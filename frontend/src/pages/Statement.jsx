@@ -40,7 +40,6 @@ export default function Statement() {
 
   useEffect(() => {
     setLoading(true);
-    const params = month ? `?month=${month}` : '';
     Promise.all([
       api.get('/commissions/statement' + (month ? `?month_filter=${month}` : '')),
       api.get('/commissions/summary'),
@@ -58,32 +57,32 @@ export default function Statement() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-white">Extrato de Comissões</h1>
-        <p className="text-movv-400 text-sm mt-1">Histórico completo por mês e por produto</p>
+        <h1 className="text-2xl font-bold text-slate-900">Extrato de Comissões</h1>
+        <p className="text-slate-500 text-sm mt-1">Histórico completo por mês e por produto</p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard label="Pendente" value={totalPending}  color="text-yellow-400" bg="bg-yellow-900/20" border="border-yellow-700/30" />
-        <SummaryCard label="Aprovado" value={totalApproved} color="text-purple-400" bg="bg-purple-900/20" border="border-purple-700/30" />
-        <SummaryCard label="Pago"     value={totalPaid}     color="text-green-400"  bg="bg-green-900/20"  border="border-green-700/30"  />
+        <SummaryCard label="Pendente" value={totalPending}  color="text-amber-600"      bg="bg-amber-50"    border="border-amber-200" />
+        <SummaryCard label="Aprovado" value={totalApproved} color="text-movv-900"        bg="bg-purple-50"   border="border-purple-200" />
+        <SummaryCard label="Pago"     value={totalPaid}     color="text-[#1B5E20]"       bg="bg-emerald-50"  border="border-emerald-200" />
       </div>
 
       {/* Month summary table */}
       {summary.length > 0 && (
         <div className="card">
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-gold-400" /> Resumo por Mês
+          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#C9A84C]" /> Resumo por Mês
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-movv-700">
-                  <th className="text-left text-movv-400 font-medium pb-2">Mês</th>
-                  <th className="text-right text-movv-400 font-medium pb-2">Pendente</th>
-                  <th className="text-right text-movv-400 font-medium pb-2">Aprovado</th>
-                  <th className="text-right text-movv-400 font-medium pb-2">Pago</th>
-                  <th className="text-right text-movv-400 font-medium pb-2">Qtd</th>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left text-slate-500 font-medium pb-2">Mês</th>
+                  <th className="text-right text-slate-500 font-medium pb-2">Pendente</th>
+                  <th className="text-right text-slate-500 font-medium pb-2">Aprovado</th>
+                  <th className="text-right text-slate-500 font-medium pb-2">Pago</th>
+                  <th className="text-right text-slate-500 font-medium pb-2">Qtd</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,20 +94,20 @@ export default function Statement() {
                     return acc;
                   }, {})
                 ).map(([m, data]) => (
-                  <tr key={m} className="border-b border-movv-700/50 hover:bg-movv-800/40 transition-colors">
-                    <td className="py-3 text-white font-medium capitalize">
+                  <tr key={m} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 text-slate-900 font-medium capitalize">
                       {format(new Date(m + '-02'), 'MMMM yyyy', { locale: ptBR })}
                     </td>
-                    <td className="py-3 text-right text-yellow-400">
+                    <td className="py-3 text-right text-amber-600">
                       {data.pending > 0 ? `R$ ${data.pending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                     </td>
-                    <td className="py-3 text-right text-purple-400">
+                    <td className="py-3 text-right text-movv-900">
                       {data.approved > 0 ? `R$ ${data.approved.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                     </td>
-                    <td className="py-3 text-right text-green-400">
+                    <td className="py-3 text-right text-[#1B5E20] font-medium">
                       {data.paid > 0 ? `R$ ${data.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                     </td>
-                    <td className="py-3 text-right text-movv-400">{data.count}</td>
+                    <td className="py-3 text-right text-slate-500">{data.count}</td>
                   </tr>
                 ))}
               </tbody>
@@ -120,11 +119,11 @@ export default function Statement() {
       {/* Detailed statement */}
       <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-          <h3 className="font-semibold text-white flex items-center gap-2">
-            <FileText className="w-4 h-4 text-gold-400" /> Detalhes
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#C9A84C]" /> Detalhes
           </h3>
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400 pointer-events-none" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <select
               value={month}
               onChange={e => setMonth(e.target.value)}
@@ -135,16 +134,16 @@ export default function Statement() {
                 <option key={m.value} value={m.value} className="capitalize">{m.label}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-10">
-            <div className="w-7 h-7 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-movv-900 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center py-10 text-movv-500">
+          <div className="text-center py-10 text-slate-400">
             <FileText className="w-10 h-10 mx-auto mb-2 opacity-40" />
             <p>Nenhuma comissão encontrada</p>
           </div>
@@ -152,23 +151,23 @@ export default function Statement() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-movv-700">
+                <tr className="border-b border-slate-200">
                   {['Data','Protocolo','Cliente','Produto','Tipo','Valor Op.','Comissão','Status'].map(h => (
-                    <th key={h} className="text-left text-movv-400 font-medium pb-2 pr-4 whitespace-nowrap">{h}</th>
+                    <th key={h} className="text-left text-slate-500 font-medium pb-2 pr-4 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, i) => (
-                  <tr key={i} className="border-b border-movv-700/40 hover:bg-movv-800/40 transition-colors">
-                    <td className="py-3 pr-4 text-movv-400 whitespace-nowrap text-xs">
+                  <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 pr-4 text-slate-500 whitespace-nowrap text-xs">
                       {format(new Date(item.created_at), 'dd/MM/yyyy')}
                     </td>
-                    <td className="py-3 pr-4 font-mono text-xs text-gold-400 whitespace-nowrap">{item.protocol}</td>
-                    <td className="py-3 pr-4 text-white whitespace-nowrap">{item.client_name}</td>
-                    <td className="py-3 pr-4 text-movv-300 whitespace-nowrap">{item.product_name}</td>
-                    <td className="py-3 pr-4 text-movv-400 text-xs whitespace-nowrap">{TYPE_LABELS[item.type] || item.type}</td>
-                    <td className="py-3 pr-4 text-movv-300 whitespace-nowrap">
+                    <td className="py-3 pr-4 font-mono text-xs text-[#C9A84C] whitespace-nowrap">{item.protocol}</td>
+                    <td className="py-3 pr-4 text-slate-900 whitespace-nowrap">{item.client_name}</td>
+                    <td className="py-3 pr-4 text-slate-600 whitespace-nowrap">{item.product_name}</td>
+                    <td className="py-3 pr-4 text-slate-500 text-xs whitespace-nowrap">{TYPE_LABELS[item.type] || item.type}</td>
+                    <td className="py-3 pr-4 text-slate-600 whitespace-nowrap">
                       {item.operated_value ? `R$ ${parseFloat(item.operated_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                     </td>
                     <td className="py-3 pr-4 text-gradient font-bold whitespace-nowrap">
@@ -181,8 +180,8 @@ export default function Statement() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-movv-600">
-                  <td colSpan={6} className="pt-3 text-movv-400 text-xs font-medium">
+                <tr className="border-t-2 border-slate-200">
+                  <td colSpan={6} className="pt-3 text-slate-500 text-xs font-medium">
                     {items.length} registro(s)
                   </td>
                   <td className="pt-3 text-gradient font-bold text-base">
@@ -202,7 +201,7 @@ export default function Statement() {
 function SummaryCard({ label, value, color, bg, border }) {
   return (
     <div className={`rounded-2xl p-5 border ${bg} ${border}`}>
-      <p className="text-movv-400 text-xs font-medium uppercase tracking-wide">{label}</p>
+      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">{label}</p>
       <p className={`text-2xl font-bold mt-1 ${color}`}>
         R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
       </p>

@@ -64,25 +64,25 @@ export default function NewReferral() {
   if (success) {
     return (
       <div className="max-w-lg mx-auto">
-        <div className="card-gold text-center space-y-5">
-          <div className="inline-flex w-16 h-16 rounded-full bg-green-900/40 border border-green-700/40 items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8 text-green-400" />
+        <div className="card text-center space-y-5">
+          <div className="inline-flex w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-[#1B5E20]" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Indicação Registrada!</h2>
-            <p className="text-movv-400 text-sm mt-1">
-              WhatsApp enviado para <strong className="text-white">{success.client_name}</strong>
+            <h2 className="text-xl font-bold text-slate-900">Indicação Registrada!</h2>
+            <p className="text-slate-500 text-sm mt-1">
+              WhatsApp enviado para <strong className="text-slate-900">{success.client_name}</strong>
             </p>
           </div>
 
-          <div className="bg-movv-900/60 rounded-2xl p-5 border border-movv-600 space-y-3">
+          <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
             <div>
-              <p className="text-movv-400 text-xs uppercase tracking-wider mb-1">Protocolo</p>
+              <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Protocolo</p>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-gradient text-2xl font-bold font-mono tracking-widest">
                   {success.protocol}
                 </span>
-                <button onClick={copyProtocol} className="text-movv-400 hover:text-gold-400 transition-colors">
+                <button onClick={copyProtocol} className="text-slate-400 hover:text-[#C9A84C] transition-colors">
                   <Copy className="w-4 h-4" />
                 </button>
               </div>
@@ -93,7 +93,7 @@ export default function NewReferral() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-green-900/20 border border-green-700/30 rounded-xl p-3 text-sm text-green-300">
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-[#1B5E20]">
             <MessageSquare className="w-4 h-4 flex-shrink-0" />
             <span>Mensagem enviada via WhatsApp ao cliente</span>
           </div>
@@ -112,14 +112,14 @@ export default function NewReferral() {
   return (
     <div className="max-w-lg mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Indicar Cliente</h1>
-        <p className="text-movv-400 text-sm mt-1">Cadastre um novo cliente e gere o protocolo de indicação</p>
+        <h1 className="text-2xl font-bold text-slate-900">Indicar Cliente</h1>
+        <p className="text-slate-500 text-sm mt-1">Cadastre um novo cliente e gere o protocolo de indicação</p>
       </div>
 
       {/* Commission preview */}
       {selectedProduct && (
-        <div className="bg-gold-900/20 border border-gold-700/30 rounded-2xl p-4">
-          <p className="text-gold-300 text-xs font-semibold uppercase tracking-wider mb-2">Comissão prevista</p>
+        <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-2xl p-4">
+          <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider mb-2">Comissão prevista</p>
           <CommissionPreview product={selectedProduct} />
         </div>
       )}
@@ -128,7 +128,7 @@ export default function NewReferral() {
         <div>
           <label className="label">Nome completo do cliente</label>
           <div className="relative">
-            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400" />
+            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               name="client_name"
               value={form.client_name}
@@ -143,7 +143,7 @@ export default function NewReferral() {
         <div>
           <label className="label">WhatsApp do cliente</label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400" />
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               name="client_whatsapp"
               value={form.client_whatsapp}
@@ -154,13 +154,13 @@ export default function NewReferral() {
               inputMode="numeric"
             />
           </div>
-          <p className="text-movv-500 text-xs mt-1">A mensagem de protocolo será enviada automaticamente</p>
+          <p className="text-slate-400 text-xs mt-1">A mensagem de protocolo será enviada automaticamente</p>
         </div>
 
         <div>
           <label className="label">Produto de interesse</label>
           <div className="relative">
-            <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400 pointer-events-none" />
+            <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <select
               name="product_id"
               value={form.product_id}
@@ -176,15 +176,14 @@ export default function NewReferral() {
           </div>
         </div>
 
-        {/* WhatsApp note */}
-        <div className="flex items-start gap-3 bg-movv-900/60 rounded-xl p-3 text-sm text-movv-400 border border-movv-700/50">
-          <MessageSquare className="w-4 h-4 mt-0.5 text-green-400 flex-shrink-0" />
+        <div className="flex items-start gap-3 bg-slate-50 rounded-xl p-3 text-sm text-slate-500 border border-slate-200">
+          <MessageSquare className="w-4 h-4 mt-0.5 text-[#1B5E20] flex-shrink-0" />
           <p>Ao confirmar, o cliente receberá o protocolo automaticamente via WhatsApp com os dados da indicação.</p>
         </div>
 
         <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
           {loading
-            ? <span className="w-5 h-5 border-2 border-movv-900 border-t-transparent rounded-full animate-spin" />
+            ? <span className="w-5 h-5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
             : <><UserPlus className="w-4 h-4" /> Registrar Indicação</>
           }
         </button>
@@ -195,9 +194,9 @@ export default function NewReferral() {
 
 function InfoItem({ label, value, icon }) {
   return (
-    <div className="bg-movv-800/60 rounded-lg p-2.5">
-      <p className="text-movv-500 text-xs">{label}</p>
-      <p className="text-white text-sm font-medium flex items-center gap-1 mt-0.5">
+    <div className="bg-white rounded-lg p-2.5 border border-slate-200">
+      <p className="text-slate-400 text-xs">{label}</p>
+      <p className="text-slate-900 text-sm font-medium flex items-center gap-1 mt-0.5">
         {icon}{value}
       </p>
     </div>
@@ -206,18 +205,18 @@ function InfoItem({ label, value, icon }) {
 
 function CommissionPreview({ product }) {
   if (product.type === 'digital_certificate') {
-    return <p className="text-gold-300 text-sm">100% para contabilidade (independente do valor)</p>;
+    return <p className="text-slate-700 text-sm">100% para contabilidade (independente do valor)</p>;
   }
   if (product.type === 'bpo') {
     return (
-      <div className="text-sm text-gold-300 space-y-0.5">
+      <div className="text-sm text-slate-700 space-y-0.5">
         <p>1º mês: <strong>R$ 699,50</strong> (50% de R$1.399)</p>
         <p>2º mês+: <strong>R$ 69,95/mês</strong> (5% recorrente)</p>
       </div>
     );
   }
   return (
-    <div className="text-sm text-gold-300 space-y-0.5">
+    <div className="text-sm text-slate-700 space-y-0.5">
       <p>1% do valor operado, sendo:</p>
       <p>• <strong>60%</strong> para você · <strong>40%</strong> para a contabilidade</p>
     </div>

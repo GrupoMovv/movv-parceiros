@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { format } from 'date-fns';
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-movv-900 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
@@ -77,8 +78,8 @@ export default function AdminDashboard() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Painel Admin</h1>
-          <p className="text-movv-400 text-sm mt-1">Visão geral do Movv Parceiros</p>
+          <h1 className="text-2xl font-bold text-slate-900">Painel Admin</h1>
+          <p className="text-slate-500 text-sm mt-1">Visão geral do Movv Parceiros</p>
         </div>
         <button onClick={handleExpire} disabled={expiring} className="btn-secondary flex items-center gap-2 text-sm">
           <RefreshCw className={`w-4 h-4 ${expiring ? 'animate-spin' : ''}`} />
@@ -96,45 +97,45 @@ export default function AdminDashboard() {
 
       {/* Chart */}
       <div className="card">
-        <h3 className="font-semibold text-white mb-5 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-gold-400" /> Indicações por Mês
+        <h3 className="font-semibold text-slate-900 mb-5 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-[#C9A84C]" /> Indicações por Mês
         </h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={stats.chartData} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2d1054" vertical={false} />
-            <XAxis dataKey="month" tick={{ fill: '#9D8FBE', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#9D8FBE', fontSize: 12 }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ background: '#1a0b2e', border: '1px solid #3d1870', borderRadius: 12, color: '#f0e8ff' }}
-              cursor={{ fill: 'rgba(107,33,168,0.1)' }}
+              contentStyle={{ background: '#ffffff', border: '1px solid #E2E8F0', borderRadius: 12, color: '#1E293B' }}
+              cursor={{ fill: 'rgba(74,14,143,0.05)' }}
             />
-            <Bar dataKey="total"     name="Total"      fill="#6b21a8" radius={[4,4,0,0]} />
-            <Bar dataKey="converted" name="Convertidas" fill="#d4af37" radius={[4,4,0,0]} />
+            <Bar dataKey="total"     name="Total"       fill="#4A0E8F" radius={[4,4,0,0]} />
+            <Bar dataKey="converted" name="Convertidas" fill="#C9A84C" radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Recent referrals */}
       <div className="card">
-        <h3 className="font-semibold text-white mb-4">Indicações Recentes</h3>
+        <h3 className="font-semibold text-slate-900 mb-4">Indicações Recentes</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-movv-700">
+              <tr className="border-b border-slate-200">
                 {['Protocolo','Cliente','Produto','Parceiro','Status','Data'].map(h => (
-                  <th key={h} className="text-left text-movv-400 font-medium pb-2 pr-4 whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left text-slate-500 font-medium pb-2 pr-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {recentReferrals.map(r => (
-                <tr key={r.id} className="border-b border-movv-700/40 hover:bg-movv-800/40 transition-colors">
-                  <td className="py-2.5 pr-4 font-mono text-xs text-gold-400">{r.protocol}</td>
-                  <td className="py-2.5 pr-4 text-white">{r.client_name}</td>
-                  <td className="py-2.5 pr-4 text-movv-300">{r.product_name}</td>
-                  <td className="py-2.5 pr-4 text-movv-400 text-xs">{r.partner_code}</td>
+                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 pr-4 font-mono text-xs text-[#C9A84C]">{r.protocol}</td>
+                  <td className="py-2.5 pr-4 text-slate-900">{r.client_name}</td>
+                  <td className="py-2.5 pr-4 text-slate-600">{r.product_name}</td>
+                  <td className="py-2.5 pr-4 text-slate-500 text-xs">{r.partner_code}</td>
                   <td className="py-2.5 pr-4"><StatusBadge status={r.status} /></td>
-                  <td className="py-2.5 text-movv-500 text-xs whitespace-nowrap">
+                  <td className="py-2.5 text-slate-400 text-xs whitespace-nowrap">
                     {format(new Date(r.created_at), 'dd/MM/yy')}
                   </td>
                 </tr>
@@ -150,12 +151,12 @@ export default function AdminDashboard() {
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
     <div className={accent ? 'card-gold' : 'card'}>
-      <div className={`inline-flex p-2 rounded-lg mb-3 ${accent ? 'bg-gold-900/40 text-gold-400' : 'bg-movv-700 text-movv-300'}`}>
+      <div className={`inline-flex p-2 rounded-lg mb-3 ${accent ? 'bg-[#FDF8ED] text-[#C9A84C]' : 'bg-purple-50 text-movv-900'}`}>
         {React.cloneElement(icon, { className: 'w-4 h-4' })}
       </div>
-      <p className="text-movv-400 text-xs font-medium uppercase tracking-wide">{label}</p>
-      <p className={`text-xl font-bold mt-1 ${accent ? 'text-gradient' : 'text-white'}`}>{value}</p>
-      <p className="text-movv-500 text-xs mt-0.5">{sub}</p>
+      <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">{label}</p>
+      <p className={`text-xl font-bold mt-1 ${accent ? 'text-gradient' : 'text-slate-900'}`}>{value}</p>
+      <p className="text-slate-400 text-xs mt-0.5">{sub}</p>
     </div>
   );
 }
@@ -170,5 +171,3 @@ function StatusBadge({ status }) {
   const s = map[status] || { cls: 'badge-pending', label: status };
   return <span className={s.cls}>{s.label}</span>;
 }
-
-import React from 'react';

@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ClipboardList, Search, CheckCircle2, Filter, ChevronDown } from 'lucide-react';
+import { ClipboardList, Search, CheckCircle2, Filter } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 
 const STATUS_MAP = {
@@ -61,7 +61,7 @@ export default function AdminReferrals() {
     }
     setSaving(true);
     try {
-      const r = await api.put(`/referrals/${selected.id}/confirm`, {
+      await api.put(`/referrals/${selected.id}/confirm`, {
         operated_value: parseFloat(form.operated_value),
         bpo_month_count: parseInt(form.bpo_month_count),
       });
@@ -78,19 +78,19 @@ export default function AdminReferrals() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-white">Indicações</h1>
-        <p className="text-movv-400 text-sm mt-1">{referrals.length} indicações no total</p>
+        <h1 className="text-2xl font-bold text-slate-900">Indicações</h1>
+        <p className="text-slate-500 text-sm mt-1">{referrals.length} indicações no total</p>
       </div>
 
       {/* Filters */}
       <div className="card py-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar protocolo, cliente, parceiro..." className="input pl-10" />
           </div>
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400 pointer-events-none" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input pl-9 appearance-none w-44">
               <option value="">Todos os status</option>
               <option value="pending">Pendente</option>
@@ -101,7 +101,7 @@ export default function AdminReferrals() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary counters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {['pending','converted','expired','cancelled'].map(s => {
           const count = referrals.filter(r => r.status === s).length;
@@ -109,10 +109,14 @@ export default function AdminReferrals() {
             <button
               key={s}
               onClick={() => setStatusFilter(statusFilter === s ? '' : s)}
-              className={`rounded-xl p-3 border text-left transition-all ${statusFilter === s ? 'border-gold-500/50 bg-gold-900/20' : 'border-movv-700 bg-movv-800 hover:border-movv-600'}`}
+              className={`rounded-xl p-3 border text-left transition-all ${
+                statusFilter === s
+                  ? 'border-[#C9A84C]/50 bg-[#FDF8ED]'
+                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+              }`}
             >
-              <p className="text-movv-400 text-xs uppercase tracking-wide">{STATUS_MAP[s]?.label}</p>
-              <p className="text-white font-bold text-xl mt-1">{count}</p>
+              <p className="text-slate-500 text-xs uppercase tracking-wide">{STATUS_MAP[s]?.label}</p>
+              <p className="text-slate-900 font-bold text-xl mt-1">{count}</p>
             </button>
           );
         })}
@@ -122,29 +126,29 @@ export default function AdminReferrals() {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-movv-700 bg-movv-850/50">
+            <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
                 {['Protocolo','Cliente','WhatsApp','Produto','Parceiro','Valor Op.','Validade','Status','Ação'].map(h => (
-                  <th key={h} className="text-left text-movv-400 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-10 text-movv-500">Carregando...</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-slate-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-10 text-movv-500">Nenhuma indicação encontrada</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-slate-400">Nenhuma indicação encontrada</td></tr>
               ) : filtered.map(r => (
-                <tr key={r.id} className="border-b border-movv-700/40 hover:bg-movv-800/40 transition-colors">
-                  <td className="py-3 px-4 font-mono text-xs text-gold-400 whitespace-nowrap">{r.protocol}</td>
-                  <td className="py-3 px-4 text-white whitespace-nowrap">{r.client_name}</td>
-                  <td className="py-3 px-4 text-movv-400 text-xs">{r.client_whatsapp}</td>
-                  <td className="py-3 px-4 text-movv-300 whitespace-nowrap">{r.product_name}</td>
-                  <td className="py-3 px-4 text-movv-400 text-xs">{r.partner_code}</td>
-                  <td className="py-3 px-4 text-movv-300 whitespace-nowrap">
+                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <td className="py-3 px-4 font-mono text-xs text-[#C9A84C] whitespace-nowrap">{r.protocol}</td>
+                  <td className="py-3 px-4 text-slate-900 whitespace-nowrap">{r.client_name}</td>
+                  <td className="py-3 px-4 text-slate-500 text-xs">{r.client_whatsapp}</td>
+                  <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{r.product_name}</td>
+                  <td className="py-3 px-4 text-slate-500 text-xs">{r.partner_code}</td>
+                  <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
                     {r.operated_value ? `R$ ${parseFloat(r.operated_value).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '—'}
                   </td>
-                  <td className="py-3 px-4 text-movv-500 text-xs whitespace-nowrap">
+                  <td className="py-3 px-4 text-slate-400 text-xs whitespace-nowrap">
                     {format(new Date(r.expires_at), 'dd/MM/yy')}
                   </td>
                   <td className="py-3 px-4">
@@ -152,7 +156,7 @@ export default function AdminReferrals() {
                   </td>
                   <td className="py-3 px-4">
                     {r.status === 'pending' && (
-                      <button onClick={() => openConfirm(r)} className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 border border-green-700/40 hover:border-green-600/60 px-2.5 py-1 rounded-lg transition-colors">
+                      <button onClick={() => openConfirm(r)} className="flex items-center gap-1 text-xs text-[#1B5E20] hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 px-2.5 py-1 rounded-lg transition-colors">
                         <CheckCircle2 className="w-3 h-3" /> Confirmar
                       </button>
                     )}
@@ -168,7 +172,7 @@ export default function AdminReferrals() {
       <Modal open={modal} onClose={() => setModal(false)} title="Confirmar Venda">
         {selected && (
           <div className="space-y-4">
-            <div className="bg-movv-900/60 rounded-xl p-4 border border-movv-700/50 space-y-2 text-sm">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2 text-sm">
               <Row label="Protocolo"  value={selected.protocol} mono />
               <Row label="Cliente"    value={selected.client_name} />
               <Row label="Produto"    value={selected.product_name} />
@@ -198,7 +202,7 @@ export default function AdminReferrals() {
                   value={form.bpo_month_count}
                   onChange={e => setForm(f => ({ ...f, bpo_month_count: e.target.value }))}
                 />
-                <p className="text-movv-500 text-xs mt-1">
+                <p className="text-slate-400 text-xs mt-1">
                   1º mês = 50% (R$699,50) · 2º mês+ = 5% recorrente (R$69,95)
                 </p>
               </div>
@@ -228,8 +232,8 @@ export default function AdminReferrals() {
 function Row({ label, value, mono }) {
   return (
     <div className="flex justify-between">
-      <span className="text-movv-400">{label}</span>
-      <span className={`text-white ${mono ? 'font-mono text-gold-400' : ''}`}>{value}</span>
+      <span className="text-slate-500">{label}</span>
+      <span className={`text-slate-900 ${mono ? 'font-mono text-[#C9A84C]' : ''}`}>{value}</span>
     </div>
   );
 }
@@ -249,11 +253,11 @@ function CommissionPreviewBox({ value, productType, bpoMonth }) {
     ];
   }
   return (
-    <div className="bg-gold-900/20 border border-gold-700/30 rounded-xl p-3 space-y-1.5">
-      <p className="text-gold-400 text-xs font-semibold uppercase tracking-wider">Comissões a gerar</p>
+    <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-xl p-3 space-y-1.5">
+      <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider">Comissões a gerar</p>
       {lines.map(l => (
         <div key={l.label} className="flex justify-between text-sm">
-          <span className="text-movv-300">{l.label}</span>
+          <span className="text-slate-600">{l.label}</span>
           <span className="text-gradient font-bold">R$ {l.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
         </div>
       ))}

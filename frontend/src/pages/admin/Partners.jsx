@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Users, Plus, Search, Edit2, Key, ToggleLeft, ToggleRight, X, ChevronDown } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Key, ToggleLeft, ToggleRight } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 
 const EMPTY_FORM = { name: '', email: '', type: 'employee', whatsapp: '', pix_key: '', parent_id: '', password: '', is_admin: false };
@@ -11,7 +11,7 @@ export default function AdminPartners() {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null); // 'create' | 'edit' | 'reset'
+  const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -34,18 +34,12 @@ export default function AdminPartners() {
     finally { setLoading(false); }
   }
 
-  function openCreate() {
-    setForm(EMPTY_FORM);
-    setSelected(null);
-    setModal('create');
-  }
-
+  function openCreate() { setForm(EMPTY_FORM); setSelected(null); setModal('create'); }
   function openEdit(p) {
     setSelected(p);
     setForm({ name: p.name, email: p.email, type: p.type, whatsapp: p.whatsapp || '', pix_key: p.pix_key || '', parent_id: p.parent_id || '', password: '', is_admin: p.is_admin });
     setModal('edit');
   }
-
   function openReset(p) { setSelected(p); setForm({ password: '' }); setModal('reset'); }
 
   async function handleSave() {
@@ -82,8 +76,8 @@ export default function AdminPartners() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Parceiros</h1>
-          <p className="text-movv-400 text-sm mt-1">{partners.length} parceiros cadastrados</p>
+          <h1 className="text-2xl font-bold text-slate-900">Parceiros</h1>
+          <p className="text-slate-500 text-sm mt-1">{partners.length} parceiros cadastrados</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Novo Parceiro
@@ -93,7 +87,7 @@ export default function AdminPartners() {
       {/* Search */}
       <div className="card py-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-movv-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -107,36 +101,36 @@ export default function AdminPartners() {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-movv-700 bg-movv-850/50">
+            <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
                 {['Código','Nome','Tipo','Email','WhatsApp','PIX','Vinculado a','Indicações','Saldo','Status','Ações'].map(h => (
-                  <th key={h} className="text-left text-movv-400 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="text-center py-10 text-movv-500">Carregando...</td></tr>
+                <tr><td colSpan={11} className="text-center py-10 text-slate-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} className="text-center py-10 text-movv-500">Nenhum parceiro encontrado</td></tr>
+                <tr><td colSpan={11} className="text-center py-10 text-slate-400">Nenhum parceiro encontrado</td></tr>
               ) : filtered.map(p => (
-                <tr key={p.id} className={`border-b border-movv-700/40 hover:bg-movv-800/40 transition-colors ${!p.is_active ? 'opacity-50' : ''}`}>
-                  <td className="py-3 px-4 font-mono text-xs text-gold-400">{p.code}</td>
-                  <td className="py-3 px-4 text-white font-medium whitespace-nowrap">
+                <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${!p.is_active ? 'opacity-50' : ''}`}>
+                  <td className="py-3 px-4 font-mono text-xs text-[#C9A84C]">{p.code}</td>
+                  <td className="py-3 px-4 text-slate-900 font-medium whitespace-nowrap">
                     {p.name}
-                    {p.is_admin && <span className="ml-2 text-xs bg-movv-700 text-gold-300 px-1.5 py-0.5 rounded">Admin</span>}
+                    {p.is_admin && <span className="ml-2 text-xs bg-purple-50 text-movv-900 border border-purple-200 px-1.5 py-0.5 rounded">Admin</span>}
                   </td>
                   <td className="py-3 px-4">
                     <span className={p.type === 'accounting' ? 'badge-approved' : 'badge-pending'}>
                       {p.type === 'accounting' ? 'Contab.' : 'Func.'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-movv-300 text-xs">{p.email}</td>
-                  <td className="py-3 px-4 text-movv-400 text-xs">{p.whatsapp || '—'}</td>
-                  <td className="py-3 px-4 text-movv-400 text-xs max-w-[120px] truncate">{p.pix_key || '—'}</td>
-                  <td className="py-3 px-4 text-movv-400 text-xs">{p.parent_name || '—'}</td>
-                  <td className="py-3 px-4 text-center text-movv-300">{p.total_referrals || 0}</td>
-                  <td className="py-3 px-4 text-right text-gradient font-medium whitespace-nowrap">
+                  <td className="py-3 px-4 text-slate-600 text-xs">{p.email}</td>
+                  <td className="py-3 px-4 text-slate-500 text-xs">{p.whatsapp || '—'}</td>
+                  <td className="py-3 px-4 text-slate-500 text-xs max-w-[120px] truncate">{p.pix_key || '—'}</td>
+                  <td className="py-3 px-4 text-slate-500 text-xs">{p.parent_name || '—'}</td>
+                  <td className="py-3 px-4 text-center text-slate-700">{p.total_referrals || 0}</td>
+                  <td className="py-3 px-4 text-right text-[#1B5E20] font-semibold whitespace-nowrap">
                     R$ {parseFloat(p.pending_balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-3 px-4">
@@ -146,14 +140,14 @@ export default function AdminPartners() {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-movv-400 hover:bg-movv-700 hover:text-white transition-colors" title="Editar">
+                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => openReset(p)} className="p-1.5 rounded-lg text-movv-400 hover:bg-movv-700 hover:text-yellow-300 transition-colors" title="Redefinir senha">
+                      <button onClick={() => openReset(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-amber-600 transition-colors" title="Redefinir senha">
                         <Key className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-movv-400 hover:bg-movv-700 transition-colors" title={p.is_active ? 'Desativar' : 'Ativar'}>
-                        {p.is_active ? <ToggleRight className="w-3.5 h-3.5 text-green-400" /> : <ToggleLeft className="w-3.5 h-3.5 text-red-400" />}
+                      <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors" title={p.is_active ? 'Desativar' : 'Ativar'}>
+                        {p.is_active ? <ToggleRight className="w-3.5 h-3.5 text-[#1B5E20]" /> : <ToggleLeft className="w-3.5 h-3.5 text-red-500" />}
                       </button>
                     </div>
                   </td>
@@ -172,7 +166,7 @@ export default function AdminPartners() {
       >
         {modal === 'reset' ? (
           <div className="space-y-4">
-            <p className="text-movv-400 text-sm">Nova senha para <strong className="text-white">{selected?.name}</strong></p>
+            <p className="text-slate-500 text-sm">Nova senha para <strong className="text-slate-900">{selected?.name}</strong></p>
             <div>
               <label className="label">Nova Senha</label>
               <input type="password" className="input" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />

@@ -80,8 +80,8 @@ export default function AdminProducts() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Produtos</h1>
-          <p className="text-movv-400 text-sm mt-1">{products.length} produtos cadastrados</p>
+          <h1 className="text-2xl font-bold text-slate-900">Produtos</h1>
+          <p className="text-slate-500 text-sm mt-1">{products.length} produtos cadastrados</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Novo Produto
@@ -89,15 +89,15 @@ export default function AdminProducts() {
       </div>
 
       {/* Commission rules reference */}
-      <div className="bg-movv-800/60 border border-movv-700/50 rounded-2xl p-4">
-        <p className="text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5">
+      <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-2xl p-4">
+        <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <Info className="w-3.5 h-3.5" /> Regras de Comissão
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           {TYPES.map(t => (
             <div key={t.value} className="flex gap-2">
-              <span className="text-gold-500 font-medium whitespace-nowrap">{t.label}:</span>
-              <span className="text-movv-400">{TYPE_RULES[t.value]}</span>
+              <span className="text-[#C9A84C] font-medium whitespace-nowrap">{t.label}:</span>
+              <span className="text-slate-600">{TYPE_RULES[t.value]}</span>
             </div>
           ))}
         </div>
@@ -107,35 +107,35 @@ export default function AdminProducts() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-3 flex justify-center py-10">
-            <div className="w-7 h-7 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-movv-900 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : products.map(p => (
           <div key={p.id} className={`card flex flex-col justify-between ${!p.is_active ? 'opacity-50' : ''}`}>
             <div>
               <div className="flex items-start justify-between mb-2">
-                <div className="inline-flex p-2 rounded-lg bg-movv-700">
-                  <Package className="w-4 h-4 text-gold-400" />
+                <div className="inline-flex p-2 rounded-lg bg-purple-50">
+                  <Package className="w-4 h-4 text-movv-900" />
                 </div>
                 <span className={p.is_active ? 'badge-converted' : 'badge-expired'}>
                   {p.is_active ? 'Ativo' : 'Inativo'}
                 </span>
               </div>
-              <h3 className="text-white font-semibold mt-3">{p.name}</h3>
-              <span className="inline-block mt-1 text-xs bg-movv-700 text-movv-300 px-2 py-0.5 rounded-md">
+              <h3 className="text-slate-900 font-semibold mt-3">{p.name}</h3>
+              <span className="inline-block mt-1 text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
                 {TYPES.find(t => t.value === p.type)?.label || p.type}
               </span>
               {p.description && (
-                <p className="text-movv-400 text-xs mt-2 line-clamp-2">{p.description}</p>
+                <p className="text-slate-500 text-xs mt-2 line-clamp-2">{p.description}</p>
               )}
-              <p className="text-movv-500 text-xs mt-2">{TYPE_RULES[p.type]}</p>
+              <p className="text-slate-400 text-xs mt-2">{TYPE_RULES[p.type]}</p>
             </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-movv-700">
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
               <button onClick={() => openEdit(p)} className="btn-secondary flex-1 flex items-center justify-center gap-1.5 text-xs py-2">
                 <Edit2 className="w-3 h-3" /> Editar
               </button>
-              <button onClick={() => toggleActive(p)} className="p-2 rounded-xl border border-movv-600 hover:bg-movv-700 transition-colors">
+              <button onClick={() => toggleActive(p)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
                 {p.is_active
-                  ? <ToggleRight className="w-4 h-4 text-green-400" />
+                  ? <ToggleRight className="w-4 h-4 text-[#1B5E20]" />
                   : <ToggleLeft className="w-4 h-4 text-red-400" />
                 }
               </button>
@@ -157,7 +157,7 @@ export default function AdminProducts() {
               {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
             {form.type && (
-              <p className="text-movv-500 text-xs mt-1">{TYPE_RULES[form.type]}</p>
+              <p className="text-slate-400 text-xs mt-1">{TYPE_RULES[form.type]}</p>
             )}
           </div>
           <div>
