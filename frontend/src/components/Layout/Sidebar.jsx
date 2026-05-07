@@ -39,7 +39,7 @@ export default function Sidebar({ onClose }) {
       <div className="px-6 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
           <img
-            src="/logo.png"
+            src="/logo-header.png"
             alt="Grupo Movv"
             style={{ height: '40px', width: 'auto' }}
             className="drop-shadow-md flex-shrink-0"

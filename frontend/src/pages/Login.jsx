@@ -40,7 +40,7 @@ export default function Login() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
               <img
-                src="/logo.png"
+                src="/logo-login.png"
                 alt="Grupo Movv"
                 style={{ height: '120px', width: 'auto' }}
                 className="drop-shadow-lg"
