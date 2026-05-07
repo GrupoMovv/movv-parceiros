@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
-  CreditCard, Package, LogOut, ChevronRight, Gem
+  CreditCard, Package, LogOut, ChevronRight
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -36,11 +36,14 @@ export default function Sidebar({ onClose }) {
   return (
     <aside className="h-full flex flex-col bg-movv-900 border-r border-movv-700 w-64">
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-movv-700">
+      <div className="px-6 py-5 border-b border-movv-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold">
-            <Gem className="w-5 h-5 text-movv-900" />
-          </div>
+          <img
+            src="/logo.png.png"
+            alt="Grupo Movv"
+            style={{ height: '40px', width: 'auto' }}
+            className="drop-shadow-md flex-shrink-0"
+          />
           <div>
             <p className="text-gradient font-bold text-lg leading-none">Movv</p>
             <p className="text-movv-400 text-xs font-medium">Parceiros</p>

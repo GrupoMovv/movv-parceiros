@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Gem, Eye, EyeOff, Lock, Hash } from 'lucide-react';
+import { Eye, EyeOff, Lock, Hash } from 'lucide-react';
 
 export default function Login() {
   const [code, setCode] = useState('');
@@ -39,8 +39,13 @@ export default function Login() {
         <div className="bg-movv-800/80 backdrop-blur-xl border border-movv-700 rounded-3xl p-8 shadow-purple">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex w-16 h-16 rounded-2xl bg-gold-gradient items-center justify-center shadow-gold-lg mb-4">
-              <Gem className="w-8 h-8 text-movv-900" />
+            <div className="flex justify-center mb-4">
+              <img
+                src="/logo.png.png"
+                alt="Grupo Movv"
+                style={{ height: '120px', width: 'auto' }}
+                className="drop-shadow-lg"
+              />
             </div>
             <h1 className="text-gradient text-3xl font-bold">Movv Parceiros</h1>
             <p className="text-movv-400 text-sm mt-1">Grupo Movv — Itumbiara/GO</p>
