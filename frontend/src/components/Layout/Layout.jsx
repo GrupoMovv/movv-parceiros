@@ -35,7 +35,7 @@ export default function Layout() {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <img src="/logo.png.png" alt="Grupo Movv" style={{ height: '40px', width: 'auto' }} className="drop-shadow" />
+          <img src="/logo.png" alt="Grupo Movv" style={{ height: '40px', width: 'auto' }} className="drop-shadow" />
           <span className="text-gradient font-bold text-lg">Movv Parceiros</span>
         </header>
 
