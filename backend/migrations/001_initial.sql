@@ -21,14 +21,21 @@ CREATE TABLE IF NOT EXISTS partners (
 
 -- Produtos
 CREATE TABLE IF NOT EXISTS products (
-  id              SERIAL PRIMARY KEY,
-  name            VARCHAR(255) NOT NULL,
-  type            VARCHAR(50)  NOT NULL
-                    CHECK (type IN ('credit','bpo','digital_certificate','account','insurance','other')),
-  description     TEXT,
-  commission_rate NUMERIC(6,4) DEFAULT 0.0100,
-  is_active       BOOLEAN DEFAULT TRUE
+  id                 SERIAL PRIMARY KEY,
+  name               VARCHAR(255) NOT NULL,
+  type               VARCHAR(50)  NOT NULL
+                       CHECK (type IN ('credit','bpo','digital_certificate','account','insurance','other')),
+  description        TEXT,
+  commission_rate    NUMERIC(6,4) DEFAULT 0.0100,
+  faixa              VARCHAR(20)  DEFAULT 'media'
+                       CHECK (faixa IN ('alta','media','baixa','especial')),
+  percentual_repasse NUMERIC(6,4) DEFAULT 0.0100,
+  is_active          BOOLEAN DEFAULT TRUE
 );
+
+-- Colunas adicionadas — seguro para bancos já existentes
+ALTER TABLE products ADD COLUMN IF NOT EXISTS faixa              VARCHAR(20)  DEFAULT 'media';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS percentual_repasse NUMERIC(6,4) DEFAULT 0.0100;
 
 -- Indicações
 CREATE TABLE IF NOT EXISTS referrals (

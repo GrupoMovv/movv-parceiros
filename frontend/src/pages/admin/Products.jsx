@@ -1,28 +1,26 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Package, Plus, Edit2, ToggleLeft, ToggleRight, Info } from 'lucide-react';
+import { Plus, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 
 const TYPES = [
-  { value: 'credit',              label: 'Crédito' },
-  { value: 'bpo',                 label: 'BPO Financeiro' },
-  { value: 'digital_certificate', label: 'Certificado Digital' },
-  { value: 'account',             label: 'Conta Bancária' },
-  { value: 'insurance',           label: 'Seguro' },
-  { value: 'other',               label: 'Outro' },
+  { value: 'credit',    label: 'Crédito' },
+  { value: 'bpo',       label: 'BPO Financeiro' },
+  { value: 'insurance', label: 'Seguro' },
+  { value: 'other',     label: 'Outro' },
 ];
 
-const TYPE_RULES = {
-  digital_certificate: '100% à contabilidade, independente do valor',
-  bpo:                 '1º mês: 50% do plano (R$699,50) · 2º mês+: 5% recorrente (R$69,95)',
-  credit:              '1% do valor operado: 60% func. / 40% contab.',
-  account:             '1% do valor operado: 60% func. / 40% contab.',
-  insurance:           '1% do valor operado: 60% func. / 40% contab.',
-  other:               '1% do valor operado: 60% func. / 40% contab.',
+const FAIXAS = {
+  alta:     { label: 'ALTA',     titulo: 'Faixa Alta',      desc: '1,5% do valor operado', badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-300', dotCls: 'bg-emerald-500', btnSelected: 'bg-emerald-50 border-emerald-400 text-emerald-700' },
+  media:    { label: 'MÉDIA',    titulo: 'Faixa Média',     desc: '1,0% do valor operado', badgeCls: 'bg-yellow-100 text-yellow-700 border-yellow-300',   dotCls: 'bg-yellow-500',  btnSelected: 'bg-yellow-50 border-yellow-400 text-yellow-700' },
+  baixa:    { label: 'BAIXA',    titulo: 'Faixa Baixa',     desc: '0,3% do valor operado', badgeCls: 'bg-blue-100 text-blue-700 border-blue-300',         dotCls: 'bg-blue-500',    btnSelected: 'bg-blue-50 border-blue-400 text-blue-700' },
+  especial: { label: 'ESPECIAL', titulo: 'Produto Especial', desc: 'Mensalidade R$1.399',   badgeCls: 'bg-purple-100 text-purple-700 border-purple-300',   dotCls: 'bg-purple-500',  btnSelected: 'bg-purple-50 border-purple-400 text-purple-700' },
 };
 
-const EMPTY = { name: '', type: 'credit', description: '', commission_rate: 0.01 };
+const FAIXA_ORDER = ['alta', 'media', 'baixa', 'especial'];
+const PERCENTUAIS  = { alta: 0.015, media: 0.01, baixa: 0.003, especial: 0 };
+const EMPTY        = { name: '', type: 'credit', description: '', faixa: 'media' };
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -46,19 +44,21 @@ export default function AdminProducts() {
 
   function openEdit(p) {
     setEditing(p);
-    setForm({ name: p.name, type: p.type, description: p.description || '', commission_rate: p.commission_rate });
+    setForm({ name: p.name, type: p.type, description: p.description || '', faixa: p.faixa || 'media' });
     setModal(true);
   }
 
   async function handleSave() {
     if (!form.name || !form.type) { toast.error('Nome e tipo são obrigatórios'); return; }
+    const rate = PERCENTUAIS[form.faixa] ?? 0.01;
+    const payload = { ...form, commission_rate: rate, percentual_repasse: rate, is_active: editing ? editing.is_active : true };
     setSaving(true);
     try {
       if (editing) {
-        await api.put(`/products/${editing.id}`, { ...form, is_active: editing.is_active });
+        await api.put(`/products/${editing.id}`, payload);
         toast.success('Produto atualizado!');
       } else {
-        await api.post('/products', form);
+        await api.post('/products', payload);
         toast.success('Produto criado!');
       }
       setModal(false);
@@ -76,8 +76,13 @@ export default function AdminProducts() {
     } catch { toast.error('Erro ao atualizar'); }
   }
 
+  const groups = FAIXA_ORDER.map(faixa => ({
+    faixa,
+    items: products.filter(p => (p.faixa || 'media') === faixa),
+  })).filter(g => g.items.length > 0);
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Produtos</h1>
@@ -88,86 +93,100 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      {/* Commission rules reference */}
-      <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-2xl p-4">
-        <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5">
-          <Info className="w-3.5 h-3.5" /> Regras de Comissão
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          {TYPES.map(t => (
-            <div key={t.value} className="flex gap-2">
-              <span className="text-[#C9A84C] font-medium whitespace-nowrap">{t.label}:</span>
-              <span className="text-slate-600">{TYPE_RULES[t.value]}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Products grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <div className="col-span-3 flex justify-center py-10">
-            <div className="w-7 h-7 border-2 border-movv-900 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : products.map(p => (
-          <div key={p.id} className={`card flex flex-col justify-between ${!p.is_active ? 'opacity-50' : ''}`}>
-            <div>
-              <div className="flex items-start justify-between mb-2">
-                <div className="inline-flex p-2 rounded-lg bg-purple-50">
-                  <Package className="w-4 h-4 text-movv-900" />
-                </div>
-                <span className={p.is_active ? 'badge-converted' : 'badge-expired'}>
-                  {p.is_active ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
-              <h3 className="text-slate-900 font-semibold mt-3">{p.name}</h3>
-              <span className="inline-block mt-1 text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                {TYPES.find(t => t.value === p.type)?.label || p.type}
-              </span>
-              {p.description && (
-                <p className="text-slate-500 text-xs mt-2 line-clamp-2">{p.description}</p>
-              )}
-              <p className="text-slate-400 text-xs mt-2">{TYPE_RULES[p.type]}</p>
-            </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
-              <button onClick={() => openEdit(p)} className="btn-secondary flex-1 flex items-center justify-center gap-1.5 text-xs py-2">
-                <Edit2 className="w-3 h-3" /> Editar
-              </button>
-              <button onClick={() => toggleActive(p)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
-                {p.is_active
-                  ? <ToggleRight className="w-4 h-4 text-[#1B5E20]" />
-                  : <ToggleLeft className="w-4 h-4 text-red-400" />
-                }
-              </button>
-            </div>
+      {/* Legenda de faixas */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {FAIXA_ORDER.map(key => (
+          <div key={key} className="bg-white border border-slate-200 rounded-xl p-3">
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${FAIXAS[key].badgeCls}`}>
+              {FAIXAS[key].label}
+            </span>
+            <p className="text-slate-500 text-xs mt-1.5">{FAIXAS[key].desc}</p>
           </div>
         ))}
       </div>
 
-      {/* Modal */}
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="w-7 h-7 border-2 border-movv-900 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : groups.map(({ faixa, items }) => (
+        <div key={faixa}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-2 h-2 rounded-full ${FAIXAS[faixa].dotCls}`} />
+            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+              {FAIXAS[faixa].titulo} — {FAIXAS[faixa].desc}
+            </h2>
+            <span className="text-slate-400 text-xs">({items.length})</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {items.map(p => (
+              <div key={p.id} className={`card flex flex-col justify-between ${!p.is_active ? 'opacity-50' : ''}`}>
+                <div>
+                  <div className="flex items-start justify-between mb-2">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${FAIXAS[p.faixa || 'media'].badgeCls}`}>
+                      {FAIXAS[p.faixa || 'media'].label}
+                    </span>
+                    <span className={p.is_active ? 'badge-converted' : 'badge-expired'}>
+                      {p.is_active ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                  <h3 className="text-slate-900 font-semibold mt-2 text-sm">{p.name}</h3>
+                  {p.description && (
+                    <p className="text-slate-500 text-xs mt-1 line-clamp-2">{p.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
+                  <button onClick={() => openEdit(p)} className="btn-secondary flex-1 flex items-center justify-center gap-1.5 text-xs py-2">
+                    <Edit2 className="w-3 h-3" /> Editar
+                  </button>
+                  <button onClick={() => toggleActive(p)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+                    {p.is_active
+                      ? <ToggleRight className="w-4 h-4 text-[#1B5E20]" />
+                      : <ToggleLeft className="w-4 h-4 text-red-400" />
+                    }
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
       <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Editar Produto' : 'Novo Produto'}>
         <div className="space-y-4">
           <div>
             <label className="label">Nome do produto</label>
-            <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Crédito Empresarial" />
+            <input className="input" value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Ex: Crédito Pessoal" />
           </div>
           <div>
-            <label className="label">Tipo / Categoria</label>
-            <select className="input appearance-none" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            <label className="label">Tipo</label>
+            <select className="input appearance-none" value={form.type}
+              onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
               {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
-            {form.type && (
-              <p className="text-slate-400 text-xs mt-1">{TYPE_RULES[form.type]}</p>
-            )}
+          </div>
+          <div>
+            <label className="label">Faixa de Comissão</label>
+            <div className="grid grid-cols-2 gap-2">
+              {FAIXA_ORDER.map(key => (
+                <button key={key} type="button"
+                  onClick={() => setForm(f => ({ ...f, faixa: key }))}
+                  className={`p-2.5 rounded-xl border text-left transition-all ${
+                    form.faixa === key ? FAIXAS[key].btnSelected : 'border-slate-200 hover:bg-slate-50'
+                  }`}>
+                  <span className="text-xs font-bold">{FAIXAS[key].label}</span>
+                  <p className="text-xs text-slate-500 mt-0.5">{FAIXAS[key].desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="label">Descrição (opcional)</label>
-            <textarea
-              className="input resize-none h-20"
-              value={form.description}
+            <textarea className="input resize-none h-20" value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Descrição breve do produto..."
-            />
+              placeholder="Descrição breve do produto..." />
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={() => setModal(false)} className="btn-secondary flex-1">Cancelar</button>

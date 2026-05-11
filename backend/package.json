@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "node migrations/run.js",
-    "seed": "node seeds/seed.js"
+    "seed": "node seeds/seed.js",
+    "setup": "node scripts/setup.js"
   },
   "dependencies": {
     "axios": "^1.6.7",
