@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Statement from './pages/Statement';
 import NewReferral from './pages/NewReferral';
+import MaterialApoio from './pages/MaterialApoio';
+import DiretaCertificacao from './pages/DiretaCertificacao';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPartners from './pages/admin/Partners';
 import AdminReferrals from './pages/admin/Referrals';
@@ -28,6 +30,12 @@ function RequireAdmin({ children }) {
   return children;
 }
 
+function RequireAccounting({ children }) {
+  const { user } = useAuth();
+  if (!user?.is_admin && user?.type !== 'accounting') return <Navigate to="/" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -35,13 +43,15 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Dashboard />} />
-          <Route path="extrato" element={<Statement />} />
-          <Route path="indicar" element={<NewReferral />} />
-          <Route path="admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
-          <Route path="admin/parceiros" element={<RequireAdmin><AdminPartners /></RequireAdmin>} />
-          <Route path="admin/indicacoes" element={<RequireAdmin><AdminReferrals /></RequireAdmin>} />
-          <Route path="admin/pagamentos" element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
-          <Route path="admin/produtos" element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
+          <Route path="extrato"              element={<Statement />} />
+          <Route path="indicar"              element={<NewReferral />} />
+          <Route path="material-apoio"       element={<MaterialApoio />} />
+          <Route path="direta-certificacao"  element={<RequireAccounting><DiretaCertificacao /></RequireAccounting>} />
+          <Route path="admin"                element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+          <Route path="admin/parceiros"      element={<RequireAdmin><AdminPartners /></RequireAdmin>} />
+          <Route path="admin/indicacoes"     element={<RequireAdmin><AdminReferrals /></RequireAdmin>} />
+          <Route path="admin/pagamentos"     element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
+          <Route path="admin/produtos"       element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
