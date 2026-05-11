@@ -143,13 +143,13 @@ export default function DiretaCertificacao() {
           <p className="text-slate-500 text-sm mt-0.5">Dúvidas sobre emissão, valores ou prazos</p>
         </div>
         <a
-          href="https://wa.me/5564993252996"
+          href="https://wa.me/5564993088864"
           target="_blank"
           rel="noopener noreferrer"
           className="btn-primary flex items-center gap-2 whitespace-nowrap"
         >
           <MessageCircle className="w-4 h-4" />
-          (64) 99325-2996
+          (64) 9308-8864
         </a>
       </div>
     </div>
