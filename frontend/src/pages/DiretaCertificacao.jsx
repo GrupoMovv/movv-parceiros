@@ -1,7 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { ShieldCheck, MessageCircle, AlertTriangle } from 'lucide-react';
 
-const WA_NUMBER = '5564993252996';
+const WA_NUMBER = '5564993088864';
 
 const PF = [
   { produto: 'PF A1',               preco: 170, comissao: 47.22 },
