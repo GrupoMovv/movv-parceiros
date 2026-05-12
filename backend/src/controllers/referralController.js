@@ -8,7 +8,8 @@ async function listReferrals(req, res) {
     const { month, status } = req.query;
     let query = `
       SELECT r.*, p.name AS partner_name, p.code AS partner_code,
-             pr.name AS product_name, pr.type AS product_type
+             pr.name AS product_name, pr.type AS product_type,
+             pr.percentual_repasse, pr.faixa
       FROM referrals r
       JOIN partners p ON p.id = r.partner_id
       JOIN products pr ON pr.id = r.product_id

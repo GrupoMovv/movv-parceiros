@@ -212,6 +212,7 @@ export default function AdminReferrals() {
               <CommissionPreviewBox
                 value={parseFloat(form.operated_value)}
                 productType={selected.product_type}
+                commissionRate={parseFloat(selected.percentual_repasse) || 0.01}
                 bpoMonth={parseInt(form.bpo_month_count)}
               />
             )}
@@ -238,18 +239,19 @@ function Row({ label, value, mono }) {
   );
 }
 
-function CommissionPreviewBox({ value, productType, bpoMonth }) {
+function CommissionPreviewBox({ value, productType, commissionRate, bpoMonth }) {
   let lines = [];
   if (productType === 'digital_certificate') {
-    lines = [{ label: 'Contabilidade (100%)', amount: value * 0.01 }];
+    const total = value * commissionRate;
+    lines = [{ label: `Contabilidade (${(commissionRate * 100).toFixed(1)}%)`, amount: total }];
   } else if (productType === 'bpo') {
-    const rate = bpoMonth === 1 ? 0.50 : 0.05;
-    lines = [{ label: `Parceiro (${bpoMonth === 1 ? '50%' : '5%'})`, amount: 1399 * rate }];
+    const amount = bpoMonth === 1 ? 650 : 70;
+    lines = [{ label: `Parceiro (${bpoMonth === 1 ? '1º mês'  : 'Recorrente'})`, amount }];
   } else {
-    const total = value * 0.01;
+    const total = value * commissionRate;
     lines = [
-      { label: 'Funcionário (60%)', amount: total * 0.60 },
-      { label: 'Contabilidade (40%)', amount: total * 0.40 },
+      { label: `Funcionário (60% de ${(commissionRate * 100).toFixed(1)}%)`, amount: total * 0.60 },
+      { label: `Contabilidade (40% de ${(commissionRate * 100).toFixed(1)}%)`, amount: total * 0.40 },
     ];
   }
   return (
