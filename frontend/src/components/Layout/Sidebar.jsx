@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
-  CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck
+  Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -15,6 +15,7 @@ const adminLinks = [
   { to: '/admin',              icon: LayoutDashboard, label: 'Visão Geral' },
   { to: '/admin/parceiros',    icon: Users,           label: 'Parceiros' },
   { to: '/admin/indicacoes',   icon: ClipboardList,   label: 'Indicações' },
+  { to: '/admin/comissoes',    icon: Coins,           label: 'Comissões' },
   { to: '/admin/pagamentos',   icon: CreditCard,      label: 'Pagamentos' },
   { to: '/admin/produtos',     icon: Package,         label: 'Produtos' },
 ];

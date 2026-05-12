@@ -10,6 +10,7 @@ import DiretaCertificacao from './pages/DiretaCertificacao';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPartners from './pages/admin/Partners';
 import AdminReferrals from './pages/admin/Referrals';
+import AdminCommissions from './pages/admin/Commissions';
 import AdminPayments from './pages/admin/Payments';
 import AdminProducts from './pages/admin/Products';
 
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="admin"                element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="admin/parceiros"      element={<RequireAdmin><AdminPartners /></RequireAdmin>} />
           <Route path="admin/indicacoes"     element={<RequireAdmin><AdminReferrals /></RequireAdmin>} />
+          <Route path="admin/comissoes"      element={<RequireAdmin><AdminCommissions /></RequireAdmin>} />
           <Route path="admin/pagamentos"     element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
           <Route path="admin/produtos"       element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
         </Route>

@@ -97,4 +97,46 @@ async function approveCommissions(req, res) {
   }
 }
 
-module.exports = { listCommissions, getStatement, getSummaryByMonth, approveCommissions };
+async function approveOne(req, res) {
+  try {
+    const result = await db.query(
+      `UPDATE commissions SET status='approved' WHERE id=$1 AND status='pending' RETURNING *`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou já processada' });
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+async function cancelOne(req, res) {
+  try {
+    const result = await db.query(
+      `UPDATE commissions SET status='cancelled' WHERE id=$1 AND status='pending' RETURNING *`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou já processada' });
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+async function revertOne(req, res) {
+  try {
+    const result = await db.query(
+      `UPDATE commissions SET status='pending' WHERE id=$1 AND status='approved' RETURNING *`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou não aprovada' });
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+module.exports = { listCommissions, getStatement, getSummaryByMonth, approveCommissions, approveOne, cancelOne, revertOne };
