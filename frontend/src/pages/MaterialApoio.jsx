@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Download, BookOpen, CheckCircle2, UserPlus, ClipboardList, Banknote,
-  ChevronDown, ChevronUp, MessageCircle, TrendingUp, Zap, Star
+  ChevronDown, ChevronUp, MessageCircle, TrendingUp, Zap, Star, Info
 } from 'lucide-react';
 
 const FAIXAS = [
@@ -62,7 +62,7 @@ const FAQ = [
   },
   {
     q: 'Como é calculada a comissão?',
-    a: 'Depende da faixa do produto: 1,5% (Alta), 1,0% (Média) ou 0,3% (Baixa) sobre o valor operado. O total é dividido 60% para o funcionário e 40% para a contabilidade.',
+    a: 'Depende da faixa do produto: 1,5% (Alta), 1,0% (Média) ou 0,3% (Baixa) sobre o valor operado. O total é dividido em 51% para o funcionário, 34% líquido para a contabilidade e 15% de imposto — retido pela contabilidade para pagamento de tributos. A contabilidade recebe 100% via PIX e é responsável por distribuir ao funcionário.',
   },
   {
     q: 'O que é o protocolo de indicação?',
@@ -74,7 +74,7 @@ const FAQ = [
   },
   {
     q: 'Como funciona o BPO Financeiro?',
-    a: 'No 1º mês você recebe R$ 650,00 e a partir do 2º mês R$ 70,00/mês recorrente enquanto o cliente mantiver o plano ativo. Divisão 60/40 entre funcionário e contabilidade.',
+    a: 'No 1º mês o parceiro recebe R$ 650,00 e a partir do 2º mês R$ 70,00/mês recorrente enquanto o cliente mantiver o plano ativo. Divisão: 51% funcionário · 34% contabilidade · 15% imposto — retido pela contabilidade.',
   },
 ];
 
@@ -142,9 +142,15 @@ export default function MaterialApoio() {
       {/* Tabela de comissões */}
       <section>
         <h2 className="text-lg font-bold text-slate-900 mb-1">Tabela de comissões — Azul Empréstimo</h2>
-        <p className="text-slate-500 text-sm mb-4">
-          Divisão: <strong>60%</strong> funcionário · <strong>40%</strong> contabilidade sobre o valor da faixa
+        <p className="text-slate-500 text-sm mb-3">
+          Divisão: <strong>51%</strong> funcionário · <strong>34%</strong> contabilidade · <strong>15%</strong> imposto (retido pela contabilidade)
         </p>
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+          <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-amber-800 text-xs leading-relaxed">
+            A contabilidade recebe <strong>100% do valor</strong> da comissão via PIX (51% + 34% + 15%) e é responsável por distribuir ao funcionário e pelo recolhimento do imposto sobre o serviço.
+          </p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {FAIXAS.map(f => (
             <div key={f.label} className={`rounded-2xl border p-5 ${f.bgCls}`}>
@@ -195,7 +201,7 @@ export default function MaterialApoio() {
             </div>
           </div>
           <p className="relative text-white/50 text-xs mt-4">
-            * Divisão 60% funcionário / 40% contabilidade. Recorrente ativo enquanto o cliente mantiver o plano.
+            * Divisão: 51% funcionário · 34% contabilidade · 15% imposto. A contabilidade recebe o total e distribui ao funcionário. Recorrente ativo enquanto o cliente mantiver o plano.
           </p>
         </div>
       </section>

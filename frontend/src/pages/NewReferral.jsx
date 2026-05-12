@@ -216,9 +216,9 @@ function CommissionPreview({ product, valorEstimado, onValorChange }) {
     return (
       <div className="text-sm text-slate-700 space-y-1">
         <p className="font-semibold">Mensalidade do cliente: R$ 1.399,00</p>
-        <p>1º mês: <strong>R$ 650,00</strong> ao parceiro (50%)</p>
-        <p>2º mês em diante: <strong>R$ 70,00/mês</strong> recorrente (5%)</p>
-        <p className="text-slate-500 text-xs mt-1">Divisão: 60% funcionário · 40% contabilidade</p>
+        <p>1º mês: <strong>R$ 650,00</strong> ao parceiro</p>
+        <p>2º mês em diante: <strong>R$ 70,00/mês</strong> recorrente</p>
+        <p className="text-slate-500 text-xs mt-1">Divisão: 51% funcionário · 34% contabilidade · 15% imposto</p>
       </div>
     );
   }
@@ -226,14 +226,15 @@ function CommissionPreview({ product, valorEstimado, onValorChange }) {
   const percentual    = parseFloat(product.percentual_repasse) || 0.01;
   const valorNum      = parseFloat(String(valorEstimado).replace(/\./g, '').replace(',', '.')) || 0;
   const total         = valorNum * percentual;
-  const funcionario   = total * 0.6;
-  const contabilidade = total * 0.4;
+  const funcionario   = total * 0.51;
+  const contabilidade = total * 0.34;
+  const imposto       = total * 0.15;
 
   return (
     <div className="space-y-2 text-sm">
       <div className="flex items-center gap-2 text-slate-600">
         <TrendingUp className="w-3.5 h-3.5" />
-        <span>Repasse: <strong>{(percentual * 100).toFixed(1)}%</strong> do valor operado — split 60/40</span>
+        <span>Repasse: <strong>{(percentual * 100).toFixed(1)}%</strong> do valor operado</span>
       </div>
       <div>
         <label className="text-xs text-slate-500 mb-1 block">Valor estimado da operação (opcional)</label>
@@ -241,12 +242,20 @@ function CommissionPreview({ product, valorEstimado, onValorChange }) {
           placeholder="Ex: 10000" className="input text-sm py-2" inputMode="numeric" />
       </div>
       {valorNum > 0 ? (
-        <div className="bg-white/70 rounded-xl p-3 space-y-1 border border-white/80">
-          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Você recebe aproximadamente</p>
+        <div className="bg-white/70 rounded-xl p-3 space-y-2 border border-white/80">
+          <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Sua comissão estimada</p>
           <p className="text-xl font-bold text-slate-900">{fmt(funcionario)}</p>
-          <p className="text-xs text-slate-500">
-            de {fmt(total)} total · {fmt(contabilidade)} para a contabilidade
-          </p>
+          <p className="text-xs text-slate-500">51% do total de {fmt(total)}</p>
+          <div className="border-t border-slate-200/80 pt-2 space-y-1">
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>Contabilidade (34%)</span>
+              <span>{fmt(contabilidade)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-slate-400 italic">
+              <span>Imposto (15%) — retido pela contabilidade</span>
+              <span>{fmt(imposto)}</span>
+            </div>
+          </div>
         </div>
       ) : (
         <p className="text-slate-400 text-xs">Digite o valor estimado para ver sua comissão</p>

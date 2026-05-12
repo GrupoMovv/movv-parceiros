@@ -13,9 +13,9 @@ const STATUS_MAP = {
 };
 
 const TYPE_MAP = {
-  employee:         'Funcionário',
-  accounting:       'Contabilidade',
-  accounting_full:  'Contabilidade',
+  employee:         'Funcionário (51%)',
+  accounting:       'Contabilidade (49%)',
+  accounting_full:  'Contabilidade (100%)',
   bpo_first:        'BPO 1º Mês',
   bpo_recurring:    'BPO Recorrente',
 };
@@ -195,11 +195,21 @@ export default function AdminCommissions() {
                     <p className="text-slate-900">{c.partner_name}</p>
                     <p className="text-[#C9A84C] font-mono">{c.partner_code}</p>
                   </td>
-                  <td className="py-3 px-4 text-slate-500 whitespace-nowrap text-xs">
-                    {TYPE_MAP[c.type] || c.type}
+                  <td className="py-3 px-4 text-xs">
+                    <p className="text-slate-600 whitespace-nowrap">{TYPE_MAP[c.type] || c.type}</p>
+                    {c.type === 'accounting' && (
+                      <p className="text-slate-400 italic whitespace-nowrap">
+                        34% líq. + 15% imp. = 49%
+                      </p>
+                    )}
                   </td>
-                  <td className="py-3 px-4 text-[#1B5E20] font-bold whitespace-nowrap">
-                    R$ {fmt(c.amount)}
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <p className="text-[#1B5E20] font-bold">R$ {fmt(c.amount)}</p>
+                    {c.type === 'accounting' && (
+                      <p className="text-slate-400 text-xs">
+                        imp. R$ {fmt(parseFloat(c.amount) * (15 / 49))}
+                      </p>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_MAP[c.status]?.cls}`}>

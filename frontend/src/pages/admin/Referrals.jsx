@@ -240,29 +240,59 @@ function Row({ label, value, mono }) {
 }
 
 function CommissionPreviewBox({ value, productType, commissionRate, bpoMonth }) {
-  let lines = [];
+  const fmt = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const pct = (commissionRate * 100).toFixed(1);
+
   if (productType === 'digital_certificate') {
     const total = value * commissionRate;
-    lines = [{ label: `Contabilidade (${(commissionRate * 100).toFixed(1)}%)`, amount: total }];
-  } else if (productType === 'bpo') {
-    const amount = bpoMonth === 1 ? 650 : 70;
-    lines = [{ label: `Parceiro (${bpoMonth === 1 ? '1º mês'  : 'Recorrente'})`, amount }];
-  } else {
-    const total = value * commissionRate;
-    lines = [
-      { label: `Funcionário (60% de ${(commissionRate * 100).toFixed(1)}%)`, amount: total * 0.60 },
-      { label: `Contabilidade (40% de ${(commissionRate * 100).toFixed(1)}%)`, amount: total * 0.40 },
-    ];
+    return (
+      <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-xl p-3 space-y-1.5">
+        <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider">Comissões a gerar</p>
+        <div className="flex justify-between text-sm">
+          <span className="text-slate-600">Contabilidade ({pct}%)</span>
+          <span className="text-gradient font-bold">R$ {fmt(total)}</span>
+        </div>
+      </div>
+    );
   }
+
+  if (productType === 'bpo') {
+    const amount = bpoMonth === 1 ? 650 : 70;
+    return (
+      <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-xl p-3 space-y-1.5">
+        <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider">Comissões a gerar</p>
+        <div className="flex justify-between text-sm">
+          <span className="text-slate-600">Parceiro ({bpoMonth === 1 ? '1º mês' : 'Recorrente'})</span>
+          <span className="text-gradient font-bold">R$ {fmt(amount)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const total       = value * commissionRate;
+  const funcionario = total * 0.51;
+  const contab      = total * 0.34;
+  const imposto     = total * 0.15;
+
   return (
     <div className="bg-[#FDF8ED] border border-[#C9A84C]/30 rounded-xl p-3 space-y-1.5">
-      <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider">Comissões a gerar</p>
-      {lines.map(l => (
-        <div key={l.label} className="flex justify-between text-sm">
-          <span className="text-slate-600">{l.label}</span>
-          <span className="text-gradient font-bold">R$ {l.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-        </div>
-      ))}
+      <p className="text-[#C9A84C] text-xs font-semibold uppercase tracking-wider">Comissões a gerar — {pct}% do valor</p>
+      <div className="flex justify-between text-sm">
+        <span className="text-slate-600">Funcionário (51%)</span>
+        <span className="text-[#1B5E20] font-bold">R$ {fmt(funcionario)}</span>
+      </div>
+      <div className="flex justify-between text-sm">
+        <span className="text-slate-600">Contabilidade (34%)</span>
+        <span className="text-[#1B5E20] font-bold">R$ {fmt(contab)}</span>
+      </div>
+      <div className="flex justify-between text-sm border-t border-[#C9A84C]/20 pt-1.5 mt-0.5">
+        <span className="text-slate-400 text-xs italic">Imposto (15%) — retido pela contabilidade</span>
+        <span className="text-slate-400 text-xs font-medium">R$ {fmt(imposto)}</span>
+      </div>
+      <div className="flex justify-between text-sm border-t border-[#C9A84C]/30 pt-1.5 font-semibold">
+        <span className="text-slate-700">Total (100%)</span>
+        <span className="text-gradient font-bold">R$ {fmt(total)}</span>
+      </div>
     </div>
   );
 }

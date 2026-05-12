@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileText, TrendingUp, Filter, ChevronDown } from 'lucide-react';
+import { FileText, TrendingUp, Filter, ChevronDown, Info } from 'lucide-react';
 
 const TYPE_LABELS = {
-  employee:        'Funcionário (60%)',
-  accounting:      'Contabilidade (40%)',
+  employee:        'Funcionário (51%)',
+  accounting:      'Contabilidade (49%)',
   accounting_full: 'Cert. Digital (100%)',
-  bpo_first:       'BPO 1º Mês (50%)',
-  bpo_recurring:   'BPO Recorrente (5%)',
+  bpo_first:       'BPO 1º Mês',
+  bpo_recurring:   'BPO Recorrente',
 };
 
 const STATUS_MAP = {
@@ -59,6 +59,14 @@ export default function Statement() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Extrato de Comissões</h1>
         <p className="text-slate-500 text-sm mt-1">Histórico completo por mês e por produto</p>
+      </div>
+
+      {/* Info banner novo modelo */}
+      <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+        <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+        <p className="text-blue-700 text-sm">
+          <strong>Modelo de comissão:</strong> Funcionário recebe <strong>51%</strong> · Contabilidade recebe <strong>49%</strong> (34% líquido + 15% imposto). A contabilidade recebe o total via PIX e é responsável pela distribuição ao funcionário e pelo pagamento dos tributos.
+        </p>
       </div>
 
       {/* Summary cards */}

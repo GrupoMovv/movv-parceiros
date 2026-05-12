@@ -108,6 +108,7 @@ export default function AdminPayments() {
                   <p className="text-[#1B5E20] font-bold text-xl">
                     R$ {parseFloat(p.pending_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
+                  <p className="text-slate-400 text-xs mt-0.5">51% func. · 34% cont. · 15% imp.</p>
                   <button onClick={() => openPay(p)} className="btn-primary mt-2 text-sm flex items-center gap-1.5">
                     <CreditCard className="w-3.5 h-3.5" /> Registrar PIX
                   </button>
