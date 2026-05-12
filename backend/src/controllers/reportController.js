@@ -64,7 +64,7 @@ async function getMonthlyStatement(req, res) {
 
     const referrals = refRes.rows.map(r => {
       const total = parseFloat(r.total_commission);
-      const isEmployee = r.employee_parent_id === accId;
+      const isEmployee = parseInt(r.employee_parent_id) === accId;
       return {
         protocol:         r.protocol,
         client_name:      r.client_name,
