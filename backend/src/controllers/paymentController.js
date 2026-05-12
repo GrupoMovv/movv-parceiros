@@ -41,6 +41,14 @@ async function registerPayment(req, res) {
 
   const receiptFile = req.file ? req.file.filename : null;
 
+  // commission_ids chega como string JSON via FormData (ex: "[9,10]") — precisa ser parseado
+  let ids = null;
+  if (commission_ids) {
+    ids = Array.isArray(commission_ids)
+      ? commission_ids.map(Number)
+      : JSON.parse(commission_ids).map(Number);
+  }
+
   try {
     await db.query('BEGIN');
     const payResult = await db.query(
@@ -51,15 +59,15 @@ async function registerPayment(req, res) {
         amount,
         payment_date || new Date().toISOString().slice(0, 10),
         reference_month,
-        commission_ids || null,
+        ids,
         receiptFile,
       ]
     );
 
-    if (commission_ids?.length) {
+    if (ids?.length) {
       await db.query(
         `UPDATE commissions SET status='paid' WHERE id = ANY($1) AND partner_id = $2`,
-        [commission_ids, partner_id]
+        [ids, partner_id]
       );
     }
     await db.query('COMMIT');
