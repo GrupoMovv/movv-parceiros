@@ -3,8 +3,9 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CreditCard, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
+import { CreditCard, CheckCircle2, AlertCircle, Calendar, FileDown, Loader2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
+import { generateMonthlyReport } from '../../utils/generateReport';
 
 function buildMonthOptions() {
   const opts = [];
@@ -24,6 +25,7 @@ export default function AdminPayments() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ reference_month: '', payment_date: '', receipt: null });
   const [saving, setSaving] = useState(false);
+  const [reportLoading, setReportLoading] = useState(null); // payment id being generated
   const months = buildMonthOptions();
 
   useEffect(() => { load(); }, []);
@@ -48,6 +50,18 @@ export default function AdminPayments() {
       receipt: null,
     });
     setModal(true);
+  }
+
+  async function handleGenerateReport(pay) {
+    setReportLoading(pay.id);
+    try {
+      const res = await api.get(`/reports/monthly-statement?accounting_id=${pay.partner_id}&month=${pay.reference_month}`);
+      await generateMonthlyReport(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao gerar relatório');
+    } finally {
+      setReportLoading(null);
+    }
   }
 
   async function handlePay() {
@@ -135,7 +149,7 @@ export default function AdminPayments() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  {['Data','Parceiro','Código','Chave PIX','Mês Ref.','Valor','Comprovante'].map(h => (
+                  {['Data','Parceiro','Código','Chave PIX','Mês Ref.','Valor','Comprovante','Relatório'].map(h => (
                     <th key={h} className="text-left text-slate-500 font-medium pb-2 pr-4 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -168,6 +182,20 @@ export default function AdminPayments() {
                       ) : (
                         <span className="text-slate-300 text-xs">—</span>
                       )}
+                    </td>
+                    <td className="py-3">
+                      <button
+                        onClick={() => handleGenerateReport(pay)}
+                        disabled={reportLoading === pay.id}
+                        title="Baixar Relatório Mensal PDF"
+                        className="flex items-center gap-1 text-xs text-[#4A0E8F] hover:text-purple-800 border border-purple-200 hover:border-purple-300 bg-purple-50 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading === pay.id
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <FileDown className="w-3 h-3" />
+                        }
+                        PDF
+                      </button>
                     </td>
                   </tr>
                 ))}

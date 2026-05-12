@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileText, TrendingUp, Filter, ChevronDown, Info } from 'lucide-react';
+import { FileText, TrendingUp, Filter, ChevronDown, Info, Download, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { generateMonthlyReport } from '../utils/generateReport';
 
 const TYPE_LABELS = {
   employee:        'Funcionário (51%)',
@@ -32,11 +34,14 @@ function buildMonthOptions() {
 }
 
 export default function Statement() {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState('');
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const months = buildMonthOptions();
+  const isAccounting = user?.type === 'accounting' || user?.is_admin;
 
   useEffect(() => {
     setLoading(true);
@@ -54,11 +59,52 @@ export default function Statement() {
   const totalApproved = items.filter(i => i.status === 'approved').reduce((a, b) => a + parseFloat(b.amount), 0);
   const totalPaid     = items.filter(i => i.status === 'paid').reduce((a, b) => a + parseFloat(b.amount), 0);
 
+  async function downloadReport() {
+    const targetMonth = month || new Date().toISOString().slice(0, 7);
+    const accountingId = user?.is_admin ? user?.id : user?.id;
+    setGeneratingPdf(true);
+    try {
+      const res = await api.get(`/reports/monthly-statement?accounting_id=${accountingId}&month=${targetMonth}`);
+      await generateMonthlyReport(res.data);
+    } catch (err) {
+      const { toast } = await import('react-hot-toast');
+      toast.error(err.response?.data?.error || 'Erro ao gerar relatório');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Extrato de Comissões</h1>
-        <p className="text-slate-500 text-sm mt-1">Histórico completo por mês e por produto</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Extrato de Comissões</h1>
+          <p className="text-slate-500 text-sm mt-1">Histórico completo por mês e por produto</p>
+        </div>
+        {isAccounting && (
+          <div className="flex items-center gap-2">
+            <select
+              value={month}
+              onChange={e => setMonth(e.target.value)}
+              className="input text-sm py-2 appearance-none w-44"
+            >
+              <option value="">Mês atual</option>
+              {months.map(m => (
+                <option key={m.value} value={m.value} className="capitalize">{m.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={downloadReport}
+              disabled={generatingPdf}
+              className="btn-primary flex items-center gap-2 whitespace-nowrap py-2"
+            >
+              {generatingPdf
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando...</>
+                : <><Download className="w-4 h-4" /> Relatório PDF</>
+              }
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Info banner novo modelo */}
