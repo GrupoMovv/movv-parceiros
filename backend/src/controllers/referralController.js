@@ -80,6 +80,7 @@ async function confirmSale(req, res) {
   try {
     const refResult = await db.query(
       `SELECT r.*, pr.type AS product_type, pr.name AS product_name,
+              pr.percentual_repasse, pr.commission_rate,
               p.type AS partner_type, p.parent_id
        FROM referrals r
        JOIN products pr ON pr.id = r.product_id
@@ -101,7 +102,7 @@ async function confirmSale(req, res) {
     }
 
     const partner = { id: referral.partner_id, type: referral.partner_type, parent_id: referral.parent_id };
-    const product = { type: referral.product_type };
+    const product = { type: referral.product_type, percentual_repasse: referral.percentual_repasse, commission_rate: referral.commission_rate };
     const commissions = calculateCommissions(product, operated_value, partner, parentPartner, bpo_month_count || 1);
 
     const currentMonth = new Date().toISOString().slice(0, 7);
