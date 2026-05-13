@@ -15,8 +15,11 @@ async function getMonthlyStatement(req, res) {
 
   try {
     // 1. Accounting partner info
+    // Admins may generate reports for any partner; non-admins are limited to accounting-type partners.
     const accRes = await db.query(
-      `SELECT id, name, code, email, pix_key FROM partners WHERE id = $1 AND type = 'accounting'`,
+      req.user.is_admin
+        ? `SELECT id, name, code, email, pix_key FROM partners WHERE id = $1`
+        : `SELECT id, name, code, email, pix_key FROM partners WHERE id = $1 AND type = 'accounting'`,
       [accId]
     );
     if (!accRes.rows[0]) return res.status(404).json({ error: 'Contabilidade não encontrada' });

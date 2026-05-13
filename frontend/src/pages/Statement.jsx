@@ -61,7 +61,7 @@ export default function Statement() {
 
   async function downloadReport() {
     const targetMonth = month || new Date().toISOString().slice(0, 7);
-    const accountingId = user?.is_admin ? user?.id : user?.id;
+    const accountingId = user?.id;
     setGeneratingPdf(true);
     try {
       const res = await api.get(`/reports/monthly-statement?accounting_id=${accountingId}&month=${targetMonth}`);
