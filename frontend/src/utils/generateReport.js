@@ -25,9 +25,25 @@ const toNum = v => {
 
 const fmt = v => `R$ ${toNum(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
+// Converte "YYYY-MM" para "Maio/2026" usando horario local para evitar
+// bug de fuso: new Date("2026-05-02") em UTC-3 = 30/abril as 21h.
 const fmtMonth = m => {
-  const label = format(new Date(m + '-02'), 'MMMM/yyyy', { locale: ptBR });
+  const [year, mon] = (m || '').split('-').map(Number);
+  if (!year || !mon) return m || '';
+  const label = format(new Date(year, mon - 1, 1), 'MMMM/yyyy', { locale: ptBR });
   return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
+// Parseia qualquer representacao de data (ISO com Z, ISO sem Z, YYYY-MM-DD)
+// e retorna um Date local valido, ou null se invalido.
+const parseDate = str => {
+  if (!str) return null;
+  // Pega so a parte da data (antes do T) para evitar ambiguidade de fuso
+  const datePart = String(str).split('T')[0];
+  const [y, mo, d] = datePart.split('-').map(Number);
+  if (!y || !mo || !d) return null;
+  const dt = new Date(y, mo - 1, d);
+  return isNaN(dt.getTime()) ? null : dt;
 };
 
 async function loadLogoBase64(url) {
@@ -113,7 +129,8 @@ export async function generateMonthlyReport(data) {
     doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy')}`, 16, y + 20);
 
     if (payment) {
-      const datePay = format(new Date(payment.payment_date + 'T12:00:00'), 'dd/MM/yyyy');
+      const dtPay = parseDate(payment.payment_date);
+      const datePay = dtPay ? format(dtPay, 'dd/MM/yyyy') : '—';
       doc.text(`Pagamento PIX registrado: ${datePay}`, W / 2, y + 14);
       doc.setTextColor(...C.green);
       doc.setFont('helvetica', 'bold');
