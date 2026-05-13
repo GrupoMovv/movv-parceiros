@@ -92,7 +92,7 @@ export default function MyEmployees() {
       `📧 *Email:* ${cred.email}`,
       `🔒 *Senha:* ${cred.plain_password}`,
       '',
-      '🌐 Acesse o portal pelo link recebido pela equipe Movv.',
+      '🌐 Acesse: https://movv-parceiros.onrender.com',
     ].join('\n');
   }
 
