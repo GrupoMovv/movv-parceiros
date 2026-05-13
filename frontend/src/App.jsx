@@ -7,6 +7,7 @@ import Statement from './pages/Statement';
 import NewReferral from './pages/NewReferral';
 import MaterialApoio from './pages/MaterialApoio';
 import DiretaCertificacao from './pages/DiretaCertificacao';
+import MyEmployees from './pages/MyEmployees';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPartners from './pages/admin/Partners';
 import AdminReferrals from './pages/admin/Referrals';
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Dashboard />} />
           <Route path="extrato"              element={<Statement />} />
+          <Route path="meus-funcionarios"   element={<RequireAccounting><MyEmployees /></RequireAccounting>} />
           <Route path="indicar"              element={<NewReferral />} />
           <Route path="material-apoio"       element={<MaterialApoio />} />
           <Route path="direta-certificacao"  element={<RequireAccounting><DiretaCertificacao /></RequireAccounting>} />

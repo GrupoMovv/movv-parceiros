@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Lock, Hash } from 'lucide-react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 
 export default function Login() {
-  const [code, setCode] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const partner = await login(code.trim().toUpperCase(), password);
+      const partner = await login(identifier.trim(), password);
       toast.success(`Bem-vindo(a), ${partner.name.split(' ')[0]}!`);
       navigate(partner.is_admin ? '/admin' : '/');
     } catch (err) {
@@ -52,19 +52,20 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="label">Código do Parceiro</label>
+              <label className="label">Email, Código ou WhatsApp</label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  value={code}
-                  onChange={e => setCode(e.target.value)}
-                  placeholder="Ex: CONT-IT-001"
-                  className="input pl-10 uppercase tracking-widest"
+                  value={identifier}
+                  onChange={e => setIdentifier(e.target.value)}
+                  placeholder="exemplo@email.com ou CONT-IT-001"
+                  className="input pl-10"
                   required
                   autoFocus
                 />
               </div>
+              <p className="text-slate-400 text-xs mt-1">Use seu email, código de parceiro ou número de WhatsApp</p>
             </div>
 
             <div>

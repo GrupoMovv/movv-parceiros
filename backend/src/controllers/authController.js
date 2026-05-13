@@ -3,22 +3,29 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
 async function login(req, res) {
-  const { code, password } = req.body;
-  if (!code || !password) {
-    return res.status(400).json({ error: 'Código e senha são obrigatórios' });
+  const { identifier, password } = req.body;
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'Identificador e senha são obrigatórios' });
   }
+
+  const raw = identifier.trim();
+  const asCode      = raw.toUpperCase();
+  const asEmail     = raw.toLowerCase();
+  const asWhatsapp  = raw.replace(/\D/g, '');
 
   try {
     const result = await db.query(
       `SELECT p.*, pp.code AS parent_code, pp.name AS parent_name
        FROM partners p
        LEFT JOIN partners pp ON pp.id = p.parent_id
-       WHERE p.code = $1 AND p.is_active = true`,
-      [code.toUpperCase()]
+       WHERE (p.code = $1 OR p.email = $2 OR ($3 <> '' AND p.whatsapp = $3))
+         AND p.is_active = true
+       LIMIT 1`,
+      [asCode, asEmail, asWhatsapp]
     );
     const partner = result.rows[0];
     if (!partner) {
-      return res.status(401).json({ error: 'Código ou senha inválidos' });
+      return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
     const valid = await bcrypt.compare(password, partner.password_hash);

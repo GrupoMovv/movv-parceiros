@@ -19,7 +19,8 @@ app.use('/api/referrals', require('./routes/referrals'));
 app.use('/api/commissions', require('./routes/commissions'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/products', require('./routes/products'));
-app.use('/api/reports',  require('./routes/reports'));
+app.use('/api/reports',    require('./routes/reports'));
+app.use('/api/employees',  require('./routes/employees'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 

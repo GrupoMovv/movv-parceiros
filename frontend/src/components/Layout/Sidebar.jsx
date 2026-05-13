@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
-  Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck
+  Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -103,6 +103,11 @@ export default function Sidebar({ onClose }) {
           <NavItem key={to} to={to} icon={icon} label={label} onClose={onClose}
             end={to === '/' || to === '/admin'} />
         ))}
+
+        {/* Meus Funcionários — visível apenas para contabilidade (não admin) */}
+        {!user?.is_admin && user?.type === 'accounting' && (
+          <NavItem to="/meus-funcionarios" icon={UsersRound} label="Meus Funcionários" onClose={onClose} />
+        )}
 
         {/* Seção de recursos — visível a todos */}
         <div className="pt-3 mt-3 border-t border-white/10">

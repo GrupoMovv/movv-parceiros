@@ -20,8 +20,8 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  async function login(code, password) {
-    const res = await api.post('/auth/login', { code, password });
+  async function login(identifier, password) {
+    const res = await api.post('/auth/login', { identifier, password });
     const { token, partner } = res.data;
     localStorage.setItem('movv_token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
