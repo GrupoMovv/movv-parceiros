@@ -67,8 +67,10 @@ export default function Statement() {
       const res = await api.get(`/reports/monthly-statement?accounting_id=${accountingId}&month=${targetMonth}`);
       await generateMonthlyReport(res.data);
     } catch (err) {
+      console.error('[downloadReport] Erro ao gerar relatório:', err);
       const { toast } = await import('react-hot-toast');
-      toast.error(err.response?.data?.error || 'Erro ao gerar relatório');
+      const msg = err.response?.data?.error || err.message || 'Erro ao gerar relatório';
+      toast.error(msg);
     } finally {
       setGeneratingPdf(false);
     }

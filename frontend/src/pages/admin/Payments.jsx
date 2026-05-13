@@ -58,7 +58,8 @@ export default function AdminPayments() {
       const res = await api.get(`/reports/monthly-statement?accounting_id=${pay.partner_id}&month=${pay.reference_month}`);
       await generateMonthlyReport(res.data);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao gerar relatório');
+      console.error('[Payments] Erro ao gerar relatório:', err);
+      toast.error(err.response?.data?.error || err.message || 'Erro ao gerar relatório');
     } finally {
       setReportLoading(null);
     }
