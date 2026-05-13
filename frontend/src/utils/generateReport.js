@@ -46,17 +46,22 @@ const parseDate = str => {
   return isNaN(dt.getTime()) ? null : dt;
 };
 
-async function loadLogoBase64(url) {
+// Retorna { base64, imgW, imgH } com as dimensoes reais em pixels,
+// ou null em caso de falha. As dimensoes sao necessarias para calcular
+// o tamanho renderizado proporcional no PDF.
+async function loadLogo(url) {
   return new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
+        const imgW = img.naturalWidth  || img.width  || 1;
+        const imgH = img.naturalHeight || img.height || 1;
         const canvas = document.createElement('canvas');
-        canvas.width  = img.naturalWidth  || img.width  || 1;
-        canvas.height = img.naturalHeight || img.height || 1;
+        canvas.width  = imgW;
+        canvas.height = imgH;
         canvas.getContext('2d').drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
+        resolve({ base64: canvas.toDataURL('image/png'), imgW, imgH });
       } catch (e) {
         console.warn('[generateReport] Falha ao converter logo:', e);
         resolve(null);
@@ -84,20 +89,34 @@ export async function generateMonthlyReport(data) {
     const W   = doc.internal.pageSize.getWidth();
     const H   = doc.internal.pageSize.getHeight();
 
-    const logoBase64 = await loadLogoBase64('/logo-header.png');
+    const logo = await loadLogo('/logo-header.png');
 
     // ── HEADER BAND ──────────────────────────────────────────────────────────
+    const HEADER_H = 40; // mm
     doc.setFillColor(...C.purple);
-    doc.rect(0, 0, W, 40, 'F');
+    doc.rect(0, 0, W, HEADER_H, 'F');
 
-    if (logoBase64) {
+    // Logo: canto superior esquerdo, altura maxima 26mm, largura maxima 52mm,
+    // centralizada verticalmente dentro do header de 40mm.
+    if (logo) {
       try {
-        doc.addImage(logoBase64, 'PNG', 10, 7, 40, 0);
+        const MAX_H = 26; // mm — cabe em 40mm com ~7mm de margem topo/base
+        const MAX_W = 52; // mm — nao ultrapassa o terco esquerdo da pagina
+        const ratio = logo.imgW / logo.imgH;
+        let lh = MAX_H;
+        let lw = lh * ratio;
+        if (lw > MAX_W) { lw = MAX_W; lh = lw / ratio; }
+        const lx = 6;                        // margem esquerda
+        const ly = (HEADER_H - lh) / 2;     // centralizado verticalmente
+        doc.addImage(logo.base64, 'PNG', lx, ly, lw, lh);
       } catch (e) {
         console.warn('[generateReport] Falha ao inserir logo:', e);
       }
     }
 
+    // Titulo centralizado horizontalmente. Com a logo ocupando no maximo
+    // 58mm (lx=6 + MAX_W=52), e a pagina tendo 210mm, ha espaco suficiente
+    // para o titulo centralizado em W/2=105mm sem se sobrepor a logo.
     doc.setTextColor(...C.white);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
