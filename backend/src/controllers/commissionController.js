@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const emailService = require('../services/emailService');
 
 async function listCommissions(req, res) {
   try {
@@ -104,7 +105,20 @@ async function approveOne(req, res) {
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou já processada' });
-    return res.json(result.rows[0]);
+    const comm = result.rows[0];
+    db.query('SELECT name, email FROM partners WHERE id = $1', [comm.partner_id])
+      .then(({ rows }) => {
+        if (rows[0]) {
+          return emailService.enviarComissaoAprovada({
+            nome: rows[0].name,
+            email: rows[0].email,
+            valor: comm.amount,
+            mes: comm.reference_month,
+          });
+        }
+      })
+      .catch(err => console.error('[EMAIL]', err.message));
+    return res.json(comm);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });

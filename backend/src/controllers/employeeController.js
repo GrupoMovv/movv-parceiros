@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
+const emailService = require('../services/emailService');
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -52,7 +53,14 @@ async function createEmployee(req, res) {
        RETURNING id, code, name, email, type, whatsapp, pix_key, is_active, created_at`,
       [code, name, email, hash, whatsapp || null, pix_key || null, req.user.id]
     );
-    return res.status(201).json({ ...result.rows[0], plain_password: password });
+    const employee = result.rows[0];
+    emailService.enviarCredenciais({
+      nome: employee.name,
+      email: employee.email,
+      codigoAcesso: password,
+      whatsapp: employee.whatsapp,
+    }).catch(err => console.error('[EMAIL]', err.message));
+    return res.status(201).json({ ...employee, plain_password: password });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Email já cadastrado' });
     console.error(err);
@@ -102,7 +110,7 @@ async function toggleEmployee(req, res) {
 async function resendCredentials(req, res) {
   try {
     const own = await db.query(
-      `SELECT id, code, name, email FROM partners WHERE id = $1 AND parent_id = $2 AND type = 'employee'`,
+      `SELECT id, code, name, email, whatsapp FROM partners WHERE id = $1 AND parent_id = $2 AND type = 'employee'`,
       [req.params.id, req.user.id]
     );
     if (!own.rows[0]) return res.status(404).json({ error: 'Funcionário não encontrado' });
@@ -111,6 +119,13 @@ async function resendCredentials(req, res) {
     const password = generatePassword();
     const hash = await bcrypt.hash(password, 10);
     await db.query('UPDATE partners SET password_hash = $1 WHERE id = $2', [hash, employee.id]);
+
+    emailService.enviarCredenciais({
+      nome: employee.name,
+      email: employee.email,
+      codigoAcesso: password,
+      whatsapp: employee.whatsapp,
+    }).catch(err => console.error('[EMAIL]', err.message));
 
     return res.json({
       code: employee.code,

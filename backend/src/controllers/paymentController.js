@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const path = require('path');
+const emailService = require('../services/emailService');
 
 async function listPayments(req, res) {
   try {
@@ -71,7 +72,23 @@ async function registerPayment(req, res) {
       );
     }
     await db.query('COMMIT');
-    return res.status(201).json(payResult.rows[0]);
+    const payment = payResult.rows[0];
+
+    db.query('SELECT name, email FROM partners WHERE id = $1', [partner_id])
+      .then(({ rows }) => {
+        if (rows[0]) {
+          return emailService.enviarNotificacaoPagamento({
+            nome: rows[0].name,
+            email: rows[0].email,
+            valor: amount,
+            data: payment.payment_date,
+            mes: reference_month,
+          });
+        }
+      })
+      .catch(err => console.error('[EMAIL]', err.message));
+
+    return res.status(201).json(payment);
   } catch (err) {
     await db.query('ROLLBACK');
     console.error(err);

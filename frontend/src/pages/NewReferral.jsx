@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { UserPlus, Phone, Package, CheckCircle2, Copy, Clock, MessageSquare, TrendingUp } from 'lucide-react';
+import { UserPlus, Phone, Package, CheckCircle2, Copy, Clock, MessageSquare, TrendingUp, Mail } from 'lucide-react';
 
 const FAIXAS = {
   alta:     { label: 'ALTA',     titulo: 'Faixa Alta — 1,5%',      badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-300', panelCls: 'bg-emerald-50 border-emerald-200' },
@@ -15,7 +15,7 @@ const FAIXA_ORDER = ['alta', 'media', 'baixa', 'especial'];
 
 export default function NewReferral() {
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ client_name: '', client_whatsapp: '', product_id: '', valor_estimado: '' });
+  const [form, setForm] = useState({ client_name: '', client_whatsapp: '', client_email: '', product_id: '', valor_estimado: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
@@ -58,6 +58,7 @@ export default function NewReferral() {
         client_name: form.client_name,
         client_whatsapp: form.client_whatsapp.replace(/\D/g, ''),
         product_id: parseInt(form.product_id),
+        ...(form.client_email.trim() && { client_email: form.client_email.trim() }),
       });
       setSuccess(res.data);
       toast.success('Indicação registrada! WhatsApp enviado ao cliente.');
@@ -75,7 +76,7 @@ export default function NewReferral() {
 
   function reset() {
     setSuccess(null);
-    setForm({ client_name: '', client_whatsapp: '', product_id: '', valor_estimado: '' });
+    setForm({ client_name: '', client_whatsapp: '', client_email: '', product_id: '', valor_estimado: '' });
   }
 
   if (success) {
@@ -110,6 +111,12 @@ export default function NewReferral() {
             <MessageSquare className="w-4 h-4 flex-shrink-0" />
             <span>Mensagem enviada via WhatsApp ao cliente</span>
           </div>
+          {success.client_email && (
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700">
+              <Mail className="w-4 h-4 flex-shrink-0" />
+              <span>Email com protocolo enviado para <strong>{success.client_email}</strong></span>
+            </div>
+          )}
           <div className="flex gap-3">
             <button onClick={reset} className="btn-primary flex-1">Nova Indicação</button>
             <button onClick={() => navigate('/')} className="btn-secondary flex-1">Ir ao Painel</button>
@@ -146,6 +153,16 @@ export default function NewReferral() {
               placeholder="(64) 99999-9999" className="input pl-10" required inputMode="numeric" />
           </div>
           <p className="text-slate-400 text-xs mt-1">A mensagem de protocolo será enviada automaticamente</p>
+        </div>
+
+        <div>
+          <label className="label">Email do cliente <span className="text-slate-400 font-normal">(opcional)</span></label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input name="client_email" type="email" value={form.client_email} onChange={handleChange}
+              placeholder="cliente@email.com" className="input pl-10" />
+          </div>
+          <p className="text-slate-400 text-xs mt-1">Se informado, envia email com os dados da indicação ao cliente</p>
         </div>
 
         <div>

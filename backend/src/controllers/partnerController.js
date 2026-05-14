@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
+const emailService = require('../services/emailService');
 
 async function listPartners(req, res) {
   try {
@@ -67,7 +68,14 @@ async function createPartner(req, res) {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, code, name, email, type, whatsapp, pix_key, is_admin, is_active, created_at`,
       [code, name, email, hash, type, whatsapp, pix_key, parent_id || null, is_admin || false]
     );
-    return res.status(201).json(result.rows[0]);
+    const partner = result.rows[0];
+    emailService.enviarCredenciais({
+      nome: partner.name,
+      email: partner.email,
+      codigoAcesso: password,
+      whatsapp: partner.whatsapp,
+    }).catch(err => console.error('[EMAIL]', err.message));
+    return res.status(201).json(partner);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Email já cadastrado' });
     console.error(err);

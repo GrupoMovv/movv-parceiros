@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { generateProtocol, getExpirationDate } = require('../services/protocolService');
 const { sendWhatsAppMessage, buildProtocolMessage } = require('../services/zapApiService');
 const { calculateCommissions } = require('../services/commissionService');
+const emailService = require('../services/emailService');
 
 async function listReferrals(req, res) {
   try {
@@ -40,7 +41,7 @@ async function listReferrals(req, res) {
 }
 
 async function createReferral(req, res) {
-  const { client_name, client_whatsapp, product_id } = req.body;
+  const { client_name, client_whatsapp, product_id, client_email } = req.body;
   if (!client_name || !client_whatsapp || !product_id) {
     return res.status(400).json({ error: 'Nome, WhatsApp e produto são obrigatórios' });
   }
@@ -54,9 +55,9 @@ async function createReferral(req, res) {
     const expiresAt = getExpirationDate();
 
     const result = await db.query(
-      `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [protocol, req.user.id, client_name, client_whatsapp, product_id, expiresAt]
+      `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, client_email, product_id, expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [protocol, req.user.id, client_name, client_whatsapp, client_email || null, product_id, expiresAt]
     );
     const referral = result.rows[0];
 
@@ -64,6 +65,16 @@ async function createReferral(req, res) {
       client_name, protocol, product.name, req.user.name, expiresAt
     );
     sendWhatsAppMessage(client_whatsapp, message).catch(() => {});
+
+    if (client_email) {
+      emailService.enviarConfirmacaoIndicacao({
+        nome: client_name,
+        email: client_email,
+        protocolo: protocol,
+        produto: product.name,
+        validade: expiresAt,
+      }).catch(err => console.error('[EMAIL]', err.message));
+    }
 
     return res.status(201).json({ ...referral, product_name: product.name });
   } catch (err) {
