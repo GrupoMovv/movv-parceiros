@@ -8,12 +8,15 @@ import NewReferral from './pages/NewReferral';
 import MaterialApoio from './pages/MaterialApoio';
 import DiretaCertificacao from './pages/DiretaCertificacao';
 import MyEmployees from './pages/MyEmployees';
+import MovvOffice from './pages/MovvOffice';
+import MovvCobrancas from './pages/MovvCobrancas';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPartners from './pages/admin/Partners';
 import AdminReferrals from './pages/admin/Referrals';
 import AdminCommissions from './pages/admin/Commissions';
 import AdminPayments from './pages/admin/Payments';
 import AdminProducts from './pages/admin/Products';
+import AdminInterest from './pages/admin/Interest';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -50,10 +53,13 @@ export default function App() {
           <Route path="indicar"              element={<NewReferral />} />
           <Route path="material-apoio"       element={<MaterialApoio />} />
           <Route path="direta-certificacao"  element={<RequireAccounting><DiretaCertificacao /></RequireAccounting>} />
+          <Route path="movv-office"          element={<MovvOffice />} />
+          <Route path="movv-cobrancas"       element={<MovvCobrancas />} />
           <Route path="admin"                element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="admin/parceiros"      element={<RequireAdmin><AdminPartners /></RequireAdmin>} />
           <Route path="admin/indicacoes"     element={<RequireAdmin><AdminReferrals /></RequireAdmin>} />
           <Route path="admin/comissoes"      element={<RequireAdmin><AdminCommissions /></RequireAdmin>} />
+          <Route path="admin/interesse"      element={<RequireAdmin><AdminInterest /></RequireAdmin>} />
           <Route path="admin/pagamentos"     element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
           <Route path="admin/produtos"       element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
         </Route>

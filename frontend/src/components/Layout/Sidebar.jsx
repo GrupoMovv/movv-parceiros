@@ -2,7 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
-  Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound
+  Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
+  Building2, TrendingUp, Sparkles
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -16,6 +17,7 @@ const adminLinks = [
   { to: '/admin/parceiros',    icon: Users,           label: 'Parceiros' },
   { to: '/admin/indicacoes',   icon: ClipboardList,   label: 'Indicações' },
   { to: '/admin/comissoes',    icon: Coins,           label: 'Comissões' },
+  { to: '/admin/interesse',    icon: Sparkles,        label: 'Interesses' },
   { to: '/admin/pagamentos',   icon: CreditCard,      label: 'Pagamentos' },
   { to: '/admin/produtos',     icon: Package,         label: 'Produtos' },
 ];
@@ -117,6 +119,54 @@ export default function Sidebar({ onClose }) {
             <NavItem to="/direta-certificacao" icon={ShieldCheck} label="Direta Certificação" onClose={onClose} />
           )}
         </div>
+
+        {/* Em Breve — visível a todos os parceiros */}
+        {!user?.is_admin && (
+          <div className="pt-3 mt-3 border-t border-white/10">
+            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Em Breve</p>
+            <NavLink
+              to="/movv-office"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                ${isActive
+                  ? 'bg-gold-gradient text-movv-900 shadow-gold'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white'}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Building2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
+                  <span className="flex-1">Movv Office</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
+                    BREVE
+                  </span>
+                </>
+              )}
+            </NavLink>
+            <NavLink
+              to="/movv-cobrancas"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                ${isActive
+                  ? 'bg-gold-gradient text-movv-900 shadow-gold'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white'}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
+                  <span className="flex-1">Movv Cobranças</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
+                    BREVE
+                  </span>
+                </>
+              )}
+            </NavLink>
+          </div>
+        )}
+
       </nav>
 
       {/* Logout */}
