@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Download, BookOpen, CheckCircle2, UserPlus, ClipboardList, Banknote,
-  ChevronDown, ChevronUp, MessageCircle, TrendingUp, Zap, Star, Info
+  ChevronDown, ChevronUp, MessageCircle, TrendingUp, Zap, Star, Info, AlertTriangle
 } from 'lucide-react';
 
 const FAIXAS = [
@@ -168,6 +168,109 @@ export default function MaterialApoio() {
               </ul>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Manual de Boas Práticas */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Manual de Boas Práticas — Repasse Legal ao Funcionário</h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Como a contabilidade pode repassar a comissão do funcionário seguindo a legislação trabalhista e fiscal
+          </p>
+        </div>
+
+        {/* Alerta vermelho */}
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 font-bold text-sm">ATENÇÃO: Pagamento por fora gera riscos sérios</p>
+            <p className="text-red-700 text-xs mt-1 leading-relaxed">
+              Repassar a comissão sem registro pode gerar reclamação trabalhista, autuação fiscal e responsabilização do escritório.
+              Sempre escolha um dos 3 modelos legais.
+            </p>
+          </div>
+        </div>
+
+        {/* Card de download */}
+        <div className="relative overflow-hidden rounded-2xl bg-movv-900 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
+          <div className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #C9A84C 0%, transparent 60%)' }} />
+          <div className="flex-1 relative">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-4 h-4 text-[#C9A84C]" />
+              <span className="text-[#C9A84C] text-xs font-bold uppercase tracking-widest">Manual Completo</span>
+            </div>
+            <h3 className="text-white text-xl md:text-2xl font-bold leading-tight">
+              Manual de Boas Práticas — Repasse Legal ao Funcionário
+            </h3>
+            <p className="text-white/60 text-sm mt-2">
+              Os 3 modelos legais de repasse, comparativo de encargos, exemplos práticos e orientações jurídicas para sua contabilidade.
+            </p>
+          </div>
+          <a
+            href="/manual-boas-praticas.pdf"
+            download
+            className="relative flex items-center gap-2 bg-gold-gradient text-movv-900 font-bold px-6 py-3 rounded-xl shadow-gold hover:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            <Download className="w-4 h-4" />
+            Baixar Manual Completo (PDF)
+          </a>
+        </div>
+
+        {/* 3 cards dos modelos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Modelo 1 — Folha */}
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white">Modelo 1</span>
+              <span className="text-xs text-emerald-700 font-medium">Mais simples</span>
+            </div>
+            <p className="text-emerald-900 font-bold text-base">Folha de Pagamento</p>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              Lance a comissão no holerite como <strong>Prêmio por Produtividade</strong> ou Comissão.
+              Tem encargos (INSS, FGTS, IR) mas é 100% legalizado e operacionalmente simples.
+            </p>
+          </div>
+
+          {/* Modelo 2 — PLR (Recomendado) */}
+          <div className="rounded-2xl border-2 border-[#C9A84C] bg-yellow-50 p-5 space-y-3 relative">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C9A84C] text-[#4A0E8F] text-[10px] font-extrabold px-3 py-1 rounded-full tracking-wider whitespace-nowrap">
+              ⭐ RECOMENDADO
+            </span>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-600 text-white">Modelo 2</span>
+              <span className="text-xs text-yellow-700 font-medium">Mais econômico</span>
+            </div>
+            <p className="text-yellow-900 font-bold text-base">PLR Semestral</p>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              Acumule as comissões e pague via <strong>Participação nos Lucros</strong> (Lei 10.101/2000).
+              Sem INSS, sem FGTS, IR diferenciado. Até R$ 7.640/ano é <strong>ISENTO de IR</strong>.
+            </p>
+          </div>
+
+          {/* Modelo 3 — MEI */}
+          <div className="rounded-2xl border border-purple-200 bg-purple-50 p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-700 text-white">Modelo 3</span>
+              <span className="text-xs text-purple-700 font-medium">Mais flexível</span>
+            </div>
+            <p className="text-purple-900 font-bold text-base">MEI do Funcionário</p>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              Funcionário abre MEI e emite NF mensal para a contabilidade. Sem vínculo trabalhista extra,
+              mas atenção à pejotização. Recomendado quando há várias fontes de renda.
+            </p>
+          </div>
+        </div>
+
+        {/* Box disclaimer dourado */}
+        <div className="flex items-start gap-3 rounded-xl border border-[#C9A84C] p-4" style={{ background: '#C9A84C18' }}>
+          <Info className="w-4 h-4 text-[#C9A84C] flex-shrink-0 mt-0.5" />
+          <p className="text-slate-700 text-xs leading-relaxed">
+            <strong>Importante:</strong> Este manual é um guia geral. Cada contabilidade deve avaliar com seu departamento
+            jurídico/contábil qual modelo se encaixa melhor à sua estrutura tributária e operacional.
+            O Grupo Movv não se responsabiliza pela escolha do modelo de repasse interno.
+          </p>
         </div>
       </section>
 
