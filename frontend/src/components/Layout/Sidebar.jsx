@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
-  Building2, TrendingUp, Sparkles
+  Building2, TrendingUp, Sparkles, ShoppingCart
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -158,6 +158,26 @@ export default function Sidebar({ onClose }) {
                 <>
                   <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
                   <span className="flex-1">Movv Cobranças</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
+                    BREVE
+                  </span>
+                </>
+              )}
+            </NavLink>
+            <NavLink
+              to="/movv-suprimentos"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                ${isActive
+                  ? 'bg-gold-gradient text-movv-900 shadow-gold'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white'}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <ShoppingCart className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
+                  <span className="flex-1">Movv Suprimentos</span>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
                     BREVE
                   </span>

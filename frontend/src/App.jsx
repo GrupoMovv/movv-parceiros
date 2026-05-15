@@ -10,6 +10,7 @@ import DiretaCertificacao from './pages/DiretaCertificacao';
 import MyEmployees from './pages/MyEmployees';
 import MovvOffice from './pages/MovvOffice';
 import MovvCobrancas from './pages/MovvCobrancas';
+import MovvSuprimentos from './pages/MovvSuprimentos';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPartners from './pages/admin/Partners';
 import AdminReferrals from './pages/admin/Referrals';
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="direta-certificacao"  element={<RequireAccounting><DiretaCertificacao /></RequireAccounting>} />
           <Route path="movv-office"          element={<MovvOffice />} />
           <Route path="movv-cobrancas"       element={<MovvCobrancas />} />
+          <Route path="movv-suprimentos"     element={<MovvSuprimentos />} />
           <Route path="admin"                element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="admin/parceiros"      element={<RequireAdmin><AdminPartners /></RequireAdmin>} />
           <Route path="admin/indicacoes"     element={<RequireAdmin><AdminReferrals /></RequireAdmin>} />

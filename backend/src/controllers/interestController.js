@@ -2,8 +2,8 @@ const db = require('../config/database');
 
 async function registerInterest(req, res) {
   const { service } = req.body;
-  if (!service || !['office', 'collections'].includes(service)) {
-    return res.status(400).json({ error: 'Serviço inválido. Use "office" ou "collections".' });
+  if (!service || !['office', 'collections', 'supplies'].includes(service)) {
+    return res.status(400).json({ error: 'Serviço inválido. Use "office", "collections" ou "supplies".' });
   }
   try {
     const result = await db.query(
