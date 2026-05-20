@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
-  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign
+  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -196,6 +196,11 @@ export default function Sidebar({ onClose }) {
             </NavLink>
           </div>
         )}
+
+        {/* Movv Café — visível a todos os perfis */}
+        <div className="pt-3 mt-3 border-t border-white/10">
+          <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
+        </div>
 
       </nav>
 

@@ -20,6 +20,7 @@ import AdminProducts from './pages/admin/Products';
 import AdminInterest from './pages/admin/Interest';
 import AdminInternalCommissions from './pages/admin/InternalCommissions';
 import MinhasComissoes from './pages/MinhasComissoes';
+import MovvCafe from './pages/MovvCafe';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
           <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
+          <Route path="movv-cafe"                element={<MovvCafe />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
