@@ -8,13 +8,38 @@ async function login(req, res) {
     return res.status(400).json({ error: 'Identificador e senha são obrigatórios' });
   }
 
-  const raw = identifier.trim();
-  const asCode      = raw.toUpperCase();
-  const asEmail     = raw.toLowerCase();
-  const asWhatsapp  = raw.replace(/\D/g, '');
+  const raw        = identifier.trim();
+  const asEmail    = raw.toLowerCase();
+  const asWhatsapp = raw.replace(/\D/g, '');
 
   try {
-    const result = await db.query(
+    // 1. Tenta colaborador interno (email ou whatsapp)
+    const internalResult = await db.query(
+      `SELECT * FROM internal_collaborators
+       WHERE (email = $1 OR ($2 <> '' AND whatsapp = $2))
+         AND active = true
+       LIMIT 1`,
+      [asEmail, asWhatsapp]
+    );
+    const internalUser = internalResult.rows[0];
+
+    if (internalUser) {
+      const valid = await bcrypt.compare(password, internalUser.password_hash);
+      if (!valid) return res.status(401).json({ error: 'Credenciais inválidas' });
+
+      const token = jwt.sign(
+        { id: internalUser.id, userType: 'internal', role: internalUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      const { password_hash, ...safe } = internalUser;
+      return res.json({ token, partner: { ...safe, type: 'internal', is_admin: false, code: null } });
+    }
+
+    // 2. Tenta parceiro (código, email ou whatsapp)
+    const asCode = raw.toUpperCase();
+    const partnerResult = await db.query(
       `SELECT p.*, pp.code AS parent_code, pp.name AS parent_name
        FROM partners p
        LEFT JOIN partners pp ON pp.id = p.parent_id
@@ -23,18 +48,14 @@ async function login(req, res) {
        LIMIT 1`,
       [asCode, asEmail, asWhatsapp]
     );
-    const partner = result.rows[0];
-    if (!partner) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
+    const partner = partnerResult.rows[0];
+    if (!partner) return res.status(401).json({ error: 'Credenciais inválidas' });
 
     const valid = await bcrypt.compare(password, partner.password_hash);
-    if (!valid) {
-      return res.status(401).json({ error: 'Código ou senha inválidos' });
-    }
+    if (!valid) return res.status(401).json({ error: 'Código ou senha inválidos' });
 
     const token = jwt.sign(
-      { id: partner.id, code: partner.code, is_admin: partner.is_admin },
+      { id: partner.id, userType: 'partner', code: partner.code, is_admin: partner.is_admin },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -49,6 +70,15 @@ async function login(req, res) {
 
 async function me(req, res) {
   try {
+    if (req.user.type === 'internal') {
+      const result = await db.query(
+        'SELECT id, name, email, role, whatsapp, pix_key, base_salary, active, created_at FROM internal_collaborators WHERE id = $1',
+        [req.user.id]
+      );
+      const u = result.rows[0];
+      return res.json({ ...u, type: 'internal', is_admin: false, code: null });
+    }
+
     const result = await db.query(
       `SELECT p.id, p.code, p.name, p.email, p.type, p.whatsapp, p.pix_key,
               p.is_admin, p.is_active, p.created_at,
@@ -72,12 +102,19 @@ async function changePassword(req, res) {
   }
 
   try {
-    const result = await db.query('SELECT password_hash FROM partners WHERE id = $1', [req.user.id]);
-    const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
-    if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
-
-    const hash = await bcrypt.hash(newPassword, 10);
-    await db.query('UPDATE partners SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    if (req.user.type === 'internal') {
+      const result = await db.query('SELECT password_hash FROM internal_collaborators WHERE id = $1', [req.user.id]);
+      const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+      if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+      const hash = await bcrypt.hash(newPassword, 10);
+      await db.query('UPDATE internal_collaborators SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    } else {
+      const result = await db.query('SELECT password_hash FROM partners WHERE id = $1', [req.user.id]);
+      const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+      if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+      const hash = await bcrypt.hash(newPassword, 10);
+      await db.query('UPDATE partners SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    }
     return res.json({ message: 'Senha alterada com sucesso' });
   } catch (err) {
     console.error(err);

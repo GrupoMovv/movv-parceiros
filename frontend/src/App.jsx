@@ -18,6 +18,8 @@ import AdminCommissions from './pages/admin/Commissions';
 import AdminPayments from './pages/admin/Payments';
 import AdminProducts from './pages/admin/Products';
 import AdminInterest from './pages/admin/Interest';
+import AdminInternalCommissions from './pages/admin/InternalCommissions';
+import MinhasComissoes from './pages/MinhasComissoes';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -42,6 +44,12 @@ function RequireAccounting({ children }) {
   return children;
 }
 
+function RequireInternal({ children }) {
+  const { user } = useAuth();
+  if (user?.type !== 'internal') return <Navigate to="/" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -63,7 +71,9 @@ export default function App() {
           <Route path="admin/comissoes"      element={<RequireAdmin><AdminCommissions /></RequireAdmin>} />
           <Route path="admin/interesse"      element={<RequireAdmin><AdminInterest /></RequireAdmin>} />
           <Route path="admin/pagamentos"     element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
-          <Route path="admin/produtos"       element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
+          <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
+          <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
+          <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

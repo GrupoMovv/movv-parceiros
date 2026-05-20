@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
-  Building2, TrendingUp, Sparkles, ShoppingCart
+  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -13,13 +13,18 @@ const partnerLinks = [
 ];
 
 const adminLinks = [
-  { to: '/admin',              icon: LayoutDashboard, label: 'Visão Geral' },
-  { to: '/admin/parceiros',    icon: Users,           label: 'Parceiros' },
-  { to: '/admin/indicacoes',   icon: ClipboardList,   label: 'Indicações' },
-  { to: '/admin/comissoes',    icon: Coins,           label: 'Comissões' },
-  { to: '/admin/interesse',    icon: Sparkles,        label: 'Interesses' },
-  { to: '/admin/pagamentos',   icon: CreditCard,      label: 'Pagamentos' },
-  { to: '/admin/produtos',     icon: Package,         label: 'Produtos' },
+  { to: '/admin',                       icon: LayoutDashboard, label: 'Visão Geral' },
+  { to: '/admin/parceiros',             icon: Users,           label: 'Parceiros' },
+  { to: '/admin/indicacoes',            icon: ClipboardList,   label: 'Indicações' },
+  { to: '/admin/comissoes',             icon: Coins,           label: 'Comissões' },
+  { to: '/admin/comissoes-internas',    icon: DollarSign,      label: 'Comissões Internas' },
+  { to: '/admin/interesse',             icon: Sparkles,        label: 'Interesses' },
+  { to: '/admin/pagamentos',            icon: CreditCard,      label: 'Pagamentos' },
+  { to: '/admin/produtos',              icon: Package,         label: 'Produtos' },
+];
+
+const internalLinks = [
+  { to: '/minhas-comissoes', icon: DollarSign, label: 'Minhas Comissões' },
 ];
 
 function NavItem({ to, icon: Icon, label, onClose, end }) {
@@ -56,7 +61,8 @@ export default function Sidebar({ onClose }) {
   }
 
   const isAccounting = user?.is_admin || user?.type === 'accounting';
-  const mainLinks    = user?.is_admin ? adminLinks : partnerLinks;
+  const isInternal   = user?.type === 'internal';
+  const mainLinks    = user?.is_admin ? adminLinks : isInternal ? internalLinks : partnerLinks;
 
   const tierColor = {
     Bronze: 'text-amber-300', Prata: 'text-slate-300', Ouro: 'text-gold-300', Diamante: 'text-blue-300'
@@ -84,12 +90,14 @@ export default function Sidebar({ onClose }) {
       <div className="px-4 py-4 border-b border-white/10">
         <div className="bg-movv-800/60 rounded-xl p-3">
           <p className="text-white font-semibold text-sm truncate">{user?.name}</p>
-          <p className="text-gold-300 text-xs font-mono mt-0.5">{user?.code}</p>
+          {user?.code && <p className="text-gold-300 text-xs font-mono mt-0.5">{user?.code}</p>}
           <div className="flex items-center gap-1.5 mt-1.5">
             <span className={`text-xs font-medium ${tierColor[user?.tier] || 'text-amber-300'}`}>
               {user?.is_admin
                 ? '⚙ Administrador'
-                : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}
+                : isInternal
+                  ? (user?.role === 'manager_azul' ? '★ Gerente Azul' : '★ Comercial Azul + Direta')
+                  : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}
             </span>
           </div>
         </div>
@@ -106,22 +114,24 @@ export default function Sidebar({ onClose }) {
             end={to === '/' || to === '/admin'} />
         ))}
 
-        {/* Meus Funcionários — visível apenas para contabilidade (não admin) */}
-        {!user?.is_admin && user?.type === 'accounting' && (
+        {/* Meus Funcionários — visível apenas para contabilidade (não admin, não interno) */}
+        {!user?.is_admin && !isInternal && user?.type === 'accounting' && (
           <NavItem to="/meus-funcionarios" icon={UsersRound} label="Meus Funcionários" onClose={onClose} />
         )}
 
-        {/* Seção de recursos — visível a todos */}
-        <div className="pt-3 mt-3 border-t border-white/10">
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Recursos</p>
-          <NavItem to="/material-apoio" icon={BookOpen} label="Material de Apoio" onClose={onClose} />
-          {isAccounting && (
-            <NavItem to="/direta-certificacao" icon={ShieldCheck} label="Direta Certificação" onClose={onClose} />
-          )}
-        </div>
+        {/* Seção de recursos — visível a parceiros e admin, não a colaboradores internos */}
+        {!isInternal && (
+          <div className="pt-3 mt-3 border-t border-white/10">
+            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Recursos</p>
+            <NavItem to="/material-apoio" icon={BookOpen} label="Material de Apoio" onClose={onClose} />
+            {isAccounting && (
+              <NavItem to="/direta-certificacao" icon={ShieldCheck} label="Direta Certificação" onClose={onClose} />
+            )}
+          </div>
+        )}
 
-        {/* Em Breve — visível a todos os parceiros */}
-        {!user?.is_admin && (
+        {/* Em Breve — visível apenas a parceiros */}
+        {!user?.is_admin && !isInternal && (
           <div className="pt-3 mt-3 border-t border-white/10">
             <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Em Breve</p>
             <NavLink
