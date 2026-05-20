@@ -1,4 +1,5 @@
-import { Coffee, MapPin, Phone, ShoppingBag, Star, Leaf, Sparkles, Flame, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Coffee, MapPin, ShoppingBag, Star, Leaf, Sparkles, Flame, Package, ZoomIn, X } from 'lucide-react';
 
 const WA_BASE = 'https://wa.me/5564992917383';
 
@@ -6,6 +7,59 @@ const WA_UNIT_TRAD  = `${WA_BASE}?text=Ol%C3%A1!%20Tenho%20interesse%20em%20comp
 const WA_BULK_TRAD  = `${WA_BASE}?text=Ol%C3%A1!%20Tenho%20interesse%20em%20comprar%20no%20ATACADO%20(acima%20de%2020kg)%20o%20Caf%C3%A9%20de%20V%C3%B3%20Tradicional`;
 const WA_GOURMET    = `${WA_BASE}?text=Ol%C3%A1!%20Tenho%20interesse%20em%20comprar%20o%20Caf%C3%A9%20de%20V%C3%B3%20Gourmet%20500g%20(em%20graos)`;
 const WA_CONTACT    = `${WA_BASE}?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Caf%C3%A9%20de%20V%C3%B3`;
+
+// ─── Lightbox ─────────────────────────────────────────────────────────────────
+function Lightbox({ src, alt, onClose }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(true));
+    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Imagem ampliada"
+      onClick={onClose}
+      style={{ opacity: visible ? 1 : 0, transition: 'opacity 250ms ease' }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-10"
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ transform: visible ? 'scale(1)' : 'scale(0.94)', transition: 'transform 250ms ease' }}
+        className="relative"
+      >
+        {/* Botão fechar */}
+        <button
+          onClick={onClose}
+          aria-label="Fechar imagem"
+          className="absolute -top-4 -right-4 z-10 w-10 h-10 rounded-full bg-stone-900 border border-white/20 flex items-center justify-center text-white hover:bg-amber-800 transition-colors shadow-xl"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+        />
+
+        <p className="text-center text-white/50 text-xs mt-3 select-none">
+          {alt} · clique fora ou ESC para fechar
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const badges = [
   { icon: <Leaf className="w-4 h-4" />,     label: '100% Arábica Selecionado' },
@@ -15,6 +69,8 @@ const badges = [
 ];
 
 export default function MovvCafe() {
+  const [lightbox, setLightbox] = useState(null); // { src, alt }
+
   return (
     <div className="max-w-4xl mx-auto pb-12 space-y-10">
 
@@ -91,7 +147,14 @@ export default function MovvCafe() {
           {/* Card Tradicional */}
           <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-md flex flex-col">
             {/* Imagem */}
-            <div className="h-52 bg-gradient-to-br from-stone-100 to-amber-100 flex items-center justify-center overflow-hidden">
+            <div
+              className="h-52 bg-gradient-to-br from-stone-100 to-amber-100 flex items-center justify-center overflow-hidden relative group cursor-zoom-in"
+              onClick={() => setLightbox({ src: '/cafe-tradicional.jpg', alt: 'Café de Vó Tradicional' })}
+              role="button"
+              tabIndex={0}
+              aria-label="Ampliar imagem do Café Tradicional"
+              onKeyDown={e => e.key === 'Enter' && setLightbox({ src: '/cafe-tradicional.jpg', alt: 'Café de Vó Tradicional' })}
+            >
               <img
                 src="/cafe-tradicional.jpg"
                 alt="Café de Vó Tradicional"
@@ -100,6 +163,12 @@ export default function MovvCafe() {
               />
               <div className="hidden w-full h-full items-center justify-center">
                 <Coffee className="w-20 h-20 text-stone-400" />
+              </div>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors pointer-events-none flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-full p-2.5">
+                  <ZoomIn className="w-6 h-6 text-white" />
+                </div>
               </div>
             </div>
 
@@ -151,7 +220,14 @@ export default function MovvCafe() {
           {/* Card Gourmet */}
           <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-md flex flex-col">
             {/* Imagem */}
-            <div className="h-52 bg-gradient-to-br from-stone-200 to-stone-100 flex items-center justify-center overflow-hidden relative">
+            <div
+              className="h-52 bg-gradient-to-br from-stone-200 to-stone-100 flex items-center justify-center overflow-hidden relative group cursor-zoom-in"
+              onClick={() => setLightbox({ src: '/cafe-gourmet.jpg', alt: 'Café de Vó Gourmet' })}
+              role="button"
+              tabIndex={0}
+              aria-label="Ampliar imagem do Café Gourmet"
+              onKeyDown={e => e.key === 'Enter' && setLightbox({ src: '/cafe-gourmet.jpg', alt: 'Café de Vó Gourmet' })}
+            >
               <img
                 src="/cafe-gourmet.jpg"
                 alt="Café de Vó Gourmet"
@@ -162,9 +238,15 @@ export default function MovvCafe() {
                 <Coffee className="w-20 h-20 text-stone-400" />
               </div>
               {/* Selo premium */}
-              <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+              <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow z-10">
                 <Star className="w-3 h-3" /> Premium
               </span>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors pointer-events-none flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-full p-2.5">
+                  <ZoomIn className="w-6 h-6 text-white" />
+                </div>
+              </div>
             </div>
 
             <div className="p-5 flex flex-col flex-1 gap-3">
@@ -276,5 +358,8 @@ export default function MovvCafe() {
       </div>
 
     </div>
+    {lightbox && (
+      <Lightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
+    )}
   );
 }
