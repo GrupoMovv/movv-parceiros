@@ -394,13 +394,15 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
       </div>
 
       <div>
-        <label className="label">Faturamento Bruto Azul (R$)</label>
-        <input type="number" min="0" step="0.01" className="input"
-          placeholder="Ex: 85000"
+        <label className="label">Faturamento Bruto Azul</label>
+        <CurrencyInput
           value={form.azul_revenue}
-          onChange={e => set('azul_revenue', e.target.value)} />
+          onChange={v => set('azul_revenue', v)}
+          placeholder="85.000,00"
+          className="input"
+        />
         <p className="text-xs text-slate-400 mt-1">
-          Base = {((parseFloat(form.azul_revenue) || 0) * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
+          Base = {(form.azul_revenue * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
         </p>
       </div>
 
@@ -413,7 +415,7 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
         </div>
         <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
           {(isPabline ? CURVA_PABLINE : CURVA_FERNANDO).map((tier, i) => {
-            const net    = (parseFloat(form.azul_revenue) || 0) * 0.80;
+            const net    = form.azul_revenue * 0.80;
             const active = net >= tier.min && net <= tier.max;
             return (
               <div key={i} className={`rounded-lg px-3 py-2 text-xs ${active ? 'bg-movv-gradient text-white font-bold' : 'bg-slate-50 text-slate-600'}`}>
@@ -434,32 +436,37 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Base via Contabilidade (R$)</label>
-              <input type="number" min="0" step="0.01" className="input"
-                placeholder="venda − custo − com. cont."
+              <label className="label">Base via Contabilidade</label>
+              <CurrencyInput
                 value={form.base_via_accounting}
-                onChange={e => set('base_via_accounting', e.target.value)} />
+                onChange={v => set('base_via_accounting', v)}
+                placeholder="venda − custo − com. cont."
+                className="input"
+              />
               <p className="text-xs text-emerald-600 mt-1 font-medium">
-                Fernando: {((parseFloat(form.base_via_accounting) || 0) * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                Fernando: {(form.base_via_accounting * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
             </div>
             <div>
-              <label className="label">Base Venda Direta (R$)</label>
-              <input type="number" min="0" step="0.01" className="input"
-                placeholder="venda − custo"
+              <label className="label">Base Venda Direta</label>
+              <CurrencyInput
                 value={form.base_via_direct}
-                onChange={e => set('base_via_direct', e.target.value)} />
+                onChange={v => set('base_via_direct', v)}
+                placeholder="venda − custo"
+                className="input"
+              />
               <p className="text-xs text-emerald-600 mt-1 font-medium">
-                Fernando: {((parseFloat(form.base_via_direct) || 0) * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                Fernando: {(form.base_via_direct * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
             </div>
           </div>
           <div>
             <label className="label">Qtd. certificados emitidos (total)</label>
-            <input type="number" min="0" className="input w-40"
-              placeholder="0"
+            <IntegerInput
               value={form.cert_count}
-              onChange={e => set('cert_count', e.target.value)} />
+              onChange={v => set('cert_count', v)}
+              className="input w-40"
+            />
           </div>
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
             <p className="font-semibold mb-1">Regra do Salário Fernando</p>
@@ -514,8 +521,8 @@ function LaunchModal({ collab, onClose, onSaved }) {
   const isFernando = collab.role === 'comercial_full';
 
   const [form, setForm] = useState({
-    month: currentMonth, azul_revenue: '',
-    base_via_accounting: '', base_via_direct: '', cert_count: '', notes: '',
+    month: currentMonth, azul_revenue: 0,
+    base_via_accounting: 0, base_via_direct: 0, cert_count: 0, notes: '',
   });
   const [preview,  setPreview]  = useState(null);
   const [loadPrev, setLoadPrev] = useState(false);
@@ -527,10 +534,10 @@ function LaunchModal({ collab, onClose, onSaved }) {
     try {
       const res = await api.post('/internal-collaborators/commissions/preview', {
         collaborator_id:     collab.id,
-        azul_revenue:        parseFloat(form.azul_revenue)        || 0,
-        base_via_accounting: parseFloat(form.base_via_accounting) || 0,
-        base_via_direct:     parseFloat(form.base_via_direct)     || 0,
-        cert_count:          parseInt(form.cert_count)            || 0,
+        azul_revenue:        form.azul_revenue,
+        base_via_accounting: form.base_via_accounting,
+        base_via_direct:     form.base_via_direct,
+        cert_count:          form.cert_count,
       });
       setPreview(res.data);
     } catch { toast.error('Erro no preview'); }
@@ -543,10 +550,10 @@ function LaunchModal({ collab, onClose, onSaved }) {
       await api.post('/internal-collaborators/commissions', {
         collaborator_id:     collab.id,
         month:               form.month,
-        azul_revenue:        parseFloat(form.azul_revenue)        || 0,
-        base_via_accounting: parseFloat(form.base_via_accounting) || 0,
-        base_via_direct:     parseFloat(form.base_via_direct)     || 0,
-        cert_count:          parseInt(form.cert_count)            || 0,
+        azul_revenue:        form.azul_revenue,
+        base_via_accounting: form.base_via_accounting,
+        base_via_direct:     form.base_via_direct,
+        cert_count:          form.cert_count,
         notes:               form.notes || null,
       });
       toast.success(`Comissão de ${collab.name} lançada com sucesso!`);
@@ -579,14 +586,14 @@ function EditModal({ commission, collab, onClose, onSaved }) {
   const isPabline  = collab.role === 'manager_azul';
   const isFernando = collab.role === 'comercial_full';
 
-  // Pré-preenche com valores existentes.
-  // base_via_accounting/direct: o DB guarda o resultado (25% da base), revertemos a divisão.
+  // Pré-preenche com valores numéricos.
+  // base_via_accounting/direct: DB guarda resultado (25% da base), revertemos dividindo por 0.25.
   const [form, setForm] = useState({
     month:               commission.month,
-    azul_revenue:        String(parseFloat(commission.azul_revenue || 0)),
-    base_via_accounting: String((parseFloat(commission.direta_via_accounting || 0) / 0.25).toFixed(2)),
-    base_via_direct:     String((parseFloat(commission.direta_via_direct     || 0) / 0.25).toFixed(2)),
-    cert_count:          String(commission.direta_certificates_count || 0),
+    azul_revenue:        parseFloat(commission.azul_revenue || 0),
+    base_via_accounting: parseFloat(commission.direta_via_accounting || 0) / 0.25,
+    base_via_direct:     parseFloat(commission.direta_via_direct     || 0) / 0.25,
+    cert_count:          parseInt(commission.direta_certificates_count || 0),
     notes:               commission.notes || '',
   });
   const [preview,  setPreview]  = useState(null);
@@ -599,10 +606,10 @@ function EditModal({ commission, collab, onClose, onSaved }) {
     try {
       const res = await api.post('/internal-collaborators/commissions/preview', {
         collaborator_id:     collab.id,
-        azul_revenue:        parseFloat(form.azul_revenue)        || 0,
-        base_via_accounting: parseFloat(form.base_via_accounting) || 0,
-        base_via_direct:     parseFloat(form.base_via_direct)     || 0,
-        cert_count:          parseInt(form.cert_count)            || 0,
+        azul_revenue:        form.azul_revenue,
+        base_via_accounting: form.base_via_accounting,
+        base_via_direct:     form.base_via_direct,
+        cert_count:          form.cert_count,
       });
       setPreview(res.data);
     } catch { toast.error('Erro no preview'); }
@@ -614,10 +621,10 @@ function EditModal({ commission, collab, onClose, onSaved }) {
     try {
       await api.put(`/internal-collaborators/commissions/${commission.id}`, {
         month:               form.month,
-        azul_revenue:        parseFloat(form.azul_revenue)        || 0,
-        base_via_accounting: parseFloat(form.base_via_accounting) || 0,
-        base_via_direct:     parseFloat(form.base_via_direct)     || 0,
-        cert_count:          parseInt(form.cert_count)            || 0,
+        azul_revenue:        form.azul_revenue,
+        base_via_accounting: form.base_via_accounting,
+        base_via_direct:     form.base_via_direct,
+        cert_count:          form.cert_count,
         notes:               form.notes || null,
       });
       toast.success(`Comissão de ${collab.name} atualizada!`);
@@ -727,5 +734,72 @@ function PreviewItem({ label, value }) {
       <p className="text-xs text-slate-400">{label}</p>
       <p className="font-semibold text-slate-800">{value}</p>
     </div>
+  );
+}
+
+// ─── CurrencyInput — máscara BRL enquanto digita ──────────────────────────────
+// Armazena o valor bruto (número) no form; exibe formatado localmente.
+// Ex.: digitar "1000" → exibe "R$ 10,00" | digitar "100000" → "R$ 1.000,00"
+function CurrencyInput({ value, onChange, placeholder, className }) {
+  const toDisplay = raw => {
+    const n = parseFloat(raw);
+    if (!n || isNaN(n)) return '';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const [display, setDisplay] = useState(() => toDisplay(value));
+
+  const handleChange = e => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (!digits) { setDisplay(''); onChange(0); return; }
+    const num = parseInt(digits, 10) / 100;
+    setDisplay(num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    onChange(num);
+  };
+
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none select-none">
+        R$
+      </span>
+      <input
+        type="text"
+        inputMode="numeric"
+        className={`${className} pl-9`}
+        value={display}
+        onChange={handleChange}
+        placeholder={placeholder || '0,00'}
+      />
+    </div>
+  );
+}
+
+// ─── IntegerInput — separador de milhar, sem decimais ────────────────────────
+function IntegerInput({ value, onChange, placeholder, className }) {
+  const toDisplay = raw => {
+    const n = parseInt(raw);
+    if (!n || isNaN(n)) return '';
+    return n.toLocaleString('pt-BR');
+  };
+
+  const [display, setDisplay] = useState(() => toDisplay(value));
+
+  const handleChange = e => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (!digits) { setDisplay(''); onChange(0); return; }
+    const num = parseInt(digits, 10);
+    setDisplay(num.toLocaleString('pt-BR'));
+    onChange(num);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      className={className}
+      value={display}
+      onChange={handleChange}
+      placeholder={placeholder || '0'}
+    />
   );
 }
