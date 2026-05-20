@@ -89,6 +89,15 @@ async function createCommission(req, res) {
       });
     }
 
+    // Bloqueia lançamento sobre mês já pago
+    const existing = await db.query(
+      'SELECT status FROM internal_commissions WHERE collaborator_id = $1 AND month = $2',
+      [collaborator_id, month]
+    );
+    if (existing.rows[0]?.status === 'paid') {
+      return res.status(403).json({ error: 'Este mês já foi marcado como pago. Estorne o pagamento antes de relançar.' });
+    }
+
     const result = await db.query(
       `INSERT INTO internal_commissions
          (collaborator_id, month, azul_revenue, azul_commission_pct, azul_commission,
@@ -160,10 +169,96 @@ async function revertToPending(req, res) {
       [id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
+    console.log(`[ESTORNO] ${new Date().toISOString()} — comissão ID ${id} (${result.rows[0].month}) estornada para pendente`);
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Erro ao reverter' });
+    return res.status(500).json({ error: 'Erro ao estornar' });
+  }
+}
+
+// ─── Admin: editar comissão existente ──────────────────────────────────────
+async function updateCommission(req, res) {
+  try {
+    const { id } = req.params;
+    const { month, azul_revenue, base_via_accounting, base_via_direct, cert_count, notes } = req.body;
+
+    const check = await db.query('SELECT * FROM internal_commissions WHERE id = $1', [id]);
+    if (!check.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
+    if (check.rows[0].status === 'paid') {
+      return res.status(403).json({ error: 'Não é possível editar uma comissão já paga. Estorne o pagamento primeiro.' });
+    }
+
+    const collab = await db.query(
+      'SELECT id, role FROM internal_collaborators WHERE id = $1',
+      [check.rows[0].collaborator_id]
+    );
+    const { role } = collab.rows[0];
+
+    let calc;
+    if (role === 'manager_azul') {
+      calc = calcPabline({ azulRevenue: azul_revenue || 0 });
+    } else {
+      calc = calcFernando({
+        azulRevenue:       azul_revenue        || 0,
+        baseViaAccounting: base_via_accounting || 0,
+        baseViaDirect:     base_via_direct     || 0,
+        certCount:         cert_count          || 0,
+      });
+    }
+
+    const result = await db.query(
+      `UPDATE internal_commissions SET
+         month                     = $1,
+         azul_revenue              = $2,
+         azul_commission_pct       = $3,
+         azul_commission           = $4,
+         direta_certificates_count = $5,
+         direta_via_accounting     = $6,
+         direta_via_direct         = $7,
+         direta_commission         = $8,
+         base_salary               = $9,
+         total_amount              = $10,
+         notes                     = $11
+       WHERE id = $12
+       RETURNING *`,
+      [
+        month || check.rows[0].month,
+        azul_revenue || 0,
+        calc.azul_commission_pct,
+        calc.azul_commission,
+        calc.direta_certificates_count,
+        calc.direta_via_accounting,
+        calc.direta_via_direct,
+        calc.direta_commission,
+        calc.base_salary,
+        calc.total_amount,
+        notes !== undefined ? notes : check.rows[0].notes,
+        id,
+      ]
+    );
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao atualizar comissão' });
+  }
+}
+
+// ─── Admin: excluir comissão (apenas pendente) ──────────────────────────────
+async function deleteCommission(req, res) {
+  try {
+    const { id } = req.params;
+    const check = await db.query('SELECT * FROM internal_commissions WHERE id = $1', [id]);
+    if (!check.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
+    if (check.rows[0].status === 'paid') {
+      return res.status(403).json({ error: 'Não é possível excluir uma comissão já paga. Estorne o pagamento primeiro.' });
+    }
+    await db.query('DELETE FROM internal_commissions WHERE id = $1', [id]);
+    console.log(`[DELETE] ${new Date().toISOString()} — comissão ID ${id} (${check.rows[0].month}) excluída`);
+    return res.json({ message: 'Comissão excluída com sucesso' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao excluir comissão' });
   }
 }
 
@@ -254,6 +349,8 @@ module.exports = {
   listCollaborators,
   previewCommission,
   createCommission,
+  updateCommission,
+  deleteCommission,
   markAsPaid,
   revertToPending,
   listAllCommissions,

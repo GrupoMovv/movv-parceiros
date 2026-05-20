@@ -7,6 +7,8 @@ router.get ('/collaborators',          authenticate, requireAdmin, ctrl.listColl
 router.get ('/commissions',            authenticate, requireAdmin, ctrl.listAllCommissions);
 router.post('/commissions/preview',    authenticate, requireAdmin, ctrl.previewCommission);
 router.post('/commissions',            authenticate, requireAdmin, ctrl.createCommission);
+router.put  ('/commissions/:id',        authenticate, requireAdmin, ctrl.updateCommission);
+router.delete('/commissions/:id',       authenticate, requireAdmin, ctrl.deleteCommission);
 router.patch('/commissions/:id/paid',  authenticate, requireAdmin, ctrl.markAsPaid);
 router.patch('/commissions/:id/revert',authenticate, requireAdmin, ctrl.revertToPending);
 
