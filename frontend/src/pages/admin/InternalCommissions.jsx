@@ -17,8 +17,7 @@ const ROLE_LABEL = {
 };
 
 const CURVA_PABLINE = [
-  { label: 'Até R$ 20k',        min: 0,      max: 20000,   pct: 0.03 },
-  { label: 'R$ 20k – R$ 50k',   min: 20001,  max: 50000,   pct: 0.05 },
+  { label: 'Até R$ 50k',        min: 0,      max: 50000,   pct: 0.05 },
   { label: 'R$ 50k – R$ 100k',  min: 50001,  max: 100000,  pct: 0.07 },
   { label: 'R$ 100k – R$ 200k', min: 100001, max: 200000,  pct: 0.06 },
   { label: 'R$ 200k – R$ 300k', min: 200001, max: 300000,  pct: 0.05 },

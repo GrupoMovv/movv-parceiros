@@ -31,12 +31,11 @@ const PJ = [
 ];
 
 const CURVA_PABLINE = [
-  { label: 'Até R$ 20.000',           min: 0,      max: 20000,   pct: 0.03, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { label: 'R$ 20.001 – R$ 50.000',   min: 20001,  max: 50000,   pct: 0.05, color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  { label: 'Até R$ 50.000',           min: 0,      max: 50000,   pct: 0.05, color: 'bg-blue-100 text-blue-700 border-blue-200' },
   { label: 'R$ 50.001 – R$ 100.000',  min: 50001,  max: 100000,  pct: 0.07, color: 'bg-[#4A0E8F] text-white border-[#4A0E8F]' },
   { label: 'R$ 100.001 – R$ 200.000', min: 100001, max: 200000,  pct: 0.06, color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
   { label: 'R$ 200.001 – R$ 300.000', min: 200001, max: 300000,  pct: 0.05, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { label: 'Acima de R$ 300.000',      min: 300001, max: Infinity,pct: 0.04, color: 'bg-slate-100 text-slate-600 border-slate-200' },
+  { label: 'Acima de R$ 300.000',     min: 300001, max: Infinity, pct: 0.04, color: 'bg-slate-100 text-slate-600 border-slate-200' },
 ];
 
 const CURVA_FERNANDO = [

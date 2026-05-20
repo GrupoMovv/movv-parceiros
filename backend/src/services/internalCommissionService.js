@@ -2,7 +2,6 @@ const NET_FACTOR = 0.80; // 80% do faturamento bruto = lucro líquido base
 
 // Curva Pabline — sobre lucro líquido (faturamento * 0.80)
 function calcPablinePct(netRevenue) {
-  if (netRevenue <= 20000)  return 0.03;
   if (netRevenue <= 50000)  return 0.05;
   if (netRevenue <= 100000) return 0.07;
   if (netRevenue <= 200000) return 0.06;
@@ -67,12 +66,11 @@ function calcFernando({ azulRevenue, baseViaAccounting = 0, baseViaDirect = 0, c
 
 // Curva completa para exibição no frontend
 const CURVA_PABLINE = [
-  { label: 'Até R$ 20.000',          min: 0,      max: 20000,  pct: 0.03 },
-  { label: 'R$ 20.001 – R$ 50.000',  min: 20001,  max: 50000,  pct: 0.05 },
-  { label: 'R$ 50.001 – R$ 100.000', min: 50001,  max: 100000, pct: 0.07 },
-  { label: 'R$ 100.001 – R$ 200.000',min: 100001, max: 200000, pct: 0.06 },
-  { label: 'R$ 200.001 – R$ 300.000',min: 200001, max: 300000, pct: 0.05 },
-  { label: 'Acima de R$ 300.000',    min: 300001, max: Infinity,pct: 0.04 },
+  { label: 'Até R$ 50.000',           min: 0,      max: 50000,   pct: 0.05 },
+  { label: 'R$ 50.001 – R$ 100.000',  min: 50001,  max: 100000,  pct: 0.07 },
+  { label: 'R$ 100.001 – R$ 200.000', min: 100001, max: 200000,  pct: 0.06 },
+  { label: 'R$ 200.001 – R$ 300.000', min: 200001, max: 300000,  pct: 0.05 },
+  { label: 'Acima de R$ 300.000',     min: 300001, max: Infinity, pct: 0.04 },
 ];
 
 const CURVA_FERNANDO_AZUL = [
