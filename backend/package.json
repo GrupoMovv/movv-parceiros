@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "migrate": "node migrations/run.js",
     "seed": "node seeds/seed.js",
+    "seed:internal": "node seeds/seed_internal_collaborators.js",
     "setup": "node scripts/setup.js"
   },
   "dependencies": {
