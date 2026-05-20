@@ -17,10 +17,10 @@ const adminLinks = [
   { to: '/admin/parceiros',             icon: Users,           label: 'Parceiros' },
   { to: '/admin/indicacoes',            icon: ClipboardList,   label: 'Indicações' },
   { to: '/admin/comissoes',             icon: Coins,           label: 'Comissões' },
-  { to: '/admin/comissoes-internas',    icon: DollarSign,      label: 'Comissões Internas' },
-  { to: '/admin/interesse',             icon: Sparkles,        label: 'Interesses' },
   { to: '/admin/pagamentos',            icon: CreditCard,      label: 'Pagamentos' },
   { to: '/admin/produtos',              icon: Package,         label: 'Produtos' },
+  { to: '/admin/comissoes-internas',    icon: DollarSign,      label: 'Comissões Internas' },
+  { to: '/admin/interesse',             icon: Sparkles,        label: 'Interesses' },
 ];
 
 const internalLinks = [
@@ -45,6 +45,31 @@ function NavItem({ to, icon: Icon, label, onClose, end }) {
           <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
           <span className="flex-1">{label}</span>
           {isActive && <ChevronRight className="w-3 h-3 text-movv-900" />}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+function ComingSoonItem({ to, icon: Icon, label, onClose }) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onClose}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+        ${isActive
+          ? 'bg-gold-gradient text-movv-900 shadow-gold'
+          : 'text-white/75 hover:bg-white/10 hover:text-white'}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
+          <span className="flex-1">{label}</span>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
+            BREVE
+          </span>
         </>
       )}
     </NavLink>
@@ -119,7 +144,7 @@ export default function Sidebar({ onClose }) {
           <NavItem to="/meus-funcionarios" icon={UsersRound} label="Meus Funcionários" onClose={onClose} />
         )}
 
-        {/* Seção de recursos — visível a parceiros e admin, não a colaboradores internos */}
+        {/* Recursos — visível a parceiros e admin, não a colaboradores internos */}
         {!isInternal && (
           <div className="pt-3 mt-3 border-t border-white/10">
             <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Recursos</p>
@@ -130,77 +155,29 @@ export default function Sidebar({ onClose }) {
           </div>
         )}
 
-        {/* Em Breve — visível apenas a parceiros */}
-        {!user?.is_admin && !isInternal && (
+        {/* Movv Café para admin: aparece ANTES de Em Breve */}
+        {user?.is_admin && (
           <div className="pt-3 mt-3 border-t border-white/10">
-            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Em Breve</p>
-            <NavLink
-              to="/movv-office"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
-                ${isActive
-                  ? 'bg-gold-gradient text-movv-900 shadow-gold'
-                  : 'text-white/75 hover:bg-white/10 hover:text-white'}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Building2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
-                  <span className="flex-1">Movv Office</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
-                    BREVE
-                  </span>
-                </>
-              )}
-            </NavLink>
-            <NavLink
-              to="/movv-cobrancas"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
-                ${isActive
-                  ? 'bg-gold-gradient text-movv-900 shadow-gold'
-                  : 'text-white/75 hover:bg-white/10 hover:text-white'}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
-                  <span className="flex-1">Movv Cobranças</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
-                    BREVE
-                  </span>
-                </>
-              )}
-            </NavLink>
-            <NavLink
-              to="/movv-suprimentos"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
-                ${isActive
-                  ? 'bg-gold-gradient text-movv-900 shadow-gold'
-                  : 'text-white/75 hover:bg-white/10 hover:text-white'}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <ShoppingCart className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
-                  <span className="flex-1">Movv Suprimentos</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#4A0E8F] leading-none">
-                    BREVE
-                  </span>
-                </>
-              )}
-            </NavLink>
+            <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
           </div>
         )}
 
-        {/* Movv Café — visível a todos os perfis */}
-        <div className="pt-3 mt-3 border-t border-white/10">
-          <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
-        </div>
+        {/* Em Breve — visível a parceiros E admin, não a colaboradores internos */}
+        {!isInternal && (
+          <div className="pt-3 mt-3 border-t border-white/10">
+            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Em Breve</p>
+            <ComingSoonItem to="/movv-office"     icon={Building2}    label="Movv Office"     onClose={onClose} />
+            <ComingSoonItem to="/movv-cobrancas"  icon={TrendingUp}   label="Movv Cobranças"  onClose={onClose} />
+            <ComingSoonItem to="/movv-suprimentos" icon={ShoppingCart} label="Movv Suprimentos" onClose={onClose} />
+          </div>
+        )}
+
+        {/* Movv Café para parceiros/internos: aparece DEPOIS de Em Breve */}
+        {!user?.is_admin && (
+          <div className="pt-3 mt-3 border-t border-white/10">
+            <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
+          </div>
+        )}
 
       </nav>
 
