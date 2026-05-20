@@ -72,6 +72,7 @@ export default function MovvCafe() {
   const [lightbox, setLightbox] = useState(null); // { src, alt }
 
   return (
+    <>
     <div className="max-w-4xl mx-auto pb-12 space-y-10">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
@@ -361,5 +362,6 @@ export default function MovvCafe() {
     {lightbox && (
       <Lightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
     )}
+  </>
   );
 }
