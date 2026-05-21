@@ -307,6 +307,10 @@ export default function MinhasComissoes() {
           </div>
         )}
       </div>
+
+      {/* Simulador de Comissão */}
+      {isPabline && <SimuladorPabline />}
+      {isFernando && <SimuladorFernando />}
     </div>
   );
 }
@@ -334,5 +338,224 @@ function StatusBadge({ status }) {
     <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
       <Clock className="w-3 h-3" /> Pendente
     </span>
+  );
+}
+
+// ─── Simulador helpers ─────────────────────────────────────────────────────────
+const SALARIO_BASE = 1621;
+const COM_CONT_PER_CERT   = 13.51;
+const COM_DIRETA_PER_CERT = 29.43;
+
+function getTierSim(curve, value) {
+  return [...curve].reverse().find(t => value >= t.min) || curve[0];
+}
+
+function CurrencyInputSim({ value, onChange, placeholder }) {
+  const toDisplay = raw => {
+    const n = parseFloat(raw);
+    if (!n || isNaN(n)) return '';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const [display, setDisplay] = useState(() => toDisplay(value));
+  const handleChange = e => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (!digits) { setDisplay(''); onChange(0); return; }
+    const num = parseInt(digits, 10) / 100;
+    setDisplay(num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    onChange(num);
+  };
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none select-none">R$</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        className="input pl-9"
+        value={display}
+        onChange={handleChange}
+        placeholder={placeholder || '0,00'}
+      />
+    </div>
+  );
+}
+
+function IntegerInputSim({ value, onChange, placeholder }) {
+  const toDisplay = raw => {
+    const n = parseInt(raw);
+    if (!n || isNaN(n)) return '';
+    return n.toLocaleString('pt-BR');
+  };
+  const [display, setDisplay] = useState(() => toDisplay(value));
+  const handleChange = e => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (!digits) { setDisplay(''); onChange(0); return; }
+    const num = parseInt(digits, 10);
+    setDisplay(num.toLocaleString('pt-BR'));
+    onChange(num);
+  };
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      className="input"
+      value={display}
+      onChange={handleChange}
+      placeholder={placeholder || '0'}
+    />
+  );
+}
+
+// ─── Simulador Pabline ─────────────────────────────────────────────────────────
+function SimuladorPabline() {
+  const [faturamento, setFaturamento] = useState(0);
+
+  const ll       = faturamento * 0.80;
+  const tier     = faturamento > 0 ? getTierSim(CURVA_PABLINE, ll) : null;
+  const comissao = tier ? ll * tier.pct : 0;
+  const total    = comissao + SALARIO_BASE;
+
+  return (
+    <div className="card !p-0 overflow-hidden border border-purple-200 shadow-lg">
+      <div className="bg-movv-gradient px-5 py-4">
+        <h3 className="font-bold text-white text-lg">🧮 Simule seus ganhos</h3>
+        <p className="text-white/70 text-sm mt-0.5">Veja quanto você pode ganhar com diferentes faturamentos</p>
+      </div>
+      <div className="p-5 space-y-4">
+        <div>
+          <label className="label">Faturamento mensal da Azul:</label>
+          <CurrencyInputSim value={faturamento} onChange={setFaturamento} placeholder="Ex: 50.000,00" />
+        </div>
+
+        {tier ? (
+          <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4 space-y-2.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Faixa aplicada:</span>
+              <span className="font-bold text-[#4A0E8F]">{(tier.pct * 100).toFixed(1)}%</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Lucro líquido Azul:</span>
+              <span className="font-semibold text-slate-800">{fmt(ll)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Sua comissão:</span>
+              <span className="font-semibold text-[#4A0E8F]">{fmt(comissao)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">+ Salário base:</span>
+              <span className="font-semibold text-slate-700">{fmt(SALARIO_BASE)}</span>
+            </div>
+            <div className="border-t border-purple-200 pt-2.5 flex justify-between items-center">
+              <span className="font-bold text-slate-900 text-sm">TOTAL ESTIMADO:</span>
+              <span className="font-bold text-xl text-[#C9A84C]">{fmt(total)}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center text-slate-400 text-sm">
+            Digite um faturamento para ver a simulação
+          </div>
+        )}
+
+        <p className="text-xs text-slate-400 italic">
+          Esta é apenas uma simulação. Os valores reais são definidos no fechamento mensal.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Simulador Fernando ────────────────────────────────────────────────────────
+function SimuladorFernando() {
+  const [vendasAzul, setVendasAzul] = useState(0);
+  const [certCont,   setCertCont]   = useState(0);
+  const [certDireta, setCertDireta] = useState(0);
+
+  const llAzul        = vendasAzul * 0.80;
+  const tierAzul      = vendasAzul > 0 ? getTierSim(CURVA_FERNANDO, llAzul) : null;
+  const comAzul       = tierAzul ? llAzul * tierAzul.pct : 0;
+  const comCont       = certCont * COM_CONT_PER_CERT;
+  const comDireta     = certDireta * COM_DIRETA_PER_CERT;
+  const subtotalDireta = comCont + comDireta;
+  const totalComissoes = comAzul + subtotalDireta;
+  const showSalario   = totalComissoes < 3500;
+  const totalEstimado = totalComissoes + (showSalario ? SALARIO_BASE : 0);
+  const hasInput      = vendasAzul > 0 || certCont > 0 || certDireta > 0;
+
+  return (
+    <div className="card !p-0 overflow-hidden border border-[#C9A84C]/30 shadow-lg">
+      <div className="bg-movv-gradient px-5 py-4">
+        <h3 className="font-bold text-white text-lg">🧮 Simule seus ganhos</h3>
+        <p className="text-white/70 text-sm mt-0.5">Preencha os campos abaixo para ver sua comissão total</p>
+      </div>
+      <div className="p-5 space-y-4">
+        <div>
+          <label className="label">Vendas Azul (suas vendas) no mês:</label>
+          <CurrencyInputSim value={vendasAzul} onChange={setVendasAzul} placeholder="Ex: 15.000,00" />
+        </div>
+        <div>
+          <label className="label">Certificados Direta vendidos via contabilidade:</label>
+          <IntegerInputSim value={certCont} onChange={setCertCont} placeholder="Ex: 60" />
+        </div>
+        <div>
+          <label className="label">Certificados Direta — venda direta (cliente próprio):</label>
+          <IntegerInputSim value={certDireta} onChange={setCertDireta} placeholder="Ex: 40" />
+        </div>
+
+        {hasInput ? (
+          <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4 space-y-3">
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comissão Azul</p>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">% aplicada: {tierAzul ? (tierAzul.pct * 100).toFixed(1) : '0,0'}%</span>
+                <span className="font-semibold text-[#4A0E8F]">{fmt(comAzul)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comissão Direta</p>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Via contabilidade ({certCont} cert):</span>
+                <span className="font-semibold text-slate-700">{fmt(comCont)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Venda direta ({certDireta} cert):</span>
+                <span className="font-semibold text-slate-700">{fmt(comDireta)}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-purple-100 pt-1.5">
+                <span className="text-slate-600 font-medium">Subtotal Direta:</span>
+                <span className="font-semibold text-slate-800">{fmt(subtotalDireta)}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-purple-200 pt-2.5 space-y-1.5">
+              <div className="flex justify-between text-sm font-bold">
+                <span className="text-slate-900">TOTAL COMISSÕES:</span>
+                <span className="text-[#4A0E8F]">{fmt(totalComissoes)}</span>
+              </div>
+              {showSalario && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">+ Salário base:</span>
+                    <span className="font-semibold text-slate-700">{fmt(SALARIO_BASE)}</span>
+                  </div>
+                  <p className="text-xs text-slate-400">(porque comissão &lt; R$ 3.500)</p>
+                </>
+              )}
+              <div className="flex justify-between items-center border-t border-purple-200 pt-2">
+                <span className="font-bold text-slate-900 text-sm">TOTAL ESTIMADO:</span>
+                <span className="font-bold text-xl text-[#C9A84C]">{fmt(totalEstimado)}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center text-slate-400 text-sm">
+            Preencha os campos acima para ver a simulação
+          </div>
+        )}
+
+        <p className="text-xs text-slate-400 italic">
+          Esta é apenas uma simulação. Os valores reais são definidos no fechamento mensal.
+        </p>
+      </div>
+    </div>
   );
 }

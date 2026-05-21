@@ -116,6 +116,9 @@ export default function AdminInternalCommissions() {
           bg="bg-purple-50" border="border-purple-200" color="text-[#4A0E8F]" />
       </div>
 
+      {/* Tabela de referência rápida */}
+      <TabelaReferencia />
+
       {/* Cards dos colaboradores */}
       {loading ? (
         <div className="flex justify-center py-16">
@@ -800,5 +803,111 @@ function IntegerInput({ value, onChange, placeholder, className }) {
       onChange={handleChange}
       placeholder={placeholder || '0'}
     />
+  );
+}
+
+// ─── Tabela de Referência (colapsável) ────────────────────────────────────────
+function TabelaReferencia() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="card !p-0 overflow-hidden">
+      <button
+        onClick={() => setOpen(p => !p)}
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-base font-bold text-slate-900">📊 Tabelas de Comissão</span>
+          <span className="text-xs text-slate-400 font-normal">(referência rápida)</span>
+        </div>
+        {open
+          ? <ChevronUp className="w-5 h-5 text-slate-400 flex-shrink-0" />
+          : <ChevronDown className="w-5 h-5 text-slate-400 flex-shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-100 px-5 py-5 space-y-6">
+          {/* Pabline */}
+          <div>
+            <p className="font-bold text-slate-900 mb-3">👔 PABLINE — Gerente Azul</p>
+            <div className="overflow-x-auto rounded-xl border border-slate-200 mb-3">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="text-left px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">Faixa Faturamento</th>
+                    <th className="text-right px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">% Comis.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CURVA_PABLINE.map((tier, i) => (
+                    <tr key={i} className="border-b border-slate-100 last:border-0">
+                      <td className="px-4 py-2.5 text-slate-700">{tier.label}</td>
+                      <td className="px-4 py-2.5 text-right font-bold text-[#4A0E8F]">
+                        {(tier.pct * 100).toFixed(1)}%
+                        {tier.pct === 0.07 && <span className="ml-1 text-[#C9A84C]">⭐</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-slate-500">
+              Salário base: <strong>R$ 1.621</strong> · Aplica em <strong>TODAS</strong> as vendas Azul
+            </p>
+          </div>
+
+          <hr className="border-slate-200" />
+
+          {/* Fernando */}
+          <div>
+            <p className="font-bold text-slate-900 mb-3">💼 FERNANDO — Comercial</p>
+
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">AZUL (suas vendas):</p>
+            <div className="overflow-x-auto rounded-xl border border-slate-200 mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="text-left px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">Faixa Faturamento</th>
+                    <th className="text-right px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">% Comis.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CURVA_FERNANDO.map((tier, i) => (
+                    <tr key={i} className="border-b border-slate-100 last:border-0">
+                      <td className="px-4 py-2.5 text-slate-700">{tier.label}</td>
+                      <td className="px-4 py-2.5 text-right font-bold text-[#4A0E8F]">{(tier.pct * 100).toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">DIRETA:</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-2 mb-3">
+              <div className="flex items-start gap-2 text-sm">
+                <span className="text-amber-600 font-bold mt-0.5">•</span>
+                <div>
+                  <span className="text-slate-700 font-medium">Via contabilidade: </span>
+                  <span className="text-slate-600">25% sobre lucro líquido</span>
+                  <p className="text-xs text-slate-400 mt-0.5">(após descontar a comissão da contabilidade)</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-sm">
+                <span className="text-amber-600 font-bold mt-0.5">•</span>
+                <div>
+                  <span className="text-slate-700 font-medium">Venda direta: </span>
+                  <span className="text-slate-600">25% sobre lucro bruto</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Salário base: <strong>R$ 1.621</strong>{' '}
+              <span className="text-slate-400">(até comissão &lt; R$ 3.500)</span>
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
