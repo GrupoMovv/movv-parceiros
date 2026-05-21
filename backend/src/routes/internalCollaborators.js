@@ -11,6 +11,7 @@ router.put  ('/commissions/:id',        authenticate, requireAdmin, ctrl.updateC
 router.delete('/commissions/:id',       authenticate, requireAdmin, ctrl.deleteCommission);
 router.patch('/commissions/:id/paid',  authenticate, requireAdmin, ctrl.markAsPaid);
 router.patch('/commissions/:id/revert',authenticate, requireAdmin, ctrl.revertToPending);
+router.post ('/reset-password/:collaboratorId', authenticate, requireAdmin, ctrl.resetPassword);
 
 // ─── Rotas do colaborador (acesso próprio) ────────────────────────────────────
 router.get('/me/commissions', authenticate, requireInternal, ctrl.myCommissions);

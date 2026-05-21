@@ -72,7 +72,7 @@ async function me(req, res) {
   try {
     if (req.user.type === 'internal') {
       const result = await db.query(
-        'SELECT id, name, email, role, whatsapp, pix_key, base_salary, active, created_at FROM internal_collaborators WHERE id = $1',
+        'SELECT id, name, email, role, whatsapp, pix_key, base_salary, active, created_at, must_change_password FROM internal_collaborators WHERE id = $1',
         [req.user.id]
       );
       const u = result.rows[0];
@@ -81,7 +81,7 @@ async function me(req, res) {
 
     const result = await db.query(
       `SELECT p.id, p.code, p.name, p.email, p.type, p.whatsapp, p.pix_key,
-              p.is_admin, p.is_active, p.created_at,
+              p.is_admin, p.is_active, p.created_at, p.must_change_password,
               pp.code AS parent_code, pp.name AS parent_name
        FROM partners p
        LEFT JOIN partners pp ON pp.id = p.parent_id
@@ -107,13 +107,13 @@ async function changePassword(req, res) {
       const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
       if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.query('UPDATE internal_collaborators SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+      await db.query('UPDATE internal_collaborators SET password_hash = $1, must_change_password = false WHERE id = $2', [hash, req.user.id]);
     } else {
       const result = await db.query('SELECT password_hash FROM partners WHERE id = $1', [req.user.id]);
       const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
       if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.query('UPDATE partners SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+      await db.query('UPDATE partners SET password_hash = $1, must_change_password = false WHERE id = $2', [hash, req.user.id]);
     }
     return res.json({ message: 'Senha alterada com sucesso' });
   } catch (err) {
@@ -122,4 +122,29 @@ async function changePassword(req, res) {
   }
 }
 
-module.exports = { login, me, changePassword };
+async function forceChangePassword(req, res) {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
+  }
+  try {
+    const hash = await bcrypt.hash(newPassword, 10);
+    if (req.user.type === 'internal') {
+      await db.query(
+        'UPDATE internal_collaborators SET password_hash = $1, must_change_password = false WHERE id = $2',
+        [hash, req.user.id]
+      );
+    } else {
+      await db.query(
+        'UPDATE partners SET password_hash = $1, must_change_password = false WHERE id = $2',
+        [hash, req.user.id]
+      );
+    }
+    return res.json({ message: 'Senha definida com sucesso' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+module.exports = { login, me, changePassword, forceChangePassword };

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   Users, DollarSign, CheckCircle2, Clock, Plus, X,
   RotateCcw, ChevronDown, ChevronUp, Loader2, Eye,
-  Pencil, Trash2, AlertTriangle, Lock,
+  Pencil, Trash2, AlertTriangle, Lock, KeyRound, Copy,
 } from 'lucide-react';
 
 const fmt    = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -35,11 +35,14 @@ export default function AdminInternalCommissions() {
   const [collaborators, setCollaborators] = useState([]);
   const [commissions,   setCommissions]   = useState([]);
   const [loading,       setLoading]       = useState(true);
-  const [modalCollab,   setModalCollab]   = useState(null);          // collab obj → novo lançamento
-  const [modalEdit,     setModalEdit]     = useState(null);          // { commission, collab }
-  const [modalDelete,   setModalDelete]   = useState(null);          // commission obj
+  const [modalCollab,   setModalCollab]   = useState(null);
+  const [modalEdit,     setModalEdit]     = useState(null);
+  const [modalDelete,   setModalDelete]   = useState(null);
   const [deleting,      setDeleting]      = useState(false);
   const [expanded,      setExpanded]      = useState({});
+  const [modalReset,    setModalReset]    = useState(null);          // collab obj → confirmar reset
+  const [resetResult,   setResetResult]   = useState(null);          // { newPassword, collaboratorName, email }
+  const [resetting,     setResetting]     = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -69,6 +72,20 @@ export default function AdminInternalCommissions() {
       toast.success('Pagamento estornado.');
       load();
     } catch { toast.error('Erro ao estornar'); }
+  }
+
+  async function confirmReset() {
+    if (!modalReset) return;
+    setResetting(true);
+    try {
+      const res = await api.post(`/internal-collaborators/reset-password/${modalReset.id}`);
+      setModalReset(null);
+      setResetResult(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao resetar senha');
+    } finally {
+      setResetting(false);
+    }
   }
 
   async function handleDelete() {
@@ -130,6 +147,7 @@ export default function AdminInternalCommissions() {
           collab={collab}
           commissions={commByCollab(collab.id)}
           onLaunch={() => setModalCollab(collab)}
+          onReset={() => setModalReset(collab)}
           onPaid={markPaid}
           onRevert={revert}
           onEdit={commission => setModalEdit({ commission, collab })}
@@ -162,6 +180,22 @@ export default function AdminInternalCommissions() {
           loading={deleting}
           onClose={() => setModalDelete(null)}
           onConfirm={handleDelete}
+        />
+      )}
+
+      {modalReset && (
+        <ResetConfirmModal
+          collab={modalReset}
+          loading={resetting}
+          onClose={() => setModalReset(null)}
+          onConfirm={confirmReset}
+        />
+      )}
+
+      {resetResult && (
+        <ResetResultModal
+          result={resetResult}
+          onClose={() => setResetResult(null)}
         />
       )}
     </div>
@@ -231,7 +265,7 @@ function ActionButtons({ commission, onPaid, onRevert, onEdit, onDelete }) {
 }
 
 // ─── Card do colaborador ──────────────────────────────────────────────────────
-function CollabCard({ collab, commissions, onLaunch, onPaid, onRevert, onEdit, onDelete, expanded, toggleExpand }) {
+function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, onEdit, onDelete, expanded, toggleExpand }) {
   const latest = commissions[0];
   return (
     <div className="card !p-0 overflow-hidden">
@@ -264,7 +298,15 @@ function CollabCard({ collab, commissions, onLaunch, onPaid, onRevert, onEdit, o
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={onReset}
+            title="Resetar senha deste colaborador"
+            className="flex items-center gap-1.5 border border-slate-200 bg-white text-slate-600 text-sm font-semibold px-3 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
+          >
+            <KeyRound className="w-4 h-4" />
+            Resetar Senha
+          </button>
           <button
             onClick={onLaunch}
             className="flex items-center gap-2 bg-movv-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity"
@@ -803,6 +845,108 @@ function IntegerInput({ value, onChange, placeholder, className }) {
       onChange={handleChange}
       placeholder={placeholder || '0'}
     />
+  );
+}
+
+// ─── Reset Password Modals ────────────────────────────────────────────────────
+function ResetConfirmModal({ collab, loading, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <KeyRound className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-slate-900 text-lg">Resetar Senha</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{collab.name}</p>
+            </div>
+          </div>
+          <p className="text-slate-600 text-sm mt-4 leading-relaxed">
+            Tem certeza que deseja resetar a senha de <strong>{collab.name}</strong>?
+          </p>
+          <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+            Será gerada uma nova senha temporária que você deverá comunicar ao colaborador
+            via canal seguro.
+          </p>
+        </div>
+        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+          <button onClick={onClose} disabled={loading} className="btn-secondary">Cancelar</button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+            Sim, resetar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetResultModal({ result, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(result.newPassword).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="px-6 pt-6 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <KeyRound className="w-5 h-5 text-emerald-600" />
+            </div>
+            <h2 className="font-bold text-slate-900 text-lg">Nova Senha Gerada</h2>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <div className="space-y-1 text-sm text-slate-600">
+            <p><span className="font-medium">Colaborador:</span> {result.collaboratorName}</p>
+            <p><span className="font-medium">E-mail:</span> {result.email}</p>
+          </div>
+
+          <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4">
+            <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Senha temporária</p>
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono font-bold text-2xl text-[#4A0E8F] tracking-widest select-all">
+                {result.newPassword}
+              </span>
+              <button
+                onClick={handleCopy}
+                className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl border transition-all ${
+                  copied
+                    ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Copy className="w-4 h-4" />
+                {copied ? 'Copiado!' : 'Copiar'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 space-y-1">
+            <p className="font-semibold">IMPORTANTE</p>
+            <p>Anote esta senha agora. Ela não poderá ser visualizada de novo.</p>
+            <p>Envie ao colaborador via canal seguro. Na próxima vez que ele fizer login, será obrigado a criar uma nova senha.</p>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
+          <button onClick={onClose} className="btn-primary">Fechar</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

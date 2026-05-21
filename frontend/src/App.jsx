@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login';
@@ -21,15 +21,21 @@ import AdminInterest from './pages/admin/Interest';
 import AdminInternalCommissions from './pages/admin/InternalCommissions';
 import MinhasComissoes from './pages/MinhasComissoes';
 import MovvCafe from './pages/MovvCafe';
+import AlterarSenha from './pages/AlterarSenha';
+import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return (
     <div className="min-h-screen bg-movv-gradient flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
   if (!user) return <Navigate to="/login" replace />;
+  if (user.must_change_password && location.pathname !== '/trocar-senha-obrigatorio') {
+    return <Navigate to="/trocar-senha-obrigatorio" replace />;
+  }
   return children;
 }
 
@@ -56,6 +62,9 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/trocar-senha-obrigatorio" element={
+          <RequireAuth><TrocarSenhaObrigatorio /></RequireAuth>
+        } />
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Dashboard />} />
           <Route path="extrato"              element={<Statement />} />
@@ -76,6 +85,7 @@ export default function App() {
           <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
+          <Route path="alterar-senha"            element={<AlterarSenha />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -14,6 +16,7 @@ import {
 } from 'recharts';
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentReferrals, setRecentReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +79,18 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {user?.must_change_password && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-800 text-sm">⚠️ Você está usando a senha padrão</p>
+            <p className="text-amber-700 text-sm mt-0.5">Por segurança, recomendamos trocar sua senha agora.</p>
+          </div>
+          <Link to="/alterar-senha" className="btn-primary text-sm whitespace-nowrap flex-shrink-0">
+            Trocar minha senha
+          </Link>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Painel Admin</h1>

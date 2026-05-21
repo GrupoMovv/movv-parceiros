@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
-  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee
+  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound
 } from 'lucide-react';
 
 const partnerLinks = [
@@ -181,8 +181,9 @@ export default function Sidebar({ onClose }) {
 
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-white/10">
+      {/* Alterar Senha + Logout */}
+      <div className="px-3 py-4 border-t border-white/10 space-y-1">
+        <NavItem to="/alterar-senha" icon={KeyRound} label="Alterar Senha" onClose={onClose} />
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium

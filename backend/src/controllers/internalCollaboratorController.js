@@ -1,5 +1,13 @@
 const db = require('../config/database');
+const bcrypt = require('bcryptjs');
 const { calcPabline, calcFernando, CURVA_PABLINE, CURVA_FERNANDO_AZUL, NET_FACTOR } = require('../services/internalCommissionService');
+
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let pass = '';
+  for (let i = 0; i < 8; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+  return pass;
+}
 
 // ─── Admin: listar colaboradores ────────────────────────────────────────────
 async function listCollaborators(req, res) {
@@ -345,6 +353,38 @@ function getCurves(req, res) {
   return res.json({ CURVA_PABLINE, CURVA_FERNANDO_AZUL, NET_FACTOR });
 }
 
+// ─── Admin: resetar senha de colaborador ───────────────────────────────────
+async function resetPassword(req, res) {
+  const { collaboratorId } = req.params;
+  try {
+    const result = await db.query(
+      'SELECT id, name, email FROM internal_collaborators WHERE id = $1 AND active = true',
+      [collaboratorId]
+    );
+    const collab = result.rows[0];
+    if (!collab) return res.status(404).json({ error: 'Colaborador não encontrado' });
+
+    const newPassword = generatePassword();
+    const hash = await bcrypt.hash(newPassword, 10);
+
+    await db.query(
+      'UPDATE internal_collaborators SET password_hash = $1, must_change_password = true WHERE id = $2',
+      [hash, collaboratorId]
+    );
+
+    console.log(`[RESET SENHA] ${new Date().toISOString()} — senha de ${collab.name} (id: ${collaboratorId}) resetada pelo admin`);
+
+    return res.json({
+      newPassword,
+      collaboratorName: collab.name,
+      email: collab.email,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao resetar senha' });
+  }
+}
+
 module.exports = {
   listCollaborators,
   previewCommission,
@@ -357,4 +397,5 @@ module.exports = {
   myCommissions,
   mySummary,
   getCurves,
+  resetPassword,
 };
