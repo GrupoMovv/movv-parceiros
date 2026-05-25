@@ -464,21 +464,37 @@ function SimuladorPabline() {
 }
 
 // ─── Simulador Fernando ────────────────────────────────────────────────────────
-function SimuladorFernando() {
-  const [vendasAzul, setVendasAzul] = useState(0);
-  const [certCont,   setCertCont]   = useState(0);
-  const [certDireta, setCertDireta] = useState(0);
+const PCT_SEGUROS_OPTIONS = Array.from({ length: 21 }, (_, i) => i + 10);
 
-  const llAzul        = vendasAzul * 0.80;
-  const tierAzul      = vendasAzul > 0 ? getTierSim(CURVA_FERNANDO, llAzul) : null;
-  const comAzul       = tierAzul ? llAzul * tierAzul.pct : 0;
-  const comCont       = certCont * COM_CONT_PER_CERT;
-  const comDireta     = certDireta * COM_DIRETA_PER_CERT;
+function SimuladorFernando() {
+  const [azulNormal,    setAzulNormal]    = useState(0);
+  const [segurosVal,    setSegurosVal]    = useState(0);
+  const [segurosPct,    setSegurosPct]    = useState(10);
+  const [consorciosVal, setConsorciosVal] = useState(0);
+  const [certCont,      setCertCont]      = useState(0);
+  const [certDireta,    setCertDireta]    = useState(0);
+
+  // Azul Normal
+  const llNormal     = azulNormal * 0.80;
+  const tierNormal   = azulNormal > 0 ? getTierSim(CURVA_FERNANDO, llNormal) : null;
+  const comNormal    = tierNormal ? llNormal * tierNormal.pct : 0;
+
+  // Seguros: Fernando = (valorOperado × %ComissaoAzul) × 20%
+  const comissaoAzulSeguros = segurosVal * (segurosPct / 100);
+  const comSeguros          = comissaoAzulSeguros * 0.20;
+
+  // Consórcios: Fernando = valorOperado × 80% × 1,5%
+  const comConsorcios = consorciosVal * 0.80 * 0.015;
+
+  // Direta
+  const comCont        = certCont    * COM_CONT_PER_CERT;
+  const comDireta      = certDireta  * COM_DIRETA_PER_CERT;
   const subtotalDireta = comCont + comDireta;
-  const totalComissoes = comAzul + subtotalDireta;
-  const showSalario   = totalComissoes < 3500;
-  const totalEstimado = totalComissoes + (showSalario ? SALARIO_BASE : 0);
-  const hasInput      = vendasAzul > 0 || certCont > 0 || certDireta > 0;
+
+  const totalComissoes = comNormal + comSeguros + comConsorcios + subtotalDireta;
+  const showSalario    = totalComissoes < 3500;
+  const totalEstimado  = totalComissoes + (showSalario ? SALARIO_BASE : 0);
+  const hasInput       = azulNormal > 0 || segurosVal > 0 || consorciosVal > 0 || certCont > 0 || certDireta > 0;
 
   return (
     <div className="card !p-0 overflow-hidden border border-[#C9A84C]/30 shadow-lg">
@@ -486,45 +502,137 @@ function SimuladorFernando() {
         <h3 className="font-bold text-white text-lg">🧮 Simule seus ganhos</h3>
         <p className="text-white/70 text-sm mt-0.5">Preencha os campos abaixo para ver sua comissão total</p>
       </div>
-      <div className="p-5 space-y-4">
-        <div>
-          <label className="label">Vendas Azul (suas vendas) no mês:</label>
-          <CurrencyInputSim value={vendasAzul} onChange={setVendasAzul} placeholder="Ex: 15.000,00" />
-        </div>
-        <div>
-          <label className="label">Certificados Direta vendidos via contabilidade:</label>
-          <IntegerInputSim value={certCont} onChange={setCertCont} placeholder="Ex: 60" />
-        </div>
-        <div>
-          <label className="label">Certificados Direta — venda direta (cliente próprio):</label>
-          <IntegerInputSim value={certDireta} onChange={setCertDireta} placeholder="Ex: 40" />
+      <div className="p-5 space-y-5">
+
+        {/* AZUL - PRODUTOS NORMAIS */}
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#4A0E8F] inline-block" />
+            Azul — Produtos Normais
+            <span className="font-normal normal-case text-slate-400">(sem seguros/consórcios)</span>
+          </p>
+          <div>
+            <label className="label">Valor operado no mês:</label>
+            <CurrencyInputSim value={azulNormal} onChange={setAzulNormal} placeholder="Ex: 15.000,00" />
+          </div>
+          {azulNormal > 0 && (
+            <p className="text-xs text-emerald-600 font-medium">
+              Fernando: {fmt(comNormal)}
+              <span className="text-slate-400 font-normal ml-1">
+                ({fmt(llNormal)} LL × {tierNormal ? (tierNormal.pct * 100).toFixed(1) : '0'}%)
+              </span>
+            </p>
+          )}
         </div>
 
+        {/* AZUL - SEGUROS */}
+        <div className="space-y-2 border-t border-slate-100 pt-4">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Azul — Seguros
+            <span className="font-normal normal-case text-slate-400">(Fernando = 20% da comissão Azul)</span>
+          </p>
+          <div>
+            <label className="label">Valor operado em seguros este mês:</label>
+            <CurrencyInputSim value={segurosVal} onChange={setSegurosVal} placeholder="Ex: 50.000,00" />
+          </div>
+          <div>
+            <label className="label">% médio de comissão Azul:</label>
+            <select
+              className="input"
+              value={segurosPct}
+              onChange={e => setSegurosPct(parseInt(e.target.value))}
+            >
+              {PCT_SEGUROS_OPTIONS.map(p => (
+                <option key={p} value={p}>{p}%</option>
+              ))}
+            </select>
+          </div>
+          {segurosVal > 0 && (
+            <p className="text-xs text-emerald-600 font-medium">
+              Fernando: {fmt(comSeguros)}
+              <span className="text-slate-400 font-normal ml-1">
+                (20% de {fmt(comissaoAzulSeguros)} comissão Azul)
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* AZUL - CONSÓRCIOS */}
+        <div className="space-y-2 border-t border-slate-100 pt-4">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#C9A84C] inline-block" />
+            Azul — Consórcios
+            <span className="font-normal normal-case text-slate-400">(Fernando = LL × 1,5%)</span>
+          </p>
+          <div>
+            <label className="label">Valor operado em consórcios este mês:</label>
+            <CurrencyInputSim value={consorciosVal} onChange={setConsorciosVal} placeholder="Ex: 20.000,00" />
+          </div>
+          {consorciosVal > 0 && (
+            <p className="text-xs text-emerald-600 font-medium">
+              Fernando: {fmt(comConsorcios)}
+              <span className="text-slate-400 font-normal ml-1">
+                ({fmt(consorciosVal * 0.80)} LL × 1,5%)
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* DIRETA */}
+        <div className="space-y-2 border-t border-slate-100 pt-4">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            Direta — Certificação
+          </p>
+          <div>
+            <label className="label">Certificados via contabilidade:</label>
+            <IntegerInputSim value={certCont} onChange={setCertCont} placeholder="Ex: 60" />
+          </div>
+          <div>
+            <label className="label">Certificados venda direta (cliente próprio):</label>
+            <IntegerInputSim value={certDireta} onChange={setCertDireta} placeholder="Ex: 40" />
+          </div>
+        </div>
+
+        {/* RESULTADO */}
         {hasInput ? (
           <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4 space-y-3">
-            <div className="space-y-1.5">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comissão Azul</p>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">% aplicada: {tierAzul ? (tierAzul.pct * 100).toFixed(1) : '0,0'}%</span>
-                <span className="font-semibold text-[#4A0E8F]">{fmt(comAzul)}</span>
-              </div>
-            </div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resumo</p>
 
-            <div className="space-y-1.5">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comissão Direta</p>
+            {azulNormal > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Via contabilidade ({certCont} cert):</span>
-                <span className="font-semibold text-slate-700">{fmt(comCont)}</span>
+                <span className="text-slate-600">Azul Normal ({tierNormal ? (tierNormal.pct * 100).toFixed(1) : '0'}%):</span>
+                <span className="font-semibold text-[#4A0E8F]">{fmt(comNormal)}</span>
               </div>
+            )}
+            {segurosVal > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Venda direta ({certDireta} cert):</span>
-                <span className="font-semibold text-slate-700">{fmt(comDireta)}</span>
+                <span className="text-slate-600">Seguros (20% da com. Azul):</span>
+                <span className="font-semibold text-[#4A0E8F]">{fmt(comSeguros)}</span>
               </div>
-              <div className="flex justify-between text-sm border-t border-purple-100 pt-1.5">
-                <span className="text-slate-600 font-medium">Subtotal Direta:</span>
-                <span className="font-semibold text-slate-800">{fmt(subtotalDireta)}</span>
+            )}
+            {consorciosVal > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Consórcios (LL × 1,5%):</span>
+                <span className="font-semibold text-[#4A0E8F]">{fmt(comConsorcios)}</span>
               </div>
-            </div>
+            )}
+            {subtotalDireta > 0 && (
+              <div className="space-y-1">
+                {comCont > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Direta via contabilidade ({certCont} cert):</span>
+                    <span className="font-semibold text-slate-700">{fmt(comCont)}</span>
+                  </div>
+                )}
+                {comDireta > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Direta venda direta ({certDireta} cert):</span>
+                    <span className="font-semibold text-slate-700">{fmt(comDireta)}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="border-t border-purple-200 pt-2.5 space-y-1.5">
               <div className="flex justify-between text-sm font-bold">
