@@ -455,16 +455,17 @@ function CurvaDisplay({ curve, netValue, label }) {
 const PCT_OPTIONS = Array.from({ length: 21 }, (_, i) => i + 10);
 
 function SegurosList({ seguros, onChange }) {
+  const list = seguros || [];
   function addRow() {
-    if (seguros.length >= 10) return;
-    onChange([...seguros, { id: Date.now(), descricao: '', valorOperado: 0, pctComissaoAzul: 10 }]);
+    if (list.length >= 10) return;
+    onChange([...list, { id: Date.now(), descricao: '', valorOperado: 0, pctComissaoAzul: 10 }]);
   }
-  function removeRow(id) { onChange(seguros.filter(s => s.id !== id)); }
+  function removeRow(id) { onChange(list.filter(s => s.id !== id)); }
   function updateRow(id, field, value) {
-    onChange(seguros.map(s => s.id === id ? { ...s, [field]: value } : s));
+    onChange(list.map(s => s.id === id ? { ...s, [field]: value } : s));
   }
 
-  const subtotal = seguros.reduce((sum, s) => {
+  const subtotal = list.reduce((sum, s) => {
     return sum + (parseFloat(s.valorOperado || 0) * parseFloat(s.pctComissaoAzul || 0) / 100) * 0.20;
   }, 0);
 
@@ -479,18 +480,18 @@ function SegurosList({ seguros, onChange }) {
         <button
           type="button"
           onClick={addRow}
-          disabled={seguros.length >= 10}
+          disabled={list.length >= 10}
           className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-[#4A0E8F] hover:bg-purple-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Plus className="w-3 h-3" /> Adicionar
         </button>
       </div>
 
-      {seguros.length === 0 ? (
+      {list.length === 0 ? (
         <p className="text-xs text-slate-400 text-center py-3 italic">Nenhum seguro este mês</p>
       ) : (
         <>
-          {seguros.map(s => (
+          {list.map(s => (
             <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
               <div className="flex items-start gap-2">
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -591,12 +592,12 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
             </div>
             <div>
               <label className="label">Faturamento Bruto</label>
-              <CurrencyInput value={form.azul_normal_revenue} onChange={v => set('azul_normal_revenue', v)} placeholder="85.000,00" className="input" />
+              <CurrencyInput value={form.azul_normal_revenue || 0} onChange={v => set('azul_normal_revenue', v)} placeholder="85.000,00" className="input" />
               <p className="text-xs text-slate-400 mt-1">
-                Base = {(form.azul_normal_revenue * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
+                Base = {((form.azul_normal_revenue || 0) * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
               </p>
             </div>
-            <CurvaDisplay curve={CURVA_FERNANDO} netValue={form.azul_normal_revenue * 0.80} label="Fernando — Azul Normal" />
+            <CurvaDisplay curve={CURVA_FERNANDO} netValue={(form.azul_normal_revenue || 0) * 0.80} label="Fernando — Azul Normal" />
           </div>
 
           {/* Seguros */}
@@ -611,10 +612,10 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
             </div>
             <div>
               <label className="label">Valor Operado</label>
-              <CurrencyInput value={form.consorcios_revenue} onChange={v => set('consorcios_revenue', v)} placeholder="0,00" className="input" />
+              <CurrencyInput value={form.consorcios_revenue || 0} onChange={v => set('consorcios_revenue', v)} placeholder="0,00" className="input" />
               <p className="text-xs text-emerald-600 mt-1 font-medium">
                 Fernando:{' '}
-                {(form.consorcios_revenue * 0.80 * 0.015).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {((form.consorcios_revenue || 0) * 0.80 * 0.015).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 <span className="text-slate-400 font-normal ml-1">(valor × 80% × 1,5%)</span>
               </p>
             </div>
@@ -730,6 +731,7 @@ function LaunchModal({ collab, onClose, onSaved }) {
 
   const [form, setForm] = useState({
     month: currentMonth, azul_revenue: 0,
+    azul_normal_revenue: 0, seguros: [], consorcios_revenue: 0,
     base_via_accounting: 0, base_via_direct: 0, cert_count: 0, notes: '',
   });
   const [preview,  setPreview]  = useState(null);
@@ -741,11 +743,14 @@ function LaunchModal({ collab, onClose, onSaved }) {
     setLoadPrev(true);
     try {
       const res = await api.post('/internal-collaborators/commissions/preview', {
-        collaborator_id:     collab.id,
-        azul_revenue:        form.azul_revenue,
-        base_via_accounting: form.base_via_accounting,
-        base_via_direct:     form.base_via_direct,
-        cert_count:          form.cert_count,
+        collaborator_id:      collab.id,
+        azul_revenue:         form.azul_revenue,
+        azul_normal_revenue:  form.azul_normal_revenue,
+        seguros_data:         form.seguros || [],
+        consorcios_revenue:   form.consorcios_revenue,
+        base_via_accounting:  form.base_via_accounting,
+        base_via_direct:      form.base_via_direct,
+        cert_count:           form.cert_count,
       });
       setPreview(res.data);
     } catch { toast.error('Erro no preview'); }
@@ -756,13 +761,16 @@ function LaunchModal({ collab, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/internal-collaborators/commissions', {
-        collaborator_id:     collab.id,
-        month:               form.month,
-        azul_revenue:        form.azul_revenue,
-        base_via_accounting: form.base_via_accounting,
-        base_via_direct:     form.base_via_direct,
-        cert_count:          form.cert_count,
-        notes:               form.notes || null,
+        collaborator_id:      collab.id,
+        month:                form.month,
+        azul_revenue:         form.azul_revenue,
+        azul_normal_revenue:  form.azul_normal_revenue,
+        seguros_data:         form.seguros || [],
+        consorcios_revenue:   form.consorcios_revenue,
+        base_via_accounting:  form.base_via_accounting,
+        base_via_direct:      form.base_via_direct,
+        cert_count:           form.cert_count,
+        notes:                form.notes || null,
       });
       toast.success(`Comissão de ${collab.name} lançada com sucesso!`);
       onSaved();
@@ -796,13 +804,18 @@ function EditModal({ commission, collab, onClose, onSaved }) {
 
   // Pré-preenche com valores numéricos.
   // base_via_accounting/direct: DB guarda resultado (25% da base), revertemos dividindo por 0.25.
+  // seguros_data vem do DB como JSONB; adicionamos id local para o key do React.
+  const rawSeguros = Array.isArray(commission.seguros_data) ? commission.seguros_data : [];
   const [form, setForm] = useState({
-    month:               commission.month,
-    azul_revenue:        parseFloat(commission.azul_revenue || 0),
-    base_via_accounting: parseFloat(commission.direta_via_accounting || 0) / 0.25,
-    base_via_direct:     parseFloat(commission.direta_via_direct     || 0) / 0.25,
-    cert_count:          parseInt(commission.direta_certificates_count || 0),
-    notes:               commission.notes || '',
+    month:                commission.month,
+    azul_revenue:         parseFloat(commission.azul_revenue         || 0),
+    azul_normal_revenue:  parseFloat(commission.azul_normal_revenue  || 0),
+    seguros:              rawSeguros.map((s, i) => ({ ...s, id: Date.now() + i })),
+    consorcios_revenue:   parseFloat(commission.consorcios_revenue   || 0),
+    base_via_accounting:  parseFloat(commission.direta_via_accounting || 0) / 0.25,
+    base_via_direct:      parseFloat(commission.direta_via_direct     || 0) / 0.25,
+    cert_count:           parseInt(commission.direta_certificates_count || 0),
+    notes:                commission.notes || '',
   });
   const [preview,  setPreview]  = useState(null);
   const [loadPrev, setLoadPrev] = useState(false);
@@ -813,11 +826,14 @@ function EditModal({ commission, collab, onClose, onSaved }) {
     setLoadPrev(true);
     try {
       const res = await api.post('/internal-collaborators/commissions/preview', {
-        collaborator_id:     collab.id,
-        azul_revenue:        form.azul_revenue,
-        base_via_accounting: form.base_via_accounting,
-        base_via_direct:     form.base_via_direct,
-        cert_count:          form.cert_count,
+        collaborator_id:      collab.id,
+        azul_revenue:         form.azul_revenue,
+        azul_normal_revenue:  form.azul_normal_revenue,
+        seguros_data:         form.seguros || [],
+        consorcios_revenue:   form.consorcios_revenue,
+        base_via_accounting:  form.base_via_accounting,
+        base_via_direct:      form.base_via_direct,
+        cert_count:           form.cert_count,
       });
       setPreview(res.data);
     } catch { toast.error('Erro no preview'); }
@@ -828,12 +844,15 @@ function EditModal({ commission, collab, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.put(`/internal-collaborators/commissions/${commission.id}`, {
-        month:               form.month,
-        azul_revenue:        form.azul_revenue,
-        base_via_accounting: form.base_via_accounting,
-        base_via_direct:     form.base_via_direct,
-        cert_count:          form.cert_count,
-        notes:               form.notes || null,
+        month:                form.month,
+        azul_revenue:         form.azul_revenue,
+        azul_normal_revenue:  form.azul_normal_revenue,
+        seguros_data:         form.seguros || [],
+        consorcios_revenue:   form.consorcios_revenue,
+        base_via_accounting:  form.base_via_accounting,
+        base_via_direct:      form.base_via_direct,
+        cert_count:           form.cert_count,
+        notes:                form.notes || null,
       });
       toast.success(`Comissão de ${collab.name} atualizada!`);
       onSaved();
