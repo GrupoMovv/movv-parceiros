@@ -33,7 +33,16 @@ async function listCollaborators(req, res) {
 // ─── Admin: preview de cálculo antes de salvar ──────────────────────────────
 async function previewCommission(req, res) {
   try {
-    const { collaborator_id, azul_revenue, base_via_accounting, base_via_direct, cert_count } = req.body;
+    const {
+      collaborator_id,
+      azul_revenue,
+      azul_normal_revenue,
+      seguros_data,
+      consorcios_revenue,
+      base_via_accounting,
+      base_via_direct,
+      cert_count,
+    } = req.body;
 
     const collab = await db.query(
       'SELECT id, role FROM internal_collaborators WHERE id = $1 AND active = true',
@@ -47,16 +56,22 @@ async function previewCommission(req, res) {
       calc = calcPabline({ azulRevenue: azul_revenue || 0 });
     } else {
       calc = calcFernando({
-        azulRevenue:        azul_revenue        || 0,
-        baseViaAccounting:  base_via_accounting || 0,
-        baseViaDirect:      base_via_direct     || 0,
-        certCount:          cert_count          || 0,
+        azulNormalRevenue: azul_normal_revenue ?? azul_revenue ?? 0,
+        segurosData:       seguros_data        || [],
+        consorciosRevenue: consorcios_revenue  || 0,
+        baseViaAccounting: base_via_accounting || 0,
+        baseViaDirect:     base_via_direct     || 0,
+        certCount:         cert_count          || 0,
       });
     }
 
+    const baseForNet = role === 'manager_azul'
+      ? parseFloat(azul_revenue || 0)
+      : parseFloat(azul_normal_revenue ?? azul_revenue ?? 0);
+
     return res.json({
       ...calc,
-      net_revenue: parseFloat(azul_revenue || 0) * NET_FACTOR,
+      net_revenue: baseForNet * NET_FACTOR,
     });
   } catch (err) {
     console.error(err);
@@ -70,6 +85,9 @@ async function createCommission(req, res) {
     const {
       collaborator_id, month,
       azul_revenue,
+      azul_normal_revenue,
+      seguros_data,
+      consorcios_revenue,
       base_via_accounting, base_via_direct, cert_count,
       notes,
     } = req.body;
@@ -90,7 +108,9 @@ async function createCommission(req, res) {
       calc = calcPabline({ azulRevenue: azul_revenue || 0 });
     } else {
       calc = calcFernando({
-        azulRevenue:       azul_revenue        || 0,
+        azulNormalRevenue: azul_normal_revenue ?? azul_revenue ?? 0,
+        segurosData:       seguros_data        || [],
+        consorciosRevenue: consorcios_revenue  || 0,
         baseViaAccounting: base_via_accounting || 0,
         baseViaDirect:     base_via_direct     || 0,
         certCount:         cert_count          || 0,
@@ -106,12 +126,17 @@ async function createCommission(req, res) {
       return res.status(403).json({ error: 'Este mês já foi marcado como pago. Estorne o pagamento antes de relançar.' });
     }
 
+    const segurosJson = JSON.stringify(seguros_data && role !== 'manager_azul' ? seguros_data : []);
+
     const result = await db.query(
       `INSERT INTO internal_commissions
          (collaborator_id, month, azul_revenue, azul_commission_pct, azul_commission,
           direta_certificates_count, direta_via_accounting, direta_via_direct, direta_commission,
-          base_salary, total_amount, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+          base_salary, total_amount, notes,
+          azul_normal_revenue, azul_normal_commission,
+          seguros_data, seguros_total_revenue, seguros_commission,
+          consorcios_revenue, consorcios_commission)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        ON CONFLICT (collaborator_id, month) DO UPDATE SET
          azul_revenue              = EXCLUDED.azul_revenue,
          azul_commission_pct       = EXCLUDED.azul_commission_pct,
@@ -122,11 +147,18 @@ async function createCommission(req, res) {
          direta_commission         = EXCLUDED.direta_commission,
          base_salary               = EXCLUDED.base_salary,
          total_amount              = EXCLUDED.total_amount,
-         notes                     = EXCLUDED.notes
+         notes                     = EXCLUDED.notes,
+         azul_normal_revenue       = EXCLUDED.azul_normal_revenue,
+         azul_normal_commission    = EXCLUDED.azul_normal_commission,
+         seguros_data              = EXCLUDED.seguros_data,
+         seguros_total_revenue     = EXCLUDED.seguros_total_revenue,
+         seguros_commission        = EXCLUDED.seguros_commission,
+         consorcios_revenue        = EXCLUDED.consorcios_revenue,
+         consorcios_commission     = EXCLUDED.consorcios_commission
        RETURNING *`,
       [
         collaborator_id, month,
-        azul_revenue || 0,
+        role === 'manager_azul' ? (azul_revenue || 0) : (calc.azul_normal_revenue || 0),
         calc.azul_commission_pct,
         calc.azul_commission,
         calc.direta_certificates_count,
@@ -136,6 +168,13 @@ async function createCommission(req, res) {
         calc.base_salary,
         calc.total_amount,
         notes || null,
+        calc.azul_normal_revenue,
+        calc.azul_normal_commission,
+        segurosJson,
+        calc.seguros_total_revenue,
+        calc.seguros_commission,
+        calc.consorcios_revenue,
+        calc.consorcios_commission,
       ]
     );
 
@@ -189,7 +228,15 @@ async function revertToPending(req, res) {
 async function updateCommission(req, res) {
   try {
     const { id } = req.params;
-    const { month, azul_revenue, base_via_accounting, base_via_direct, cert_count, notes } = req.body;
+    const {
+      month,
+      azul_revenue,
+      azul_normal_revenue,
+      seguros_data,
+      consorcios_revenue,
+      base_via_accounting, base_via_direct, cert_count,
+      notes,
+    } = req.body;
 
     const check = await db.query('SELECT * FROM internal_commissions WHERE id = $1', [id]);
     if (!check.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
@@ -208,12 +255,16 @@ async function updateCommission(req, res) {
       calc = calcPabline({ azulRevenue: azul_revenue || 0 });
     } else {
       calc = calcFernando({
-        azulRevenue:       azul_revenue        || 0,
+        azulNormalRevenue: azul_normal_revenue ?? azul_revenue ?? 0,
+        segurosData:       seguros_data        || [],
+        consorciosRevenue: consorcios_revenue  || 0,
         baseViaAccounting: base_via_accounting || 0,
         baseViaDirect:     base_via_direct     || 0,
         certCount:         cert_count          || 0,
       });
     }
+
+    const segurosJson = JSON.stringify(seguros_data && role !== 'manager_azul' ? seguros_data : []);
 
     const result = await db.query(
       `UPDATE internal_commissions SET
@@ -227,12 +278,19 @@ async function updateCommission(req, res) {
          direta_commission         = $8,
          base_salary               = $9,
          total_amount              = $10,
-         notes                     = $11
-       WHERE id = $12
+         notes                     = $11,
+         azul_normal_revenue       = $12,
+         azul_normal_commission    = $13,
+         seguros_data              = $14,
+         seguros_total_revenue     = $15,
+         seguros_commission        = $16,
+         consorcios_revenue        = $17,
+         consorcios_commission     = $18
+       WHERE id = $19
        RETURNING *`,
       [
         month || check.rows[0].month,
-        azul_revenue || 0,
+        role === 'manager_azul' ? (azul_revenue || 0) : (calc.azul_normal_revenue || 0),
         calc.azul_commission_pct,
         calc.azul_commission,
         calc.direta_certificates_count,
@@ -242,6 +300,13 @@ async function updateCommission(req, res) {
         calc.base_salary,
         calc.total_amount,
         notes !== undefined ? notes : check.rows[0].notes,
+        calc.azul_normal_revenue,
+        calc.azul_normal_commission,
+        segurosJson,
+        calc.seguros_total_revenue,
+        calc.seguros_commission,
+        calc.consorcios_revenue,
+        calc.consorcios_commission,
         id,
       ]
     );

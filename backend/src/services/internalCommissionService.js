@@ -25,25 +25,59 @@ function calcPabline({ azulRevenue }) {
   const totalAmount = parseFloat((azulCommission + baseSalary).toFixed(2));
 
   return {
-    azul_commission_pct:   pct,
-    azul_commission:       azulCommission,
+    azul_commission_pct:       pct,
+    azul_commission:           azulCommission,
+    azul_normal_revenue:       0,
+    azul_normal_commission:    0,
+    seguros_total_revenue:     0,
+    seguros_commission:        0,
+    consorcios_revenue:        0,
+    consorcios_commission:     0,
     direta_certificates_count: 0,
-    direta_via_accounting: 0,
-    direta_via_direct:     0,
-    direta_commission:     0,
-    base_salary:           baseSalary,
-    total_amount:          totalAmount,
+    direta_via_accounting:     0,
+    direta_via_direct:         0,
+    direta_commission:         0,
+    base_salary:               baseSalary,
+    total_amount:              totalAmount,
   };
 }
 
 // Calcula comissão completa de Fernando para um mês
-// baseViaAccounting = (venda - custo - comissão cont.) para certificados via contabilidade
-// baseViaDirect     = (venda - custo) para certificados venda direta
-function calcFernando({ azulRevenue, baseViaAccounting = 0, baseViaDirect = 0, certCount = 0 }) {
-  const net = parseFloat(azulRevenue) * NET_FACTOR;
-  const pct = calcFernandoAzulPct(net);
-  const azulCommission = parseFloat((net * pct).toFixed(2));
+// azulNormalRevenue  = Azul produtos normais (consignado, FGTS etc.) — curva 0.5/1/1.5% sobre LL
+// segurosData        = array de { valorOperado, pctComissaoAzul } — Fernando recebe 20% do que Azul paga à Movv
+// consorciosRevenue  = Azul Consórcios — Fernando recebe 1.5% sobre LL (80%)
+// baseViaAccounting  = base de cálculo certs via contabilidade (25%)
+// baseViaDirect      = base de cálculo certs venda direta (25%)
+function calcFernando({
+  azulRevenue       = 0,  // legacy compat — usado se azulNormalRevenue não fornecido
+  azulNormalRevenue,
+  segurosData       = [],
+  consorciosRevenue = 0,
+  baseViaAccounting = 0,
+  baseViaDirect     = 0,
+  certCount         = 0,
+}) {
+  // Azul Normal
+  const normalRev  = parseFloat(azulNormalRevenue ?? azulRevenue ?? 0);
+  const netNormal  = normalRev * NET_FACTOR;
+  const azulPct    = calcFernandoAzulPct(netNormal);
+  const azulNormalCommission = parseFloat((netNormal * azulPct).toFixed(2));
 
+  // Seguros: Fernando = (valorOperado × %ComissaoAzul) × 20%
+  const segurosArr       = Array.isArray(segurosData) ? segurosData : [];
+  const segurosMovvTotal = segurosArr.reduce((sum, s) => {
+    return sum + parseFloat(s.valorOperado || 0) * (parseFloat(s.pctComissaoAzul || 0) / 100);
+  }, 0);
+  const segurosCommission = parseFloat((segurosMovvTotal * 0.20).toFixed(2));
+
+  // Consórcios: Fernando = valorOperado × 80% × 1.5%
+  const consorciosRev        = parseFloat(consorciosRevenue || 0);
+  const consorciosCommission = parseFloat((consorciosRev * NET_FACTOR * 0.015).toFixed(2));
+
+  // Total Azul = soma dos 3 tipos
+  const azulCommission = parseFloat((azulNormalCommission + segurosCommission + consorciosCommission).toFixed(2));
+
+  // Direta
   const diretaViaAccounting = parseFloat((parseFloat(baseViaAccounting) * 0.25).toFixed(2));
   const diretaViaDirect     = parseFloat((parseFloat(baseViaDirect)     * 0.25).toFixed(2));
   const diretaCommission    = parseFloat((diretaViaAccounting + diretaViaDirect).toFixed(2));
@@ -53,7 +87,13 @@ function calcFernando({ azulRevenue, baseViaAccounting = 0, baseViaDirect = 0, c
   const totalAmount     = parseFloat((totalCommission + baseSalary).toFixed(2));
 
   return {
-    azul_commission_pct:       pct,
+    azul_commission_pct:       azulPct,
+    azul_normal_revenue:       normalRev,
+    azul_normal_commission:    azulNormalCommission,
+    seguros_total_revenue:     parseFloat(segurosMovvTotal.toFixed(2)),
+    seguros_commission:        segurosCommission,
+    consorcios_revenue:        consorciosRev,
+    consorcios_commission:     consorciosCommission,
     azul_commission:           azulCommission,
     direta_certificates_count: parseInt(certCount) || 0,
     direta_via_accounting:     diretaViaAccounting,

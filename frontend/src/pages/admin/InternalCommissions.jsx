@@ -428,6 +428,134 @@ function ModalShell({ title, subtitle, onClose, children }) {
   );
 }
 
+// ─── Curva de Comissão (display) ─────────────────────────────────────────────
+function CurvaDisplay({ curve, netValue, label }) {
+  return (
+    <div className="rounded-xl border border-slate-200 overflow-hidden">
+      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Curva — {label}</p>
+      </div>
+      <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {curve.map((tier, i) => {
+          const active = netValue >= tier.min && netValue <= tier.max;
+          return (
+            <div key={i} className={`rounded-lg px-3 py-2 text-xs ${active ? 'bg-movv-gradient text-white font-bold' : 'bg-slate-50 text-slate-600'}`}>
+              <p className={active ? 'text-white/80' : 'text-slate-400'}>{tier.label}</p>
+              <p className="font-bold text-sm mt-0.5">{(tier.pct * 100).toFixed(1)}%</p>
+              {active && <p className="text-[10px] text-white/70 mt-0.5">← você está aqui</p>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Seguros — lista dinâmica (Fernando) ──────────────────────────────────────
+const PCT_OPTIONS = Array.from({ length: 21 }, (_, i) => i + 10);
+
+function SegurosList({ seguros, onChange }) {
+  function addRow() {
+    if (seguros.length >= 10) return;
+    onChange([...seguros, { id: Date.now(), descricao: '', valorOperado: 0, pctComissaoAzul: 10 }]);
+  }
+  function removeRow(id) { onChange(seguros.filter(s => s.id !== id)); }
+  function updateRow(id, field, value) {
+    onChange(seguros.map(s => s.id === id ? { ...s, [field]: value } : s));
+  }
+
+  const subtotal = seguros.reduce((sum, s) => {
+    return sum + (parseFloat(s.valorOperado || 0) * parseFloat(s.pctComissaoAzul || 0) / 100) * 0.20;
+  }, 0);
+
+  return (
+    <div className="border-t border-slate-100 pt-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <p className="text-sm font-semibold text-slate-800">Seguros</p>
+          <span className="text-xs text-slate-400">(Fernando = 20% do que Azul paga à Movv)</span>
+        </div>
+        <button
+          type="button"
+          onClick={addRow}
+          disabled={seguros.length >= 10}
+          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-[#4A0E8F] hover:bg-purple-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-3 h-3" /> Adicionar
+        </button>
+      </div>
+
+      {seguros.length === 0 ? (
+        <p className="text-xs text-slate-400 text-center py-3 italic">Nenhum seguro este mês</p>
+      ) : (
+        <>
+          {seguros.map(s => (
+            <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-slate-500 font-medium">Descrição (opcional)</label>
+                    <input
+                      type="text"
+                      className="input mt-0.5 text-sm"
+                      value={s.descricao}
+                      onChange={e => updateRow(s.id, 'descricao', e.target.value)}
+                      placeholder="Ex: Vida Empresarial"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 font-medium">Valor Operado</label>
+                    <CurrencyInput
+                      key={`val-${s.id}`}
+                      value={s.valorOperado}
+                      onChange={v => updateRow(s.id, 'valorOperado', v)}
+                      className="input mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 font-medium">% Comissão Azul</label>
+                    <select
+                      className="input mt-0.5"
+                      value={s.pctComissaoAzul}
+                      onChange={e => updateRow(s.id, 'pctComissaoAzul', parseInt(e.target.value))}
+                    >
+                      {PCT_OPTIONS.map(p => <option key={p} value={p}>{p}%</option>)}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeRow(s.id)}
+                  className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {parseFloat(s.valorOperado) > 0 && (
+                <p className="text-xs text-emerald-600 font-medium">
+                  Fernando:{' '}
+                  {((parseFloat(s.valorOperado) * parseFloat(s.pctComissaoAzul) / 100) * 0.20)
+                    .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <span className="text-slate-400 font-normal ml-1">
+                    ({parseFloat(s.valorOperado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} × {s.pctComissaoAzul}% × 20%)
+                  </span>
+                </p>
+              )}
+            </div>
+          ))}
+          <div className="flex items-center justify-between text-sm bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+            <span className="text-slate-600 font-medium">Subtotal seguros Fernando:</span>
+            <span className="font-bold text-emerald-700">
+              {subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Commission Form (compartilhado entre Launch e Edit) ─────────────────────
 function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loadPrev, onPreview }) {
   return (
@@ -437,87 +565,93 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
         <input type="month" className="input" value={form.month} onChange={e => set('month', e.target.value)} />
       </div>
 
-      <div>
-        <label className="label">Faturamento Bruto Azul</label>
-        <CurrencyInput
-          value={form.azul_revenue}
-          onChange={v => set('azul_revenue', v)}
-          placeholder="85.000,00"
-          className="input"
-        />
-        <p className="text-xs text-slate-400 mt-1">
-          Base = {(form.azul_revenue * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
-        </p>
-      </div>
-
-      {/* Curva informativa */}
-      <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Curva de Comissão — {isPabline ? 'Pabline' : 'Fernando Azul'}
-          </p>
-        </div>
-        <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {(isPabline ? CURVA_PABLINE : CURVA_FERNANDO).map((tier, i) => {
-            const net    = form.azul_revenue * 0.80;
-            const active = net >= tier.min && net <= tier.max;
-            return (
-              <div key={i} className={`rounded-lg px-3 py-2 text-xs ${active ? 'bg-movv-gradient text-white font-bold' : 'bg-slate-50 text-slate-600'}`}>
-                <p className={active ? 'text-white/80' : 'text-slate-400'}>{tier.label}</p>
-                <p className="font-bold text-sm mt-0.5">{(tier.pct * 100).toFixed(1)}%</p>
-                {active && <p className="text-[10px] text-white/70 mt-0.5">← você está aqui</p>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Campos Direta — apenas Fernando */}
-      {isFernando && (
-        <div className="border-t border-slate-100 pt-4 space-y-4">
-          <p className="text-sm font-semibold text-slate-700">
-            Direta Certificação <span className="text-xs font-normal text-slate-400">(Fernando recebe 25% sobre cada base)</span>
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Base via Contabilidade</label>
-              <CurrencyInput
-                value={form.base_via_accounting}
-                onChange={v => set('base_via_accounting', v)}
-                placeholder="venda − custo − com. cont."
-                className="input"
-              />
-              <p className="text-xs text-emerald-600 mt-1 font-medium">
-                Fernando: {(form.base_via_accounting * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </p>
-            </div>
-            <div>
-              <label className="label">Base Venda Direta</label>
-              <CurrencyInput
-                value={form.base_via_direct}
-                onChange={v => set('base_via_direct', v)}
-                placeholder="venda − custo"
-                className="input"
-              />
-              <p className="text-xs text-emerald-600 mt-1 font-medium">
-                Fernando: {(form.base_via_direct * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </p>
-            </div>
-          </div>
+      {/* PABLINE: campo único de faturamento Azul */}
+      {isPabline && (
+        <>
           <div>
-            <label className="label">Qtd. certificados emitidos (total)</label>
-            <IntegerInput
-              value={form.cert_count}
-              onChange={v => set('cert_count', v)}
-              className="input w-40"
-            />
+            <label className="label">Faturamento Bruto Azul</label>
+            <CurrencyInput value={form.azul_revenue} onChange={v => set('azul_revenue', v)} placeholder="85.000,00" className="input" />
+            <p className="text-xs text-slate-400 mt-1">
+              Base = {(form.azul_revenue * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
+            </p>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
-            <p className="font-semibold mb-1">Regra do Salário Fernando</p>
-            <p>Se comissão total &lt; R$ 3.500 → salário R$ 1.621 é incluído</p>
-            <p>Se comissão total ≥ R$ 3.500 → salário = R$ 0</p>
+          <CurvaDisplay curve={CURVA_PABLINE} netValue={form.azul_revenue * 0.80} label="Pabline" />
+        </>
+      )}
+
+      {/* FERNANDO: 3 seções de produto */}
+      {isFernando && (
+        <>
+          {/* Azul Normal */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#4A0E8F]" />
+              <p className="text-sm font-semibold text-slate-800">Azul — Produtos Normais</p>
+              <span className="text-xs text-slate-400">(consignado, FGTS, etc.)</span>
+            </div>
+            <div>
+              <label className="label">Faturamento Bruto</label>
+              <CurrencyInput value={form.azul_normal_revenue} onChange={v => set('azul_normal_revenue', v)} placeholder="85.000,00" className="input" />
+              <p className="text-xs text-slate-400 mt-1">
+                Base = {(form.azul_normal_revenue * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
+              </p>
+            </div>
+            <CurvaDisplay curve={CURVA_FERNANDO} netValue={form.azul_normal_revenue * 0.80} label="Fernando — Azul Normal" />
           </div>
-        </div>
+
+          {/* Seguros */}
+          <SegurosList seguros={form.seguros} onChange={arr => set('seguros', arr)} />
+
+          {/* Consórcios */}
+          <div className="border-t border-slate-100 pt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#C9A84C]" />
+              <p className="text-sm font-semibold text-slate-800">Consórcios</p>
+              <span className="text-xs text-slate-400">(Fernando = LL × 1,5%)</span>
+            </div>
+            <div>
+              <label className="label">Valor Operado</label>
+              <CurrencyInput value={form.consorcios_revenue} onChange={v => set('consorcios_revenue', v)} placeholder="0,00" className="input" />
+              <p className="text-xs text-emerald-600 mt-1 font-medium">
+                Fernando:{' '}
+                {(form.consorcios_revenue * 0.80 * 0.015).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                <span className="text-slate-400 font-normal ml-1">(valor × 80% × 1,5%)</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Direta */}
+          <div className="border-t border-slate-100 pt-4 space-y-4">
+            <p className="text-sm font-semibold text-slate-700">
+              Direta Certificação <span className="text-xs font-normal text-slate-400">(Fernando recebe 25% sobre cada base)</span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Base via Contabilidade</label>
+                <CurrencyInput value={form.base_via_accounting} onChange={v => set('base_via_accounting', v)} placeholder="venda − custo − com. cont." className="input" />
+                <p className="text-xs text-emerald-600 mt-1 font-medium">
+                  Fernando: {(form.base_via_accounting * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </div>
+              <div>
+                <label className="label">Base Venda Direta</label>
+                <CurrencyInput value={form.base_via_direct} onChange={v => set('base_via_direct', v)} placeholder="venda − custo" className="input" />
+                <p className="text-xs text-emerald-600 mt-1 font-medium">
+                  Fernando: {(form.base_via_direct * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="label">Qtd. certificados emitidos (total)</label>
+              <IntegerInput value={form.cert_count} onChange={v => set('cert_count', v)} className="input w-40" />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+              <p className="font-semibold mb-1">Regra do Salário Fernando</p>
+              <p>Se comissão total &lt; R$ 3.500 → salário R$ 1.621 é incluído</p>
+              <p>Se comissão total ≥ R$ 3.500 → salário = R$ 0</p>
+            </div>
+          </div>
+        </>
       )}
 
       <div>
@@ -541,13 +675,43 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
         {preview && (
           <div className="mt-4 bg-[#F8F4FF] border border-purple-200 rounded-xl p-4 space-y-3">
             <p className="text-xs font-semibold text-[#4A0E8F] uppercase tracking-wider">Preview do Cálculo</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-              <PreviewItem label="Base líquida"  value={fmt(preview.net_revenue)} />
-              <PreviewItem label="% Azul"        value={fmtPct(preview.azul_commission_pct)} />
-              <PreviewItem label="Comissão Azul" value={fmt(preview.azul_commission)} />
-              {isFernando && <PreviewItem label="Com. Direta" value={fmt(preview.direta_commission)} />}
-              <PreviewItem label="Salário base"  value={fmt(preview.base_salary)} />
-            </div>
+
+            {isPabline && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                <PreviewItem label="Base líquida"  value={fmt(preview.net_revenue)} />
+                <PreviewItem label="% Azul"        value={fmtPct(preview.azul_commission_pct)} />
+                <PreviewItem label="Comissão Azul" value={fmt(preview.azul_commission)} />
+                <PreviewItem label="Salário base"  value={fmt(preview.base_salary)} />
+              </div>
+            )}
+
+            {isFernando && (
+              <div className="space-y-2 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <PreviewItem label="Azul Normal LL"    value={fmt(preview.net_revenue)} />
+                  <PreviewItem label="% Azul Normal"     value={fmtPct(preview.azul_commission_pct)} />
+                  <PreviewItem label="Com. Azul Normal"  value={fmt(preview.azul_normal_commission)} />
+                </div>
+                {parseFloat(preview.seguros_commission) > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <PreviewItem label="Seguros (Azul→Movv)" value={fmt(preview.seguros_total_revenue)} />
+                    <PreviewItem label="Com. Seguros (20%)"  value={fmt(preview.seguros_commission)} />
+                  </div>
+                )}
+                {parseFloat(preview.consorcios_commission) > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <PreviewItem label="Consórcios"      value={fmt(preview.consorcios_revenue)} />
+                    <PreviewItem label="Com. Consórcios" value={fmt(preview.consorcios_commission)} />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <PreviewItem label="Total Azul"   value={fmt(preview.azul_commission)} />
+                  <PreviewItem label="Com. Direta"  value={fmt(preview.direta_commission)} />
+                  <PreviewItem label="Salário base" value={fmt(preview.base_salary)} />
+                </div>
+              </div>
+            )}
+
             <div className="border-t border-purple-200 pt-3 flex items-center justify-between">
               <p className="text-slate-600 text-sm font-semibold">Total a receber</p>
               <p className="text-[#4A0E8F] font-bold text-xl">{fmt(preview.total_amount)}</p>
