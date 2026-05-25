@@ -5,8 +5,20 @@ require('dotenv').config();
 
 const app = express();
 
+const allowedOrigins = [
+  'https://portal.grupomovv.com.br',
+  'https://movv-parceiros.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    // Permite requisições sem origin (Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Não permitido por CORS: ' + origin));
+  },
   credentials: true,
 }));
 app.use(express.json());

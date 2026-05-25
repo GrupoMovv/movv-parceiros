@@ -3,7 +3,7 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Grupo Movv <noreply@grupomovv.com.br>';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'contato@grupomovv.com.br';
-const PORTAL_URL = process.env.FRONTEND_URL || 'https://movv-parceiros.onrender.com';
+const PORTAL_URL = process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br';
 
 async function enviar({ to, subject, html }) {
   try {
