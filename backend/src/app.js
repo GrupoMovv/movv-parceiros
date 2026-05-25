@@ -35,6 +35,7 @@ app.use('/api/reports',    require('./routes/reports'));
 app.use('/api/employees',  require('./routes/employees'));
 app.use('/api/interest',              require('./routes/interest'));
 app.use('/api/internal-collaborators', require('./routes/internalCollaborators'));
+app.use('/api/indicators',             require('./routes/indicators'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 

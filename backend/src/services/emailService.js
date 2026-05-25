@@ -179,6 +179,40 @@ async function enviarConfirmacaoIndicacao({ nome, email, protocolo, produto, val
   return enviar({ to: email, subject: `Movv — Protocolo de indicacao: ${protocolo}`, html });
 }
 
+async function enviarNovoIndicadorAdmin({ nome, cpf, whatsapp, email }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Novo Cadastro de Indicador</h2>
+    <p style="color:#555;line-height:1.6;">Um novo candidato se cadastrou no programa <strong>Indique Azul e Ganhe</strong> e aguarda aprovação.</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('Nome', nome)}
+      ${linha('CPF', cpf)}
+      ${linha('WhatsApp', whatsapp)}
+      ${email ? linha('E-mail', email) : ''}
+    </table>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;"><strong>Ação necessária:</strong> Acesse o portal para aprovar ou rejeitar o cadastro.</p>
+    </div>
+    ${botao('Acessar o Portal', PORTAL_URL)}
+  `);
+  return enviar({ to: ADMIN_EMAIL, subject: 'Novo cadastro de Indicador — aprovação necessária', html });
+}
+
+async function enviarAprovacaoIndicador({ nome, email }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Seu cadastro foi aprovado!</h2>
+    <p style="color:#555;line-height:1.6;">Parabéns, <strong>${nome}</strong>! Seu cadastro no programa <strong>Indique Azul e Ganhe</strong> foi aprovado.</p>
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#2d1b5e 100%);border-radius:12px;padding:28px;text-align:center;margin:24px 0;">
+      <p style="margin:0;color:#C9A84C;font-size:13px;text-transform:uppercase;letter-spacing:2px;font-weight:700;">Programa</p>
+      <p style="margin:8px 0 4px;color:#fff;font-size:24px;font-weight:700;">Indique Azul e Ganhe</p>
+      <p style="margin:0;color:#8a8aaa;font-size:13px;">Acesse o portal e comece a indicar clientes!</p>
+    </div>
+    <p style="color:#555;line-height:1.6;">Agora você pode entrar no portal com seu CPF, e-mail ou WhatsApp cadastrados, junto com sua senha.</p>
+    ${botao('Entrar no Portal', `${PORTAL_URL}/login`)}
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">Em caso de dúvidas, entre em contato com nossa equipe.</p>
+  `);
+  return enviar({ to: email, subject: 'Movv — Seu cadastro foi aprovado!', html });
+}
+
 module.exports = {
   enviarCredenciais,
   enviarRecuperacaoSenha,
@@ -186,4 +220,6 @@ module.exports = {
   enviarRelatorioMensal,
   enviarNotificacaoPagamento,
   enviarConfirmacaoIndicacao,
+  enviarNovoIndicadorAdmin,
+  enviarAprovacaoIndicador,
 };

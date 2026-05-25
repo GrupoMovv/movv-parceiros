@@ -20,6 +20,15 @@ const authenticate = async (req, res, next) => {
         return res.status(401).json({ error: 'Colaborador não encontrado ou inativo' });
       }
       req.user = { ...result.rows[0], type: 'internal', is_admin: false };
+    } else if (decoded.userType === 'indicator') {
+      const result = await db.query(
+        'SELECT id, name, cpf, email, whatsapp, pix_key, pix_key_type, status, total_indications, total_commissions, total_paid, pending_amount FROM indicators WHERE id = $1 AND status = $2',
+        [decoded.id, 'approved']
+      );
+      if (!result.rows[0]) {
+        return res.status(401).json({ error: 'Indicador não encontrado ou não aprovado' });
+      }
+      req.user = { ...result.rows[0], type: 'indicator', is_admin: false };
     } else {
       const result = await db.query(
         'SELECT id, code, name, email, type, is_admin, is_active, parent_id FROM partners WHERE id = $1',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
@@ -18,7 +18,13 @@ export default function Login() {
     try {
       const partner = await login(identifier.trim(), password);
       toast.success(`Bem-vindo(a), ${partner.name.split(' ')[0]}!`);
-      navigate(partner.is_admin ? '/admin' : '/');
+      if (partner.type === 'indicator') {
+        navigate('/indicador/dashboard');
+      } else if (partner.is_admin) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao fazer login');
     } finally {
@@ -103,6 +109,12 @@ export default function Login() {
 
           <p className="text-center text-slate-400 text-xs mt-6">
             Problemas para acessar? Fale com a equipe Movv.
+          </p>
+          <p className="text-center text-slate-400 text-xs mt-4">
+            Quer ser um Indicador?{' '}
+            <Link to="/seja-indicador" className="text-[#4A0E8F] font-semibold hover:underline">
+              Cadastre-se gratuitamente
+            </Link>
           </p>
         </div>
 

@@ -6,6 +6,7 @@ import {
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound
 } from 'lucide-react';
 
+
 const partnerLinks = [
   { to: '/',        icon: LayoutDashboard, label: 'Painel' },
   { to: '/extrato', icon: FileText,        label: 'Extrato' },
@@ -21,6 +22,18 @@ const adminLinks = [
   { to: '/admin/produtos',              icon: Package,         label: 'Produtos' },
   { to: '/admin/comissoes-internas',    icon: DollarSign,      label: 'Comissões Internas' },
   { to: '/admin/interesse',             icon: Sparkles,        label: 'Interesses' },
+  { to: '/admin/indicadores',           icon: UsersRound,      label: 'Indicadores' },
+];
+
+const indicatorLinks = [
+  { to: '/indicador/dashboard',         icon: LayoutDashboard, label: 'Painel'            },
+  { to: '/indicador/indicar',           icon: UserPlus,        label: 'Indicar Cliente'   },
+  { to: '/indicador/minhas-indicacoes', icon: ClipboardList,   label: 'Minhas Indicações' },
+  { to: '/indicador/produtos-azul',     icon: Package,         label: 'Produtos Azul'     },
+  { to: '/indicador/simulador',         icon: TrendingUp,      label: 'Simulador'         },
+  { to: '/indicador/material-apoio',    icon: BookOpen,        label: 'Material de Apoio' },
+  { to: '/indicador/meus-pagamentos',   icon: CreditCard,      label: 'Meus Pagamentos'   },
+  { to: '/indicador/perfil',            icon: Users,           label: 'Meu Perfil'        },
 ];
 
 const internalLinks = [
@@ -87,7 +100,8 @@ export default function Sidebar({ onClose }) {
 
   const isAccounting = user?.is_admin || user?.type === 'accounting';
   const isInternal   = user?.type === 'internal';
-  const mainLinks    = user?.is_admin ? adminLinks : isInternal ? internalLinks : partnerLinks;
+  const isIndicator  = user?.type === 'indicator';
+  const mainLinks    = user?.is_admin ? adminLinks : isInternal ? internalLinks : isIndicator ? indicatorLinks : partnerLinks;
 
   const tierColor = {
     Bronze: 'text-amber-300', Prata: 'text-slate-300', Ouro: 'text-gold-300', Diamante: 'text-blue-300'
@@ -122,7 +136,9 @@ export default function Sidebar({ onClose }) {
                 ? '⚙ Administrador'
                 : isInternal
                   ? (user?.role === 'manager_azul' ? '★ Gerente Azul' : '★ Comercial Azul + Direta')
-                  : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}
+                  : isIndicator
+                    ? '◆ Indicador Azul'
+                    : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}
             </span>
           </div>
         </div>
@@ -133,19 +149,22 @@ export default function Sidebar({ onClose }) {
         {user?.is_admin && (
           <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Admin</p>
         )}
+        {isIndicator && (
+          <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Indicador Azul</p>
+        )}
 
         {mainLinks.map(({ to, icon, label }) => (
           <NavItem key={to} to={to} icon={icon} label={label} onClose={onClose}
-            end={to === '/' || to === '/admin'} />
+            end={to === '/' || to === '/admin' || to === '/indicador/dashboard'} />
         ))}
 
-        {/* Meus Funcionários — visível apenas para contabilidade (não admin, não interno) */}
-        {!user?.is_admin && !isInternal && user?.type === 'accounting' && (
+        {/* Meus Funcionários — visível apenas para contabilidade (não admin, não interno, não indicador) */}
+        {!user?.is_admin && !isInternal && !isIndicator && user?.type === 'accounting' && (
           <NavItem to="/meus-funcionarios" icon={UsersRound} label="Meus Funcionários" onClose={onClose} />
         )}
 
-        {/* Recursos — visível a parceiros e admin, não a colaboradores internos */}
-        {!isInternal && (
+        {/* Recursos — visível a parceiros e admin, não a colaboradores internos nem indicadores */}
+        {!isInternal && !isIndicator && (
           <div className="pt-3 mt-3 border-t border-white/10">
             <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Recursos</p>
             <NavItem to="/material-apoio" icon={BookOpen} label="Material de Apoio" onClose={onClose} />
@@ -162,8 +181,8 @@ export default function Sidebar({ onClose }) {
           </div>
         )}
 
-        {/* Em Breve — visível a parceiros E admin, não a colaboradores internos */}
-        {!isInternal && (
+        {/* Em Breve — visível a parceiros E admin, não a colaboradores internos nem indicadores */}
+        {!isInternal && !isIndicator && (
           <div className="pt-3 mt-3 border-t border-white/10">
             <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Em Breve</p>
             <ComingSoonItem to="/movv-office"     icon={Building2}    label="Movv Office"     onClose={onClose} />
@@ -173,7 +192,7 @@ export default function Sidebar({ onClose }) {
         )}
 
         {/* Movv Café para parceiros/internos: aparece DEPOIS de Em Breve */}
-        {!user?.is_admin && (
+        {!user?.is_admin && !isIndicator && (
           <div className="pt-3 mt-3 border-t border-white/10">
             <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
           </div>

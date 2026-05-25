@@ -49,19 +49,41 @@ async function login(req, res) {
       [asCode, asEmail, asWhatsapp]
     );
     const partner = partnerResult.rows[0];
-    if (!partner) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-    const valid = await bcrypt.compare(password, partner.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Código ou senha inválidos' });
+    if (partner) {
+      const valid = await bcrypt.compare(password, partner.password_hash);
+      if (!valid) return res.status(401).json({ error: 'Código ou senha inválidos' });
 
-    const token = jwt.sign(
-      { id: partner.id, userType: 'partner', code: partner.code, is_admin: partner.is_admin },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      const token = jwt.sign(
+        { id: partner.id, userType: 'partner', code: partner.code, is_admin: partner.is_admin },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      const { password_hash, ...safe } = partner;
+      return res.json({ token, partner: safe });
+    }
+
+    // 3. Tenta indicador (CPF sem máscara, email ou whatsapp)
+    const asCpf = raw.replace(/\D/g, '');
+    const indicatorResult = await db.query(
+      `SELECT * FROM indicators WHERE (cpf = $1 OR email = $2 OR ($3 <> '' AND whatsapp = $3)) AND status = 'approved' LIMIT 1`,
+      [asCpf, asEmail, asWhatsapp]
     );
+    const indicator = indicatorResult.rows[0];
+    if (indicator) {
+      const valid = await bcrypt.compare(password, indicator.password_hash);
+      if (!valid) return res.status(401).json({ error: 'Credenciais inválidas' });
+      const token = jwt.sign(
+        { id: indicator.id, userType: 'indicator' },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+      const { password_hash, ...safe } = indicator;
+      return res.json({ token, partner: { ...safe, type: 'indicator', is_admin: false, code: null } });
+    }
 
-    const { password_hash, ...safe } = partner;
-    return res.json({ token, partner: safe });
+    return res.status(401).json({ error: 'Credenciais inválidas' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
@@ -77,6 +99,14 @@ async function me(req, res) {
       );
       const u = result.rows[0];
       return res.json({ ...u, type: 'internal', is_admin: false, code: null });
+    }
+
+    if (req.user.type === 'indicator') {
+      const result = await db.query(
+        'SELECT id, name, cpf, email, whatsapp, pix_key, pix_key_type, status, total_indications, total_commissions, total_paid, pending_amount, created_at FROM indicators WHERE id = $1',
+        [req.user.id]
+      );
+      return res.json({ ...result.rows[0], type: 'indicator', is_admin: false, code: null });
     }
 
     const result = await db.query(

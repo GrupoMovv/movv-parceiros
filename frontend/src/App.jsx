@@ -19,10 +19,24 @@ import AdminPayments from './pages/admin/Payments';
 import AdminProducts from './pages/admin/Products';
 import AdminInterest from './pages/admin/Interest';
 import AdminInternalCommissions from './pages/admin/InternalCommissions';
+import AdminIndicadores from './pages/admin/AdminIndicadores';
 import MinhasComissoes from './pages/MinhasComissoes';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
 import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
+// Páginas públicas
+import SejaIndicador from './pages/SejaIndicador';
+import CadastroIndicador from './pages/CadastroIndicador';
+import TermosIndicador from './pages/TermosIndicador';
+// Páginas do indicador
+import IndicadorDashboard from './pages/indicador/Dashboard';
+import IndicadorIndicar from './pages/indicador/Indicar';
+import IndicadorMinhasIndicacoes from './pages/indicador/MinhasIndicacoes';
+import IndicadorProdutosAzul from './pages/indicador/ProdutosAzul';
+import IndicadorSimulador from './pages/indicador/Simulador';
+import IndicadorMaterialApoio from './pages/indicador/MaterialApoio';
+import IndicadorMeusPagamentos from './pages/indicador/MeusPagamentos';
+import IndicadorPerfil from './pages/indicador/Perfil';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -33,7 +47,8 @@ function RequireAuth({ children }) {
     </div>
   );
   if (!user) return <Navigate to="/login" replace />;
-  if (user.must_change_password && location.pathname !== '/trocar-senha-obrigatorio') {
+  // Indicadores não passam pelo fluxo de troca obrigatória de senha
+  if (user.type !== 'indicator' && user.must_change_password && location.pathname !== '/trocar-senha-obrigatorio') {
     return <Navigate to="/trocar-senha-obrigatorio" replace />;
   }
   return children;
@@ -57,14 +72,26 @@ function RequireInternal({ children }) {
   return children;
 }
 
+function RequireIndicator({ children }) {
+  const { user } = useAuth();
+  if (user?.type !== 'indicator') return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        {/* Páginas públicas */}
+        <Route path="/login"             element={<Login />} />
+        <Route path="/seja-indicador"    element={<SejaIndicador />} />
+        <Route path="/cadastro-indicador" element={<CadastroIndicador />} />
+        <Route path="/termos-indicador"   element={<TermosIndicador />} />
+
         <Route path="/trocar-senha-obrigatorio" element={
           <RequireAuth><TrocarSenhaObrigatorio /></RequireAuth>
         } />
+
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Dashboard />} />
           <Route path="extrato"              element={<Statement />} />
@@ -83,9 +110,19 @@ export default function App() {
           <Route path="admin/pagamentos"     element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
           <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
           <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
+          <Route path="admin/indicadores"   element={<RequireAdmin><AdminIndicadores /></RequireAdmin>} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
+          {/* Rotas do Indicador */}
+          <Route path="indicador/dashboard"          element={<RequireIndicator><IndicadorDashboard /></RequireIndicator>} />
+          <Route path="indicador/indicar"            element={<RequireIndicator><IndicadorIndicar /></RequireIndicator>} />
+          <Route path="indicador/minhas-indicacoes"  element={<RequireIndicator><IndicadorMinhasIndicacoes /></RequireIndicator>} />
+          <Route path="indicador/produtos-azul"      element={<RequireIndicator><IndicadorProdutosAzul /></RequireIndicator>} />
+          <Route path="indicador/simulador"          element={<RequireIndicator><IndicadorSimulador /></RequireIndicator>} />
+          <Route path="indicador/material-apoio"     element={<RequireIndicator><IndicadorMaterialApoio /></RequireIndicator>} />
+          <Route path="indicador/meus-pagamentos"    element={<RequireIndicator><IndicadorMeusPagamentos /></RequireIndicator>} />
+          <Route path="indicador/perfil"             element={<RequireIndicator><IndicadorPerfil /></RequireIndicator>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
