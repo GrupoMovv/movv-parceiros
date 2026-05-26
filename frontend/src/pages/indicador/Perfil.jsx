@@ -4,6 +4,40 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users } from 'lucide-react';
 
+const PIX_TYPES = [
+  { value: 'cpf',       label: 'CPF' },
+  { value: 'email',     label: 'E-mail' },
+  { value: 'telefone',  label: 'Telefone (Celular)' },
+  { value: 'aleatoria', label: 'Chave Aleatória' },
+];
+
+function maskCPF(v) {
+  return v.replace(/\D/g, '').slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function maskPhone(v) {
+  return v.replace(/\D/g, '').slice(0, 11)
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d{1,4})$/, '$1-$2');
+}
+
+function pixPlaceholder(type) {
+  if (type === 'cpf')       return '000.000.000-00';
+  if (type === 'email')     return 'seu@email.com';
+  if (type === 'telefone')  return '(62) 99999-0000';
+  if (type === 'aleatoria') return 'Cole sua chave aleatória (UUID)';
+  return 'Sua chave PIX';
+}
+
+function applyPixMask(value, type) {
+  if (type === 'cpf')      return maskCPF(value);
+  if (type === 'telefone') return maskPhone(value);
+  return value;
+}
+
 export default function IndicadorPerfil() {
   const { refreshUser } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -129,30 +163,31 @@ export default function IndicadorPerfil() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">Tipo de chave PIX</label>
-            <select
-              value={form.pix_key_type}
-              onChange={e => setForm(f => ({ ...f, pix_key_type: e.target.value }))}
-              className="input"
-            >
-              <option value="cpf">CPF</option>
-              <option value="email">E-mail</option>
-              <option value="telefone">Telefone</option>
-              <option value="aleatoria">Aleatória</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">Chave PIX</label>
-            <input
-              type="text"
-              value={form.pix_key}
-              onChange={e => setForm(f => ({ ...f, pix_key: e.target.value }))}
-              placeholder="Sua chave PIX"
-              className="input"
-            />
-          </div>
+        <div>
+          <label className="label">Tipo de chave PIX</label>
+          <select
+            value={form.pix_key_type}
+            onChange={e => setForm(f => ({ ...f, pix_key_type: e.target.value, pix_key: '' }))}
+            className="input"
+            style={{ backgroundColor: '#fff' }}
+          >
+            {PIX_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Chave PIX</label>
+          <input
+            type={form.pix_key_type === 'email' ? 'email' : 'text'}
+            value={form.pix_key}
+            onChange={e => setForm(f => ({ ...f, pix_key: applyPixMask(e.target.value, f.pix_key_type) }))}
+            placeholder={pixPlaceholder(form.pix_key_type)}
+            className="input"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Aceita: CPF, e-mail, telefone ou chave aleatória
+          </p>
         </div>
 
         <button

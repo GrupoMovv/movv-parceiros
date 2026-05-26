@@ -32,6 +32,27 @@ function validCPF(cpf) {
   return r === parseInt(c[10]);
 }
 
+const PIX_TYPES = [
+  { value: 'cpf',       label: 'CPF' },
+  { value: 'email',     label: 'E-mail' },
+  { value: 'telefone',  label: 'Telefone (Celular)' },
+  { value: 'aleatoria', label: 'Chave Aleatória' },
+];
+
+function pixPlaceholder(type) {
+  if (type === 'cpf')       return '000.000.000-00';
+  if (type === 'email')     return 'seu@email.com';
+  if (type === 'telefone')  return '(62) 99999-0000';
+  if (type === 'aleatoria') return 'Cole sua chave aleatória (UUID)';
+  return 'Sua chave PIX';
+}
+
+function applyPixMask(value, type) {
+  if (type === 'cpf')      return maskCPF(value);
+  if (type === 'telefone') return maskPhone(value);
+  return value;
+}
+
 export default function CadastroIndicador() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -54,7 +75,20 @@ export default function CadastroIndicador() {
     if (!rawCpf) e.cpf = 'CPF obrigatório';
     else if (!validCPF(rawCpf)) e.cpf = 'CPF inválido';
     if (!form.whatsapp) e.whatsapp = 'WhatsApp obrigatório';
-    if (!form.pix_key.trim()) e.pix_key = 'Chave PIX obrigatória';
+
+    const pix = form.pix_key.trim();
+    if (!pix) {
+      e.pix_key = 'Chave PIX obrigatória';
+    } else if (form.pix_key_type === 'cpf') {
+      if (!validCPF(pix)) e.pix_key = 'CPF inválido como chave PIX';
+    } else if (form.pix_key_type === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pix)) e.pix_key = 'E-mail inválido';
+    } else if (form.pix_key_type === 'telefone') {
+      if (pix.replace(/\D/g, '').length < 11) e.pix_key = 'Telefone deve ter 11 dígitos com DDD';
+    } else if (form.pix_key_type === 'aleatoria') {
+      if (pix.length < 32) e.pix_key = 'Chave aleatória deve ter no mínimo 32 caracteres';
+    }
+
     if (!form.password) e.password = 'Senha obrigatória';
     else if (form.password.length < 6) e.password = 'Mínimo 6 caracteres';
     if (form.password !== form.confirmPassword) e.confirmPassword = 'As senhas não coincidem';
@@ -180,31 +214,29 @@ export default function CadastroIndicador() {
           </div>
 
           {/* Tipo PIX + Chave */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-white/60 font-semibold uppercase tracking-wider mb-1.5">Tipo da chave PIX *</label>
-              <select
-                value={form.pix_key_type}
-                onChange={e => set('pix_key_type', e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#4A0E8F] transition-colors"
-              >
-                <option value="cpf">CPF</option>
-                <option value="email">E-mail</option>
-                <option value="telefone">Telefone</option>
-                <option value="aleatoria">Aleatória</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-white/60 font-semibold uppercase tracking-wider mb-1.5">Chave PIX *</label>
-              <input
-                type="text"
-                value={form.pix_key}
-                onChange={e => set('pix_key', e.target.value)}
-                placeholder="Sua chave PIX"
-                className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.pix_key ? 'border-red-500' : 'border-white/20'}`}
-              />
-              {errors.pix_key && <p className="text-red-400 text-xs mt-1">{errors.pix_key}</p>}
-            </div>
+          <div>
+            <label className="block text-xs text-white/60 font-semibold uppercase tracking-wider mb-1.5">Tipo da chave PIX *</label>
+            <select
+              value={form.pix_key_type}
+              onChange={e => { set('pix_key_type', e.target.value); set('pix_key', ''); }}
+              className="w-full border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#4A0E8F] transition-colors"
+              style={{ backgroundColor: '#1a0a3e' }}
+            >
+              {PIX_TYPES.map(t => (
+                <option key={t.value} value={t.value} style={{ backgroundColor: '#1a0a3e' }}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-white/60 font-semibold uppercase tracking-wider mb-1.5">Chave PIX *</label>
+            <input
+              type={form.pix_key_type === 'email' ? 'email' : 'text'}
+              value={form.pix_key}
+              onChange={e => set('pix_key', applyPixMask(e.target.value, form.pix_key_type))}
+              placeholder={pixPlaceholder(form.pix_key_type)}
+              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.pix_key ? 'border-red-500' : 'border-white/20'}`}
+            />
+            {errors.pix_key && <p className="text-red-400 text-xs mt-1">{errors.pix_key}</p>}
           </div>
 
           {/* Senha */}
