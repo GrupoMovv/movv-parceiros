@@ -27,28 +27,44 @@ export default function SejaIndicador() {
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#4A0E8F]/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#C9A84C]/10 rounded-full blur-3xl" />
         </div>
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <p className="text-[#C9A84C] text-xs font-bold uppercase tracking-[4px] mb-4">Grupo Movv — Itumbiara/GO</p>
-          <h1 className="text-4xl md:text-6xl font-black leading-tight mb-6">
-            INDIQUE AZUL<br />
-            <span className="text-[#C9A84C]">E GANHE</span>
-          </h1>
-          <p className="text-xl text-white/70 mb-8 max-w-2xl mx-auto">
-            Indique clientes para os produtos financeiros Azul e receba comissão via PIX direto no seu CPF. Sem mensalidade, sem burocracia.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/cadastro-indicador"
-              className="inline-flex items-center gap-2 bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-[#4A0E8F]/30"
-            >
-              QUERO SER INDICADOR <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-lg px-8 py-4 rounded-2xl transition-all border border-white/20"
-            >
-              Já sou indicador — Entrar
-            </Link>
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            {/* Texto */}
+            <div className="flex-1 text-center lg:text-left">
+              <p className="text-[#C9A84C] text-xs font-bold uppercase tracking-[4px] mb-4">Grupo Movv — Itumbiara/GO</p>
+              <h1 className="text-4xl md:text-6xl font-black leading-tight mb-6">
+                INDIQUE AZUL<br />
+                <span className="text-[#C9A84C]">E GANHE</span>
+              </h1>
+              <p className="text-xl text-white/70 mb-8 max-w-2xl">
+                Indique clientes para os produtos financeiros Azul e receba comissão via PIX direto no seu CPF. Sem mensalidade, sem burocracia.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link
+                  to="/cadastro-indicador"
+                  className="inline-flex items-center gap-2 bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-[#4A0E8F]/30"
+                >
+                  QUERO SER INDICADOR <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-lg px-8 py-4 rounded-2xl transition-all border border-white/20"
+                >
+                  Já sou indicador — Entrar
+                </Link>
+              </div>
+            </div>
+            {/* Imagem do programa */}
+            <div className="flex-shrink-0 w-full max-w-sm lg:max-w-md">
+              <div className="relative">
+                <div className="absolute -inset-2 bg-[#4A0E8F]/40 rounded-3xl blur-xl" />
+                <img
+                  src="/indique-e-ganhe.jpg"
+                  alt="Indique Azul e Ganhe"
+                  className="relative w-full rounded-2xl shadow-2xl border border-white/10"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
