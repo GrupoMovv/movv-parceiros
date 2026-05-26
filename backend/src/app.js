@@ -12,7 +12,7 @@ const allowedOrigins = [
   'http://localhost:3000',
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     // Permite requisições sem origin (Postman, curl, server-to-server)
     if (!origin) return callback(null, true);
@@ -20,7 +20,13 @@ app.use(cors({
     callback(new Error('Não permitido por CORS: ' + origin));
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+// Responde preflight OPTIONS em todas as rotas
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
