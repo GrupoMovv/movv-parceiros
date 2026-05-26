@@ -3,42 +3,90 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
-  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound
+  Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
 } from 'lucide-react';
 
+// ─── Roles ────────────────────────────────────────────────────────────────────
 
-const partnerLinks = [
-  { to: '/',        icon: LayoutDashboard, label: 'Painel' },
-  { to: '/extrato', icon: FileText,        label: 'Extrato' },
-  { to: '/indicar', icon: UserPlus,        label: 'Indicar Cliente' },
+function getUserRoles(user) {
+  if (!user) return [];
+  const roles = [];
+  if (user.is_admin) roles.push('admin');
+  if (user.type === 'accounting') roles.push('accounting');
+  if (user.type === 'indicator') roles.push('indicator');
+  if (user.type === 'internal') roles.push('internal');
+  // qualquer parceiro que não seja accounting, indicator ou internal
+  if (!user.is_admin && !['accounting', 'indicator', 'internal'].includes(user.type)) {
+    roles.push('partner');
+  }
+  return roles;
+}
+
+function canAccess(item, userRoles) {
+  if (item.alwaysEnabled) return true;
+  if (!item.roles?.length) return false;
+  return item.roles.some(r => userRoles.includes(r));
+}
+
+// ─── Master Menu ──────────────────────────────────────────────────────────────
+
+const MASTER_MENU = [
+  {
+    section: 'Admin',
+    items: [
+      { label: 'Visão Geral',        icon: LayoutDashboard, to: '/admin',                   roles: ['admin'], end: true },
+      { label: 'Parceiros',          icon: Users,           to: '/admin/parceiros',          roles: ['admin'] },
+      { label: 'Indicações',         icon: ClipboardList,   to: '/admin/indicacoes',         roles: ['admin'] },
+      { label: 'Comissões',          icon: Coins,           to: '/admin/comissoes',          roles: ['admin'] },
+      { label: 'Pagamentos',         icon: CreditCard,      to: '/admin/pagamentos',         roles: ['admin'] },
+      { label: 'Produtos',           icon: Package,         to: '/admin/produtos',           roles: ['admin'] },
+      { label: 'Comissões Internas', icon: DollarSign,      to: '/admin/comissoes-internas', roles: ['admin'] },
+      { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin'] },
+      { label: 'Interesses',         icon: Sparkles,        to: '/admin/interesse',          roles: ['admin'] },
+    ],
+  },
+  {
+    section: 'Portal Parceiro',
+    items: [
+      { label: 'Painel',              icon: LayoutDashboard, to: '/',                   roles: ['admin', 'accounting', 'partner'], end: true },
+      { label: 'Extrato',             icon: FileText,        to: '/extrato',             roles: ['admin', 'accounting', 'partner'] },
+      { label: 'Indicar Cliente',     icon: UserPlus,        to: '/indicar',             roles: ['admin', 'accounting', 'partner'] },
+      { label: 'Material de Apoio',   icon: BookOpen,        to: '/material-apoio',      roles: ['admin', 'accounting', 'partner'] },
+      { label: 'Direta Certificação', icon: ShieldCheck,     to: '/direta-certificacao', roles: ['admin', 'accounting'] },
+      { label: 'Meus Funcionários',   icon: UsersRound,      to: '/meus-funcionarios',   roles: ['admin', 'accounting'] },
+    ],
+  },
+  {
+    section: 'Indicador Azul',
+    items: [
+      { label: 'Painel Indicador',  icon: LayoutDashboard, to: '/indicador/dashboard',         roles: ['indicator'], end: true },
+      { label: 'Indicar',           icon: UserPlus,        to: '/indicador/indicar',            roles: ['indicator'] },
+      { label: 'Minhas Indicações', icon: ClipboardList,   to: '/indicador/minhas-indicacoes',  roles: ['indicator'] },
+      { label: 'Produtos Azul',     icon: Package,         to: '/indicador/produtos-azul',      roles: ['indicator'] },
+      { label: 'Simulador',         icon: TrendingUp,      to: '/indicador/simulador',          roles: ['indicator'] },
+      { label: 'Material de Apoio', icon: BookOpen,        to: '/indicador/material-apoio',     roles: ['indicator'] },
+      { label: 'Meus Pagamentos',   icon: CreditCard,      to: '/indicador/meus-pagamentos',    roles: ['indicator'] },
+      { label: 'Meu Perfil',        icon: Users,           to: '/indicador/perfil',             roles: ['indicator'] },
+    ],
+  },
+  {
+    section: 'Colaborador',
+    items: [
+      { label: 'Minhas Comissões', icon: DollarSign, to: '/minhas-comissoes', roles: ['internal'] },
+    ],
+  },
+  {
+    section: 'Recursos',
+    items: [
+      { label: 'Movv Café',         icon: Coffee,       to: '/movv-cafe',          alwaysEnabled: true },
+      { label: 'Movv Office',       icon: Building2,    to: '/movv-office',        alwaysEnabled: true, comingSoon: true },
+      { label: 'Movv Cobranças',    icon: TrendingUp,   to: '/movv-cobrancas',     alwaysEnabled: true, comingSoon: true },
+      { label: 'Movv Suprimentos',  icon: ShoppingCart, to: '/movv-suprimentos',   alwaysEnabled: true, comingSoon: true },
+    ],
+  },
 ];
 
-const adminLinks = [
-  { to: '/admin',                       icon: LayoutDashboard, label: 'Visão Geral' },
-  { to: '/admin/parceiros',             icon: Users,           label: 'Parceiros' },
-  { to: '/admin/indicacoes',            icon: ClipboardList,   label: 'Indicações' },
-  { to: '/admin/comissoes',             icon: Coins,           label: 'Comissões' },
-  { to: '/admin/pagamentos',            icon: CreditCard,      label: 'Pagamentos' },
-  { to: '/admin/produtos',              icon: Package,         label: 'Produtos' },
-  { to: '/admin/comissoes-internas',    icon: DollarSign,      label: 'Comissões Internas' },
-  { to: '/admin/interesse',             icon: Sparkles,        label: 'Interesses' },
-  { to: '/admin/indicadores',           icon: UsersRound,      label: 'Indicadores' },
-];
-
-const indicatorLinks = [
-  { to: '/indicador/dashboard',         icon: LayoutDashboard, label: 'Painel'            },
-  { to: '/indicador/indicar',           icon: UserPlus,        label: 'Indicar Cliente'   },
-  { to: '/indicador/minhas-indicacoes', icon: ClipboardList,   label: 'Minhas Indicações' },
-  { to: '/indicador/produtos-azul',     icon: Package,         label: 'Produtos Azul'     },
-  { to: '/indicador/simulador',         icon: TrendingUp,      label: 'Simulador'         },
-  { to: '/indicador/material-apoio',    icon: BookOpen,        label: 'Material de Apoio' },
-  { to: '/indicador/meus-pagamentos',   icon: CreditCard,      label: 'Meus Pagamentos'   },
-  { to: '/indicador/perfil',            icon: Users,           label: 'Meu Perfil'        },
-];
-
-const internalLinks = [
-  { to: '/minhas-comissoes', icon: DollarSign, label: 'Minhas Comissões' },
-];
+// ─── Nav Items ────────────────────────────────────────────────────────────────
 
 function NavItem({ to, icon: Icon, label, onClose, end }) {
   return (
@@ -61,6 +109,16 @@ function NavItem({ to, icon: Icon, label, onClose, end }) {
         </>
       )}
     </NavLink>
+  );
+}
+
+function LockedItem({ icon: Icon, label }) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium opacity-30 cursor-not-allowed select-none">
+      <Icon className="w-4 h-4 flex-shrink-0" />
+      <span className="flex-1 text-white/60">{label}</span>
+      <Lock className="w-3 h-3 flex-shrink-0 text-white/40" />
+    </div>
   );
 }
 
@@ -89,23 +147,24 @@ function ComingSoonItem({ to, icon: Icon, label, onClose }) {
   );
 }
 
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+
 export default function Sidebar({ onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const userRoles = getUserRoles(user);
+
+  const isInternal  = user?.type === 'internal';
+  const isIndicator = user?.type === 'indicator';
+
+  const tierColor = {
+    Bronze: 'text-amber-300', Prata: 'text-slate-300', Ouro: 'text-gold-300', Diamante: 'text-blue-300',
+  };
 
   function handleLogout() {
     logout();
     navigate('/login');
   }
-
-  const isAccounting = user?.is_admin || user?.type === 'accounting';
-  const isInternal   = user?.type === 'internal';
-  const isIndicator  = user?.type === 'indicator';
-  const mainLinks    = user?.is_admin ? adminLinks : isInternal ? internalLinks : isIndicator ? indicatorLinks : partnerLinks;
-
-  const tierColor = {
-    Bronze: 'text-amber-300', Prata: 'text-slate-300', Ouro: 'text-gold-300', Diamante: 'text-blue-300'
-  };
 
   return (
     <aside className="h-full flex flex-col bg-movv-900 w-64">
@@ -145,59 +204,42 @@ export default function Sidebar({ onClose }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {user?.is_admin && (
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Admin</p>
-        )}
-        {isIndicator && (
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Indicador Azul</p>
-        )}
-
-        {mainLinks.map(({ to, icon, label }) => (
-          <NavItem key={to} to={to} icon={icon} label={label} onClose={onClose}
-            end={to === '/' || to === '/admin' || to === '/indicador/dashboard'} />
+      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-3">
+        {MASTER_MENU.map(({ section, items }) => (
+          <div key={section}>
+            <p className="text-white/35 text-[10px] font-bold uppercase tracking-widest px-3 mb-1">
+              {section}
+            </p>
+            <div className="space-y-0.5">
+              {items.map(item => {
+                if (item.comingSoon) {
+                  return (
+                    <ComingSoonItem
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
+                      onClose={onClose}
+                    />
+                  );
+                }
+                if (canAccess(item, userRoles)) {
+                  return (
+                    <NavItem
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
+                      onClose={onClose}
+                      end={item.end}
+                    />
+                  );
+                }
+                return <LockedItem key={item.to} icon={item.icon} label={item.label} />;
+              })}
+            </div>
+          </div>
         ))}
-
-        {/* Meus Funcionários — visível apenas para contabilidade (não admin, não interno, não indicador) */}
-        {!user?.is_admin && !isInternal && !isIndicator && user?.type === 'accounting' && (
-          <NavItem to="/meus-funcionarios" icon={UsersRound} label="Meus Funcionários" onClose={onClose} />
-        )}
-
-        {/* Recursos — visível a parceiros e admin, não a colaboradores internos nem indicadores */}
-        {!isInternal && !isIndicator && (
-          <div className="pt-3 mt-3 border-t border-white/10">
-            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Recursos</p>
-            <NavItem to="/material-apoio" icon={BookOpen} label="Material de Apoio" onClose={onClose} />
-            {isAccounting && (
-              <NavItem to="/direta-certificacao" icon={ShieldCheck} label="Direta Certificação" onClose={onClose} />
-            )}
-          </div>
-        )}
-
-        {/* Movv Café para admin: aparece ANTES de Em Breve */}
-        {user?.is_admin && (
-          <div className="pt-3 mt-3 border-t border-white/10">
-            <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
-          </div>
-        )}
-
-        {/* Em Breve — visível a parceiros E admin, não a colaboradores internos nem indicadores */}
-        {!isInternal && !isIndicator && (
-          <div className="pt-3 mt-3 border-t border-white/10">
-            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Em Breve</p>
-            <ComingSoonItem to="/movv-office"     icon={Building2}    label="Movv Office"     onClose={onClose} />
-            <ComingSoonItem to="/movv-cobrancas"  icon={TrendingUp}   label="Movv Cobranças"  onClose={onClose} />
-            <ComingSoonItem to="/movv-suprimentos" icon={ShoppingCart} label="Movv Suprimentos" onClose={onClose} />
-          </div>
-        )}
-
-        {/* Movv Café para parceiros/internos: aparece DEPOIS de Em Breve */}
-        {!user?.is_admin && !isIndicator && (
-          <div className="pt-3 mt-3 border-t border-white/10">
-            <NavItem to="/movv-cafe" icon={Coffee} label="Movv Café" onClose={onClose} />
-          </div>
-        )}
-
       </nav>
 
       {/* Alterar Senha + Logout */}
