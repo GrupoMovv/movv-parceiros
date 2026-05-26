@@ -35,7 +35,7 @@ export default function SejaIndicador() {
             <span className="text-[#C9A84C]">E GANHE</span>
           </h1>
           <p className="text-xl text-white/70 mb-8 max-w-2xl mx-auto">
-            Indique clientes para os produtos financeiros Azul e receba comissão via PIX direto no seu CPF. Sem mensalidade, sem burocracia.
+            Indique clientes para os produtos financeiros Azul e receba comissão direto na sua chave PIX. Sem mensalidade, sem burocracia.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link
@@ -73,7 +73,7 @@ export default function SejaIndicador() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { icon: DollarSign, title: 'Sem mensalidade', desc: 'Cadastro 100% gratuito. Você só recebe, nunca paga.' },
-              { icon: Smartphone, title: 'PIX direto no CPF', desc: 'Receba suas comissões via PIX assim que aprovadas.' },
+              { icon: Smartphone, title: 'PIX na sua chave', desc: 'Receba suas comissões via PIX (CPF, e-mail, telefone ou aleatória).' },
               { icon: TrendingUp, title: 'Quanto mais indica, mais ganha', desc: 'Sem teto de ganhos. Você cria sua própria renda extra.' },
               { icon: Eye, title: 'Acompanhamento em tempo real', desc: 'Veja o status de cada indicação no seu painel.' },
             ].map(({ icon: Icon, title, desc }) => (
