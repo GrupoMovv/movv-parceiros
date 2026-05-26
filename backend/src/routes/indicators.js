@@ -22,14 +22,17 @@ router.put('/referrals/:id/renew',    authenticate, requireIndicator, ctrl.renew
 router.get('/my-payments',            authenticate, requireIndicator, ctrl.getMyPayments);
 
 // Admin
-router.get('/',                       authenticate, requireAdmin, ctrl.listIndicators);
-router.get('/payments/pending',       authenticate, requireAdmin, ctrl.getPendingPayments);
-router.get('/payments',               authenticate, requireAdmin, ctrl.listAdminPayments);
-router.post('/payments',              authenticate, requireAdmin, ctrl.createPayment);
-router.put('/payments/:id/pay',       authenticate, requireAdmin, ctrl.markPaymentPaid);
-router.get('/:id',                    authenticate, requireAdmin, ctrl.getIndicatorById);
-router.put('/:id/approve',            authenticate, requireAdmin, ctrl.approveIndicator);
-router.put('/:id/reject',             authenticate, requireAdmin, ctrl.rejectIndicator);
-router.put('/:id/suspend',            authenticate, requireAdmin, ctrl.suspendIndicator);
+router.get('/',                            authenticate, requireAdmin, ctrl.listIndicators);
+router.get('/all-referrals',               authenticate, requireAdmin, ctrl.listAllReferrals);
+router.put('/referrals/:id/approve',       authenticate, requireAdmin, ctrl.approveReferralAdmin);
+router.put('/referrals/:id/cancel',        authenticate, requireAdmin, ctrl.cancelReferralAdmin);
+router.get('/payments/pending',            authenticate, requireAdmin, ctrl.getPendingPayments);
+router.get('/payments',                    authenticate, requireAdmin, ctrl.listAdminPayments);
+router.post('/payments',                   authenticate, requireAdmin, ctrl.createPayment);
+router.put('/payments/:id/pay',            authenticate, requireAdmin, ctrl.markPaymentPaid);
+router.get('/:id',                         authenticate, requireAdmin, ctrl.getIndicatorById);
+router.put('/:id/approve',                 authenticate, requireAdmin, ctrl.approveIndicator);
+router.put('/:id/reject',                  authenticate, requireAdmin, ctrl.rejectIndicator);
+router.put('/:id/suspend',                 authenticate, requireAdmin, ctrl.suspendIndicator);
 
 module.exports = router;

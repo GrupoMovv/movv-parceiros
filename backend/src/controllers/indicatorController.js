@@ -429,6 +429,86 @@ async function getMyPayments(req, res) {
   }
 }
 
+// GET /api/indicators/all-referrals — admin
+async function listAllReferrals(req, res) {
+  const { status } = req.query;
+  try {
+    let sql = `
+      SELECT ir.*, i.name AS indicator_name, i.cpf AS indicator_cpf, i.whatsapp AS indicator_whatsapp
+      FROM indicator_referrals ir
+      JOIN indicators i ON i.id = ir.indicator_id
+    `;
+    const params = [];
+    if (status) {
+      sql += ' WHERE ir.status = $1';
+      params.push(status);
+    }
+    sql += ' ORDER BY ir.created_at DESC';
+    const result = await db.query(sql, params);
+    return res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+// PUT /api/indicators/referrals/:id/approve — admin
+async function approveReferralAdmin(req, res) {
+  const { commission_value } = req.body;
+  try {
+    const ref = await db.query('SELECT * FROM indicator_referrals WHERE id = $1', [req.params.id]);
+    if (!ref.rows[0]) return res.status(404).json({ error: 'Indicação não encontrada' });
+    const referral = ref.rows[0];
+
+    if (referral.status === 'approved') {
+      return res.status(409).json({ error: 'Indicação já está aprovada.' });
+    }
+
+    const commValue = (commission_value != null && commission_value !== '')
+      ? parseFloat(commission_value)
+      : (referral.commission_value ? parseFloat(referral.commission_value) : null);
+
+    const result = await db.query(
+      `UPDATE indicator_referrals SET status = 'approved', commission_value = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [commValue, req.params.id]
+    );
+
+    if (commValue) {
+      await db.query(
+        `UPDATE indicators SET
+          total_commissions = total_commissions + $1,
+          pending_amount    = pending_amount + $1,
+          updated_at        = NOW()
+         WHERE id = $2`,
+        [commValue, referral.indicator_id]
+      );
+    }
+
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+// PUT /api/indicators/referrals/:id/cancel — admin
+async function cancelReferralAdmin(req, res) {
+  const { notes } = req.body;
+  try {
+    const result = await db.query(
+      `UPDATE indicator_referrals SET status = 'cancelled', notes = COALESCE($1, notes), updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [notes || null, req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Indicação não encontrada' });
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
 module.exports = {
   register,
   listIndicators,
@@ -449,4 +529,7 @@ module.exports = {
   markPaymentPaid,
   getPendingPayments,
   getMyPayments,
+  listAllReferrals,
+  approveReferralAdmin,
+  cancelReferralAdmin,
 };
