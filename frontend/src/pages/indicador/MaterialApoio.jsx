@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { BookOpen, Copy, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -41,8 +41,8 @@ export default function IndicadorMaterialApoio() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/10 rounded-xl flex items-center justify-center">
-          <BookOpen className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/10 rounded-xl flex items-center justify-center">
+          <BookOpen className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Material de Apoio</h1>
@@ -63,7 +63,7 @@ export default function IndicadorMaterialApoio() {
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     copied === idx
                       ? 'bg-green-100 text-green-700'
-                      : 'bg-[#4A0E8F]/10 text-[#4A0E8F] hover:bg-[#4A0E8F]/20'
+                      : 'bg-[#0C2D48]/10 text-[#0C2D48] hover:bg-[#0C2D48]/20'
                   }`}
                 >
                   {copied === idx ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -83,10 +83,10 @@ export default function IndicadorMaterialApoio() {
         <h2 className="text-lg font-bold text-slate-800 mb-3">Link do Portal</h2>
         <p className="text-slate-500 text-sm mb-3">Compartilhe este link com clientes que queiram se cadastrar diretamente:</p>
         <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
-          <span className="flex-1 text-sm font-mono text-[#4A0E8F] truncate">{PORTAL_URL}</span>
+          <span className="flex-1 text-sm font-mono text-[#0C2D48] truncate">{PORTAL_URL}</span>
           <button
             onClick={() => { navigator.clipboard.writeText(PORTAL_URL); toast.success('Link copiado!'); }}
-            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4A0E8F]/10 text-[#4A0E8F] hover:bg-[#4A0E8F]/20 rounded-lg text-xs font-semibold transition-all"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0C2D48]/10 text-[#0C2D48] hover:bg-[#0C2D48]/20 rounded-lg text-xs font-semibold transition-all"
           >
             <Copy className="w-3.5 h-3.5" /> Copiar
           </button>
@@ -99,7 +99,7 @@ export default function IndicadorMaterialApoio() {
         <ul className="space-y-3">
           {DICAS.map((d, i) => (
             <li key={i} className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-[#4A0E8F]/10 text-[#4A0E8F] rounded-full flex items-center justify-center text-xs font-bold">
+              <span className="flex-shrink-0 w-6 h-6 bg-[#0C2D48]/10 text-[#0C2D48] rounded-full flex items-center justify-center text-xs font-bold">
                 {i + 1}
               </span>
               <p className="text-slate-600 text-sm leading-relaxed">{d}</p>

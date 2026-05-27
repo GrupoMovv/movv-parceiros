@@ -1,12 +1,12 @@
-import jsPDF from 'jspdf';
+﻿import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // Brand colors
 const C = {
-  purple:    [74,  14, 143],
-  purpleHex: '#4A0E8F',
+  blue:      [12,  45,  72],
+  blueHex:   '#0C2D48',
   gold:      [201, 168, 76],
   goldHex:   '#C9A84C',
   green:     [27,  94, 32],
@@ -93,7 +93,7 @@ export async function generateMonthlyReport(data) {
 
     // ── HEADER BAND ──────────────────────────────────────────────────────────
     const HEADER_H = 40; // mm
-    doc.setFillColor(...C.purple);
+    doc.setFillColor(...C.blue);
     doc.rect(0, 0, W, HEADER_H, 'F');
 
     // Logo: canto superior esquerdo, altura maxima 26mm, largura maxima 52mm,
@@ -167,7 +167,7 @@ export async function generateMonthlyReport(data) {
     y += 32;
 
     // ── FINANCIAL SUMMARY ────────────────────────────────────────────────────
-    doc.setTextColor(...C.purple);
+    doc.setTextColor(...C.blue);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('Resumo Financeiro', 14, y);
@@ -205,7 +205,7 @@ export async function generateMonthlyReport(data) {
 
     // ── BY-EMPLOYEE TABLE ─────────────────────────────────────────────────────
     if (Array.isArray(by_employee) && by_employee.length > 0) {
-      doc.setTextColor(...C.purple);
+      doc.setTextColor(...C.blue);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text('Resumo por Funcionario', 14, y);
@@ -229,7 +229,7 @@ export async function generateMonthlyReport(data) {
           ]),
           empTotalRow,
         ],
-        headStyles: { fillColor: C.purple, textColor: C.white, fontSize: 8.5, fontStyle: 'bold' },
+        headStyles: { fillColor: C.blue, textColor: C.white, fontSize: 8.5, fontStyle: 'bold' },
         columnStyles: {
           0: { cellWidth: 'auto', fontSize: 8.5 },
           1: { cellWidth: 35, fontStyle: 'bold', textColor: C.gold, fontSize: 8.5 },
@@ -242,7 +242,7 @@ export async function generateMonthlyReport(data) {
           if (hook.row.index === by_employee.length) {
             hook.cell.styles.fontStyle = 'bold';
             hook.cell.styles.fillColor = [235, 228, 252];
-            hook.cell.styles.textColor = C.purple;
+            hook.cell.styles.textColor = C.blue;
           }
         },
         rowPageBreak: 'avoid',
@@ -256,7 +256,7 @@ export async function generateMonthlyReport(data) {
     // ── DETAILED REFERRALS TABLE ──────────────────────────────────────────────
     if (y > H - 70) { doc.addPage(); y = 15; }
 
-    doc.setTextColor(...C.purple);
+    doc.setTextColor(...C.blue);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('Detalhamento por Indicacao', 14, y);
@@ -287,7 +287,7 @@ export async function generateMonthlyReport(data) {
           fmt(r.contabilidade_34),
           fmt(r.imposto_15),
         ]),
-        headStyles: { fillColor: C.purple, textColor: C.white, fontSize: 7, fontStyle: 'bold' },
+        headStyles: { fillColor: C.blue, textColor: C.white, fontSize: 7, fontStyle: 'bold' },
         styles: { fontSize: 7, cellPadding: 2 },
         alternateRowStyles: { fillColor: C.light },
         columnStyles: {

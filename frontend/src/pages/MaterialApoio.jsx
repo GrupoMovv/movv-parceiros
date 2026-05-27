@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Download, BookOpen, CheckCircle2, UserPlus, ClipboardList, Banknote,
   ChevronDown, ChevronUp, MessageCircle, TrendingUp, Zap, Star, Info, AlertTriangle
@@ -6,7 +6,7 @@ import {
 
 const FAIXAS = [
   {
-    label: 'FAIXA ALTA', percentual: '1,5%', cor: '#1A6B3C',
+    label: 'FAIXA ALTA', percentual: '1,5%', cor: '#00875A',
     bgCls: 'bg-emerald-50 border-emerald-200', badgeCls: 'bg-emerald-600 text-white',
     dotCls: 'bg-emerald-500', textCls: 'text-emerald-800',
     produtos: [
@@ -126,7 +126,7 @@ export default function MaterialApoio() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PASSOS.map(({ icon: Icon, numero, titulo, desc }) => (
             <div key={numero} className="card text-center space-y-3">
-              <div className="inline-flex w-12 h-12 rounded-full bg-purple-50 border border-purple-100 items-center justify-center mx-auto">
+              <div className="inline-flex w-12 h-12 rounded-full bg-blue-50 border border-blue-100 items-center justify-center mx-auto">
                 <Icon className="w-5 h-5 text-movv-900" />
               </div>
               <div>
@@ -235,7 +235,7 @@ export default function MaterialApoio() {
 
           {/* Modelo 2 — PLR (Recomendado) */}
           <div className="rounded-2xl border-2 border-[#C9A84C] bg-yellow-50 p-5 space-y-3 relative">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C9A84C] text-[#4A0E8F] text-[10px] font-extrabold px-3 py-1 rounded-full tracking-wider whitespace-nowrap">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C9A84C] text-[#0C2D48] text-[10px] font-extrabold px-3 py-1 rounded-full tracking-wider whitespace-nowrap">
               ⭐ RECOMENDADO
             </span>
             <div className="flex items-center justify-between mt-1">
@@ -250,12 +250,12 @@ export default function MaterialApoio() {
           </div>
 
           {/* Modelo 3 — MEI */}
-          <div className="rounded-2xl border border-purple-200 bg-purple-50 p-5 space-y-3">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-700 text-white">Modelo 3</span>
-              <span className="text-xs text-purple-700 font-medium">Mais flexível</span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#0C2D48] text-white">Modelo 3</span>
+              <span className="text-xs text-blue-700 font-medium">Mais flexível</span>
             </div>
-            <p className="text-purple-900 font-bold text-base">MEI do Funcionário</p>
+            <p className="text-movv-900 font-bold text-base">MEI do Funcionário</p>
             <p className="text-slate-600 text-sm leading-relaxed">
               Funcionário abre MEI e emite NF mensal para a contabilidade. Sem vínculo trabalhista extra,
               mas atenção à pejotização. Recomendado quando há várias fontes de renda.
@@ -276,7 +276,7 @@ export default function MaterialApoio() {
 
       {/* BPO */}
       <section>
-        <div className="relative overflow-hidden rounded-2xl bg-purple-900 border border-purple-700 p-6">
+        <div className="relative overflow-hidden rounded-2xl bg-movv-900 border border-movv-800 p-6">
           <div className="absolute inset-0 opacity-10"
             style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #C9A84C 0%, transparent 60%)' }} />
           <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">

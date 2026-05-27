@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -15,7 +15,7 @@ const FAIXAS = {
   alta:     { label: 'ALTA',     titulo: 'Faixa Alta',      desc: '1,5% do valor operado', badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-300', dotCls: 'bg-emerald-500', btnSelected: 'bg-emerald-50 border-emerald-400 text-emerald-700' },
   media:    { label: 'MÉDIA',    titulo: 'Faixa Média',     desc: '1,0% do valor operado', badgeCls: 'bg-yellow-100 text-yellow-700 border-yellow-300',   dotCls: 'bg-yellow-500',  btnSelected: 'bg-yellow-50 border-yellow-400 text-yellow-700' },
   baixa:    { label: 'BAIXA',    titulo: 'Faixa Baixa',     desc: '0,3% do valor operado', badgeCls: 'bg-blue-100 text-blue-700 border-blue-300',         dotCls: 'bg-blue-500',    btnSelected: 'bg-blue-50 border-blue-400 text-blue-700' },
-  especial: { label: 'ESPECIAL', titulo: 'Produto Especial', desc: 'Mensalidade R$1.399',   badgeCls: 'bg-purple-100 text-purple-700 border-purple-300',   dotCls: 'bg-purple-500',  btnSelected: 'bg-purple-50 border-purple-400 text-purple-700' },
+  especial: { label: 'ESPECIAL', titulo: 'Produto Especial', desc: 'Mensalidade R$1.399',   badgeCls: 'bg-blue-100 text-blue-700 border-blue-300',   dotCls: 'bg-blue-500',  btnSelected: 'bg-blue-50 border-blue-400 text-blue-700' },
 };
 
 const FAIXA_ORDER = ['alta', 'media', 'baixa', 'especial'];

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Users, Plus, Search, Edit2, Key, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -118,7 +118,7 @@ export default function AdminPartners() {
                   <td className="py-3 px-4 font-mono text-xs text-[#C9A84C]">{p.code}</td>
                   <td className="py-3 px-4 text-slate-900 font-medium whitespace-nowrap">
                     {p.name}
-                    {p.is_admin && <span className="ml-2 text-xs bg-purple-50 text-movv-900 border border-purple-200 px-1.5 py-0.5 rounded">Admin</span>}
+                    {p.is_admin && <span className="ml-2 text-xs bg-blue-50 text-movv-900 border border-blue-200 px-1.5 py-0.5 rounded">Admin</span>}
                   </td>
                   <td className="py-3 px-4">
                     <span className={p.type === 'accounting' ? 'badge-approved' : 'badge-pending'}>

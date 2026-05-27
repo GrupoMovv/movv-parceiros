@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -180,7 +180,7 @@ export default function Dashboard() {
 function StatCard({ icon, label, value, sub, accent }) {
   return (
     <div className={accent ? 'card-gold' : 'card'}>
-      <div className={`inline-flex p-2 rounded-lg mb-3 ${accent ? 'bg-[#FDF8ED] text-[#C9A84C]' : 'bg-purple-50 text-movv-900'}`}>
+      <div className={`inline-flex p-2 rounded-lg mb-3 ${accent ? 'bg-[#FDF8ED] text-[#C9A84C]' : 'bg-blue-50 text-movv-900'}`}>
         {icon}
       </div>
       <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">{label}</p>

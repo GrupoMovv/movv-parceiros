@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -111,7 +111,7 @@ export default function IndicadorIndicar() {
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => { setForm({ client_name:'',client_cpf:'',client_whatsapp:'',client_email:'',product_name:'',estimated_value:'',notes:'' }); setSuccess(false); }}
-              className="px-5 py-2.5 bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-semibold rounded-xl transition-all text-sm"
+              className="px-5 py-2.5 bg-[#0C2D48] hover:bg-[#5a1eaf] text-white font-semibold rounded-xl transition-all text-sm"
             >
               Nova Indicação
             </button>
@@ -129,8 +129,8 @@ export default function IndicadorIndicar() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/10 rounded-xl flex items-center justify-center">
-          <UserPlus className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/10 rounded-xl flex items-center justify-center">
+          <UserPlus className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Indicar Cliente</h1>
@@ -218,9 +218,9 @@ export default function IndicadorIndicar() {
             className="input"
           />
           {estimatedCommission !== null && (
-            <div className="mt-2 p-3 bg-[#4A0E8F]/5 border border-[#4A0E8F]/20 rounded-xl">
+            <div className="mt-2 p-3 bg-[#0C2D48]/5 border border-[#0C2D48]/20 rounded-xl">
               <p className="text-xs text-slate-500">Comissão estimada para você:</p>
-              <p className="text-lg font-bold text-[#4A0E8F]">{formatBRL(estimatedCommission)}</p>
+              <p className="text-lg font-bold text-[#0C2D48]">{formatBRL(estimatedCommission)}</p>
             </div>
           )}
         </div>

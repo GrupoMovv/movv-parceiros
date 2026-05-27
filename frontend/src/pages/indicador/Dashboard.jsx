@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,7 +43,7 @@ export default function IndicadorDashboard() {
     { label: 'Indicações ativas', value: data.active_count, icon: Clock, color: 'bg-blue-500/10 text-blue-600' },
     { label: 'Aprovadas', value: data.approved_count, icon: CheckCircle, color: 'bg-green-500/10 text-green-600' },
     { label: 'Comissão pendente', value: formatBRL(data.commission_pending), icon: DollarSign, color: 'bg-yellow-500/10 text-yellow-600' },
-    { label: 'Total recebido', value: formatBRL(data.commission_received), icon: TrendingUp, color: 'bg-purple-500/10 text-purple-600' },
+    { label: 'Total recebido', value: formatBRL(data.commission_received), icon: TrendingUp, color: 'bg-blue-500/10 text-blue-700' },
   ] : [];
 
   return (
@@ -85,7 +85,7 @@ export default function IndicadorDashboard() {
         <h2 className="text-lg font-bold text-slate-900">Últimas Indicações</h2>
         <Link
           to="/indicador/indicar"
-          className="inline-flex items-center gap-2 bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all"
+          className="inline-flex items-center gap-2 bg-[#0C2D48] hover:bg-[#5a1eaf] text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all"
         >
           <UserPlus className="w-4 h-4" /> Nova Indicação
         </Link>
@@ -95,13 +95,13 @@ export default function IndicadorDashboard() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-7 h-7 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : !data?.recent_referrals?.length ? (
           <div className="text-center py-12 text-slate-500">
             <UserPlus className="w-10 h-10 mx-auto mb-3 text-slate-300" />
             <p className="font-medium">Nenhuma indicação ainda</p>
-            <Link to="/indicador/indicar" className="text-[#4A0E8F] text-sm underline mt-2 inline-block">Fazer primeira indicação</Link>
+            <Link to="/indicador/indicar" className="text-[#0C2D48] text-sm underline mt-2 inline-block">Fazer primeira indicação</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">

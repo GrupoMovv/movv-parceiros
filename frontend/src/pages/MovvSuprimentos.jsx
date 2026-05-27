@@ -1,8 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const PURPLE = '#4A0E8F';
+const BLUE = '#0C2D48';
 const GOLD   = '#C9A84C';
 
 const sections = [
@@ -78,12 +78,12 @@ export default function MovvSuprimentos() {
       {/* Header */}
       <div
         className="rounded-2xl p-8 text-white relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #2D0661 100%)` }}
+        style={{ background: `linear-gradient(135deg, ${BLUE} 0%, #061C2E 100%)` }}
       >
         <div className="relative z-10">
           <span
             className="inline-block text-xs font-bold px-3 py-1 rounded-full mb-4 tracking-widest uppercase"
-            style={{ background: GOLD, color: PURPLE }}
+            style={{ background: GOLD, color: BLUE }}
           >
             EM BREVE
           </span>
@@ -140,7 +140,7 @@ export default function MovvSuprimentos() {
             <li key={i} className="flex items-center gap-3 text-slate-700 text-sm">
               <span
                 className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white"
-                style={{ background: PURPLE }}
+                style={{ background: BLUE }}
               >
                 {i + 1}
               </span>
@@ -155,7 +155,7 @@ export default function MovvSuprimentos() {
         className="rounded-2xl p-6 border-2 space-y-4"
         style={{ borderColor: GOLD, background: `${GOLD}15` }}
       >
-        <h2 className="font-bold text-slate-900 text-base" style={{ color: PURPLE }}>
+        <h2 className="font-bold text-slate-900 text-base" style={{ color: BLUE }}>
           Vantagens para sua contabilidade
         </h2>
         <ul className="space-y-2.5">
@@ -171,7 +171,7 @@ export default function MovvSuprimentos() {
       {/* CTA */}
       <div
         className="rounded-2xl p-8 text-center"
-        style={{ background: `linear-gradient(135deg, ${PURPLE}18 0%, ${GOLD}18 100%)` }}
+        style={{ background: `linear-gradient(135deg, ${BLUE}18 0%, ${GOLD}18 100%)` }}
       >
         {done ? (
           <div className="space-y-2">
@@ -192,7 +192,7 @@ export default function MovvSuprimentos() {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-base
                          transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed
                          hover:brightness-110 active:scale-95"
-              style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #2D0661 100%)` }}
+              style={{ background: `linear-gradient(135deg, ${BLUE} 0%, #061C2E 100%)` }}
             >
               {loading && (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

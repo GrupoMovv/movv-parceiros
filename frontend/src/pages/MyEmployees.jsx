@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Users, UserPlus, UserCheck, TrendingUp, Edit2, RefreshCw, Power, Copy, Check, X, Loader2 } from 'lucide-react';
@@ -122,7 +122,7 @@ export default function MyEmployees() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={Users}      label="Total ativos"               value={totalActive}  color="text-[#4A0E8F]"  bg="bg-purple-50"  border="border-purple-200" />
+        <StatCard icon={Users}      label="Total ativos"               value={totalActive}  color="text-[#0C2D48]"  bg="bg-blue-50"  border="border-blue-200" />
         <StatCard icon={UserCheck}  label="Com indicações no mês"      value={withRefMonth} color="text-[#C9A84C]"  bg="bg-amber-50"   border="border-amber-200" />
         <StatCard icon={TrendingUp} label="Total indicações da equipe" value={totalRefs}    color="text-[#1B5E20]"  bg="bg-emerald-50" border="border-emerald-200" />
       </div>
@@ -137,7 +137,7 @@ export default function MyEmployees() {
           <div className="text-center py-10 text-slate-400">
             <Users className="w-10 h-10 mx-auto mb-2 opacity-40" />
             <p>Nenhum funcionário cadastrado</p>
-            <button onClick={openAdd} className="mt-3 text-sm text-[#4A0E8F] hover:underline">
+            <button onClick={openAdd} className="mt-3 text-sm text-[#0C2D48] hover:underline">
               Adicionar primeiro funcionário
             </button>
           </div>
@@ -161,7 +161,7 @@ export default function MyEmployees() {
                     <td className="py-3 pr-4 text-center">
                       <span className="text-slate-700 font-medium">{emp.total_referrals}</span>
                       {parseInt(emp.month_referrals) > 0 && (
-                        <span className="ml-1 text-[10px] text-[#4A0E8F] bg-purple-50 px-1 rounded">
+                        <span className="ml-1 text-[10px] text-[#0C2D48] bg-blue-50 px-1 rounded">
                           +{emp.month_referrals} mês
                         </span>
                       )}
@@ -303,7 +303,7 @@ function CredRow({ label, value, mono, highlight }) {
     <div className="flex items-center justify-between gap-3">
       <span className="text-slate-500 text-xs w-14 flex-shrink-0">{label}</span>
       <span className={`flex-1 text-right break-all ${mono ? 'font-mono' : ''} ${
-        highlight ? 'text-[#4A0E8F] font-bold text-base' : 'text-slate-900'
+        highlight ? 'text-[#0C2D48] font-bold text-base' : 'text-slate-900'
       }`}>
         {value}
       </span>

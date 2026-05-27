@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 
 const PCT = { alta: 0.01, media: 0.007, baixa: 0.002 };
@@ -17,8 +17,8 @@ export default function IndicadorSimulador() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/10 rounded-xl flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/10 rounded-xl flex items-center justify-center">
+          <TrendingUp className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Simulador de Ganhos</h1>

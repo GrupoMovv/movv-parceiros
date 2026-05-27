@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 export default function TermosIndicador() {
@@ -76,7 +76,7 @@ export default function TermosIndicador() {
           </div>
 
           <div className="mt-10 text-center">
-            <Link to="/cadastro-indicador" className="inline-block bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-semibold px-8 py-3 rounded-xl transition-all">
+            <Link to="/cadastro-indicador" className="inline-block bg-[#0C2D48] hover:bg-[#5a1eaf] text-white font-semibold px-8 py-3 rounded-xl transition-all">
               Aceitar e Cadastrar
             </Link>
           </div>

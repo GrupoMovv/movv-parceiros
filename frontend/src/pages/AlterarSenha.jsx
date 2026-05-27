@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -38,8 +38,8 @@ export default function AlterarSenha() {
     <div className="max-w-md mx-auto py-8 px-4">
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-            <KeyRound className="w-5 h-5 text-[#4A0E8F]" />
+          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <KeyRound className="w-5 h-5 text-[#0C2D48]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">Alterar Senha</h1>

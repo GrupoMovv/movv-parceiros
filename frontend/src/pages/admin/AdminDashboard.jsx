@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -122,9 +122,9 @@ export default function AdminDashboard() {
             <YAxis tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} />
             <Tooltip
               contentStyle={{ background: '#ffffff', border: '1px solid #E2E8F0', borderRadius: 12, color: '#1E293B' }}
-              cursor={{ fill: 'rgba(74,14,143,0.05)' }}
+              cursor={{ fill: 'rgba(12,45,72,0.05)' }}
             />
-            <Bar dataKey="total"     name="Total"       fill="#4A0E8F" radius={[4,4,0,0]} />
+            <Bar dataKey="total"     name="Total"       fill="#0C2D48" radius={[4,4,0,0]} />
             <Bar dataKey="converted" name="Convertidas" fill="#C9A84C" radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
     <div className={accent ? 'card-gold' : 'card'}>
-      <div className={`inline-flex p-2 rounded-lg mb-3 ${accent ? 'bg-[#FDF8ED] text-[#C9A84C]' : 'bg-purple-50 text-movv-900'}`}>
+      <div className={`inline-flex p-2 rounded-lg mb-3 ${accent ? 'bg-[#FDF8ED] text-[#C9A84C]' : 'bg-blue-50 text-movv-900'}`}>
         {React.cloneElement(icon, { className: 'w-4 h-4' })}
       </div>
       <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">{label}</p>

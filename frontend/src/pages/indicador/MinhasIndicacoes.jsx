@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { ClipboardList, RefreshCw } from 'lucide-react';
@@ -78,8 +78,8 @@ export default function IndicadorMinhasIndicacoes() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/10 rounded-xl flex items-center justify-center">
-          <ClipboardList className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/10 rounded-xl flex items-center justify-center">
+          <ClipboardList className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Minhas Indicações</h1>
@@ -95,7 +95,7 @@ export default function IndicadorMinhasIndicacoes() {
             onClick={() => setFilter(key)}
             className={`px-4 py-1.5 rounded-xl text-sm font-semibold transition-all ${
               filter === key
-                ? 'bg-[#4A0E8F] text-white'
+                ? 'bg-[#0C2D48] text-white'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -108,7 +108,7 @@ export default function IndicadorMinhasIndicacoes() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-7 h-7 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : referrals.length === 0 ? (
           <div className="text-center py-16 text-slate-500">

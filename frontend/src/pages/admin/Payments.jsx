@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -189,7 +189,7 @@ export default function AdminPayments() {
                         onClick={() => handleGenerateReport(pay)}
                         disabled={reportLoading === pay.id}
                         title="Baixar Relatório Mensal PDF"
-                        className="flex items-center gap-1 text-xs text-[#4A0E8F] hover:text-purple-800 border border-purple-200 hover:border-purple-300 bg-purple-50 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs text-[#0C2D48] hover:text-blue-800 border border-blue-200 hover:border-blue-300 bg-blue-50 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
                       >
                         {reportLoading === pay.id
                           ? <Loader2 className="w-3 h-3 animate-spin" />

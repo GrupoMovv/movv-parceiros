@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -140,7 +140,7 @@ export default function CadastroIndicador() {
           <p className="text-white/40 text-sm mb-8">
             Após aprovação, acesse o portal com seu CPF, e-mail ou WhatsApp e a senha cadastrada.
           </p>
-          <Link to="/login" className="inline-block bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-semibold px-8 py-3 rounded-xl transition-all">
+          <Link to="/login" className="inline-block bg-[#0C2D48] hover:bg-[#5a1eaf] text-white font-semibold px-8 py-3 rounded-xl transition-all">
             Ir para o login
           </Link>
         </div>
@@ -170,7 +170,7 @@ export default function CadastroIndicador() {
               value={form.name}
               onChange={e => set('name', e.target.value)}
               placeholder="Seu nome completo"
-              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.name ? 'border-red-500' : 'border-white/20'}`}
+              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors ${errors.name ? 'border-red-500' : 'border-white/20'}`}
             />
             {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
           </div>
@@ -183,7 +183,7 @@ export default function CadastroIndicador() {
               value={form.cpf}
               onChange={e => set('cpf', maskCPF(e.target.value))}
               placeholder="000.000.000-00"
-              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.cpf ? 'border-red-500' : 'border-white/20'}`}
+              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors ${errors.cpf ? 'border-red-500' : 'border-white/20'}`}
             />
             {errors.cpf && <p className="text-red-400 text-xs mt-1">{errors.cpf}</p>}
           </div>
@@ -196,7 +196,7 @@ export default function CadastroIndicador() {
               value={form.whatsapp}
               onChange={e => set('whatsapp', maskPhone(e.target.value))}
               placeholder="(62) 99999-0000"
-              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.whatsapp ? 'border-red-500' : 'border-white/20'}`}
+              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors ${errors.whatsapp ? 'border-red-500' : 'border-white/20'}`}
             />
             {errors.whatsapp && <p className="text-red-400 text-xs mt-1">{errors.whatsapp}</p>}
           </div>
@@ -209,7 +209,7 @@ export default function CadastroIndicador() {
               value={form.email}
               onChange={e => set('email', e.target.value)}
               placeholder="seu@email.com"
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors"
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors"
             />
           </div>
 
@@ -219,7 +219,7 @@ export default function CadastroIndicador() {
             <select
               value={form.pix_key_type}
               onChange={e => { set('pix_key_type', e.target.value); set('pix_key', ''); }}
-              className="w-full border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#4A0E8F] transition-colors"
+              className="w-full border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#0C2D48] transition-colors"
               style={{ backgroundColor: '#1a0a3e' }}
             >
               {PIX_TYPES.map(t => (
@@ -234,7 +234,7 @@ export default function CadastroIndicador() {
               value={form.pix_key}
               onChange={e => set('pix_key', applyPixMask(e.target.value, form.pix_key_type))}
               placeholder={pixPlaceholder(form.pix_key_type)}
-              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.pix_key ? 'border-red-500' : 'border-white/20'}`}
+              className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors ${errors.pix_key ? 'border-red-500' : 'border-white/20'}`}
             />
             {errors.pix_key && <p className="text-red-400 text-xs mt-1">{errors.pix_key}</p>}
           </div>
@@ -248,7 +248,7 @@ export default function CadastroIndicador() {
                 value={form.password}
                 onChange={e => set('password', e.target.value)}
                 placeholder="Mín. 6 caracteres"
-                className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.password ? 'border-red-500' : 'border-white/20'}`}
+                className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors ${errors.password ? 'border-red-500' : 'border-white/20'}`}
               />
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
@@ -259,7 +259,7 @@ export default function CadastroIndicador() {
                 value={form.confirmPassword}
                 onChange={e => set('confirmPassword', e.target.value)}
                 placeholder="Repita a senha"
-                className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#4A0E8F] transition-colors ${errors.confirmPassword ? 'border-red-500' : 'border-white/20'}`}
+                className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#0C2D48] transition-colors ${errors.confirmPassword ? 'border-red-500' : 'border-white/20'}`}
               />
               {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
@@ -272,7 +272,7 @@ export default function CadastroIndicador() {
                 type="checkbox"
                 checked={form.terms}
                 onChange={e => set('terms', e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-[#4A0E8F]"
+                className="mt-0.5 w-4 h-4 accent-[#0C2D48]"
               />
               <span className="text-sm">
                 Li e aceito os{' '}
@@ -287,7 +287,7 @@ export default function CadastroIndicador() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#4A0E8F] hover:bg-[#5a1eaf] disabled:opacity-50 text-white font-bold text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+            className="w-full bg-[#0C2D48] hover:bg-[#5a1eaf] disabled:opacity-50 text-white font-bold text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />

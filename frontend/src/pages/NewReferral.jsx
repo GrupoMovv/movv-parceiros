@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -8,7 +8,7 @@ const FAIXAS = {
   alta:     { label: 'ALTA',     titulo: 'Faixa Alta — 1,5%',      badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-300', panelCls: 'bg-emerald-50 border-emerald-200' },
   media:    { label: 'MÉDIA',    titulo: 'Faixa Média — 1,0%',     badgeCls: 'bg-yellow-100 text-yellow-700 border-yellow-300',   panelCls: 'bg-yellow-50 border-yellow-200' },
   baixa:    { label: 'BAIXA',    titulo: 'Faixa Baixa — 0,3%',     badgeCls: 'bg-blue-100 text-blue-700 border-blue-300',         panelCls: 'bg-blue-50 border-blue-200' },
-  especial: { label: 'ESPECIAL', titulo: 'BPO — Produto Especial',  badgeCls: 'bg-purple-100 text-purple-700 border-purple-300',   panelCls: 'bg-purple-50 border-purple-200' },
+  especial: { label: 'ESPECIAL', titulo: 'BPO — Produto Especial',  badgeCls: 'bg-blue-100 text-blue-700 border-blue-300',   panelCls: 'bg-blue-50 border-blue-200' },
 };
 
 const FAIXA_ORDER = ['alta', 'media', 'baixa', 'especial'];

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -120,7 +120,7 @@ export default function Statement() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard label="Pendente" value={totalPending}  color="text-amber-600"      bg="bg-amber-50"    border="border-amber-200" />
-        <SummaryCard label="Aprovado" value={totalApproved} color="text-movv-900"        bg="bg-purple-50"   border="border-purple-200" />
+        <SummaryCard label="Aprovado" value={totalApproved} color="text-movv-900"        bg="bg-blue-50"   border="border-blue-200" />
         <SummaryCard label="Pago"     value={totalPaid}     color="text-[#1B5E20]"       bg="bg-emerald-50"  border="border-emerald-200" />
       </div>
 

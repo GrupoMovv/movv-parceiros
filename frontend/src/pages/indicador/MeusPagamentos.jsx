@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { CreditCard, CheckCircle, Clock } from 'lucide-react';
 
@@ -36,8 +36,8 @@ export default function IndicadorMeusPagamentos() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/10 rounded-xl flex items-center justify-center">
-          <CreditCard className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/10 rounded-xl flex items-center justify-center">
+          <CreditCard className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Meus Pagamentos</h1>
@@ -63,7 +63,7 @@ export default function IndicadorMeusPagamentos() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-7 h-7 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : payments.length === 0 ? (
           <div className="text-center py-16 text-slate-500">

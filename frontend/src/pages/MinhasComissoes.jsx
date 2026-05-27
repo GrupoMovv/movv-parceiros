@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ const PJ = [
 
 const CURVA_PABLINE = [
   { label: 'Até R$ 50.000',           min: 0,      max: 50000,   pct: 0.05, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { label: 'R$ 50.001 – R$ 100.000',  min: 50001,  max: 100000,  pct: 0.07, color: 'bg-[#4A0E8F] text-white border-[#4A0E8F]' },
+  { label: 'R$ 50.001 – R$ 100.000',  min: 50001,  max: 100000,  pct: 0.07, color: 'bg-[#0C2D48] text-white border-[#0C2D48]' },
   { label: 'R$ 100.001 – R$ 200.000', min: 100001, max: 200000,  pct: 0.06, color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
   { label: 'R$ 200.001 – R$ 300.000', min: 200001, max: 300000,  pct: 0.05, color: 'bg-blue-100 text-blue-700 border-blue-200' },
   { label: 'Acima de R$ 300.000',     min: 300001, max: Infinity, pct: 0.04, color: 'bg-slate-100 text-slate-600 border-slate-200' },
@@ -40,7 +40,7 @@ const CURVA_PABLINE = [
 
 const CURVA_FERNANDO = [
   { label: 'Até R$ 50.000',           min: 0,      max: 50000,   pct: 0.005, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { label: 'R$ 50.001 – R$ 100.000',  min: 50001,  max: 100000,  pct: 0.010, color: 'bg-[#4A0E8F] text-white border-[#4A0E8F]' },
+  { label: 'R$ 50.001 – R$ 100.000',  min: 50001,  max: 100000,  pct: 0.010, color: 'bg-[#0C2D48] text-white border-[#0C2D48]' },
   { label: 'Acima de R$ 100.000',      min: 100001, max: Infinity,pct: 0.015, color: 'bg-amber-100 text-amber-700 border-amber-200' },
 ];
 
@@ -70,7 +70,7 @@ export default function MinhasComissoes() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-24">
-      <Loader2 className="w-8 h-8 animate-spin text-[#4A0E8F]" />
+      <Loader2 className="w-8 h-8 animate-spin text-[#0C2D48]" />
     </div>
   );
 
@@ -94,7 +94,7 @@ export default function MinhasComissoes() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {isPabline && <>
           <StatCard
-            icon={<DollarSign className="w-5 h-5 text-[#4A0E8F]" />}
+            icon={<DollarSign className="w-5 h-5 text-[#0C2D48]" />}
             label="Você ganhou este mês"
             value={fmt(current?.total_amount)}
             sub={current ? <StatusBadge status={current.status} /> : <span className="text-slate-400 text-xs">Aguardando lançamento</span>}
@@ -116,7 +116,7 @@ export default function MinhasComissoes() {
 
         {isFernando && <>
           <StatCard
-            icon={<TrendingUp className="w-5 h-5 text-[#4A0E8F]" />}
+            icon={<TrendingUp className="w-5 h-5 text-[#0C2D48]" />}
             label="Comissão Azul este mês"
             value={fmt(current?.azul_commission)}
             sub={current ? <span className="text-xs text-slate-500">{fmtPct(current.azul_commission_pct)} sobre líquido</span> : <span className="text-xs text-slate-400">Aguardando lançamento</span>}
@@ -139,8 +139,8 @@ export default function MinhasComissoes() {
 
       {/* Box informativo Pabline */}
       {isPabline && (
-        <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-5">
-          <p className="text-[#4A0E8F] font-semibold text-sm">Sobre sua comissão</p>
+        <div className="bg-[#F3EEFF] border border-blue-200 rounded-2xl p-5">
+          <p className="text-[#0C2D48] font-semibold text-sm">Sobre sua comissão</p>
           <p className="text-slate-600 text-sm mt-1">
             Você ganha sobre <strong>todas as vendas da Azul</strong> — próprias, da equipe e de parceiros externos.
             Quanto mais a Azul fatura, maior é a sua faixa na curva.
@@ -165,7 +165,7 @@ export default function MinhasComissoes() {
       {isPabline && (
         <div className="card !p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-            <Award className="w-5 h-5 text-[#4A0E8F]" />
+            <Award className="w-5 h-5 text-[#0C2D48]" />
             <h3 className="font-bold text-slate-900">Sua Tabela de Comissão</h3>
             <span className="text-xs text-slate-400 ml-auto">base = 80% do faturamento Azul</span>
           </div>
@@ -173,11 +173,11 @@ export default function MinhasComissoes() {
             {CURVA_PABLINE.map((tier, i) => {
               const active = net >= tier.min && net <= tier.max && !!current;
               return (
-                <div key={i} className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all ${active ? 'bg-movv-gradient text-white border-[#4A0E8F] shadow-lg' : `border ${tier.color}`}`}>
+                <div key={i} className={`rounded-xl border px-4 py-3 flex items-center justify-between transition-all ${active ? 'bg-movv-gradient text-white border-[#0C2D48] shadow-lg' : `border ${tier.color}`}`}>
                   <span className={`text-sm ${active ? 'text-white font-semibold' : ''}`}>{tier.label}</span>
                   <div className="flex items-center gap-2">
                     <span className={`font-bold text-lg ${active ? 'text-[#C9A84C]' : ''}`}>{(tier.pct * 100).toFixed(0)}%</span>
-                    {active && <span className="text-[10px] bg-[#C9A84C] text-[#4A0E8F] font-bold px-2 py-0.5 rounded-full">ATUAL</span>}
+                    {active && <span className="text-[10px] bg-[#C9A84C] text-[#0C2D48] font-bold px-2 py-0.5 rounded-full">ATUAL</span>}
                   </div>
                 </div>
               );
@@ -205,11 +205,11 @@ export default function MinhasComissoes() {
               {CURVA_FERNANDO.map((tier, i) => {
                 const active = net >= tier.min && net <= tier.max && !!current;
                 return (
-                  <div key={i} className={`rounded-xl border px-4 py-3 flex items-center justify-between ${active ? 'bg-movv-gradient text-white border-[#4A0E8F] shadow-lg' : `border ${tier.color}`}`}>
+                  <div key={i} className={`rounded-xl border px-4 py-3 flex items-center justify-between ${active ? 'bg-movv-gradient text-white border-[#0C2D48] shadow-lg' : `border ${tier.color}`}`}>
                     <span className={`text-sm ${active ? 'text-white font-semibold' : ''}`}>{tier.label}</span>
                     <div className="flex items-center gap-2">
                       <span className={`font-bold text-lg ${active ? 'text-[#C9A84C]' : ''}`}>{(tier.pct * 100).toFixed(1)}%</span>
-                      {active && <span className="text-[10px] bg-[#C9A84C] text-[#4A0E8F] font-bold px-2 py-0.5 rounded-full">ATUAL</span>}
+                      {active && <span className="text-[10px] bg-[#C9A84C] text-[#0C2D48] font-bold px-2 py-0.5 rounded-full">ATUAL</span>}
                     </div>
                   </div>
                 );
@@ -269,7 +269,7 @@ export default function MinhasComissoes() {
       {/* Histórico */}
       <div className="card !p-0 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#4A0E8F]" />
+          <TrendingUp className="w-4 h-4 text-[#0C2D48]" />
           <h3 className="font-bold text-slate-900">Histórico Mensal</h3>
         </div>
         {commissions.length === 0 ? (
@@ -298,7 +298,7 @@ export default function MinhasComissoes() {
                     <td className="px-4 py-3 text-right text-slate-700 font-medium">{fmt(c.azul_commission)}</td>
                     {isFernando && <td className="px-4 py-3 text-right text-[#C9A84C] font-medium">{fmt(c.direta_commission)}</td>}
                     <td className="px-4 py-3 text-right text-slate-600">{fmt(c.base_salary)}</td>
-                    <td className="px-4 py-3 text-right font-bold text-[#4A0E8F]">{fmt(c.total_amount)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-[#0C2D48]">{fmt(c.total_amount)}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                   </tr>
                 ))}
@@ -317,7 +317,7 @@ export default function MinhasComissoes() {
 
 function StatCard({ icon, label, value, sub, highlight }) {
   return (
-    <div className={`rounded-2xl p-5 border ${highlight ? 'bg-movv-gradient text-white border-[#4A0E8F] shadow-lg' : 'bg-white border-slate-200 shadow-sm'}`}>
+    <div className={`rounded-2xl p-5 border ${highlight ? 'bg-movv-gradient text-white border-[#0C2D48] shadow-lg' : 'bg-white border-slate-200 shadow-sm'}`}>
       <div className="flex items-center gap-2 mb-3">
         {icon}
         <p className={`text-xs font-medium uppercase tracking-wider ${highlight ? 'text-white/70' : 'text-slate-400'}`}>{label}</p>
@@ -415,7 +415,7 @@ function SimuladorPabline() {
   const total    = comissao + SALARIO_BASE;
 
   return (
-    <div className="card !p-0 overflow-hidden border border-purple-200 shadow-lg">
+    <div className="card !p-0 overflow-hidden border border-blue-200 shadow-lg">
       <div className="bg-movv-gradient px-5 py-4">
         <h3 className="font-bold text-white text-lg">🧮 Simule seus ganhos</h3>
         <p className="text-white/70 text-sm mt-0.5">Veja quanto você pode ganhar com diferentes faturamentos</p>
@@ -427,10 +427,10 @@ function SimuladorPabline() {
         </div>
 
         {tier ? (
-          <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4 space-y-2.5">
+          <div className="bg-[#F3EEFF] border border-blue-200 rounded-2xl p-4 space-y-2.5">
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">Faixa aplicada:</span>
-              <span className="font-bold text-[#4A0E8F]">{(tier.pct * 100).toFixed(1)}%</span>
+              <span className="font-bold text-[#0C2D48]">{(tier.pct * 100).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">Lucro líquido Azul:</span>
@@ -438,13 +438,13 @@ function SimuladorPabline() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">Sua comissão:</span>
-              <span className="font-semibold text-[#4A0E8F]">{fmt(comissao)}</span>
+              <span className="font-semibold text-[#0C2D48]">{fmt(comissao)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">+ Salário base:</span>
               <span className="font-semibold text-slate-700">{fmt(SALARIO_BASE)}</span>
             </div>
-            <div className="border-t border-purple-200 pt-2.5 flex justify-between items-center">
+            <div className="border-t border-blue-200 pt-2.5 flex justify-between items-center">
               <span className="font-bold text-slate-900 text-sm">TOTAL ESTIMADO:</span>
               <span className="font-bold text-xl text-[#C9A84C]">{fmt(total)}</span>
             </div>
@@ -507,7 +507,7 @@ function SimuladorFernando() {
         {/* AZUL - PRODUTOS NORMAIS */}
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#4A0E8F] inline-block" />
+            <span className="w-2 h-2 rounded-full bg-[#0C2D48] inline-block" />
             Azul — Produtos Normais
             <span className="font-normal normal-case text-slate-400">(sem seguros/consórcios)</span>
           </p>
@@ -596,25 +596,25 @@ function SimuladorFernando() {
 
         {/* RESULTADO */}
         {hasInput ? (
-          <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4 space-y-3">
+          <div className="bg-[#F3EEFF] border border-blue-200 rounded-2xl p-4 space-y-3">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resumo</p>
 
             {azulNormal > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Azul Normal ({tierNormal ? (tierNormal.pct * 100).toFixed(1) : '0'}%):</span>
-                <span className="font-semibold text-[#4A0E8F]">{fmt(comNormal)}</span>
+                <span className="font-semibold text-[#0C2D48]">{fmt(comNormal)}</span>
               </div>
             )}
             {segurosVal > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Seguros (20% da com. Azul):</span>
-                <span className="font-semibold text-[#4A0E8F]">{fmt(comSeguros)}</span>
+                <span className="font-semibold text-[#0C2D48]">{fmt(comSeguros)}</span>
               </div>
             )}
             {consorciosVal > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Consórcios (LL × 1,5%):</span>
-                <span className="font-semibold text-[#4A0E8F]">{fmt(comConsorcios)}</span>
+                <span className="font-semibold text-[#0C2D48]">{fmt(comConsorcios)}</span>
               </div>
             )}
             {subtotalDireta > 0 && (
@@ -634,10 +634,10 @@ function SimuladorFernando() {
               </div>
             )}
 
-            <div className="border-t border-purple-200 pt-2.5 space-y-1.5">
+            <div className="border-t border-blue-200 pt-2.5 space-y-1.5">
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-slate-900">TOTAL COMISSÕES:</span>
-                <span className="text-[#4A0E8F]">{fmt(totalComissoes)}</span>
+                <span className="text-[#0C2D48]">{fmt(totalComissoes)}</span>
               </div>
               {showSalario && (
                 <>
@@ -648,7 +648,7 @@ function SimuladorFernando() {
                   <p className="text-xs text-slate-400">(porque comissão &lt; R$ 3.500)</p>
                 </>
               )}
-              <div className="flex justify-between items-center border-t border-purple-200 pt-2">
+              <div className="flex justify-between items-center border-t border-blue-200 pt-2">
                 <span className="font-bold text-slate-900 text-sm">TOTAL ESTIMADO:</span>
                 <span className="font-bold text-xl text-[#C9A84C]">{fmt(totalEstimado)}</span>
               </div>

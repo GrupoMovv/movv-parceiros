@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -112,7 +112,7 @@ export default function AdminInternalCommissions() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Users className="w-6 h-6 text-[#4A0E8F]" />
+          <Users className="w-6 h-6 text-[#0C2D48]" />
           Comissões Internas
         </h1>
         <p className="text-slate-500 text-sm mt-1">
@@ -128,9 +128,9 @@ export default function AdminInternalCommissions() {
         <SummaryCard icon={<Clock className="w-5 h-5 text-amber-500" />}
           label="Total pendente" value={monthlyTotals.pending}
           bg="bg-amber-50" border="border-amber-200" color="text-amber-700" />
-        <SummaryCard icon={<DollarSign className="w-5 h-5 text-[#4A0E8F]" />}
+        <SummaryCard icon={<DollarSign className="w-5 h-5 text-[#0C2D48]" />}
           label="Total projetado (mês)" value={monthlyTotals.paid + monthlyTotals.pending}
-          bg="bg-purple-50" border="border-purple-200" color="text-[#4A0E8F]" />
+          bg="bg-blue-50" border="border-blue-200" color="text-[#0C2D48]" />
       </div>
 
       {/* Tabela de referência rápida */}
@@ -139,7 +139,7 @@ export default function AdminInternalCommissions() {
       {/* Cards dos colaboradores */}
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-[#4A0E8F]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#0C2D48]" />
         </div>
       ) : collaborators.map(collab => (
         <CollabCard
@@ -228,7 +228,7 @@ function ActionButtons({ commission, onPaid, onRevert, onEdit, onDelete }) {
         className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors
           ${isPaid
             ? 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed'
-            : 'border-purple-200 bg-purple-50 text-[#4A0E8F] hover:bg-purple-100'}`}
+            : 'border-blue-200 bg-blue-50 text-[#0C2D48] hover:bg-blue-100'}`}
       >
         <Pencil className="w-3 h-3" /> Editar
       </button>
@@ -349,7 +349,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
             )}
             <div>
               <p className="text-slate-400 text-xs">Total a receber</p>
-              <p className="font-bold text-[#4A0E8F] text-base">{fmt(latest.total_amount)}</p>
+              <p className="font-bold text-[#0C2D48] text-base">{fmt(latest.total_amount)}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -386,7 +386,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
                     <td className="px-4 py-3 text-slate-600">{fmt(c.azul_commission)}</td>
                     <td className="px-4 py-3 text-slate-600">{fmt(c.direta_commission)}</td>
                     <td className="px-4 py-3 text-slate-600">{fmt(c.base_salary)}</td>
-                    <td className="px-4 py-3 font-bold text-[#4A0E8F]">{fmt(c.total_amount)}</td>
+                    <td className="px-4 py-3 font-bold text-[#0C2D48]">{fmt(c.total_amount)}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3">
                       <ActionButtons
@@ -481,7 +481,7 @@ function SegurosList({ seguros, onChange }) {
           type="button"
           onClick={addRow}
           disabled={list.length >= 10}
-          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-[#4A0E8F] hover:bg-purple-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-[#0C2D48] hover:bg-blue-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Plus className="w-3 h-3" /> Adicionar
         </button>
@@ -586,7 +586,7 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
           {/* Azul Normal */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#4A0E8F]" />
+              <div className="w-2 h-2 rounded-full bg-[#0C2D48]" />
               <p className="text-sm font-semibold text-slate-800">Azul — Produtos Normais</p>
               <span className="text-xs text-slate-400">(consignado, FGTS, etc.)</span>
             </div>
@@ -667,15 +667,15 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
         <button
           onClick={onPreview}
           disabled={loadPrev}
-          className="flex items-center gap-2 text-sm text-[#4A0E8F] border border-purple-200 bg-purple-50 px-4 py-2 rounded-xl hover:bg-purple-100 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 text-sm text-[#0C2D48] border border-blue-200 bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50"
         >
           {loadPrev ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
           Calcular preview
         </button>
 
         {preview && (
-          <div className="mt-4 bg-[#F8F4FF] border border-purple-200 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-semibold text-[#4A0E8F] uppercase tracking-wider">Preview do Cálculo</p>
+          <div className="mt-4 bg-[#F8F4FF] border border-blue-200 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-[#0C2D48] uppercase tracking-wider">Preview do Cálculo</p>
 
             {isPabline && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
@@ -713,9 +713,9 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
               </div>
             )}
 
-            <div className="border-t border-purple-200 pt-3 flex items-center justify-between">
+            <div className="border-t border-blue-200 pt-3 flex items-center justify-between">
               <p className="text-slate-600 text-sm font-semibold">Total a receber</p>
-              <p className="text-[#4A0E8F] font-bold text-xl">{fmt(preview.total_amount)}</p>
+              <p className="text-[#0C2D48] font-bold text-xl">{fmt(preview.total_amount)}</p>
             </div>
           </div>
         )}
@@ -923,7 +923,7 @@ function DeleteModal({ commission, loading, onClose, onConfirm }) {
           </div>
           <p className="text-slate-600 text-sm mt-4 leading-relaxed">
             Tem certeza? Esta ação <strong>não pode ser desfeita</strong>. O registro de{' '}
-            <strong className="text-[#4A0E8F]">{fmt(commission.total_amount)}</strong> será excluído permanentemente.
+            <strong className="text-[#0C2D48]">{fmt(commission.total_amount)}</strong> será excluído permanentemente.
           </p>
         </div>
         <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
@@ -1098,10 +1098,10 @@ function ResetResultModal({ result, onClose }) {
             <p><span className="font-medium">E-mail:</span> {result.email}</p>
           </div>
 
-          <div className="bg-[#F3EEFF] border border-purple-200 rounded-2xl p-4">
+          <div className="bg-[#F3EEFF] border border-blue-200 rounded-2xl p-4">
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Senha temporária</p>
             <div className="flex items-center justify-between gap-3">
-              <span className="font-mono font-bold text-2xl text-[#4A0E8F] tracking-widest select-all">
+              <span className="font-mono font-bold text-2xl text-[#0C2D48] tracking-widest select-all">
                 {result.newPassword}
               </span>
               <button
@@ -1169,7 +1169,7 @@ function TabelaReferencia() {
                   {CURVA_PABLINE.map((tier, i) => (
                     <tr key={i} className="border-b border-slate-100 last:border-0">
                       <td className="px-4 py-2.5 text-slate-700">{tier.label}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-[#4A0E8F]">
+                      <td className="px-4 py-2.5 text-right font-bold text-[#0C2D48]">
                         {(tier.pct * 100).toFixed(1)}%
                         {tier.pct === 0.07 && <span className="ml-1 text-[#C9A84C]">⭐</span>}
                       </td>
@@ -1202,7 +1202,7 @@ function TabelaReferencia() {
                   {CURVA_FERNANDO.map((tier, i) => (
                     <tr key={i} className="border-b border-slate-100 last:border-0">
                       <td className="px-4 py-2.5 text-slate-700">{tier.label}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-[#4A0E8F]">{(tier.pct * 100).toFixed(1)}%</td>
+                      <td className="px-4 py-2.5 text-right font-bold text-[#0C2D48]">{(tier.pct * 100).toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>

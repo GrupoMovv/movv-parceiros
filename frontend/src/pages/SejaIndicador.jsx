@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Smartphone, DollarSign, Eye, CheckCircle, ArrowRight } from 'lucide-react';
 
@@ -24,7 +24,7 @@ export default function SejaIndicador() {
       {/* Hero */}
       <section className="relative overflow-hidden py-20 px-4" style={{ background: 'linear-gradient(135deg, #0f0a1e 0%, #1a0a3e 50%, #0f0a1e 100%)' }}>
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#4A0E8F]/20 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#0C2D48]/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#C9A84C]/10 rounded-full blur-3xl" />
         </div>
         <div className="relative z-10 max-w-4xl mx-auto text-center">
@@ -40,7 +40,7 @@ export default function SejaIndicador() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link
               to="/cadastro-indicador"
-              className="inline-flex items-center gap-2 bg-[#4A0E8F] hover:bg-[#5a1eaf] text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-[#4A0E8F]/30"
+              className="inline-flex items-center gap-2 bg-[#0C2D48] hover:bg-[#5a1eaf] text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-[#0C2D48]/30"
             >
               QUERO SER INDICADOR <ArrowRight className="w-5 h-5" />
             </Link>
@@ -54,7 +54,7 @@ export default function SejaIndicador() {
 
           {/* Imagem em destaque */}
           <div className="relative mx-auto w-full max-w-3xl">
-            <div className="absolute -inset-4 bg-[#4A0E8F]/30 rounded-3xl blur-2xl" />
+            <div className="absolute -inset-4 bg-[#0C2D48]/30 rounded-3xl blur-2xl" />
             <img
               src="/indique-e-ganhe.jpg"
               alt="Indique Azul e Ganhe"
@@ -78,7 +78,7 @@ export default function SejaIndicador() {
               { icon: Eye, title: 'Acompanhamento em tempo real', desc: 'Veja o status de cada indicação no seu painel.' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all">
-                <div className="w-12 h-12 bg-[#4A0E8F]/30 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <div className="w-12 h-12 bg-[#0C2D48]/30 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <Icon className="w-6 h-6 text-[#C9A84C]" />
                 </div>
                 <h3 className="font-bold text-lg mb-2">{title}</h3>
@@ -101,8 +101,8 @@ export default function SejaIndicador() {
               { n: '4', title: 'Receba via PIX', desc: 'Quando a indicação for concluída, você recebe sua comissão.' },
             ].map(({ n, title, desc }) => (
               <div key={n} className="relative">
-                <div className="bg-[#1a0a3e] border border-[#4A0E8F]/40 rounded-2xl p-6">
-                  <div className="w-10 h-10 bg-[#4A0E8F] rounded-xl flex items-center justify-center font-black text-xl text-[#C9A84C] mb-4">{n}</div>
+                <div className="bg-[#1a0a3e] border border-[#0C2D48]/40 rounded-2xl p-6">
+                  <div className="w-10 h-10 bg-[#0C2D48] rounded-xl flex items-center justify-center font-black text-xl text-[#C9A84C] mb-4">{n}</div>
                   <h3 className="font-bold text-lg mb-2">{title}</h3>
                   <p className="text-white/60 text-sm">{desc}</p>
                 </div>
@@ -180,7 +180,7 @@ export default function SejaIndicador() {
                   min="1"
                   value={simQtd}
                   onChange={e => setSimQtd(Number(e.target.value))}
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:border-[#4A0E8F]"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:border-[#0C2D48]"
                 />
               </div>
               <div>
@@ -190,7 +190,7 @@ export default function SejaIndicador() {
                   min="0"
                   value={simValor}
                   onChange={e => setSimValor(Number(e.target.value))}
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:border-[#4A0E8F]"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:border-[#0C2D48]"
                 />
               </div>
               <div>
@@ -198,7 +198,7 @@ export default function SejaIndicador() {
                 <select
                   value={simCat}
                   onChange={e => setSimCat(e.target.value)}
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:border-[#4A0E8F]"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:border-[#0C2D48]"
                 >
                   <option value="alta">Alta (1%)</option>
                   <option value="media">Média (0,7%)</option>
@@ -206,7 +206,7 @@ export default function SejaIndicador() {
                 </select>
               </div>
             </div>
-            <div className="bg-[#4A0E8F]/20 border border-[#4A0E8F]/40 rounded-2xl p-6 text-center">
+            <div className="bg-[#0C2D48]/20 border border-[#0C2D48]/40 rounded-2xl p-6 text-center">
               <p className="text-white/60 text-sm mb-2">Estimativa de ganhos mensais</p>
               <p className="text-5xl font-black text-[#C9A84C]">{formatBRL(simResult)}</p>
               <p className="text-white/40 text-xs mt-2">* Estimativa com base nos valores informados</p>
@@ -216,7 +216,7 @@ export default function SejaIndicador() {
       </section>
 
       {/* CTA Final */}
-      <section className="py-20 px-4" style={{ background: 'linear-gradient(135deg, #1a0a3e 0%, #4A0E8F 100%)' }}>
+      <section className="py-20 px-4" style={{ background: 'linear-gradient(135deg, #1a0a3e 0%, #0C2D48 100%)' }}>
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-4xl font-black mb-4">Pronto para começar?</h2>
           <p className="text-white/70 text-lg mb-8">Cadastre-se gratuitamente e comece a ganhar comissões hoje mesmo.</p>

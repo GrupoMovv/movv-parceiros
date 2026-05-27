@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Package, CheckCircle } from 'lucide-react';
 
@@ -22,8 +22,8 @@ export default function IndicadorProdutosAzul() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/10 rounded-xl flex items-center justify-center">
-          <Package className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/10 rounded-xl flex items-center justify-center">
+          <Package className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Produtos Azul</h1>
@@ -33,7 +33,7 @@ export default function IndicadorProdutosAzul() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-7 h-7 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -60,9 +60,9 @@ export default function IndicadorProdutosAzul() {
         </div>
       )}
 
-      <div className="bg-[#4A0E8F]/5 border border-[#4A0E8F]/20 rounded-2xl p-5">
+      <div className="bg-[#0C2D48]/5 border border-[#0C2D48]/20 rounded-2xl p-5">
         <p className="text-slate-700 text-sm leading-relaxed">
-          <strong className="text-[#4A0E8F]">Como funciona:</strong> A comissão é calculada sobre o valor total da operação contratada pelo cliente indicado. O pagamento é realizado via PIX após a conclusão e aprovação da operação.
+          <strong className="text-[#0C2D48]">Como funciona:</strong> A comissão é calculada sobre o valor total da operação contratada pelo cliente indicado. O pagamento é realizado via PIX após a conclusão e aprovação da operação.
         </p>
       </div>
     </div>

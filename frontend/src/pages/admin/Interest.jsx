@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -7,7 +7,7 @@ import { Sparkles, Filter, X, MessageSquare, Phone } from 'lucide-react';
 
 const SERVICE_LABEL = { office: 'Movv Office', collections: 'Movv Cobranças', supplies: 'Movv Suprimentos' };
 const SERVICE_COLOR = {
-  office:      'bg-purple-100 text-purple-700 border border-purple-200',
+  office:      'bg-blue-100 text-blue-700 border border-blue-200',
   collections: 'bg-amber-100  text-amber-700  border border-amber-200',
   supplies:    'bg-emerald-100 text-emerald-700 border border-emerald-200',
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -112,7 +112,7 @@ export default function Login() {
           </p>
           <p className="text-center text-slate-400 text-xs mt-4">
             Quer ser um Indicador?{' '}
-            <Link to="/seja-indicador" className="text-[#4A0E8F] font-semibold hover:underline">
+            <Link to="/seja-indicador" className="text-[#0C2D48] font-semibold hover:underline">
               Cadastre-se gratuitamente
             </Link>
           </p>

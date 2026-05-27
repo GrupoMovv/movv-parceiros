@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -268,7 +268,7 @@ function SectionIndicadores() {
             key={key}
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              activeTab === key ? 'bg-[#4A0E8F] text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              activeTab === key ? 'bg-[#0C2D48] text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
             }`}
           >
             <Icon className={`w-4 h-4 ${activeTab === key ? 'text-white' : color}`} />
@@ -285,7 +285,7 @@ function SectionIndicadores() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : indicators.length === 0 ? (
           <div className="text-center py-16 text-slate-500">
@@ -415,7 +415,7 @@ function SectionIndicacoes() {
             key={key}
             onClick={() => setFilterStatus(key)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              filterStatus === key ? 'bg-[#4A0E8F] text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              filterStatus === key ? 'bg-[#0C2D48] text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
             }`}
           >
             {label}
@@ -426,7 +426,7 @@ function SectionIndicacoes() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : referrals.length === 0 ? (
           <div className="text-center py-16 text-slate-500">
@@ -580,7 +580,7 @@ function SectionPagamentos() {
         </h2>
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <div className="w-7 h-7 border-2 border-[#4A0E8F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-2 border-[#0C2D48] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : pending.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 text-center py-10 text-slate-500">
@@ -696,8 +696,8 @@ export default function AdminIndicadores() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#4A0E8F]/20 rounded-xl flex items-center justify-center">
-          <Users className="w-5 h-5 text-[#4A0E8F]" />
+        <div className="w-10 h-10 bg-[#0C2D48]/20 rounded-xl flex items-center justify-center">
+          <Users className="w-5 h-5 text-[#0C2D48]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Programa Indique Azul e Ganhe</h1>
@@ -713,7 +713,7 @@ export default function AdminIndicadores() {
             onClick={() => setMainTab(key)}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-all -mb-px ${
               mainTab === key
-                ? 'border-[#4A0E8F] text-[#4A0E8F]'
+                ? 'border-[#0C2D48] text-[#0C2D48]'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
