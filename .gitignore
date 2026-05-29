@@ -48,3 +48,7 @@ desktop.ini
 # Coverage
 coverage/
 *.lcov
+
+# Backups do banco de dados (NUNCA versionar)
+backend/backups/*.sql
+backend/backups/*.sql.gz
