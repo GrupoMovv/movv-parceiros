@@ -80,9 +80,8 @@ async function main() {
     console.log('');
 
     await client.query('BEGIN');
-    await client.query("SET session_replication_role = 'replica'");
 
-    // Tabelas transacionais — apaga tudo e reseta sequences
+    // Tabelas transacionais — apaga na ordem correta (filho → pai) com CASCADE
     const truncateTables = [
       'indicator_payments',
       'indicator_referrals',
@@ -107,10 +106,9 @@ async function main() {
 
     // Reinicia sequence do partners para o id atual do admin
     await client.query(
-      `SELECT setval('partners_id_seq', (SELECT MAX(id) FROM partners))`
+      `SELECT setval('partners_id_seq', COALESCE((SELECT MAX(id) FROM partners), 1))`
     );
 
-    await client.query("SET session_replication_role = 'DEFAULT'");
     await client.query('COMMIT');
 
     // Contagem depois
