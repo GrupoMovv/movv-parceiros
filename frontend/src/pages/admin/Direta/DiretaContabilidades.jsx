@@ -1,22 +1,47 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Modal from '../../../components/ui/Modal';
 import CurrencyInput from '../../../components/ui/CurrencyInput';
-import { Building2, Loader2, Pencil, ToggleLeft, ToggleRight, Trash2, Plus } from 'lucide-react';
+import { Building2, Loader2, Pencil, ToggleLeft, ToggleRight, Trash2, Plus, AlertTriangle, UserPlus } from 'lucide-react';
 
 const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+const PRECO_BLOQUEIO_MINIMO = 30.00; // abaixo disso: bloqueado
+const PRECO_ALERTA_MAXIMO   = 45.00; // [BLOQUEIO_MINIMO, ALERTA_MAXIMO): exige motivo
+
+function validarPrecoContabilidade(preco) {
+  const p = parseFloat(preco);
+  if (isNaN(p) || p === 0) return { bloqueado: false, precisaMotivo: false, aviso: null };
+  if (p < PRECO_BLOQUEIO_MINIMO) {
+    return { bloqueado: true, precisaMotivo: false, aviso: `Preço não pode ser menor que R$ ${PRECO_BLOQUEIO_MINIMO.toFixed(2)}.` };
+  }
+  if (p < PRECO_ALERTA_MAXIMO) {
+    return { bloqueado: false, precisaMotivo: true, aviso: `Preço abaixo de R$ ${PRECO_ALERTA_MAXIMO.toFixed(2)} — informe o motivo.` };
+  }
+  return { bloqueado: false, precisaMotivo: false, aviso: null };
+}
+
 const EMPTY_FORM = { preco_certificado: 0, observacoes: '' };
+const EMPTY_CONTAB_FORM = { name: '', email: '', whatsapp: '', pix_key: '', password: '' };
 
 export default function DiretaContabilidades() {
+  const { user } = useAuth();
+  const isAdmin = !!user?.is_admin;
+
   const [precos, setPrecos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // 'create' | 'edit'
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [motivoReduzido, setMotivoReduzido] = useState('');
   const [saving, setSaving] = useState(false);
   const [modalDelete, setModalDelete] = useState(null);
+
+  const [modalNovaContab, setModalNovaContab] = useState(false);
+  const [contabForm, setContabForm] = useState(EMPTY_CONTAB_FORM);
+  const [savingContab, setSavingContab] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -32,30 +57,34 @@ export default function DiretaContabilidades() {
   function openCreate(row) {
     setSelected(row);
     setForm(EMPTY_FORM);
+    setMotivoReduzido('');
     setModal('create');
   }
 
   function openEdit(row) {
     setSelected(row);
     setForm({ preco_certificado: parseFloat(row.preco_certificado), observacoes: row.observacoes || '' });
+    setMotivoReduzido('');
     setModal('edit');
   }
+
+  const precoNum = parseFloat(form.preco_certificado) || 0;
+  const { bloqueado, precisaMotivo, aviso } = validarPrecoContabilidade(precoNum);
+  const podeSalvarPreco = precoNum > 0 && !bloqueado && (!precisaMotivo || motivoReduzido.trim());
 
   async function handleSave() {
     setSaving(true);
     try {
+      const payload = {
+        preco_certificado: form.preco_certificado,
+        observacoes: form.observacoes || null,
+        motivo_preco_reduzido: precisaMotivo ? motivoReduzido.trim() : undefined,
+      };
       if (modal === 'create') {
-        await api.post('/contabilidades-precos', {
-          partner_id: selected.partner_id,
-          preco_certificado: form.preco_certificado,
-          observacoes: form.observacoes || null,
-        });
+        await api.post('/contabilidades-precos', { partner_id: selected.partner_id, ...payload });
         toast.success('Preço cadastrado!');
       } else {
-        await api.put(`/contabilidades-precos/${selected.id}`, {
-          preco_certificado: form.preco_certificado,
-          observacoes: form.observacoes || null,
-        });
+        await api.put(`/contabilidades-precos/${selected.id}`, payload);
         toast.success('Preço atualizado!');
       }
       setModal(null);
@@ -84,16 +113,40 @@ export default function DiretaContabilidades() {
     }
   }
 
+  function openNovaContab() {
+    setContabForm(EMPTY_CONTAB_FORM);
+    setModalNovaContab(true);
+  }
+
+  async function handleCreateContab() {
+    setSavingContab(true);
+    try {
+      await api.post('/partners', { ...contabForm, type: 'accounting' });
+      toast.success('Contabilidade cadastrada! Agora cadastre o preço do certificado.');
+      setModalNovaContab(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao cadastrar contabilidade');
+    } finally { setSavingContab(false); }
+  }
+
+  const podeSalvarContab = contabForm.name.trim() && contabForm.email.trim() && contabForm.password.trim().length >= 6;
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Building2 className="w-6 h-6 text-[#0C2D48]" />
-          Preços por Contabilidade
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Preço de certificado cobrado pela Movv em vendas via cada contabilidade parceira.
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-[#0C2D48]" />
+            Preços por Contabilidade
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Preço de certificado cobrado pela Movv em vendas via cada contabilidade parceira.
+          </p>
+        </div>
+        <button onClick={openNovaContab} className="btn-primary flex items-center gap-2 whitespace-nowrap">
+          <UserPlus className="w-4 h-4" /> Nova Contabilidade
+        </button>
       </div>
 
       <div className="card !p-0 overflow-hidden">
@@ -134,9 +187,11 @@ export default function DiretaContabilidades() {
                           <button onClick={() => toggleAtivo(row)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors" title={row.ativo ? 'Desativar' : 'Ativar'}>
                             {row.ativo ? <ToggleRight className="w-3.5 h-3.5 text-[#1B5E20]" /> : <ToggleLeft className="w-3.5 h-3.5 text-red-500" />}
                           </button>
-                          <button onClick={() => setModalDelete(row)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Remover">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {isAdmin && (
+                            <button onClick={() => setModalDelete(row)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Remover">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </>
                       ) : (
                         <button onClick={() => openCreate(row)} className="flex items-center gap-1 text-xs font-semibold text-[#0C2D48] border border-blue-200 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
@@ -156,17 +211,72 @@ export default function DiretaContabilidades() {
         <div className="space-y-4">
           <div>
             <label className="label">Preço do certificado</label>
-            <CurrencyInput value={form.preco_certificado} onChange={v => setForm(f => ({ ...f, preco_certificado: v }))} placeholder="170,00" />
+            <CurrencyInput value={form.preco_certificado} onChange={v => { setForm(f => ({ ...f, preco_certificado: v })); setMotivoReduzido(''); }} placeholder="170,00" />
           </div>
+
+          {aviso && (
+            <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 border ${bloqueado ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+              <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${bloqueado ? 'text-red-600' : 'text-amber-600'}`} />
+              <div className="flex-1">
+                <p className={`text-xs ${bloqueado ? 'text-red-700' : 'text-amber-800'}`}>{aviso}</p>
+                {precisaMotivo && (
+                  <div className="mt-2">
+                    <label className="text-xs font-medium text-amber-800">Motivo do preço reduzido</label>
+                    <textarea
+                      className="input min-h-[50px] resize-none mt-1"
+                      value={motivoReduzido}
+                      onChange={e => setMotivoReduzido(e.target.value)}
+                      placeholder="Explique por que este preço ficou abaixo de R$ 45,00"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="label">Observações (opcional)</label>
             <textarea className="input min-h-[60px] resize-none" value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
             <button onClick={() => setModal(null)} className="btn-secondary">Cancelar</button>
-            <button onClick={handleSave} disabled={saving || !form.preco_certificado} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving || !podeSalvarPreco} className="btn-primary flex items-center gap-2 disabled:opacity-50">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Salvar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={modalNovaContab} onClose={() => setModalNovaContab(false)} title="Nova Contabilidade Parceira">
+        <div className="space-y-4">
+          <div>
+            <label className="label">Nome</label>
+            <input className="input" value={contabForm.name} onChange={e => setContabForm(f => ({ ...f, name: e.target.value }))} placeholder="Razão social ou nome fantasia" />
+          </div>
+          <div>
+            <label className="label">Email</label>
+            <input type="email" className="input" value={contabForm.email} onChange={e => setContabForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@contabilidade.com" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">WhatsApp (opcional)</label>
+              <input className="input" value={contabForm.whatsapp} onChange={e => setContabForm(f => ({ ...f, whatsapp: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Chave PIX (opcional)</label>
+              <input className="input" value={contabForm.pix_key} onChange={e => setContabForm(f => ({ ...f, pix_key: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label className="label">Senha de acesso</label>
+            <input type="text" className="input" value={contabForm.password} onChange={e => setContabForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+            <button onClick={() => setModalNovaContab(false)} className="btn-secondary">Cancelar</button>
+            <button onClick={handleCreateContab} disabled={savingContab || !podeSalvarContab} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+              {savingContab && <Loader2 className="w-4 h-4 animate-spin" />}
+              Cadastrar
             </button>
           </div>
         </div>

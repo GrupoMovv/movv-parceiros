@@ -43,7 +43,17 @@ async function getPartner(req, res) {
 }
 
 async function createPartner(req, res) {
-  const { name, email, type, whatsapp, pix_key, parent_id, password, is_admin } = req.body;
+  const isAdmin = !!req.user?.is_admin;
+  let { name, email, type, whatsapp, pix_key, parent_id, password, is_admin } = req.body;
+
+  if (!isAdmin) {
+    // Fernando (comercial_full) só pode cadastrar contabilidades parceiras —
+    // ignora qualquer type/is_admin/parent_id que venha no corpo da requisição.
+    type = 'accounting';
+    is_admin = false;
+    parent_id = null;
+  }
+
   if (!name || !email || !type || !password) {
     return res.status(400).json({ error: 'Campos obrigatórios: nome, email, tipo, senha' });
   }

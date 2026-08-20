@@ -11,8 +11,8 @@ const requireAdminOrComercialFull = (req, res, next) => {
 
 router.get('/',      authenticate, requireAdminOrComercialFull, ctrl.listPrecos);
 router.get('/:id',   authenticate, requireAdminOrComercialFull, ctrl.getPreco);
-router.post('/',     authenticate, requireAdmin, ctrl.createPreco);
-router.put('/:id',   authenticate, requireAdmin, ctrl.updatePreco);
+router.post('/',     authenticate, requireAdminOrComercialFull, ctrl.createPreco);
+router.put('/:id',   authenticate, requireAdminOrComercialFull, ctrl.updatePreco);
 router.delete('/:id', authenticate, requireAdmin, ctrl.deletePreco);
 
 module.exports = router;

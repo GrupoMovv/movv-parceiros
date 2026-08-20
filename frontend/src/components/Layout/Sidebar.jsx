@@ -83,6 +83,7 @@ const MASTER_MENU = [
       { label: 'Meu Painel',       icon: LayoutDashboard, to: '/direta/dashboard',    roles: ['comercial_full'], end: true },
       { label: 'Minhas Vendas',    icon: FileText,     to: '/direta/minhas-vendas', roles: ['comercial_full'] },
       { label: 'Atividades',       icon: ClipboardList, to: '/direta/atividades',   roles: ['comercial_full'] },
+      { label: 'Contabilidades',   icon: Building2,     to: '/direta/contabilidades', roles: ['comercial_full'] },
     ],
   },
   {

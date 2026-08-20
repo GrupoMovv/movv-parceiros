@@ -130,6 +130,7 @@ export default function App() {
           <Route path="direta/dashboard"         element={<RequireComercialFull><DiretaFernandoDashboard /></RequireComercialFull>} />
           <Route path="direta/minhas-vendas"     element={<RequireComercialFull><DiretaFernandoMinhasVendas /></RequireComercialFull>} />
           <Route path="direta/atividades"        element={<RequireComercialFull><DiretaFernandoAtividades /></RequireComercialFull>} />
+          <Route path="direta/contabilidades"    element={<RequireComercialFull><DiretaContabilidadesAdmin /></RequireComercialFull>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
           {/* Rotas do Indicador */}
