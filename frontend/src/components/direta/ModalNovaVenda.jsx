@@ -34,6 +34,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY);
   const [contabilidades, setContabilidades] = useState([]);
   const [confirmado, setConfirmado] = useState(false);
+  const [motivoReduzido, setMotivoReduzido] = useState('');
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -41,6 +42,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
     if (!open) return;
     setForm(EMPTY);
     setConfirmado(false);
+    setMotivoReduzido('');
     api.get('/contabilidades-precos')
       .then(res => setContabilidades(res.data.filter(c => c.id && c.ativo)))
       .catch(() => toast.error('Erro ao carregar contabilidades'));
@@ -58,7 +60,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
   const podeSubmeter = form.cliente_nome.trim()
     && (form.tipo_venda === 'direta' ? precoEfetivo > 0 : !!form.contabilidade_id)
     && !bloqueado
-    && (!aviso || confirmado);
+    && (!aviso || (confirmado && motivoReduzido.trim()));
 
   async function handleSave() {
     setSaving(true);
@@ -72,6 +74,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
         cliente_whatsapp:  form.cliente_whatsapp || null,
         preco_venda:       form.tipo_venda === 'direta' ? form.preco_venda : undefined,
         observacoes:       form.observacoes || null,
+        motivo_preco_reduzido: aviso ? motivoReduzido.trim() : undefined,
       });
       toast.success('Venda registrada com sucesso!');
       onSaved();
@@ -98,7 +101,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
               <button
                 key={opt.v}
                 type="button"
-                onClick={() => { set('tipo_venda', opt.v); setConfirmado(false); }}
+                onClick={() => { set('tipo_venda', opt.v); setConfirmado(false); setMotivoReduzido(''); }}
                 className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                   form.tipo_venda === opt.v
                     ? 'bg-movv-gradient text-white border-[#0C2D48]'
@@ -114,7 +117,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
         {form.tipo_venda === 'contabilidade' ? (
           <div>
             <label className="label">Contabilidade</label>
-            <select className="input" value={form.contabilidade_id} onChange={e => { set('contabilidade_id', e.target.value); setConfirmado(false); }}>
+            <select className="input" value={form.contabilidade_id} onChange={e => { set('contabilidade_id', e.target.value); setConfirmado(false); setMotivoReduzido(''); }}>
               <option value="">Selecione...</option>
               {contabilidades.map(c => (
                 <option key={c.partner_id} value={c.partner_id}>
@@ -129,7 +132,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
         ) : (
           <div>
             <label className="label">Preço de venda</label>
-            <CurrencyInput value={form.preco_venda} onChange={v => { set('preco_venda', v); setConfirmado(false); }} placeholder="Ex: 170,00" />
+            <CurrencyInput value={form.preco_venda} onChange={v => { set('preco_venda', v); setConfirmado(false); setMotivoReduzido(''); }} placeholder="Ex: 170,00" />
           </div>
         )}
 
@@ -139,10 +142,21 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
             <div className="flex-1">
               <p className={`text-xs ${bloqueado ? 'text-red-700' : 'text-amber-800'}`}>{aviso}</p>
               {!bloqueado && (
-                <label className="flex items-center gap-2 mt-2 text-xs text-amber-800">
-                  <input type="checkbox" checked={confirmado} onChange={e => setConfirmado(e.target.checked)} />
-                  Confirmo que quero registrar esta venda mesmo assim.
-                </label>
+                <>
+                  <label className="flex items-center gap-2 mt-2 text-xs text-amber-800">
+                    <input type="checkbox" checked={confirmado} onChange={e => setConfirmado(e.target.checked)} />
+                    Confirmo que quero registrar esta venda mesmo assim.
+                  </label>
+                  <div className="mt-2">
+                    <label className="text-xs font-medium text-amber-800">Motivo do preço reduzido</label>
+                    <textarea
+                      className="input min-h-[50px] resize-none mt-1"
+                      value={motivoReduzido}
+                      onChange={e => setMotivoReduzido(e.target.value)}
+                      placeholder="Explique por que este certificado foi vendido abaixo de R$ 30,00"
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>

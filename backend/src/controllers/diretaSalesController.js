@@ -74,7 +74,7 @@ async function createSale(req, res) {
   const {
     data_venda, tipo_venda, contabilidade_id,
     cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
-    preco_venda, observacoes,
+    preco_venda, observacoes, motivo_preco_reduzido,
   } = req.body;
 
   if (!tipo_venda || !['contabilidade', 'direta'].includes(tipo_venda)) {
@@ -117,6 +117,16 @@ async function createSale(req, res) {
       return res.status(400).json({ error: aviso });
     }
 
+    // Preço abaixo de R$ 30 (mas acima do custo): exige justificativa do vendedor.
+    if (aviso && !motivo_preco_reduzido?.trim()) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Motivo do preço reduzido é obrigatório para vendas abaixo de R$ 30,00.' });
+    }
+
+    const observacoesFinal = aviso && motivo_preco_reduzido?.trim()
+      ? `[Preço reduzido] ${motivo_preco_reduzido.trim()}${observacoes ? '\n' + observacoes : ''}`
+      : (observacoes || null);
+
     const goal = await diretaCalc.getOrCreateGoalDoMes(collaboratorId, referenceMonth, txDb);
     const { lucro, comissaoValor } = diretaCalc.calcularComissaoVenda(precoFinal, goal.comissao_pct);
 
@@ -132,7 +142,7 @@ async function createSale(req, res) {
         collaboratorId, dataVenda, tipo_venda, contabilidade_id || null,
         cliente_nome, cliente_cpf_cnpj || null, cliente_whatsapp || null,
         precoFinal, diretaCalc.CUSTO_CERTIFICADO, lucro, goal.comissao_pct, comissaoValor,
-        observacoes || null, referenceMonth,
+        observacoesFinal, referenceMonth,
       ]
     );
 
