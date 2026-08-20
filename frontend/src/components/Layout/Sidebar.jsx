@@ -47,9 +47,9 @@ const MASTER_MENU = [
       { label: 'Comissões Internas', icon: DollarSign,      to: '/admin/comissoes-internas', roles: ['admin'] },
       { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin'] },
       { label: 'Interesses',         icon: Sparkles,        to: '/admin/interesse',          roles: ['admin'] },
-      { label: 'Direta — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin'] },
-      { label: 'Direta — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
-      { label: 'Direta — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
+      { label: 'Movv Certificado — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin'] },
+      { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
+      { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
     ],
   },
   {
@@ -204,7 +204,7 @@ export default function Sidebar({ onClose }) {
               {user?.is_admin
                 ? '⚙ Administrador'
                 : isInternal
-                  ? (user?.role === 'manager_azul' ? '★ Gerente Azul' : '★ Comercial Azul + Direta')
+                  ? (user?.role === 'manager_azul' ? '★ Gerente Azul' : '★ Comercial Azul + Movv Certificado')
                   : isIndicator
                     ? '◆ Indicador Azul'
                     : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}

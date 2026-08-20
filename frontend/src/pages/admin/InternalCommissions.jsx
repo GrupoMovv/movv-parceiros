@@ -14,7 +14,7 @@ const currentMonth = new Date().toISOString().slice(0, 7);
 
 const ROLE_LABEL = {
   manager_azul:   'Gerente Azul',
-  comercial_full: 'Direta Certificação',
+  comercial_full: 'Movv Certificado',
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ export default function AdminInternalCommissions() {
           Comissões Internas
         </h1>
         <p className="text-slate-500 text-sm mt-1">
-          Gerencie a comissão de Pabline — lançamento manual mensal. Fernando agora usa o módulo Direta Certificação.
+          Gerencie a comissão de Pabline — lançamento manual mensal. Fernando agora usa o módulo Movv Certificado.
         </p>
       </div>
 
@@ -323,7 +323,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
           <ShieldCheck className="w-4 h-4 text-[#0C2D48] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-[#0C2D48]">
             O histórico abaixo é somente leitura. Novos fechamentos de folha do Fernando são feitos em{' '}
-            <strong>Admin &gt; Direta Certificação</strong>.
+            <strong>Admin &gt; Movv Certificado</strong>.
           </p>
         </div>
       )}
@@ -822,10 +822,10 @@ function TabelaReferencia() {
           <hr className="border-slate-200" />
 
           <div>
-            <p className="font-bold text-slate-900 mb-2">💼 FERNANDO — Direta Certificação</p>
+            <p className="font-bold text-slate-900 mb-2">💼 FERNANDO — Movv Certificado</p>
             <p className="text-sm text-slate-600">
               Fernando não usa mais este fluxo de lançamento manual. Vendas, metas, escalonamento de comissão
-              e fechamento de folha ficam em <strong>Admin &gt; Direta Certificação</strong>.
+              e fechamento de folha ficam em <strong>Admin &gt; Movv Certificado</strong>.
             </p>
           </div>
         </div>

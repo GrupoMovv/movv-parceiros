@@ -22,7 +22,7 @@ export default function DiretaDashboard() {
     try {
       const collabsRes = await api.get('/internal-collaborators/collaborators');
       const fernando = collabsRes.data.find(c => c.role === 'comercial_full');
-      if (!fernando) { toast.error('Colaborador Direta Certificação não encontrado'); return; }
+      if (!fernando) { toast.error('Colaborador Movv Certificado não encontrado'); return; }
       setCollab(fernando);
 
       const [goalRes, salesRes, actRes, commRes] = await Promise.all([
@@ -37,7 +37,7 @@ export default function DiretaDashboard() {
       setActivities(actRes.data.slice(0, 8));
       setPayrollStatus(commRes.data[0]?.status || null);
     } catch {
-      toast.error('Erro ao carregar dashboard Direta');
+      toast.error('Erro ao carregar dashboard Movv Certificado');
     } finally { setLoading(false); }
   }, []);
 
@@ -70,7 +70,7 @@ export default function DiretaDashboard() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <ShieldCheck className="w-6 h-6 text-[#0C2D48]" />
-          Direta Certificação — {collab?.name}
+          Movv Certificado — {collab?.name}
         </h1>
         <p className="text-slate-500 text-sm mt-1">Acompanhamento de vendas, metas e fechamento de folha.</p>
       </div>

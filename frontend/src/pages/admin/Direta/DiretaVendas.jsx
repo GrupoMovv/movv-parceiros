@@ -49,7 +49,7 @@ export default function DiretaVendas() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <FileText className="w-6 h-6 text-[#0C2D48]" />
-          Vendas — Direta Certificação
+          Vendas — Movv Certificado
         </h1>
         <p className="text-slate-500 text-sm mt-1">{sales.length} vendas no filtro atual</p>
       </div>

@@ -37,7 +37,7 @@ export default function DiretaFernandoDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Olá, {user?.name} 👋</h1>
-          <p className="text-slate-500 text-sm mt-1">Direta Certificação — suas vendas e metas do mês</p>
+          <p className="text-slate-500 text-sm mt-1">Movv Certificado — suas vendas e metas do mês</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setModalAtividade(true)} className="btn-secondary flex items-center gap-2">
