@@ -1,6 +1,6 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
-const { calcPabline, calcFernando, CURVA_PABLINE, CURVA_FERNANDO_AZUL, NET_FACTOR } = require('../services/internalCommissionService');
+const { calcPabline } = require('../services/internalCommissionService');
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -33,16 +33,7 @@ async function listCollaborators(req, res) {
 // ─── Admin: preview de cálculo antes de salvar ──────────────────────────────
 async function previewCommission(req, res) {
   try {
-    const {
-      collaborator_id,
-      azul_revenue,
-      azul_normal_revenue,
-      seguros_data,
-      consorcios_revenue,
-      base_via_accounting,
-      base_via_direct,
-      cert_count,
-    } = req.body;
+    const { collaborator_id, azul_revenue } = req.body;
 
     const collab = await db.query(
       'SELECT id, role FROM internal_collaborators WHERE id = $1 AND active = true',
@@ -50,29 +41,12 @@ async function previewCommission(req, res) {
     );
     if (!collab.rows[0]) return res.status(404).json({ error: 'Colaborador não encontrado' });
 
-    const { role } = collab.rows[0];
-    let calc;
-    if (role === 'manager_azul') {
-      calc = calcPabline({ azulRevenue: azul_revenue || 0 });
-    } else {
-      calc = calcFernando({
-        azulNormalRevenue: azul_normal_revenue ?? azul_revenue ?? 0,
-        segurosData:       seguros_data        || [],
-        consorciosRevenue: consorcios_revenue  || 0,
-        baseViaAccounting: base_via_accounting || 0,
-        baseViaDirect:     base_via_direct     || 0,
-        certCount:         cert_count          || 0,
-      });
+    if (collab.rows[0].role === 'comercial_full') {
+      return res.status(400).json({ error: 'Fernando agora usa apenas o módulo Direta Certificação.' });
     }
 
-    const baseForNet = role === 'manager_azul'
-      ? parseFloat(azul_revenue || 0)
-      : parseFloat(azul_normal_revenue ?? azul_revenue ?? 0);
-
-    return res.json({
-      ...calc,
-      net_revenue: baseForNet * NET_FACTOR,
-    });
+    const calc = calcPabline({ azulTotal: azul_revenue || 0 });
+    return res.json(calc);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro no preview' });
@@ -82,15 +56,7 @@ async function previewCommission(req, res) {
 // ─── Admin: lançar comissão do mês ──────────────────────────────────────────
 async function createCommission(req, res) {
   try {
-    const {
-      collaborator_id, month,
-      azul_revenue,
-      azul_normal_revenue,
-      seguros_data,
-      consorcios_revenue,
-      base_via_accounting, base_via_direct, cert_count,
-      notes,
-    } = req.body;
+    const { collaborator_id, month, azul_revenue, notes } = req.body;
 
     if (!collaborator_id || !month) {
       return res.status(400).json({ error: 'Colaborador e mês são obrigatórios' });
@@ -102,20 +68,11 @@ async function createCommission(req, res) {
     );
     if (!collab.rows[0]) return res.status(404).json({ error: 'Colaborador não encontrado' });
 
-    const { role } = collab.rows[0];
-    let calc;
-    if (role === 'manager_azul') {
-      calc = calcPabline({ azulRevenue: azul_revenue || 0 });
-    } else {
-      calc = calcFernando({
-        azulNormalRevenue: azul_normal_revenue ?? azul_revenue ?? 0,
-        segurosData:       seguros_data        || [],
-        consorciosRevenue: consorcios_revenue  || 0,
-        baseViaAccounting: base_via_accounting || 0,
-        baseViaDirect:     base_via_direct     || 0,
-        certCount:         cert_count          || 0,
-      });
+    if (collab.rows[0].role === 'comercial_full') {
+      return res.status(400).json({ error: 'Fernando agora usa apenas o módulo Direta Certificação.' });
     }
+
+    const calc = calcPabline({ azulTotal: azul_revenue || 0 });
 
     // Bloqueia lançamento sobre mês já pago
     const existing = await db.query(
@@ -126,7 +83,7 @@ async function createCommission(req, res) {
       return res.status(403).json({ error: 'Este mês já foi marcado como pago. Estorne o pagamento antes de relançar.' });
     }
 
-    const segurosJson = JSON.stringify(seguros_data && role !== 'manager_azul' ? seguros_data : []);
+    const segurosJson = JSON.stringify([]);
 
     const result = await db.query(
       `INSERT INTO internal_commissions
@@ -158,7 +115,7 @@ async function createCommission(req, res) {
        RETURNING *`,
       [
         collaborator_id, month,
-        role === 'manager_azul' ? (azul_revenue || 0) : (calc.azul_normal_revenue || 0),
+        calc.azul_revenue,
         calc.azul_commission_pct,
         calc.azul_commission,
         calc.direta_certificates_count,
@@ -228,15 +185,7 @@ async function revertToPending(req, res) {
 async function updateCommission(req, res) {
   try {
     const { id } = req.params;
-    const {
-      month,
-      azul_revenue,
-      azul_normal_revenue,
-      seguros_data,
-      consorcios_revenue,
-      base_via_accounting, base_via_direct, cert_count,
-      notes,
-    } = req.body;
+    const { month, azul_revenue, notes } = req.body;
 
     const check = await db.query('SELECT * FROM internal_commissions WHERE id = $1', [id]);
     if (!check.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
@@ -248,23 +197,12 @@ async function updateCommission(req, res) {
       'SELECT id, role FROM internal_collaborators WHERE id = $1',
       [check.rows[0].collaborator_id]
     );
-    const { role } = collab.rows[0];
-
-    let calc;
-    if (role === 'manager_azul') {
-      calc = calcPabline({ azulRevenue: azul_revenue || 0 });
-    } else {
-      calc = calcFernando({
-        azulNormalRevenue: azul_normal_revenue ?? azul_revenue ?? 0,
-        segurosData:       seguros_data        || [],
-        consorciosRevenue: consorcios_revenue  || 0,
-        baseViaAccounting: base_via_accounting || 0,
-        baseViaDirect:     base_via_direct     || 0,
-        certCount:         cert_count          || 0,
-      });
+    if (collab.rows[0].role === 'comercial_full') {
+      return res.status(400).json({ error: 'Fernando agora usa apenas o módulo Direta Certificação.' });
     }
 
-    const segurosJson = JSON.stringify(seguros_data && role !== 'manager_azul' ? seguros_data : []);
+    const calc = calcPabline({ azulTotal: azul_revenue || 0 });
+    const segurosJson = JSON.stringify([]);
 
     const result = await db.query(
       `UPDATE internal_commissions SET
@@ -290,7 +228,7 @@ async function updateCommission(req, res) {
        RETURNING *`,
       [
         month || check.rows[0].month,
-        role === 'manager_azul' ? (azul_revenue || 0) : (calc.azul_normal_revenue || 0),
+        calc.azul_revenue,
         calc.azul_commission_pct,
         calc.azul_commission,
         calc.direta_certificates_count,
@@ -413,11 +351,6 @@ async function mySummary(req, res) {
   }
 }
 
-// ─── Curvas de comissão (público para colaboradores autenticados) ────────────
-function getCurves(req, res) {
-  return res.json({ CURVA_PABLINE, CURVA_FERNANDO_AZUL, NET_FACTOR });
-}
-
 // ─── Admin: resetar senha de colaborador ───────────────────────────────────
 async function resetPassword(req, res) {
   const { collaboratorId } = req.params;
@@ -461,6 +394,5 @@ module.exports = {
   listAllCommissions,
   myCommissions,
   mySummary,
-  getCurves,
   resetPassword,
 };

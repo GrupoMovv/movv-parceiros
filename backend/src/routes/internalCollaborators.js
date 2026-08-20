@@ -16,6 +16,5 @@ router.post ('/reset-password/:collaboratorId', authenticate, requireAdmin, ctrl
 // ─── Rotas do colaborador (acesso próprio) ────────────────────────────────────
 router.get('/me/commissions', authenticate, requireInternal, ctrl.myCommissions);
 router.get('/me/summary',     authenticate, requireInternal, ctrl.mySummary);
-router.get('/curves',         authenticate,                  ctrl.getCurves);
 
 module.exports = router;

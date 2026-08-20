@@ -29,6 +29,10 @@ const TABLE_ORDER = [
   'indicators',
   'indicator_referrals',
   'indicator_payments',
+  'contabilidades_precos',
+  'direta_sales',
+  'sales_activities',
+  'sales_goals',
 ];
 
 const pool = new Pool({
