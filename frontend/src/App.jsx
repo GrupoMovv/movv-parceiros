@@ -20,7 +20,13 @@ import AdminProducts from './pages/admin/Products';
 import AdminInterest from './pages/admin/Interest';
 import AdminInternalCommissions from './pages/admin/InternalCommissions';
 import AdminIndicadores from './pages/admin/AdminIndicadores';
+import DiretaDashboardAdmin from './pages/admin/Direta/DiretaDashboard';
+import DiretaVendasAdmin from './pages/admin/Direta/DiretaVendas';
+import DiretaContabilidadesAdmin from './pages/admin/Direta/DiretaContabilidades';
 import MinhasComissoes from './pages/MinhasComissoes';
+import DiretaFernandoDashboard from './pages/direta/Dashboard';
+import DiretaFernandoMinhasVendas from './pages/direta/MinhasVendas';
+import DiretaFernandoAtividades from './pages/direta/Atividades';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
 import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
@@ -72,6 +78,12 @@ function RequireInternal({ children }) {
   return children;
 }
 
+function RequireComercialFull({ children }) {
+  const { user } = useAuth();
+  if (user?.type !== 'internal' || user?.role !== 'comercial_full') return <Navigate to="/" replace />;
+  return children;
+}
+
 function RequireIndicator({ children }) {
   const { user } = useAuth();
   if (user?.type !== 'indicator') return <Navigate to="/login" replace />;
@@ -111,7 +123,13 @@ export default function App() {
           <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
           <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
           <Route path="admin/indicadores"   element={<RequireAdmin><AdminIndicadores /></RequireAdmin>} />
+          <Route path="admin/direta"             element={<RequireAdmin><DiretaDashboardAdmin /></RequireAdmin>} />
+          <Route path="admin/direta/vendas"      element={<RequireAdmin><DiretaVendasAdmin /></RequireAdmin>} />
+          <Route path="admin/direta/contabilidades" element={<RequireAdmin><DiretaContabilidadesAdmin /></RequireAdmin>} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
+          <Route path="direta/dashboard"         element={<RequireComercialFull><DiretaFernandoDashboard /></RequireComercialFull>} />
+          <Route path="direta/minhas-vendas"     element={<RequireComercialFull><DiretaFernandoMinhasVendas /></RequireComercialFull>} />
+          <Route path="direta/atividades"        element={<RequireComercialFull><DiretaFernandoAtividades /></RequireComercialFull>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
           {/* Rotas do Indicador */}

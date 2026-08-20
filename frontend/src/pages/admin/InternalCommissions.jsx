@@ -1,10 +1,11 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import CurrencyInput from '../../components/ui/CurrencyInput';
 import {
   Users, DollarSign, CheckCircle2, Clock, Plus, X,
   RotateCcw, ChevronDown, ChevronUp, Loader2, Eye,
-  Pencil, Trash2, AlertTriangle, Lock, KeyRound, Copy,
+  Pencil, Trash2, AlertTriangle, Lock, KeyRound, Copy, ShieldCheck,
 } from 'lucide-react';
 
 const fmt    = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -13,22 +14,8 @@ const currentMonth = new Date().toISOString().slice(0, 7);
 
 const ROLE_LABEL = {
   manager_azul:   'Gerente Azul',
-  comercial_full: 'Comercial Azul + Direta',
+  comercial_full: 'Direta Certificação',
 };
-
-const CURVA_PABLINE = [
-  { label: 'Até R$ 50k',        min: 0,      max: 50000,   pct: 0.05 },
-  { label: 'R$ 50k – R$ 100k',  min: 50001,  max: 100000,  pct: 0.07 },
-  { label: 'R$ 100k – R$ 200k', min: 100001, max: 200000,  pct: 0.06 },
-  { label: 'R$ 200k – R$ 300k', min: 200001, max: 300000,  pct: 0.05 },
-  { label: 'Acima R$ 300k',     min: 300001, max: Infinity, pct: 0.04 },
-];
-
-const CURVA_FERNANDO = [
-  { label: 'Até R$ 50k',       min: 0,      max: 50000,   pct: 0.005 },
-  { label: 'R$ 50k – R$ 100k', min: 50001,  max: 100000,  pct: 0.010 },
-  { label: 'Acima R$ 100k',    min: 100001, max: Infinity, pct: 0.015 },
-];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminInternalCommissions() {
@@ -116,7 +103,7 @@ export default function AdminInternalCommissions() {
           Comissões Internas
         </h1>
         <p className="text-slate-500 text-sm mt-1">
-          Gerencie as comissões de Pabline e Fernando — lançamento manual mensal
+          Gerencie a comissão de Pabline — lançamento manual mensal. Fernando agora usa o módulo Direta Certificação.
         </p>
       </div>
 
@@ -217,21 +204,23 @@ function StatusBadge({ status }) {
 }
 
 // ─── Action Buttons ───────────────────────────────────────────────────────────
-function ActionButtons({ commission, onPaid, onRevert, onEdit, onDelete }) {
+function ActionButtons({ commission, canEdit, onPaid, onRevert, onEdit, onDelete }) {
   const isPaid = commission.status === 'paid';
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <button
-        onClick={() => onEdit(commission)}
-        disabled={isPaid}
-        title={isPaid ? 'Estorne o pagamento primeiro' : 'Editar comissão'}
-        className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors
-          ${isPaid
-            ? 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed'
-            : 'border-blue-200 bg-blue-50 text-[#0C2D48] hover:bg-blue-100'}`}
-      >
-        <Pencil className="w-3 h-3" /> Editar
-      </button>
+      {canEdit && (
+        <button
+          onClick={() => onEdit(commission)}
+          disabled={isPaid}
+          title={isPaid ? 'Estorne o pagamento primeiro' : 'Editar comissão'}
+          className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors
+            ${isPaid
+              ? 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed'
+              : 'border-blue-200 bg-blue-50 text-[#0C2D48] hover:bg-blue-100'}`}
+        >
+          <Pencil className="w-3 h-3" /> Editar
+        </button>
+      )}
 
       {isPaid ? (
         <button
@@ -267,6 +256,8 @@ function ActionButtons({ commission, onPaid, onRevert, onEdit, onDelete }) {
 // ─── Card do colaborador ──────────────────────────────────────────────────────
 function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, onEdit, onDelete, expanded, toggleExpand }) {
   const latest = commissions[0];
+  const canLaunchEdit = collab.role !== 'comercial_full'; // Fernando: fluxo antigo desativado (usa módulo Direta)
+
   return (
     <div className="card !p-0 overflow-hidden">
       {/* Header */}
@@ -307,21 +298,35 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
             <KeyRound className="w-4 h-4" />
             Resetar Senha
           </button>
-          <button
-            onClick={onLaunch}
-            className="flex items-center gap-2 bg-movv-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" />
-            Lançar Comissão
-          </button>
-          <button
-            onClick={toggleExpand}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+          {canLaunchEdit && (
+            <button
+              onClick={onLaunch}
+              className="flex items-center gap-2 bg-movv-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" />
+              Lançar Comissão
+            </button>
+          )}
+          {commissions.length > 0 && (
+            <button
+              onClick={toggleExpand}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
         </div>
       </div>
+
+      {!canLaunchEdit && (
+        <div className="mx-6 mb-5 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <ShieldCheck className="w-4 h-4 text-[#0C2D48] flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-[#0C2D48]">
+            O histórico abaixo é somente leitura. Novos fechamentos de folha do Fernando são feitos em{' '}
+            <strong>Admin &gt; Direta Certificação</strong>.
+          </p>
+        </div>
+      )}
 
       {/* Último lançamento */}
       {latest && (
@@ -331,15 +336,8 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
             <div>
-              <p className="text-slate-400 text-xs">Fat. Azul</p>
-              <p className="font-semibold text-slate-700">{fmt(latest.azul_revenue)}</p>
-            </div>
-            <div>
-              <p className="text-slate-400 text-xs">Comissão Azul</p>
-              <p className="font-semibold text-slate-700">
-                {fmt(latest.azul_commission)}{' '}
-                <span className="text-xs font-normal text-slate-400">({fmtPct(latest.azul_commission_pct)})</span>
-              </p>
+              <p className="text-slate-400 text-xs">Com. Azul (10%)</p>
+              <p className="font-semibold text-slate-700">{fmt(latest.azul_commission)}</p>
             </div>
             {parseFloat(latest.direta_commission) > 0 && (
               <div>
@@ -347,6 +345,10 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
                 <p className="font-semibold text-slate-700">{fmt(latest.direta_commission)}</p>
               </div>
             )}
+            <div>
+              <p className="text-slate-400 text-xs">Salário base</p>
+              <p className="font-semibold text-slate-700">{fmt(latest.base_salary)}</p>
+            </div>
             <div>
               <p className="text-slate-400 text-xs">Total a receber</p>
               <p className="font-bold text-[#0C2D48] text-base">{fmt(latest.total_amount)}</p>
@@ -356,6 +358,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
             <StatusBadge status={latest.status} />
             <ActionButtons
               commission={latest}
+              canEdit={canLaunchEdit}
               onPaid={onPaid}
               onRevert={onRevert}
               onEdit={onEdit}
@@ -372,7 +375,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {['Mês','Fat. Azul','% Azul','Com. Azul','Com. Direta','Salário','Total','Status','Ações'].map(h => (
+                  {['Mês','Com. Azul','Com. Direta','Salário','Total','Status','Ações'].map(h => (
                     <th key={h} className="text-left text-slate-400 text-xs font-semibold uppercase tracking-wider px-4 py-3 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -381,8 +384,6 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
                 {commissions.slice(1).map(c => (
                   <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-mono text-xs text-[#C9A84C]">{c.month}</td>
-                    <td className="px-4 py-3 text-slate-600">{fmt(c.azul_revenue)}</td>
-                    <td className="px-4 py-3 text-slate-600">{fmtPct(c.azul_commission_pct)}</td>
                     <td className="px-4 py-3 text-slate-600">{fmt(c.azul_commission)}</td>
                     <td className="px-4 py-3 text-slate-600">{fmt(c.direta_commission)}</td>
                     <td className="px-4 py-3 text-slate-600">{fmt(c.base_salary)}</td>
@@ -391,6 +392,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
                     <td className="px-4 py-3">
                       <ActionButtons
                         commission={c}
+                        canEdit={canLaunchEdit}
                         onPaid={onPaid}
                         onRevert={onRevert}
                         onEdit={onEdit}
@@ -428,137 +430,8 @@ function ModalShell({ title, subtitle, onClose, children }) {
   );
 }
 
-// ─── Curva de Comissão (display) ─────────────────────────────────────────────
-function CurvaDisplay({ curve, netValue, label }) {
-  return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden">
-      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Curva — {label}</p>
-      </div>
-      <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {curve.map((tier, i) => {
-          const active = netValue >= tier.min && netValue <= tier.max;
-          return (
-            <div key={i} className={`rounded-lg px-3 py-2 text-xs ${active ? 'bg-movv-gradient text-white font-bold' : 'bg-slate-50 text-slate-600'}`}>
-              <p className={active ? 'text-white/80' : 'text-slate-400'}>{tier.label}</p>
-              <p className="font-bold text-sm mt-0.5">{(tier.pct * 100).toFixed(1)}%</p>
-              {active && <p className="text-[10px] text-white/70 mt-0.5">← você está aqui</p>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── Seguros — lista dinâmica (Fernando) ──────────────────────────────────────
-const PCT_OPTIONS = Array.from({ length: 21 }, (_, i) => i + 10);
-
-function SegurosList({ seguros, onChange }) {
-  const list = seguros || [];
-  function addRow() {
-    if (list.length >= 10) return;
-    onChange([...list, { id: Date.now(), descricao: '', valorOperado: 0, pctComissaoAzul: 10 }]);
-  }
-  function removeRow(id) { onChange(list.filter(s => s.id !== id)); }
-  function updateRow(id, field, value) {
-    onChange(list.map(s => s.id === id ? { ...s, [field]: value } : s));
-  }
-
-  const subtotal = list.reduce((sum, s) => {
-    return sum + (parseFloat(s.valorOperado || 0) * parseFloat(s.pctComissaoAzul || 0) / 100) * 0.20;
-  }, 0);
-
-  return (
-    <div className="border-t border-slate-100 pt-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <p className="text-sm font-semibold text-slate-800">Seguros</p>
-          <span className="text-xs text-slate-400">(Fernando = 20% do que Azul paga à Movv)</span>
-        </div>
-        <button
-          type="button"
-          onClick={addRow}
-          disabled={list.length >= 10}
-          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-[#0C2D48] hover:bg-blue-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-3 h-3" /> Adicionar
-        </button>
-      </div>
-
-      {list.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-3 italic">Nenhum seguro este mês</p>
-      ) : (
-        <>
-          {list.map(s => (
-            <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-              <div className="flex items-start gap-2">
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-xs text-slate-500 font-medium">Descrição (opcional)</label>
-                    <input
-                      type="text"
-                      className="input mt-0.5 text-sm"
-                      value={s.descricao}
-                      onChange={e => updateRow(s.id, 'descricao', e.target.value)}
-                      placeholder="Ex: Vida Empresarial"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 font-medium">Valor Operado</label>
-                    <CurrencyInput
-                      key={`val-${s.id}`}
-                      value={s.valorOperado}
-                      onChange={v => updateRow(s.id, 'valorOperado', v)}
-                      className="input mt-0.5"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 font-medium">% Comissão Azul</label>
-                    <select
-                      className="input mt-0.5"
-                      value={s.pctComissaoAzul}
-                      onChange={e => updateRow(s.id, 'pctComissaoAzul', parseInt(e.target.value))}
-                    >
-                      {PCT_OPTIONS.map(p => <option key={p} value={p}>{p}%</option>)}
-                    </select>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeRow(s.id)}
-                  className="mt-5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {parseFloat(s.valorOperado) > 0 && (
-                <p className="text-xs text-emerald-600 font-medium">
-                  Fernando:{' '}
-                  {((parseFloat(s.valorOperado) * parseFloat(s.pctComissaoAzul) / 100) * 0.20)
-                    .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  <span className="text-slate-400 font-normal ml-1">
-                    ({parseFloat(s.valorOperado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} × {s.pctComissaoAzul}% × 20%)
-                  </span>
-                </p>
-              )}
-            </div>
-          ))}
-          <div className="flex items-center justify-between text-sm bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
-            <span className="text-slate-600 font-medium">Subtotal seguros Fernando:</span>
-            <span className="font-bold text-emerald-700">
-              {subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Commission Form (compartilhado entre Launch e Edit) ─────────────────────
-function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loadPrev, onPreview }) {
+// ─── Commission Form — Pabline (10% fixo sobre a comissão Azul do mês) ────────
+function CommissionForm({ form, set, preview, loadPrev, onPreview }) {
   return (
     <div className="px-6 py-5 space-y-5">
       <div>
@@ -566,94 +439,18 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
         <input type="month" className="input" value={form.month} onChange={e => set('month', e.target.value)} />
       </div>
 
-      {/* PABLINE: campo único de faturamento Azul */}
-      {isPabline && (
-        <>
-          <div>
-            <label className="label">Faturamento Bruto Azul</label>
-            <CurrencyInput value={form.azul_revenue} onChange={v => set('azul_revenue', v)} placeholder="85.000,00" className="input" />
-            <p className="text-xs text-slate-400 mt-1">
-              Base = {(form.azul_revenue * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
-            </p>
-          </div>
-          <CurvaDisplay curve={CURVA_PABLINE} netValue={form.azul_revenue * 0.80} label="Pabline" />
-        </>
-      )}
+      <div>
+        <label className="label">Total Comissão Azul Recebida no Mês</label>
+        <CurrencyInput value={form.azul_revenue} onChange={v => set('azul_revenue', v)} placeholder="10.000,00" />
+        <p className="text-xs text-slate-400 mt-1">
+          Valor total que a Azul já pagou à Movv neste mês (bruto, sem desconto).
+        </p>
+      </div>
 
-      {/* FERNANDO: 3 seções de produto */}
-      {isFernando && (
-        <>
-          {/* Azul Normal */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#0C2D48]" />
-              <p className="text-sm font-semibold text-slate-800">Azul — Produtos Normais</p>
-              <span className="text-xs text-slate-400">(consignado, FGTS, etc.)</span>
-            </div>
-            <div>
-              <label className="label">Faturamento Bruto</label>
-              <CurrencyInput value={form.azul_normal_revenue || 0} onChange={v => set('azul_normal_revenue', v)} placeholder="85.000,00" className="input" />
-              <p className="text-xs text-slate-400 mt-1">
-                Base = {((form.azul_normal_revenue || 0) * 0.80).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (80% do bruto)
-              </p>
-            </div>
-            <CurvaDisplay curve={CURVA_FERNANDO} netValue={(form.azul_normal_revenue || 0) * 0.80} label="Fernando — Azul Normal" />
-          </div>
-
-          {/* Seguros */}
-          <SegurosList seguros={form.seguros} onChange={arr => set('seguros', arr)} />
-
-          {/* Consórcios */}
-          <div className="border-t border-slate-100 pt-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#C9A84C]" />
-              <p className="text-sm font-semibold text-slate-800">Consórcios</p>
-              <span className="text-xs text-slate-400">(Fernando = LL × 1,5%)</span>
-            </div>
-            <div>
-              <label className="label">Valor Operado</label>
-              <CurrencyInput value={form.consorcios_revenue || 0} onChange={v => set('consorcios_revenue', v)} placeholder="0,00" className="input" />
-              <p className="text-xs text-emerald-600 mt-1 font-medium">
-                Fernando:{' '}
-                {((form.consorcios_revenue || 0) * 0.80 * 0.015).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                <span className="text-slate-400 font-normal ml-1">(valor × 80% × 1,5%)</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Direta */}
-          <div className="border-t border-slate-100 pt-4 space-y-4">
-            <p className="text-sm font-semibold text-slate-700">
-              Direta Certificação <span className="text-xs font-normal text-slate-400">(Fernando recebe 25% sobre cada base)</span>
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Base via Contabilidade</label>
-                <CurrencyInput value={form.base_via_accounting} onChange={v => set('base_via_accounting', v)} placeholder="venda − custo − com. cont." className="input" />
-                <p className="text-xs text-emerald-600 mt-1 font-medium">
-                  Fernando: {(form.base_via_accounting * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-              </div>
-              <div>
-                <label className="label">Base Venda Direta</label>
-                <CurrencyInput value={form.base_via_direct} onChange={v => set('base_via_direct', v)} placeholder="venda − custo" className="input" />
-                <p className="text-xs text-emerald-600 mt-1 font-medium">
-                  Fernando: {(form.base_via_direct * 0.25).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-              </div>
-            </div>
-            <div>
-              <label className="label">Qtd. certificados emitidos (total)</label>
-              <IntegerInput value={form.cert_count} onChange={v => set('cert_count', v)} className="input w-40" />
-            </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
-              <p className="font-semibold mb-1">Regra do Salário Fernando</p>
-              <p>Se comissão total &lt; R$ 3.500 → salário R$ 1.621 é incluído</p>
-              <p>Se comissão total ≥ R$ 3.500 → salário = R$ 0</p>
-            </div>
-          </div>
-        </>
-      )}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-700">Comissão da Pabline</span>
+        <span className="font-bold text-[#0C2D48]">10% fixo</span>
+      </div>
 
       <div>
         <label className="label">Observações (opcional)</label>
@@ -677,41 +474,12 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
           <div className="mt-4 bg-[#F8F4FF] border border-blue-200 rounded-xl p-4 space-y-3">
             <p className="text-xs font-semibold text-[#0C2D48] uppercase tracking-wider">Preview do Cálculo</p>
 
-            {isPabline && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                <PreviewItem label="Base líquida"  value={fmt(preview.net_revenue)} />
-                <PreviewItem label="% Azul"        value={fmtPct(preview.azul_commission_pct)} />
-                <PreviewItem label="Comissão Azul" value={fmt(preview.azul_commission)} />
-                <PreviewItem label="Salário base"  value={fmt(preview.base_salary)} />
-              </div>
-            )}
-
-            {isFernando && (
-              <div className="space-y-2 text-sm">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <PreviewItem label="Azul Normal LL"    value={fmt(preview.net_revenue)} />
-                  <PreviewItem label="% Azul Normal"     value={fmtPct(preview.azul_commission_pct)} />
-                  <PreviewItem label="Com. Azul Normal"  value={fmt(preview.azul_normal_commission)} />
-                </div>
-                {parseFloat(preview.seguros_commission) > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <PreviewItem label="Seguros (Azul→Movv)" value={fmt(preview.seguros_total_revenue)} />
-                    <PreviewItem label="Com. Seguros (20%)"  value={fmt(preview.seguros_commission)} />
-                  </div>
-                )}
-                {parseFloat(preview.consorcios_commission) > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <PreviewItem label="Consórcios"      value={fmt(preview.consorcios_revenue)} />
-                    <PreviewItem label="Com. Consórcios" value={fmt(preview.consorcios_commission)} />
-                  </div>
-                )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <PreviewItem label="Total Azul"   value={fmt(preview.azul_commission)} />
-                  <PreviewItem label="Com. Direta"  value={fmt(preview.direta_commission)} />
-                  <PreviewItem label="Salário base" value={fmt(preview.base_salary)} />
-                </div>
-              </div>
-            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+              <PreviewItem label="Comissão Azul (100%)" value={fmt(preview.azul_revenue)} />
+              <PreviewItem label="% Pabline"            value={fmtPct(preview.azul_commission_pct)} />
+              <PreviewItem label="Comissão Pabline"     value={fmt(preview.azul_commission)} />
+              <PreviewItem label="Salário base"         value={fmt(preview.base_salary)} />
+            </div>
 
             <div className="border-t border-blue-200 pt-3 flex items-center justify-between">
               <p className="text-slate-600 text-sm font-semibold">Total a receber</p>
@@ -726,14 +494,7 @@ function CommissionForm({ form, set, collab, isPabline, isFernando, preview, loa
 
 // ─── Launch Modal ─────────────────────────────────────────────────────────────
 function LaunchModal({ collab, onClose, onSaved }) {
-  const isPabline  = collab.role === 'manager_azul';
-  const isFernando = collab.role === 'comercial_full';
-
-  const [form, setForm] = useState({
-    month: currentMonth, azul_revenue: 0,
-    azul_normal_revenue: 0, seguros: [], consorcios_revenue: 0,
-    base_via_accounting: 0, base_via_direct: 0, cert_count: 0, notes: '',
-  });
+  const [form, setForm] = useState({ month: currentMonth, azul_revenue: 0, notes: '' });
   const [preview,  setPreview]  = useState(null);
   const [loadPrev, setLoadPrev] = useState(false);
   const [saving,   setSaving]   = useState(false);
@@ -743,14 +504,8 @@ function LaunchModal({ collab, onClose, onSaved }) {
     setLoadPrev(true);
     try {
       const res = await api.post('/internal-collaborators/commissions/preview', {
-        collaborator_id:      collab.id,
-        azul_revenue:         form.azul_revenue,
-        azul_normal_revenue:  form.azul_normal_revenue,
-        seguros_data:         form.seguros || [],
-        consorcios_revenue:   form.consorcios_revenue,
-        base_via_accounting:  form.base_via_accounting,
-        base_via_direct:      form.base_via_direct,
-        cert_count:           form.cert_count,
+        collaborator_id: collab.id,
+        azul_revenue:    form.azul_revenue,
       });
       setPreview(res.data);
     } catch { toast.error('Erro no preview'); }
@@ -761,16 +516,10 @@ function LaunchModal({ collab, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.post('/internal-collaborators/commissions', {
-        collaborator_id:      collab.id,
-        month:                form.month,
-        azul_revenue:         form.azul_revenue,
-        azul_normal_revenue:  form.azul_normal_revenue,
-        seguros_data:         form.seguros || [],
-        consorcios_revenue:   form.consorcios_revenue,
-        base_via_accounting:  form.base_via_accounting,
-        base_via_direct:      form.base_via_direct,
-        cert_count:           form.cert_count,
-        notes:                form.notes || null,
+        collaborator_id: collab.id,
+        month:           form.month,
+        azul_revenue:    form.azul_revenue,
+        notes:           form.notes || null,
       });
       toast.success(`Comissão de ${collab.name} lançada com sucesso!`);
       onSaved();
@@ -781,9 +530,7 @@ function LaunchModal({ collab, onClose, onSaved }) {
 
   return (
     <ModalShell title={`Lançar Comissão — ${collab.name}`} subtitle={ROLE_LABEL[collab.role]} onClose={onClose}>
-      <CommissionForm form={form} set={set} collab={collab}
-        isPabline={isPabline} isFernando={isFernando}
-        preview={preview} loadPrev={loadPrev} onPreview={loadPreview} />
+      <CommissionForm form={form} set={set} preview={preview} loadPrev={loadPrev} onPreview={loadPreview} />
       <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
         <button onClick={onClose} className="btn-secondary">Cancelar</button>
         <button onClick={handleSave} disabled={saving}
@@ -798,24 +545,12 @@ function LaunchModal({ collab, onClose, onSaved }) {
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
 function EditModal({ commission, collab, onClose, onSaved }) {
-  const isPaid     = commission.status === 'paid';
-  const isPabline  = collab.role === 'manager_azul';
-  const isFernando = collab.role === 'comercial_full';
+  const isPaid = commission.status === 'paid';
 
-  // Pré-preenche com valores numéricos.
-  // base_via_accounting/direct: DB guarda resultado (25% da base), revertemos dividindo por 0.25.
-  // seguros_data vem do DB como JSONB; adicionamos id local para o key do React.
-  const rawSeguros = Array.isArray(commission.seguros_data) ? commission.seguros_data : [];
   const [form, setForm] = useState({
-    month:                commission.month,
-    azul_revenue:         parseFloat(commission.azul_revenue         || 0),
-    azul_normal_revenue:  parseFloat(commission.azul_normal_revenue  || 0),
-    seguros:              rawSeguros.map((s, i) => ({ ...s, id: Date.now() + i })),
-    consorcios_revenue:   parseFloat(commission.consorcios_revenue   || 0),
-    base_via_accounting:  parseFloat(commission.direta_via_accounting || 0) / 0.25,
-    base_via_direct:      parseFloat(commission.direta_via_direct     || 0) / 0.25,
-    cert_count:           parseInt(commission.direta_certificates_count || 0),
-    notes:                commission.notes || '',
+    month:        commission.month,
+    azul_revenue: parseFloat(commission.azul_revenue || 0),
+    notes:        commission.notes || '',
   });
   const [preview,  setPreview]  = useState(null);
   const [loadPrev, setLoadPrev] = useState(false);
@@ -826,14 +561,8 @@ function EditModal({ commission, collab, onClose, onSaved }) {
     setLoadPrev(true);
     try {
       const res = await api.post('/internal-collaborators/commissions/preview', {
-        collaborator_id:      collab.id,
-        azul_revenue:         form.azul_revenue,
-        azul_normal_revenue:  form.azul_normal_revenue,
-        seguros_data:         form.seguros || [],
-        consorcios_revenue:   form.consorcios_revenue,
-        base_via_accounting:  form.base_via_accounting,
-        base_via_direct:      form.base_via_direct,
-        cert_count:           form.cert_count,
+        collaborator_id: collab.id,
+        azul_revenue:    form.azul_revenue,
       });
       setPreview(res.data);
     } catch { toast.error('Erro no preview'); }
@@ -844,15 +573,9 @@ function EditModal({ commission, collab, onClose, onSaved }) {
     setSaving(true);
     try {
       await api.put(`/internal-collaborators/commissions/${commission.id}`, {
-        month:                form.month,
-        azul_revenue:         form.azul_revenue,
-        azul_normal_revenue:  form.azul_normal_revenue,
-        seguros_data:         form.seguros || [],
-        consorcios_revenue:   form.consorcios_revenue,
-        base_via_accounting:  form.base_via_accounting,
-        base_via_direct:      form.base_via_direct,
-        cert_count:           form.cert_count,
-        notes:                form.notes || null,
+        month:        form.month,
+        azul_revenue: form.azul_revenue,
+        notes:        form.notes || null,
       });
       toast.success(`Comissão de ${collab.name} atualizada!`);
       onSaved();
@@ -889,9 +612,7 @@ function EditModal({ commission, collab, onClose, onSaved }) {
       subtitle={`${ROLE_LABEL[collab.role]} · ${commission.month}`}
       onClose={onClose}
     >
-      <CommissionForm form={form} set={set} collab={collab}
-        isPabline={isPabline} isFernando={isFernando}
-        preview={preview} loadPrev={loadPrev} onPreview={loadPreview} />
+      <CommissionForm form={form} set={set} preview={preview} loadPrev={loadPrev} onPreview={loadPreview} />
       <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
         <button onClick={onClose} className="btn-secondary">Cancelar</button>
         <button onClick={handleSave} disabled={saving}
@@ -961,73 +682,6 @@ function PreviewItem({ label, value }) {
       <p className="text-xs text-slate-400">{label}</p>
       <p className="font-semibold text-slate-800">{value}</p>
     </div>
-  );
-}
-
-// ─── CurrencyInput — máscara BRL enquanto digita ──────────────────────────────
-// Armazena o valor bruto (número) no form; exibe formatado localmente.
-// Ex.: digitar "1000" → exibe "R$ 10,00" | digitar "100000" → "R$ 1.000,00"
-function CurrencyInput({ value, onChange, placeholder, className }) {
-  const toDisplay = raw => {
-    const n = parseFloat(raw);
-    if (!n || isNaN(n)) return '';
-    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const [display, setDisplay] = useState(() => toDisplay(value));
-
-  const handleChange = e => {
-    const digits = e.target.value.replace(/\D/g, '');
-    if (!digits) { setDisplay(''); onChange(0); return; }
-    const num = parseInt(digits, 10) / 100;
-    setDisplay(num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    onChange(num);
-  };
-
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none select-none">
-        R$
-      </span>
-      <input
-        type="text"
-        inputMode="numeric"
-        className={`${className} pl-9`}
-        value={display}
-        onChange={handleChange}
-        placeholder={placeholder || '0,00'}
-      />
-    </div>
-  );
-}
-
-// ─── IntegerInput — separador de milhar, sem decimais ────────────────────────
-function IntegerInput({ value, onChange, placeholder, className }) {
-  const toDisplay = raw => {
-    const n = parseInt(raw);
-    if (!n || isNaN(n)) return '';
-    return n.toLocaleString('pt-BR');
-  };
-
-  const [display, setDisplay] = useState(() => toDisplay(value));
-
-  const handleChange = e => {
-    const digits = e.target.value.replace(/\D/g, '');
-    if (!digits) { setDisplay(''); onChange(0); return; }
-    const num = parseInt(digits, 10);
-    setDisplay(num.toLocaleString('pt-BR'));
-    onChange(num);
-  };
-
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      className={className}
-      value={display}
-      onChange={handleChange}
-      placeholder={placeholder || '0'}
-    />
   );
 }
 
@@ -1144,7 +798,7 @@ function TabelaReferencia() {
         className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-bold text-slate-900">📊 Tabelas de Comissão</span>
+          <span className="text-base font-bold text-slate-900">📊 Regras de Comissão</span>
           <span className="text-xs text-slate-400 font-normal">(referência rápida)</span>
         </div>
         {open
@@ -1153,84 +807,25 @@ function TabelaReferencia() {
       </button>
 
       {open && (
-        <div className="border-t border-slate-100 px-5 py-5 space-y-6">
-          {/* Pabline */}
+        <div className="border-t border-slate-100 px-5 py-5 space-y-4">
           <div>
-            <p className="font-bold text-slate-900 mb-3">👔 PABLINE — Gerente Azul</p>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 mb-3">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">Faixa Faturamento</th>
-                    <th className="text-right px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">% Comis.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {CURVA_PABLINE.map((tier, i) => (
-                    <tr key={i} className="border-b border-slate-100 last:border-0">
-                      <td className="px-4 py-2.5 text-slate-700">{tier.label}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-[#0C2D48]">
-                        {(tier.pct * 100).toFixed(1)}%
-                        {tier.pct === 0.07 && <span className="ml-1 text-[#C9A84C]">⭐</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-xs text-slate-500">
-              Salário base: <strong>R$ 1.621</strong> · Aplica em <strong>TODAS</strong> as vendas Azul
+            <p className="font-bold text-slate-900 mb-2">👔 PABLINE — Gerente Azul</p>
+            <p className="text-sm text-slate-600">
+              <strong className="text-[#0C2D48]">10% fixo</strong> sobre o total de comissão Azul recebida pela Movv no mês
+              (o admin digita esse total diretamente — sem curva, sem fator de líquido).
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Salário base: <strong>R$ 1.621</strong> · somado sempre ao valor da comissão.
             </p>
           </div>
 
           <hr className="border-slate-200" />
 
-          {/* Fernando */}
           <div>
-            <p className="font-bold text-slate-900 mb-3">💼 FERNANDO — Comercial</p>
-
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">AZUL (suas vendas):</p>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 mb-4">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">Faixa Faturamento</th>
-                    <th className="text-right px-4 py-2.5 text-slate-500 font-semibold text-xs uppercase tracking-wider">% Comis.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {CURVA_FERNANDO.map((tier, i) => (
-                    <tr key={i} className="border-b border-slate-100 last:border-0">
-                      <td className="px-4 py-2.5 text-slate-700">{tier.label}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-[#0C2D48]">{(tier.pct * 100).toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">DIRETA:</p>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-2 mb-3">
-              <div className="flex items-start gap-2 text-sm">
-                <span className="text-amber-600 font-bold mt-0.5">•</span>
-                <div>
-                  <span className="text-slate-700 font-medium">Via contabilidade: </span>
-                  <span className="text-slate-600">25% sobre lucro líquido</span>
-                  <p className="text-xs text-slate-400 mt-0.5">(após descontar a comissão da contabilidade)</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 text-sm">
-                <span className="text-amber-600 font-bold mt-0.5">•</span>
-                <div>
-                  <span className="text-slate-700 font-medium">Venda direta: </span>
-                  <span className="text-slate-600">25% sobre lucro bruto</span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-500">
-              Salário base: <strong>R$ 1.621</strong>{' '}
-              <span className="text-slate-400">(até comissão &lt; R$ 3.500)</span>
+            <p className="font-bold text-slate-900 mb-2">💼 FERNANDO — Direta Certificação</p>
+            <p className="text-sm text-slate-600">
+              Fernando não usa mais este fluxo de lançamento manual. Vendas, metas, escalonamento de comissão
+              e fechamento de folha ficam em <strong>Admin &gt; Direta Certificação</strong>.
             </p>
           </div>
         </div>

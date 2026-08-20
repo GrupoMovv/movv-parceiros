@@ -14,7 +14,11 @@ function getUserRoles(user) {
   if (user.is_admin) roles.push('admin');
   if (user.type === 'accounting') roles.push('accounting');
   if (user.type === 'indicator') roles.push('indicator');
-  if (user.type === 'internal') roles.push('internal');
+  if (user.type === 'internal') {
+    roles.push('internal');
+    // Papel específico dentro de "internal" — usado para itens exclusivos de um colaborador.
+    if (user.role) roles.push(user.role);
+  }
   // qualquer parceiro que não seja accounting, indicator ou internal
   if (!user.is_admin && !['accounting', 'indicator', 'internal'].includes(user.type)) {
     roles.push('partner');
@@ -43,6 +47,9 @@ const MASTER_MENU = [
       { label: 'Comissões Internas', icon: DollarSign,      to: '/admin/comissoes-internas', roles: ['admin'] },
       { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin'] },
       { label: 'Interesses',         icon: Sparkles,        to: '/admin/interesse',          roles: ['admin'] },
+      { label: 'Direta — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin'] },
+      { label: 'Direta — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
+      { label: 'Direta — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
     ],
   },
   {
@@ -72,7 +79,10 @@ const MASTER_MENU = [
   {
     section: 'Colaborador',
     items: [
-      { label: 'Minhas Comissões', icon: DollarSign, to: '/minhas-comissoes', roles: ['internal'] },
+      { label: 'Minhas Comissões', icon: DollarSign,   to: '/minhas-comissoes',    roles: ['manager_azul'] },
+      { label: 'Meu Painel',       icon: LayoutDashboard, to: '/direta/dashboard',    roles: ['comercial_full'], end: true },
+      { label: 'Minhas Vendas',    icon: FileText,     to: '/direta/minhas-vendas', roles: ['comercial_full'] },
+      { label: 'Atividades',       icon: ClipboardList, to: '/direta/atividades',   roles: ['comercial_full'] },
     ],
   },
   {
