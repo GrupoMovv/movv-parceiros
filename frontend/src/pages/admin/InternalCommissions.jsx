@@ -13,8 +13,9 @@ const fmtPct = v => (parseFloat(v || 0) * 100).toFixed(1) + '%';
 const currentMonth = new Date().toISOString().slice(0, 7);
 
 const ROLE_LABEL = {
-  manager_azul:   'Gerente Azul',
-  comercial_full: 'Movv Certificado',
+  manager_azul:       'Gerente Azul',
+  comercial_full:     'Movv Certificado',
+  sindicato_aprendiz: 'Sindicato — Menor Aprendiz',
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -256,7 +257,8 @@ function ActionButtons({ commission, canEdit, onPaid, onRevert, onEdit, onDelete
 // ─── Card do colaborador ──────────────────────────────────────────────────────
 function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, onEdit, onDelete, expanded, toggleExpand }) {
   const latest = commissions[0];
-  const canLaunchEdit = collab.role !== 'comercial_full'; // Fernando: fluxo antigo desativado (usa módulo Direta)
+  // Fernando e Renan: fluxo antigo desativado (usam os módulos Movv Certificado e Sindicato).
+  const canLaunchEdit = collab.role !== 'comercial_full' && collab.role !== 'sindicato_aprendiz';
 
   return (
     <div className="card !p-0 overflow-hidden">
@@ -322,8 +324,13 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
         <div className="mx-6 mb-5 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
           <ShieldCheck className="w-4 h-4 text-[#0C2D48] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-[#0C2D48]">
-            O histórico abaixo é somente leitura. Novos fechamentos de folha do Fernando são feitos em{' '}
-            <strong>Admin &gt; Movv Certificado</strong>.
+            {collab.role === 'sindicato_aprendiz' ? (
+              <>O histórico abaixo é somente leitura. Lançamentos de faturamento e bônus são feitos em{' '}
+              <strong>Admin &gt; Sindicato — Renan</strong>.</>
+            ) : (
+              <>O histórico abaixo é somente leitura. Novos fechamentos de folha do Fernando são feitos em{' '}
+              <strong>Admin &gt; Movv Certificado</strong>.</>
+            )}
           </p>
         </div>
       )}

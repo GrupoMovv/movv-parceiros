@@ -16,6 +16,9 @@ export default function MinhasComissoes() {
   const isFernando = user?.role === 'comercial_full';
   if (isFernando) return <Navigate to="/direta/dashboard" replace />;
 
+  const isRenan = user?.role === 'sindicato_aprendiz';
+  if (isRenan) return <Navigate to="/sindicato/minha-comissao" replace />;
+
   const [summary,      setSummary]      = useState(null);
   const [commissions,  setCommissions]  = useState([]);
   const [loading,      setLoading]      = useState(true);

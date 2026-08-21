@@ -4,6 +4,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
+  Landmark,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ const MASTER_MENU = [
       { label: 'Movv Certificado — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin'] },
       { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
       { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
+      { label: 'Sindicato — Renan',  icon: Landmark,     to: '/admin/sindicato',            roles: ['admin'] },
     ],
   },
   {
@@ -84,6 +86,7 @@ const MASTER_MENU = [
       { label: 'Minhas Vendas',    icon: FileText,     to: '/direta/minhas-vendas', roles: ['comercial_full'] },
       { label: 'Atividades',       icon: ClipboardList, to: '/direta/atividades',   roles: ['comercial_full'] },
       { label: 'Contabilidades',   icon: Building2,     to: '/direta/contabilidades', roles: ['comercial_full'] },
+      { label: 'Minha Comissão',   icon: Landmark,      to: '/sindicato/minha-comissao', roles: ['sindicato_aprendiz'] },
     ],
   },
   {
@@ -205,7 +208,11 @@ export default function Sidebar({ onClose }) {
               {user?.is_admin
                 ? '⚙ Administrador'
                 : isInternal
-                  ? (user?.role === 'manager_azul' ? '★ Gerente Azul' : '★ Comercial Azul + Movv Certificado')
+                  ? (user?.role === 'manager_azul'
+                      ? '★ Gerente Azul'
+                      : user?.role === 'sindicato_aprendiz'
+                        ? '★ Sindicato — Menor Aprendiz'
+                        : '★ Comercial Azul + Movv Certificado')
                   : isIndicator
                     ? '◆ Indicador Azul'
                     : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}

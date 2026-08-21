@@ -44,6 +44,7 @@ app.use('/api/internal-collaborators', require('./routes/internalCollaborators')
 app.use('/api/indicators',             require('./routes/indicators'));
 app.use('/api/direta',                 require('./routes/direta'));
 app.use('/api/contabilidades-precos',  require('./routes/contabilidadesPrecos'));
+app.use('/api/sindicato',              require('./routes/sindicato'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
