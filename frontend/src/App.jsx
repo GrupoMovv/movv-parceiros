@@ -98,6 +98,21 @@ function RequireIndicator({ children }) {
   return children;
 }
 
+// "/" precisa mandar cada tipo de usuário pra sua própria home — colaboradores
+// internos não têm indicações/comissão de parceiro, então não podem cair no
+// <Dashboard/> genérico (tela "Indique e Ganhe" de parceiro/indicador).
+function HomeRedirect() {
+  const { user } = useAuth();
+  if (user?.is_admin) return <Navigate to="/admin" replace />;
+  if (user?.type === 'indicator') return <Navigate to="/indicador/dashboard" replace />;
+  if (user?.type === 'internal') {
+    if (user?.role === 'manager_azul')       return <Navigate to="/minhas-comissoes" replace />;
+    if (user?.role === 'comercial_full')     return <Navigate to="/direta/dashboard" replace />;
+    if (user?.role === 'sindicato_aprendiz') return <Navigate to="/sindicato/minha-comissao" replace />;
+  }
+  return <Dashboard />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -113,7 +128,7 @@ export default function App() {
         } />
 
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<HomeRedirect />} />
           <Route path="extrato"              element={<Statement />} />
           <Route path="meus-funcionarios"   element={<RequireAccounting><MyEmployees /></RequireAccounting>} />
           <Route path="indicar"              element={<NewReferral />} />
