@@ -4,25 +4,21 @@ function generateExternalId() {
   return `MANUAL-${Date.now()}`;
 }
 
-function formatValor(valor) {
-  return parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+function montarMensagem() {
+  return `Olá! Tudo bem? 😊
 
-function formatData(dataVencimento) {
-  const [ano, mes, dia] = String(dataVencimento).slice(0, 10).split('-');
-  return `${dia}/${mes}/${ano}`;
-}
+Sou o Renan Araújo, do Sindicato do Comércio de Itumbiara.
 
-function montarMensagem(numeroGuia, valor, dataVencimento) {
-  return `Olá! Passando para lembrar da Guia Assistencial em aberto:
+Passando para avisar que identificamos uma pendência em nosso sistema.
 
-📋 Guia: ${numeroGuia}
-💰 Valor: R$ ${formatValor(valor)}
-📅 Vencimento: ${formatData(dataVencimento)}
+Se você já realizou o pagamento, pode me enviar o comprovante por aqui. 👍
 
-Qualquer dúvida, estamos à disposição.
+Caso ainda não tenha realizado, posso te enviar a segunda via atualizada do boleto ou, se preferir, os dados para pagamento via PIX.
 
-Sindicato — Itumbiara/GO`;
+Se precisar de qualquer coisa, estou à disposição!
+
+Renan Araújo
+SECI – Sindicato do Comércio de Itumbiara`;
 }
 
 function montarLinkWhatsapp(telefone, mensagem) {
@@ -72,15 +68,15 @@ async function listEmpresasDaContabilidade(req, res) {
 async function createContabilidade(req, res) {
   try {
     const { razao_social, nome_fantasia, cnpj, endereco, bairro, cidade, estado, cep, telefone, celular, email, status } = req.body;
-    if (!razao_social) {
-      return res.status(400).json({ error: 'razao_social é obrigatório' });
+    if (!nome_fantasia) {
+      return res.status(400).json({ error: 'nome_fantasia é obrigatório' });
     }
     const result = await db.query(
       `INSERT INTO sindicato_contabilidades
          (external_id, razao_social, nome_fantasia, cnpj, endereco, bairro, cidade, estado, cep, telefone, celular, email, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [generateExternalId(), razao_social, nome_fantasia || null, cnpj || null, endereco || null, bairro || null,
+      [generateExternalId(), razao_social || nome_fantasia, nome_fantasia, cnpj || null, endereco || null, bairro || null,
        cidade || null, estado || null, cep || null, telefone || null, celular || null, email || null, status || 'Ativo']
     );
     return res.status(201).json(result.rows[0]);
@@ -124,6 +120,9 @@ async function createEmpresa(req, res) {
     } = req.body;
     if (!razao_social) {
       return res.status(400).json({ error: 'razao_social é obrigatório' });
+    }
+    if (!contabilidade_id) {
+      return res.status(400).json({ error: 'contabilidade_id é obrigatório' });
     }
     const result = await db.query(
       `INSERT INTO sindicato_empresas
@@ -209,26 +208,26 @@ async function updateWhatsapp(req, res) {
 
 async function registrarCobranca(req, res) {
   try {
-    const { empresa_id, numero_guia, valor, data_vencimento } = req.body;
-    if (!empresa_id || !numero_guia || valor === undefined || !data_vencimento) {
-      return res.status(400).json({ error: 'empresa_id, numero_guia, valor e data_vencimento são obrigatórios' });
+    const { empresa_id } = req.body;
+    if (!empresa_id) {
+      return res.status(400).json({ error: 'empresa_id é obrigatório' });
     }
 
     const empresaResult = await db.query('SELECT * FROM sindicato_empresas WHERE id = $1', [empresa_id]);
     const empresa = empresaResult.rows[0];
     if (!empresa) return res.status(404).json({ error: 'Empresa não encontrada' });
     if (!empresa.whatsapp) {
-      return res.status(400).json({ error: 'Cadastre o WhatsApp da empresa antes de gerar a cobrança' });
+      return res.status(400).json({ error: 'Cadastre o WhatsApp da empresa antes de enviar a cobrança' });
     }
 
-    const mensagem = montarMensagem(numero_guia, valor, data_vencimento);
+    const mensagem = montarMensagem();
     const enviadoPorId = req.user?.type === 'internal' ? req.user.id : null;
 
     const result = await db.query(
-      `INSERT INTO sindicato_cobrancas (empresa_id, enviado_por_id, numero_guia, valor, data_vencimento, mensagem_gerada, telefone_usado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO sindicato_cobrancas (empresa_id, enviado_por_id, mensagem_gerada, telefone_usado)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [empresa_id, enviadoPorId, numero_guia, valor, data_vencimento, mensagem, empresa.whatsapp]
+      [empresa_id, enviadoPorId, mensagem, empresa.whatsapp]
     );
 
     return res.status(201).json({

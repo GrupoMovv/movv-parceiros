@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Modal from '../../../components/ui/Modal';
 import { Building2, Loader2, Search, Plus, ArrowLeft } from 'lucide-react';
 
-const EMPTY_FORM = { razao_social: '', nome_fantasia: '', cnpj: '', telefone: '', celular: '', whatsapp: '', status: 'Ativo' };
+const EMPTY_FORM = { razao_social: '', nome_fantasia: '', cnpj: '', telefone: '', celular: '', whatsapp: '', status: 'Ativo', contabilidade_id: '' };
 
 export default function SindicatoEmpresasDaContabilidade() {
   const { id } = useParams();
@@ -17,6 +17,7 @@ export default function SindicatoEmpresasDaContabilidade() {
   const [modalNova, setModalNova] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [contabilidades, setContabilidades] = useState([]);
 
   const load = useCallback(async (searchTerm) => {
     setLoading(true);
@@ -37,15 +38,19 @@ export default function SindicatoEmpresasDaContabilidade() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  function openNova() {
-    setForm(EMPTY_FORM);
+  async function openNova() {
+    setForm({ ...EMPTY_FORM, contabilidade_id: id });
     setModalNova(true);
+    try {
+      const res = await api.get('/sindicato-empresas/contabilidades');
+      setContabilidades(res.data);
+    } catch { toast.error('Erro ao carregar contabilidades'); }
   }
 
   async function handleCreate() {
     setSaving(true);
     try {
-      await api.post('/sindicato-empresas/empresas', { ...form, contabilidade_id: id });
+      await api.post('/sindicato-empresas/empresas', form);
       toast.success('Empresa cadastrada!');
       setModalNova(false);
       load(search);
@@ -54,7 +59,7 @@ export default function SindicatoEmpresasDaContabilidade() {
     } finally { setSaving(false); }
   }
 
-  const podeSalvar = form.razao_social.trim().length > 0;
+  const podeSalvar = form.razao_social.trim().length > 0 && !!form.contabilidade_id;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -130,6 +135,15 @@ export default function SindicatoEmpresasDaContabilidade() {
           <div>
             <label className="label">CNPJ</label>
             <input className="input" value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
+          </div>
+          <div>
+            <label className="label">Contabilidade</label>
+            <select className="input" value={form.contabilidade_id} onChange={e => setForm(f => ({ ...f, contabilidade_id: e.target.value }))}>
+              <option value="">Selecione...</option>
+              {contabilidades.map(c => (
+                <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social}</option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

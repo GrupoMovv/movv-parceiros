@@ -1,23 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
-import { Building2, Loader2, ChevronRight } from 'lucide-react';
+import Modal from '../../../components/ui/Modal';
+import { Building2, Loader2, ChevronRight, Plus } from 'lucide-react';
+
+const EMPTY_FORM = { nome_fantasia: '', razao_social: '', cnpj: '', telefone: '', email: '', endereco: '' };
 
 export default function SindicatoEmpresasListaContabilidades() {
   const navigate = useNavigate();
   const [contabilidades, setContabilidades] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get('/sindicato-empresas/contabilidades');
-        setContabilidades(res.data);
-      } catch { toast.error('Erro ao carregar contabilidades'); }
-      finally { setLoading(false); }
-    })();
+  const [modalNova, setModalNova] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/sindicato-empresas/contabilidades');
+      setContabilidades(res.data);
+    } catch { toast.error('Erro ao carregar contabilidades'); }
+    finally { setLoading(false); }
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  function openNova() {
+    setForm(EMPTY_FORM);
+    setModalNova(true);
+  }
+
+  async function handleCreate() {
+    setSaving(true);
+    try {
+      await api.post('/sindicato-empresas/contabilidades', form);
+      toast.success('Contabilidade cadastrada!');
+      setModalNova(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao cadastrar contabilidade');
+    } finally { setSaving(false); }
+  }
+
+  const podeSalvar = form.nome_fantasia.trim().length > 0;
 
   if (loading) return (
     <div className="flex justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-[#0C2D48]" /></div>
@@ -25,14 +52,22 @@ export default function SindicatoEmpresasListaContabilidades() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Building2 className="w-6 h-6 text-[#0C2D48]" />
-          Empresas
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Contabilidades parceiras do Sindicato — escolha uma para ver e cobrar as empresas vinculadas.
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-[#0C2D48]" />
+            Empresas
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Contabilidades parceiras do Sindicato — escolha uma para ver e cobrar as empresas vinculadas.
+          </p>
+        </div>
+        <button
+          onClick={openNova}
+          className="flex items-center gap-2 whitespace-nowrap bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200"
+        >
+          <Plus className="w-4 h-4" /> Nova Contabilidade
+        </button>
       </div>
 
       {contabilidades.length === 0 ? (
@@ -60,6 +95,44 @@ export default function SindicatoEmpresasListaContabilidades() {
           ))}
         </div>
       )}
+
+      <Modal open={modalNova} onClose={() => setModalNova(false)} title="Nova Contabilidade">
+        <div className="space-y-4">
+          <div>
+            <label className="label">Nome Fantasia</label>
+            <input className="input" value={form.nome_fantasia} onChange={e => setForm(f => ({ ...f, nome_fantasia: e.target.value }))} autoFocus />
+          </div>
+          <div>
+            <label className="label">Razão Social</label>
+            <input className="input" value={form.razao_social} onChange={e => setForm(f => ({ ...f, razao_social: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">CNPJ</label>
+            <input className="input" value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Telefone</label>
+              <input className="input" value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Email</label>
+              <input type="email" className="input" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label className="label">Endereço (opcional)</label>
+            <input className="input" value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} />
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+            <button onClick={() => setModalNova(false)} className="btn-secondary">Cancelar</button>
+            <button onClick={handleCreate} disabled={saving || !podeSalvar} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Cadastrar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

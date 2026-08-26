@@ -3,28 +3,28 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Modal from '../../../components/ui/Modal';
-import CurrencyInput from '../../../components/ui/CurrencyInput';
-import { Building2, Loader2, ArrowLeft, MessageCircle, Receipt, Clock } from 'lucide-react';
+import { Building2, Loader2, ArrowLeft, MessageCircle, Pencil, Clock, ArrowLeftRight, Search } from 'lucide-react';
 
-const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = d => d ? d.slice(0, 10).split('-').reverse().join('/') : '—';
-
-const EMPTY_COBRANCA = { numero_guia: '', valor: 0, data_vencimento: '' };
 
 export default function SindicatoEmpresaDetalhe() {
   const { id } = useParams();
 
   const [empresa, setEmpresa] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
 
   const [modalWhatsapp, setModalWhatsapp] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null); // 'chat' | 'cobranca'
+  const [pendingAction, setPendingAction] = useState(null); // 'send' | 'edit'
   const [whatsappInput, setWhatsappInput] = useState('');
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
 
-  const [modalCobranca, setModalCobranca] = useState(false);
-  const [cobrancaForm, setCobrancaForm] = useState(EMPTY_COBRANCA);
-  const [savingCobranca, setSavingCobranca] = useState(false);
+  const [modalContab, setModalContab] = useState(false);
+  const [contabilidades, setContabilidades] = useState([]);
+  const [loadingContab, setLoadingContab] = useState(false);
+  const [searchContab, setSearchContab] = useState('');
+  const [novaContabId, setNovaContabId] = useState(null);
+  const [savingContab, setSavingContab] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,27 +37,28 @@ export default function SindicatoEmpresaDetalhe() {
 
   useEffect(() => { load(); }, [load]);
 
-  function abrirChatWhatsapp(numero) {
-    const digits = numero.replace(/\D/g, '');
-    window.open(`https://wa.me/55${digits}`, '_blank');
+  async function enviarMensagemWhatsapp() {
+    setSendingWhatsapp(true);
+    try {
+      const res = await api.post('/sindicato-empresas/cobrancas', { empresa_id: id });
+      window.open(res.data.whatsapp_link, '_blank');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao gerar mensagem de WhatsApp');
+    } finally { setSendingWhatsapp(false); }
   }
 
   function handleClickWhatsapp() {
-    if (empresa.whatsapp) { abrirChatWhatsapp(empresa.whatsapp); return; }
-    setPendingAction('chat');
+    if (empresa.whatsapp) { enviarMensagemWhatsapp(); return; }
+    setPendingAction('send');
     setWhatsappInput('');
     setModalWhatsapp(true);
   }
 
-  function handleClickCobrarGuia() {
-    if (!empresa.whatsapp) {
-      setPendingAction('cobranca');
-      setWhatsappInput('');
-      setModalWhatsapp(true);
-      return;
-    }
-    setCobrancaForm(EMPTY_COBRANCA);
-    setModalCobranca(true);
+  function handleClickEditarWhatsapp() {
+    setPendingAction('edit');
+    setWhatsappInput(empresa.whatsapp || '');
+    setModalWhatsapp(true);
   }
 
   async function handleSaveWhatsapp() {
@@ -66,38 +67,46 @@ export default function SindicatoEmpresaDetalhe() {
     try {
       const res = await api.put(`/sindicato-empresas/empresas/${id}/whatsapp`, { whatsapp: whatsappInput.trim() });
       setEmpresa(prev => ({ ...prev, whatsapp: res.data.whatsapp }));
-      toast.success('WhatsApp cadastrado!');
+      toast.success('WhatsApp salvo!');
       setModalWhatsapp(false);
-      if (pendingAction === 'chat') {
-        abrirChatWhatsapp(res.data.whatsapp);
-      } else if (pendingAction === 'cobranca') {
-        setCobrancaForm(EMPTY_COBRANCA);
-        setModalCobranca(true);
+      if (pendingAction === 'send') {
+        await enviarMensagemWhatsapp();
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao cadastrar WhatsApp');
+      toast.error(err.response?.data?.error || 'Erro ao salvar WhatsApp');
     } finally { setSavingWhatsapp(false); }
   }
 
-  async function handleSubmitCobranca() {
-    setSavingCobranca(true);
+  async function abrirModalContab() {
+    setNovaContabId(null);
+    setSearchContab('');
+    setModalContab(true);
+    setLoadingContab(true);
     try {
-      const res = await api.post('/sindicato-empresas/cobrancas', {
-        empresa_id: id,
-        numero_guia: cobrancaForm.numero_guia,
-        valor: cobrancaForm.valor,
-        data_vencimento: cobrancaForm.data_vencimento,
-      });
-      window.open(res.data.whatsapp_link, '_blank');
-      toast.success('Cobrança registrada!');
-      setModalCobranca(false);
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao gerar cobrança');
-    } finally { setSavingCobranca(false); }
+      const res = await api.get('/sindicato-empresas/contabilidades');
+      setContabilidades(res.data);
+    } catch { toast.error('Erro ao carregar contabilidades'); }
+    finally { setLoadingContab(false); }
   }
 
-  const podeSalvarCobranca = cobrancaForm.numero_guia.trim() && parseFloat(cobrancaForm.valor) > 0 && cobrancaForm.data_vencimento;
+  async function handleSalvarContab() {
+    if (!novaContabId) return;
+    setSavingContab(true);
+    try {
+      await api.put(`/sindicato-empresas/empresas/${id}`, { contabilidade_id: novaContabId });
+      toast.success('Contabilidade atualizada!');
+      setModalContab(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao atualizar contabilidade');
+    } finally { setSavingContab(false); }
+  }
+
+  const contabilidadesFiltradas = contabilidades.filter(c => {
+    const termo = searchContab.trim().toLowerCase();
+    if (!termo) return true;
+    return (c.nome_fantasia || '').toLowerCase().includes(termo) || (c.razao_social || '').toLowerCase().includes(termo);
+  });
 
   if (loading || !empresa) return (
     <div className="flex justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-[#0C2D48]" /></div>
@@ -130,25 +139,35 @@ export default function SindicatoEmpresaDetalhe() {
         <Info label="Email" value={empresa.email} />
         <Info label="Porte" value={empresa.porte} />
         <Info label="Categoria" value={empresa.categoria} />
-        <Info label="Contabilidade" value={empresa.contabilidade_nome} />
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-slate-400">Contabilidade</span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-800 font-medium text-right">{empresa.contabilidade_nome || '—'}</span>
+            <button onClick={abrirModalContab} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Alterar contabilidade">
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
         <Info label="Status" value={empresa.status} />
-        <Info label="WhatsApp" value={empresa.whatsapp || 'Não cadastrado'} />
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-slate-400">WhatsApp</span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-800 font-medium text-right">{empresa.whatsapp || 'Não cadastrado'}</span>
+            <button onClick={handleClickEditarWhatsapp} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar WhatsApp">
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={handleClickWhatsapp}
-          className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-200"
-        >
-          <MessageCircle className="w-5 h-5" /> WhatsApp
-        </button>
-        <button
-          onClick={handleClickCobrarGuia}
-          className="flex-1 flex items-center justify-center gap-2 btn-primary"
-        >
-          <Receipt className="w-5 h-5" /> Cobrar Guia Assistencial
-        </button>
-      </div>
+      <button
+        onClick={handleClickWhatsapp}
+        disabled={sendingWhatsapp}
+        className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-200 disabled:opacity-50"
+      >
+        {sendingWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
+        Enviar mensagem no WhatsApp
+      </button>
 
       <div className="card !p-0 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
@@ -156,29 +175,25 @@ export default function SindicatoEmpresaDetalhe() {
           <h3 className="font-bold text-slate-900">Histórico de Cobranças</h3>
         </div>
         {(!empresa.cobrancas || empresa.cobrancas.length === 0) ? (
-          <div className="py-8 text-center text-slate-400 text-sm">Nenhuma cobrança registrada ainda</div>
+          <div className="py-8 text-center text-slate-400 text-sm">Nenhuma mensagem enviada ainda</div>
         ) : (
           <div className="divide-y divide-slate-100">
             {empresa.cobrancas.map(c => (
               <div key={c.id} className="px-5 py-3 flex items-center justify-between text-sm">
-                <div>
-                  <span className="font-medium text-slate-800">Guia {c.numero_guia}</span>
-                  <p className="text-slate-400 text-xs mt-0.5">Vencimento {fmtDate(c.data_vencimento)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-900">{fmt(c.valor)}</p>
-                  <p className="text-slate-400 text-xs">{fmtDate(c.created_at)}</p>
-                </div>
+                <span className="font-medium text-slate-800">Mensagem enviada para {c.telefone_usado}</span>
+                <span className="text-slate-400 text-xs">{fmtDate(c.created_at)}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Modal: cadastrar WhatsApp (pré-requisito) */}
-      <Modal open={modalWhatsapp} onClose={() => setModalWhatsapp(false)} title="Cadastrar WhatsApp">
+      {/* Modal: cadastrar/editar WhatsApp */}
+      <Modal open={modalWhatsapp} onClose={() => setModalWhatsapp(false)} title={pendingAction === 'edit' ? 'Editar WhatsApp' : 'Cadastrar WhatsApp'}>
         <div className="space-y-4">
-          <p className="text-sm text-slate-500">Esta empresa ainda não tem um WhatsApp cadastrado. Informe o número para continuar.</p>
+          {pendingAction === 'send' && (
+            <p className="text-sm text-slate-500">Esta empresa ainda não tem um WhatsApp cadastrado. Informe o número para continuar.</p>
+          )}
           <div>
             <label className="label">WhatsApp</label>
             <input
@@ -193,41 +208,51 @@ export default function SindicatoEmpresaDetalhe() {
             <button onClick={() => setModalWhatsapp(false)} className="btn-secondary">Cancelar</button>
             <button onClick={handleSaveWhatsapp} disabled={savingWhatsapp || !whatsappInput.trim()} className="btn-primary flex items-center gap-2 disabled:opacity-50">
               {savingWhatsapp && <Loader2 className="w-4 h-4 animate-spin" />}
-              Salvar e continuar
+              {pendingAction === 'send' ? 'Salvar e continuar' : 'Salvar'}
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Modal: cobrar guia assistencial */}
-      <Modal open={modalCobranca} onClose={() => setModalCobranca(false)} title="Cobrar Guia Assistencial">
+      {/* Modal: alterar contabilidade */}
+      <Modal open={modalContab} onClose={() => setModalContab(false)} title="Alterar Contabilidade">
         <div className="space-y-4">
-          <div>
-            <label className="label">Número da Guia</label>
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
-              className="input"
-              value={cobrancaForm.numero_guia}
-              onChange={e => setCobrancaForm(f => ({ ...f, numero_guia: e.target.value }))}
+              className="input pl-9"
+              placeholder="Buscar contabilidade..."
+              value={searchContab}
+              onChange={e => setSearchContab(e.target.value)}
             />
           </div>
-          <div>
-            <label className="label">Valor</label>
-            <CurrencyInput value={cobrancaForm.valor} onChange={v => setCobrancaForm(f => ({ ...f, valor: v }))} />
-          </div>
-          <div>
-            <label className="label">Data de Vencimento</label>
-            <input
-              type="date"
-              className="input"
-              value={cobrancaForm.data_vencimento}
-              onChange={e => setCobrancaForm(f => ({ ...f, data_vencimento: e.target.value }))}
-            />
+          <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+            {loadingContab ? (
+              <div className="py-8 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /></div>
+            ) : contabilidadesFiltradas.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm">Nenhuma contabilidade encontrada</div>
+            ) : contabilidadesFiltradas.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setNovaContabId(c.id)}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                  novaContabId === c.id ? 'bg-blue-50 text-[#0C2D48] font-semibold' : 'hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                {c.nome_fantasia || c.razao_social}
+                {c.id === empresa.contabilidade_id && <span className="text-slate-400 font-normal"> (atual)</span>}
+              </button>
+            ))}
           </div>
           <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
-            <button onClick={() => setModalCobranca(false)} className="btn-secondary">Cancelar</button>
-            <button onClick={handleSubmitCobranca} disabled={savingCobranca || !podeSalvarCobranca} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50">
-              {savingCobranca && <Loader2 className="w-4 h-4 animate-spin" />}
-              <MessageCircle className="w-4 h-4" /> Gerar e Enviar
+            <button onClick={() => setModalContab(false)} className="btn-secondary">Cancelar</button>
+            <button
+              onClick={handleSalvarContab}
+              disabled={savingContab || !novaContabId || novaContabId === empresa.contabilidade_id}
+              className="btn-primary flex items-center gap-2 disabled:opacity-50"
+            >
+              {savingContab && <Loader2 className="w-4 h-4 animate-spin" />}
+              Confirmar
             </button>
           </div>
         </div>
