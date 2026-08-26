@@ -15,7 +15,11 @@ build/
 .env.production
 
 # Uploads de usuários
-backend/uploads/
+backend/uploads/*
+!backend/uploads/beneficios/
+backend/uploads/beneficios/*
+!backend/uploads/beneficios/.gitkeep
+!backend/uploads/beneficios/catalogo-beneficios-seci.pdf
 
 # Logs
 *.log
