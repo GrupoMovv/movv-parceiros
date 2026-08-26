@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { montarLinkWhatsapp } = require('../utils/whatsapp');
 
 function generateExternalId() {
   return `MANUAL-${Date.now()}`;
@@ -19,11 +20,6 @@ Se precisar de qualquer coisa, estou à disposição!
 
 Renan Araújo
 SECI – Sindicato do Comércio de Itumbiara`;
-}
-
-function montarLinkWhatsapp(telefone, mensagem) {
-  const digits = String(telefone || '').replace(/\D/g, '');
-  return `https://wa.me/55${digits}?text=${encodeURIComponent(mensagem)}`;
 }
 
 // ─── Contabilidades ──────────────────────────────────────────────────────────
