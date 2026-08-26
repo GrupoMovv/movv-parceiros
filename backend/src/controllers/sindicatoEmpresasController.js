@@ -84,6 +84,27 @@ async function createContabilidade(req, res) {
 
 // ─── Empresas ────────────────────────────────────────────────────────────────
 
+async function searchEmpresas(req, res) {
+  try {
+    const { search } = req.query;
+    const params = [];
+    let where = '';
+    if (search) {
+      params.push(`%${search}%`);
+      where = `WHERE (nome_fantasia ILIKE $1 OR razao_social ILIKE $1)`;
+    }
+    params.push(30);
+    const result = await db.query(
+      `SELECT id, nome_fantasia, razao_social FROM sindicato_empresas ${where} ORDER BY nome_fantasia ASC LIMIT $${params.length}`,
+      params
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar empresas' });
+  }
+}
+
 async function getEmpresa(req, res) {
   try {
     const { id } = req.params;
@@ -240,6 +261,7 @@ module.exports = {
   listContabilidades,
   listEmpresasDaContabilidade,
   createContabilidade,
+  searchEmpresas,
   getEmpresa,
   createEmpresa,
   updateEmpresa,

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
-  Landmark,
+  Landmark, Gift, MessagesSquare,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -52,6 +52,7 @@ const MASTER_MENU = [
       { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
       { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
       { label: 'Sindicato — Renan',  icon: Landmark,     to: '/admin/sindicato',            roles: ['admin'] },
+      { label: 'Templates Benefícios', icon: MessagesSquare, to: '/sindicato/beneficios/templates', roles: ['admin'] },
     ],
   },
   {
@@ -88,6 +89,7 @@ const MASTER_MENU = [
       { label: 'Contabilidades',   icon: Building2,     to: '/direta/contabilidades', roles: ['comercial_full'] },
       { label: 'Minha Comissão',   icon: Landmark,      to: '/sindicato/minha-comissao', roles: ['sindicato_aprendiz'] },
       { label: 'Empresas',         icon: Building2,     to: '/sindicato/empresas',       roles: ['sindicato_aprendiz', 'admin'] },
+      { label: 'Benefícios',       icon: Gift,          to: '/sindicato/beneficios',      roles: ['sindicato_aprendiz', 'admin'] },
     ],
   },
   {

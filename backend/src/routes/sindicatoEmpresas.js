@@ -15,6 +15,7 @@ router.get('/contabilidades',              ctrl.listContabilidades);
 router.post('/contabilidades',             ctrl.createContabilidade);
 router.get('/contabilidades/:id/empresas', ctrl.listEmpresasDaContabilidade);
 
+router.get('/empresas',              ctrl.searchEmpresas);
 router.get('/empresas/:id',          ctrl.getEmpresa);
 router.post('/empresas',             ctrl.createEmpresa);
 router.put('/empresas/:id',          ctrl.updateEmpresa);
