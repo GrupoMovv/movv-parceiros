@@ -5,13 +5,13 @@ function generateExternalId() {
 }
 
 function montarMensagem() {
-  return `Olá! Tudo bem? 😊
+  return `Olá! Tudo bem?
 
 Sou o Renan Araújo, do Sindicato do Comércio de Itumbiara.
 
 Passando para avisar que identificamos uma pendência em nosso sistema.
 
-Se você já realizou o pagamento, pode me enviar o comprovante por aqui. 👍
+Se você já realizou o pagamento, pode me enviar o comprovante por aqui.
 
 Caso ainda não tenha realizado, posso te enviar a segunda via atualizada do boleto ou, se preferir, os dados para pagamento via PIX.
 
