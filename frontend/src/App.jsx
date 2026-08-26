@@ -29,6 +29,9 @@ import DiretaFernandoDashboard from './pages/direta/Dashboard';
 import DiretaFernandoMinhasVendas from './pages/direta/MinhasVendas';
 import DiretaFernandoAtividades from './pages/direta/Atividades';
 import SindicatoMinhaComissao from './pages/sindicato/MinhaComissao';
+import SindicatoEmpresasListaContabilidades from './pages/sindicato/Empresas/ListaContabilidades';
+import SindicatoEmpresasDaContabilidade from './pages/sindicato/Empresas/EmpresasDaContabilidade';
+import SindicatoEmpresaDetalhe from './pages/sindicato/Empresas/EmpresaDetalhe';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
 import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
@@ -89,6 +92,13 @@ function RequireComercialFull({ children }) {
 function RequireSindicatoAprendiz({ children }) {
   const { user } = useAuth();
   if (user?.type !== 'internal' || user?.role !== 'sindicato_aprendiz') return <Navigate to="/" replace />;
+  return children;
+}
+
+function RequireSindicatoEmpresas({ children }) {
+  const { user } = useAuth();
+  const isSindicatoAprendiz = user?.type === 'internal' && user?.role === 'sindicato_aprendiz';
+  if (!user?.is_admin && !isSindicatoAprendiz) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -156,6 +166,9 @@ export default function App() {
           <Route path="direta/atividades"        element={<RequireComercialFull><DiretaFernandoAtividades /></RequireComercialFull>} />
           <Route path="direta/contabilidades"    element={<RequireComercialFull><DiretaContabilidadesAdmin /></RequireComercialFull>} />
           <Route path="sindicato/minha-comissao" element={<RequireSindicatoAprendiz><SindicatoMinhaComissao /></RequireSindicatoAprendiz>} />
+          <Route path="sindicato/empresas" element={<RequireSindicatoEmpresas><SindicatoEmpresasListaContabilidades /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/empresas/contabilidade/:id" element={<RequireSindicatoEmpresas><SindicatoEmpresasDaContabilidade /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/empresas/detalhe/:id" element={<RequireSindicatoEmpresas><SindicatoEmpresaDetalhe /></RequireSindicatoEmpresas>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
           {/* Rotas do Indicador */}

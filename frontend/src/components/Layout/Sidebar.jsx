@@ -87,6 +87,7 @@ const MASTER_MENU = [
       { label: 'Atividades',       icon: ClipboardList, to: '/direta/atividades',   roles: ['comercial_full'] },
       { label: 'Contabilidades',   icon: Building2,     to: '/direta/contabilidades', roles: ['comercial_full'] },
       { label: 'Minha Comissão',   icon: Landmark,      to: '/sindicato/minha-comissao', roles: ['sindicato_aprendiz'] },
+      { label: 'Empresas',         icon: Building2,     to: '/sindicato/empresas',       roles: ['sindicato_aprendiz', 'admin'] },
     ],
   },
   {
