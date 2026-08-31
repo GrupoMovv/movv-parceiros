@@ -155,6 +155,33 @@ async function gerarMassa(req, res) {
   }
 }
 
+// Gera carteirinha pra UM dependente específico, independente da flag
+// dependentes_gerar_carteirinha do titular — usado pelo botão "Gerar" na
+// lista de dependentes sem carteirinha (dashboard de Carteirinhas), onde a
+// intenção de gerar só esse dependente é explícita e não deve depender do
+// toggle geral da família.
+async function gerarDependente(req, res) {
+  try {
+    const { dependente_id } = req.params;
+    const check = await db.query('SELECT id FROM sindicato_associados_dependentes WHERE id = $1', [dependente_id]);
+    if (!check.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
+
+    const hash = await gerarHashUnico('sindicato_associados_dependentes');
+    const validaAte = calcularValidoAte();
+    const result = await db.query(
+      `UPDATE sindicato_associados_dependentes
+       SET carteirinha_hash = $1, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $2
+       WHERE id = $3 RETURNING *`,
+      [hash, validaAte, dependente_id]
+    );
+
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao gerar carteirinha do dependente' });
+  }
+}
+
 async function uploadFoto(req, res) {
   try {
     const { id } = req.params;
@@ -297,4 +324,56 @@ async function stats(req, res) {
   }
 }
 
-module.exports = { gerar, renovar, gerarMassa, uploadFoto, setEmpresa, stats };
+const TIPOS_ASSOCIADO = {
+  emitidas:    'a.ativo AND a.carteirinha_hash IS NOT NULL',
+  ativas:      'a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE',
+  vencendo:    "a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE AND a.carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days'",
+  vencidas:    'a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate < CURRENT_DATE',
+  nao_geradas: 'a.ativo AND a.carteirinha_hash IS NULL',
+};
+
+const TIPOS_DEPENDENTE = {
+  dep_total: 'true',
+  dep_com:   'd.carteirinha_hash IS NOT NULL',
+  dep_sem:   'd.carteirinha_hash IS NULL',
+};
+
+// Listas por trás de cada card clicável do dashboard — mesmos recortes que
+// stats() usa pra contar, aqui devolvendo as linhas em vez do total.
+async function lista(req, res) {
+  try {
+    const { tipo } = req.query;
+
+    if (TIPOS_ASSOCIADO[tipo]) {
+      const result = await db.query(
+        `SELECT a.id, a.nome_completo, a.categoria_profissional, a.whatsapp,
+                a.carteirinha_hash, a.carteirinha_gerada_em, a.carteirinha_valida_ate,
+                COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social, a.empresa_nome_livre) AS empresa
+         FROM sindicato_associados a
+         LEFT JOIN sindicato_empresas e ON e.id = a.empresa_id
+         WHERE ${TIPOS_ASSOCIADO[tipo]}
+         ORDER BY a.nome_completo ASC`
+      );
+      return res.json({ tipo: 'associado', data: result.rows });
+    }
+
+    if (TIPOS_DEPENDENTE[tipo]) {
+      const result = await db.query(
+        `SELECT d.id, d.nome, d.grau, d.carteirinha_hash, d.carteirinha_gerada_em, d.carteirinha_valida_ate,
+                a.id AS titular_id, a.nome_completo AS titular_nome
+         FROM sindicato_associados_dependentes d
+         JOIN sindicato_associados a ON a.id = d.associado_id
+         WHERE a.ativo = true AND ${TIPOS_DEPENDENTE[tipo]}
+         ORDER BY d.nome ASC`
+      );
+      return res.json({ tipo: 'dependente', data: result.rows });
+    }
+
+    return res.status(400).json({ error: 'tipo inválido' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao listar' });
+  }
+}
+
+module.exports = { gerar, renovar, gerarDependente, gerarMassa, uploadFoto, setEmpresa, stats, lista };

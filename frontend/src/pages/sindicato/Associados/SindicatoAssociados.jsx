@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import api, { assetUrl, backendOrigin } from '../../../services/api';
+import api, { assetUrl } from '../../../services/api';
 import toast from 'react-hot-toast';
 import Modal from '../../../components/ui/Modal';
 import {
@@ -8,6 +8,9 @@ import {
   QrCode, RefreshCw, Camera, CreditCard,
 } from 'lucide-react';
 import { iniciais, corAvatar } from '../../../utils/avatar';
+import {
+  publicCarteirinhaUrl, carteirinhaBadge, linkWhatsapp, enviarCarteirinhaWhatsapp,
+} from '../../../utils/carteirinhaWhatsapp';
 
 const LIMIT = 20;
 const CATEGORIAS = ['Empregado', 'Empregador patronal', 'Profissional liberal', 'Autonomo', 'Outros'];
@@ -20,25 +23,6 @@ const EMPTY_FORM = {
   observacoes: '', dependentes: [], empresa_id: null, empresa_nome_livre: '',
   dependentes_gerar_carteirinha: true,
 };
-
-// URL "canônica" da carteirinha: aponta pro backend, não pro frontend
-// direto — é ele quem detecta bots de preview (WhatsApp etc.) e serve as
-// meta tags certas; humanos são redirecionados pro app na hora.
-function publicCarteirinhaUrl(hash) {
-  return `${backendOrigin()}/carteirinha/${hash}`;
-}
-
-function carteirinhaBadge(a) {
-  if (!a.carteirinha_hash || !a.carteirinha_valida_ate) {
-    return { label: 'Não gerada', cls: 'bg-slate-100 text-slate-500' };
-  }
-  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-  const validaAte = new Date(a.carteirinha_valida_ate);
-  const diffDias = Math.ceil((validaAte - hoje) / 86400000);
-  if (diffDias < 0) return { label: 'Vencida', cls: 'bg-red-100 text-red-700' };
-  if (diffDias <= 15) return { label: `Vence em ${diffDias}d`, cls: 'bg-amber-100 text-amber-700' };
-  return { label: 'Ativa', cls: 'bg-emerald-100 text-emerald-700' };
-}
 
 function maskCPF(value) {
   return String(value || '').replace(/\D/g, '').slice(0, 11)
@@ -56,75 +40,6 @@ function maskPhone(value) {
 function fmtData(iso) {
   if (!iso) return '—';
   return iso.slice(0, 10).split('-').reverse().join('/');
-}
-
-function linkWhatsapp(numero) {
-  const digits = String(numero || '').replace(/\D/g, '');
-  return `https://api.whatsapp.com/send?phone=55${digits}`;
-}
-
-// api.whatsapp.com em vez de wa.me: wa.me faz um redirect server-side que
-// corrompe emoji (vira U+FFFD) mesmo com encodeURIComponent certo.
-function linkWhatsappComTexto(numero, mensagem) {
-  const digits = String(numero || '').replace(/\D/g, '');
-  return `https://api.whatsapp.com/send?phone=55${digits}&text=${encodeURIComponent(mensagem)}`;
-}
-
-const GRAU_LABEL = Object.fromEntries(GRAUS_DEPENDENTE);
-const GRAU_ORDEM = { conjuge: 0, filho: 1, filha: 2 };
-
-// Cônjuge primeiro, depois cada grau agrupado (filho, filha) e dentro de
-// cada grupo em ordem alfabética pelo nome.
-function ordenarDependentes(deps) {
-  return [...deps].sort((x, y) => {
-    const ox = GRAU_ORDEM[x.grau] ?? 99;
-    const oy = GRAU_ORDEM[y.grau] ?? 99;
-    if (ox !== oy) return ox - oy;
-    return (x.nome || '').localeCompare(y.nome || '', 'pt-BR');
-  });
-}
-
-function montarMensagemCarteirinha(nomeCurto, urlTitular, dependentesComCarteirinha) {
-  if (dependentesComCarteirinha.length === 0) {
-    return `Olá, ${nomeCurto}! 👋
-
-Aqui está sua carteirinha digital de associado ao SECI — Sindicato dos Empregados no Comércio de Itumbiara.
-
-🎫 Acesse pelo link:
-${urlTitular}
-
-Você pode salvar a carteirinha no celular e apresentá-la sempre que precisar usar seus benefícios com nossos parceiros.
-
-Qualquer dúvida, estou à disposição!
-
-Renan Araújo
-SECI — Sindicato do Comércio de Itumbiara`;
-  }
-
-  const listaDependentes = ordenarDependentes(dependentesComCarteirinha)
-    .map(d => `• ${GRAU_LABEL[d.grau] || 'Dependente'} — ${d.nome}: ${publicCarteirinhaUrl(d.carteirinha_hash)}`)
-    .join('\n');
-
-  return `Olá, ${nomeCurto}! 👋
-
-Aqui estão as carteirinhas digitais SECI — Sindicato dos Empregados no Comércio de Itumbiara.
-
-🎫 Sua carteirinha:
-${urlTitular}
-
-👨‍👩‍👧 Carteirinhas dos dependentes:
-${listaDependentes}
-
-Você pode salvar as carteirinhas no celular e apresentá-las sempre que precisar usar seus benefícios com nossos parceiros. Compartilhe com sua família!
-
-Qualquer dúvida, estou à disposição!
-
-Renan Araújo
-SECI — Sindicato do Comércio de Itumbiara`;
-}
-
-function toastAviso(mensagem) {
-  toast(mensagem, { icon: '⚠️', style: { background: '#FEF3C7', color: '#92400E' } });
 }
 
 export default function SindicatoAssociados() {
@@ -320,19 +235,10 @@ export default function SindicatoAssociados() {
     } finally { setGerandoCarteirinhaId(null); }
   }
 
-  async function enviarCarteirinhaWhatsapp(a) {
-    if (!a.carteirinha_hash) return toastAviso('Gere a carteirinha do titular primeiro');
-    if (!a.whatsapp) return toastAviso('Cadastre o WhatsApp do associado antes de enviar');
-
+  async function handleEnviarCarteirinha(a) {
     setEnviandoCarteirinhaId(a.id);
     try {
-      const res = await api.get(`/sindicato-associados/${a.id}`);
-      const dependentesComCarteirinha = (res.data.dependentes || []).filter(d => d.carteirinha_hash);
-
-      const nomeCurto = a.nome_completo.trim().split(/\s+/)[0];
-      const urlTitular = publicCarteirinhaUrl(a.carteirinha_hash);
-      const mensagem = montarMensagemCarteirinha(nomeCurto, urlTitular, dependentesComCarteirinha);
-      window.open(linkWhatsappComTexto(a.whatsapp, mensagem), '_blank');
+      await enviarCarteirinhaWhatsapp(a);
     } catch {
       toast.error('Erro ao montar a mensagem da carteirinha');
     } finally { setEnviandoCarteirinhaId(null); }
@@ -605,7 +511,7 @@ export default function SindicatoAssociados() {
                         <Send className="w-3.5 h-3.5" />
                       </a>
                       <button
-                        onClick={() => enviarCarteirinhaWhatsapp(a)}
+                        onClick={() => handleEnviarCarteirinha(a)}
                         disabled={enviandoCarteirinhaId === a.id}
                         className="p-1.5 rounded-lg text-white transition-colors hover:opacity-90 disabled:opacity-50"
                         style={{ backgroundColor: '#0C2D48' }}

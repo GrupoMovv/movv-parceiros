@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import {
-  CreditCard, Loader2, CheckSquare, Square, RefreshCw, Clock, AlertTriangle, HelpCircle,
+  CreditCard, Loader2, CheckSquare, Square, RefreshCw, Clock, AlertTriangle, HelpCircle, ChevronRight,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import ModalListaCarteirinha from './ModalListaCarteirinha';
 
 const CATEGORIAS = ['Empregado', 'Empregador patronal', 'Profissional liberal', 'Autonomo', 'Outros'];
 const LIMIT = 100;
@@ -17,11 +18,11 @@ const ABAS = [
 ];
 
 const CARDS_DASHBOARD = [
-  { chave: 'emitidas',    label: 'Emitidas',              icone: '🎫', cls: 'bg-blue-50 border-blue-100 text-blue-900' },
-  { chave: 'ativas',      label: 'Ativas',                icone: '✅', cls: 'bg-emerald-50 border-emerald-100 text-emerald-900' },
-  { chave: 'vencendo_15', label: 'Vencendo em 15 dias',   icone: '⏰', cls: 'bg-amber-50 border-amber-100 text-amber-900' },
-  { chave: 'vencidas',    label: 'Vencidas',              icone: '❌', cls: 'bg-red-50 border-red-100 text-red-900' },
-  { chave: 'nao_geradas', label: 'Não Geradas',           icone: '⚪', cls: 'bg-slate-50 border-slate-200 text-slate-700' },
+  { chave: 'emitidas',    label: 'Emitidas',              icone: '🎫', cls: 'bg-blue-50 border-blue-100 text-blue-900',       tipoLista: 'emitidas' },
+  { chave: 'ativas',      label: 'Ativas',                icone: '✅', cls: 'bg-emerald-50 border-emerald-100 text-emerald-900', tipoLista: 'ativas' },
+  { chave: 'vencendo_15', label: 'Vencendo em 15 dias',   icone: '⏰', cls: 'bg-amber-50 border-amber-100 text-amber-900',    tipoLista: 'vencendo' },
+  { chave: 'vencidas',    label: 'Vencidas',              icone: '❌', cls: 'bg-red-50 border-red-100 text-red-900',         tipoLista: 'vencidas' },
+  { chave: 'nao_geradas', label: 'Não Geradas',           icone: '⚪', cls: 'bg-slate-50 border-slate-200 text-slate-700',   tipoLista: 'nao_geradas' },
 ];
 
 function fmtData(iso) {
@@ -54,6 +55,7 @@ export default function SindicatoCarteirinhas() {
 
   const [dashboard, setDashboard] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(true);
+  const [modalTipo, setModalTipo] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -156,11 +158,16 @@ export default function SindicatoCarteirinhas() {
           {/* Cards principais */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CARDS_DASHBOARD.map(c => (
-              <div key={c.chave} className={`rounded-2xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${c.cls}`}>
+              <button
+                key={c.chave}
+                onClick={() => setModalTipo(c.tipoLista)}
+                className={`relative text-left rounded-2xl border p-5 transition-all cursor-pointer hover:shadow-md hover:-translate-y-0.5 ${c.cls}`}
+              >
+                <ChevronRight className="w-4 h-4 absolute top-4 right-4 opacity-40" />
                 <span className="text-2xl">{c.icone}</span>
                 <p className="text-4xl font-bold mt-2">{dashboard[c.chave]}</p>
                 <p className="text-xs font-semibold mt-1 opacity-80">{c.label}</p>
-              </div>
+              </button>
             ))}
             <div className="rounded-2xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5 bg-purple-50 border-purple-100 text-purple-900">
               <span className="text-2xl">📊</span>
@@ -213,18 +220,21 @@ export default function SindicatoCarteirinhas() {
           <div>
             <h3 className="font-semibold text-slate-900 mb-3 text-sm">Dependentes</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="card">
+              <button onClick={() => setModalTipo('dep_total')} className="relative text-left card cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5">
+                <ChevronRight className="w-4 h-4 absolute top-4 right-4 text-slate-300" />
                 <p className="text-2xl font-bold text-slate-900">{dashboard.dependentes.total}</p>
                 <p className="text-xs text-slate-500 mt-1">Total cadastrados</p>
-              </div>
-              <div className="card">
+              </button>
+              <button onClick={() => setModalTipo('dep_com')} className="relative text-left card cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5">
+                <ChevronRight className="w-4 h-4 absolute top-4 right-4 text-slate-300" />
                 <p className="text-2xl font-bold text-emerald-600">{dashboard.dependentes.com_carteirinha}</p>
                 <p className="text-xs text-slate-500 mt-1">Com carteirinha</p>
-              </div>
-              <div className="card">
+              </button>
+              <button onClick={() => setModalTipo('dep_sem')} className="relative text-left card cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5">
+                <ChevronRight className="w-4 h-4 absolute top-4 right-4 text-slate-300" />
                 <p className="text-2xl font-bold text-slate-400">{dashboard.dependentes.sem_carteirinha}</p>
                 <p className="text-xs text-slate-500 mt-1">Sem carteirinha</p>
-              </div>
+              </button>
               <div className="card">
                 <p className="text-2xl font-bold text-purple-600">{dashboard.dependentes.cobertura_pct}%</p>
                 <p className="text-xs text-slate-500 mt-1">Cobertura</p>
@@ -341,6 +351,12 @@ export default function SindicatoCarteirinhas() {
           </div>
         )}
       </div>
+
+      <ModalListaCarteirinha
+        tipo={modalTipo}
+        onClose={() => setModalTipo(null)}
+        onChanged={() => { loadDashboard(); loadStats(); load(); }}
+      />
     </div>
   );
 }

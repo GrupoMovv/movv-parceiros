@@ -33,8 +33,10 @@ const requireSindicatoAccess = (req, res, next) => {
 router.use(authenticate, requireSindicatoAccess);
 
 router.get('/stats',                  ctrl.stats);
+router.get('/lista',                  ctrl.lista);
 router.post('/gerar/:associado_id',   ctrl.gerar);
 router.post('/renovar/:associado_id', ctrl.renovar);
+router.post('/gerar-dependente/:dependente_id', ctrl.gerarDependente);
 router.post('/gerar-massa',           ctrl.gerarMassa);
 router.put('/associados/:id/foto',    upload.single('foto'), ctrl.uploadFoto);
 router.put('/associados/:id/empresa', ctrl.setEmpresa);
