@@ -1,20 +1,40 @@
 import { useEffect, useState, useCallback } from 'react';
-import api from '../../../services/api';
+import api, { assetUrl } from '../../../services/api';
 import toast from 'react-hot-toast';
 import Modal from '../../../components/ui/Modal';
 import {
   Contact, Loader2, Search, Plus, Pencil, Send, Users2, Power,
   ChevronLeft, ChevronRight, CheckSquare, Square, ArrowRight, X,
+  QrCode, RefreshCw, Camera,
 } from 'lucide-react';
 
 const LIMIT = 20;
 const CATEGORIAS = ['Empregado', 'Empregador patronal', 'Profissional liberal', 'Autonomo', 'Outros'];
+const GRAUS_DEPENDENTE = [['conjuge', 'Cônjuge'], ['filho', 'Filho'], ['filha', 'Filha']];
+const DEPENDENTE_VAZIO = { nome: '', grau: '', data_nascimento: '' };
 
 const EMPTY_FORM = {
   nome_completo: '', cpf: '', data_nascimento: '', sexo: '', categoria_profissional: '',
   codigo_filiado: '', celular: '', whatsapp: '', email: '', cidade: '', estado: '',
-  observacoes: '', dependentes: [],
+  observacoes: '', dependentes: [], empresa_id: null, empresa_nome_livre: '',
+  dependentes_gerar_carteirinha: true,
 };
+
+function publicCarteirinhaUrl(hash) {
+  return `${window.location.origin}/carteirinha/${hash}`;
+}
+
+function carteirinhaBadge(a) {
+  if (!a.carteirinha_hash || !a.carteirinha_valida_ate) {
+    return { label: 'Não gerada', cls: 'bg-slate-100 text-slate-500' };
+  }
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const validaAte = new Date(a.carteirinha_valida_ate);
+  const diffDias = Math.ceil((validaAte - hoje) / 86400000);
+  if (diffDias < 0) return { label: 'Vencida', cls: 'bg-red-100 text-red-700' };
+  if (diffDias <= 15) return { label: `Vence em ${diffDias}d`, cls: 'bg-amber-100 text-amber-700' };
+  return { label: 'Ativa', cls: 'bg-emerald-100 text-emerald-700' };
+}
 
 function maskCPF(value) {
   return String(value || '').replace(/\D/g, '').slice(0, 11)
@@ -56,6 +76,17 @@ export default function SindicatoAssociados() {
   const [formAlvoId, setFormAlvoId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  const [empresaModoLivre, setEmpresaModoLivre] = useState(false);
+  const [empresaLabelAtual, setEmpresaLabelAtual] = useState('');
+  const [empresaBusca, setEmpresaBusca] = useState('');
+  const [empresaOpcoes, setEmpresaOpcoes] = useState([]);
+
+  const [fotoFile, setFotoFile] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const [fotoAtualUrl, setFotoAtualUrl] = useState(null);
+
+  const [gerandoCarteirinhaId, setGerandoCarteirinhaId] = useState(null);
 
   const [modalDetalhe, setModalDetalhe] = useState(null);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
@@ -105,8 +136,30 @@ export default function SindicatoAssociados() {
     api.get('/sindicato-beneficios/templates').then(res => setTemplates(res.data)).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (!empresaBusca.trim()) { setEmpresaOpcoes([]); return; }
+      try {
+        const res = await api.get('/sindicato-empresas/empresas', { params: { search: empresaBusca } });
+        setEmpresaOpcoes(res.data);
+      } catch { /* silencioso */ }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [empresaBusca]);
+
+  function resetCamposCarteirinha() {
+    setEmpresaModoLivre(false);
+    setEmpresaLabelAtual('');
+    setEmpresaBusca('');
+    setEmpresaOpcoes([]);
+    setFotoFile(null);
+    setFotoPreview(null);
+    setFotoAtualUrl(null);
+  }
+
   function openCreate() {
     setForm(EMPTY_FORM);
+    resetCamposCarteirinha();
     setModalForm('create');
   }
 
@@ -114,6 +167,7 @@ export default function SindicatoAssociados() {
     setModalForm('edit');
     setFormAlvoId(id);
     setForm(EMPTY_FORM);
+    resetCamposCarteirinha();
     try {
       const res = await api.get(`/sindicato-associados/${id}`);
       const a = res.data;
@@ -123,27 +177,77 @@ export default function SindicatoAssociados() {
         sexo: a.sexo || '', categoria_profissional: a.categoria_profissional || '',
         codigo_filiado: a.codigo_filiado || '', celular: a.celular || '', whatsapp: a.whatsapp || '',
         email: a.email || '', cidade: a.cidade || '', estado: a.estado || '',
-        observacoes: a.observacoes || '', dependentes: a.dependentes.map(d => d.nome),
+        observacoes: a.observacoes || '',
+        dependentes: a.dependentes.map(d => ({
+          nome: d.nome, grau: d.grau || '',
+          data_nascimento: d.data_nascimento ? d.data_nascimento.slice(0, 10) : '',
+        })),
+        empresa_id: a.empresa_id || null,
+        empresa_nome_livre: a.empresa_nome_livre || '',
+        dependentes_gerar_carteirinha: a.dependentes_gerar_carteirinha,
       });
+      setEmpresaModoLivre(!a.empresa_id && !!a.empresa_nome_livre);
+      setEmpresaLabelAtual(a.empresa_nome || '');
+      setFotoAtualUrl(a.foto_url || null);
     } catch { toast.error('Erro ao carregar associado'); setModalForm(null); }
+  }
+
+  function handleFotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoFile(file);
+    setFotoPreview(URL.createObjectURL(file));
   }
 
   async function handleSave() {
     setSaving(true);
     try {
-      const payload = { ...form, cpf: form.cpf };
+      const payload = {
+        ...form,
+        empresa_nome_livre: empresaModoLivre ? form.empresa_nome_livre : '',
+        empresa_id: empresaModoLivre ? null : form.empresa_id,
+      };
+      let alvoId = formAlvoId;
       if (modalForm === 'create') {
-        await api.post('/sindicato-associados', payload);
+        const res = await api.post('/sindicato-associados', payload);
+        alvoId = res.data.id;
         toast.success('Associado cadastrado!');
       } else {
         await api.put(`/sindicato-associados/${formAlvoId}`, payload);
         toast.success('Associado atualizado!');
       }
+
+      if (modalForm === 'edit' && alvoId) {
+        await api.put(`/sindicato-carteirinha/associados/${alvoId}/empresa`, {
+          empresa_id: payload.empresa_id || undefined,
+          empresa_nome_livre: payload.empresa_nome_livre || undefined,
+        });
+        if (fotoFile) {
+          const fd = new FormData();
+          fd.append('foto', fotoFile);
+          await api.put(`/sindicato-carteirinha/associados/${alvoId}/foto`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        }
+      }
+
       setModalForm(null);
       load(page); loadStats();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao salvar associado');
     } finally { setSaving(false); }
+  }
+
+  async function handleGerarRenovar(a) {
+    setGerandoCarteirinhaId(a.id);
+    try {
+      const acao = a.carteirinha_hash ? 'renovar' : 'gerar';
+      await api.post(`/sindicato-carteirinha/${acao}/${a.id}`);
+      toast.success(acao === 'gerar' ? 'Carteirinha gerada!' : 'Carteirinha renovada!');
+      load(page);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao gerar carteirinha');
+    } finally { setGerandoCarteirinhaId(null); }
   }
 
   async function abrirDetalhe(id) {
@@ -249,16 +353,16 @@ export default function SindicatoAssociados() {
     load(page); loadStats();
   }
 
-  function setDependente(idx, valor) {
+  function setDependente(idx, campo, valor) {
     setForm(f => {
       const dependentes = [...f.dependentes];
-      dependentes[idx] = valor;
+      dependentes[idx] = { ...dependentes[idx], [campo]: valor };
       return { ...f, dependentes };
     });
   }
 
   function addDependente() {
-    setForm(f => f.dependentes.length >= 6 ? f : { ...f, dependentes: [...f.dependentes, ''] });
+    setForm(f => f.dependentes.length >= 6 ? f : { ...f, dependentes: [...f.dependentes, { ...DEPENDENTE_VAZIO }] });
   }
 
   function removeDependente(idx) {
@@ -351,16 +455,16 @@ export default function SindicatoAssociados() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                {['Nome', 'CPF', 'Categoria', 'Celular', 'WhatsApp', 'Cidade', 'Ações'].map(h => (
+                {['Nome', 'CPF', 'Categoria', 'Celular', 'WhatsApp', 'Cidade', 'Carteirinha', 'Ações'].map(h => (
                   <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-10 text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /></td></tr>
+                <tr><td colSpan={8} className="text-center py-10 text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /></td></tr>
               ) : associados.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-10 text-slate-400">Nenhum associado encontrado</td></tr>
+                <tr><td colSpan={8} className="text-center py-10 text-slate-400">Nenhum associado encontrado</td></tr>
               ) : associados.map(a => (
                 <tr key={a.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${!a.ativo ? 'opacity-50' : ''}`}>
                   <td className="py-3 px-4">
@@ -380,6 +484,11 @@ export default function SindicatoAssociados() {
                   </td>
                   <td className="py-3 px-4 text-slate-600">{a.cidade || '—'}</td>
                   <td className="py-3 px-4">
+                    {(() => { const b = carteirinhaBadge(a); return (
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${b.cls}`}>{b.label}</span>
+                    ); })()}
+                  </td>
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
                       <a
                         href={a.whatsapp ? linkWhatsapp(a.whatsapp) : undefined}
@@ -389,6 +498,23 @@ export default function SindicatoAssociados() {
                         className={`p-1.5 rounded-lg transition-colors ${a.whatsapp ? 'text-white bg-emerald-500 hover:bg-emerald-600' : 'text-slate-300 bg-slate-100 cursor-not-allowed'}`}
                       >
                         <Send className="w-3.5 h-3.5" />
+                      </a>
+                      <button
+                        onClick={() => handleGerarRenovar(a)}
+                        disabled={gerandoCarteirinhaId === a.id}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-50"
+                        title={a.carteirinha_hash ? 'Renovar carteirinha' : 'Gerar carteirinha'}
+                      >
+                        {gerandoCarteirinhaId === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      </button>
+                      <a
+                        href={a.carteirinha_hash ? publicCarteirinhaUrl(a.carteirinha_hash) : undefined}
+                        target="_blank" rel="noreferrer"
+                        onClick={e => { if (!a.carteirinha_hash) e.preventDefault(); }}
+                        title={a.carteirinha_hash ? 'Ver carteirinha' : 'Gere a carteirinha primeiro'}
+                        className={`p-1.5 rounded-lg transition-colors ${a.carteirinha_hash ? 'text-slate-400 hover:bg-blue-50 hover:text-blue-600' : 'text-slate-300 cursor-not-allowed'}`}
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
                       </a>
                       <button onClick={() => openEdit(a.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar">
                         <Pencil className="w-3.5 h-3.5" />
@@ -483,6 +609,84 @@ export default function SindicatoAssociados() {
             <textarea className="input min-h-[60px] resize-none" value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />
           </div>
 
+          {modalForm === 'edit' && (
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className="col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="label !mb-0">Empresa</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmpresaModoLivre(m => !m);
+                      setForm(f => ({ ...f, empresa_id: null, empresa_nome_livre: '' }));
+                      setEmpresaLabelAtual(''); setEmpresaBusca(''); setEmpresaOpcoes([]);
+                    }}
+                    className="text-xs font-semibold text-[#0C2D48] hover:underline"
+                  >
+                    {empresaModoLivre ? 'Buscar empresa cadastrada' : 'Outra (digitar)'}
+                  </button>
+                </div>
+                {empresaModoLivre ? (
+                  <input
+                    className="input mt-1" placeholder="Nome da empresa"
+                    value={form.empresa_nome_livre}
+                    onChange={e => setForm(f => ({ ...f, empresa_nome_livre: e.target.value }))}
+                  />
+                ) : form.empresa_id ? (
+                  <div className="flex items-center justify-between input mt-1">
+                    <span className="text-slate-700 text-sm">{empresaLabelAtual}</span>
+                    <button type="button" onClick={() => { setForm(f => ({ ...f, empresa_id: null })); setEmpresaLabelAtual(''); }} className="text-xs text-red-500 hover:text-red-700">remover</button>
+                  </div>
+                ) : (
+                  <div className="relative mt-1">
+                    <input className="input" placeholder="Buscar empresa..." value={empresaBusca} onChange={e => setEmpresaBusca(e.target.value)} />
+                    {empresaOpcoes.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100">
+                        {empresaOpcoes.map(e => (
+                          <button
+                            key={e.id} type="button"
+                            onClick={() => { setForm(f => ({ ...f, empresa_id: e.id })); setEmpresaLabelAtual(e.nome_fantasia || e.razao_social); setEmpresaBusca(''); setEmpresaOpcoes([]); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors"
+                          >
+                            {e.nome_fantasia || e.razao_social}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="col-span-2">
+                <label className="label">Foto</label>
+                <div className="flex items-center gap-3">
+                  {fotoPreview || fotoAtualUrl ? (
+                    <img src={fotoPreview || assetUrl(fotoAtualUrl)} alt="" className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                  )}
+                  <label className="btn-secondary cursor-pointer text-sm">
+                    Escolher arquivo
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleFotoChange} />
+                  </label>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={form.dependentes_gerar_carteirinha}
+                    onChange={e => setForm(f => ({ ...f, dependentes_gerar_carteirinha: e.target.checked }))}
+                  />
+                  Gerar carteirinha para dependentes também
+                </label>
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between">
               <label className="label !mb-0">Dependentes</label>
@@ -495,7 +699,12 @@ export default function SindicatoAssociados() {
             <div className="space-y-2 mt-2">
               {form.dependentes.map((dep, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <input className="input flex-1" value={dep} onChange={e => setDependente(idx, e.target.value)} placeholder={`Dependente ${idx + 1}`} />
+                  <input className="input flex-1" value={dep.nome} onChange={e => setDependente(idx, 'nome', e.target.value)} placeholder={`Nome do dependente ${idx + 1}`} />
+                  <select className="input w-36" value={dep.grau} onChange={e => setDependente(idx, 'grau', e.target.value)}>
+                    <option value="">Grau</option>
+                    {GRAUS_DEPENDENTE.map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}
+                  </select>
+                  <input type="date" className="input w-40" value={dep.data_nascimento} onChange={e => setDependente(idx, 'data_nascimento', e.target.value)} />
                   <button onClick={() => removeDependente(idx)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -531,6 +740,11 @@ export default function SindicatoAssociados() {
               <div><span className="text-slate-400">Email:</span> <span className="text-slate-800">{modalDetalhe.email || '—'}</span></div>
               <div><span className="text-slate-400">Cidade/UF:</span> <span className="text-slate-800">{[modalDetalhe.cidade, modalDetalhe.estado].filter(Boolean).join('/') || '—'}</span></div>
               <div><span className="text-slate-400">Status:</span> <span className={modalDetalhe.ativo ? 'text-emerald-600' : 'text-red-500'}>{modalDetalhe.ativo ? 'Ativo' : 'Inativo'}</span></div>
+              <div><span className="text-slate-400">Empresa:</span> <span className="text-slate-800">{modalDetalhe.empresa_nome || modalDetalhe.empresa_nome_livre || '—'}</span></div>
+              <div>
+                <span className="text-slate-400">Carteirinha:</span>{' '}
+                {(() => { const b = carteirinhaBadge(modalDetalhe); return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${b.cls}`}>{b.label}</span>; })()}
+              </div>
             </div>
 
             {modalDetalhe.observacoes && (
@@ -544,7 +758,16 @@ export default function SindicatoAssociados() {
               <p className="text-slate-400 text-xs font-medium mb-1">Dependentes ({modalDetalhe.dependentes?.length || 0})</p>
               {modalDetalhe.dependentes?.length ? (
                 <ul className="text-sm text-slate-700 space-y-1">
-                  {modalDetalhe.dependentes.map(d => <li key={d.id}>• {d.nome}</li>)}
+                  {modalDetalhe.dependentes.map(d => (
+                    <li key={d.id} className="flex items-center gap-2">
+                      • {d.nome}{d.grau ? ` (${GRAUS_DEPENDENTE.find(([v]) => v === d.grau)?.[1] || d.grau})` : ''}
+                      {d.carteirinha_hash && (
+                        <a href={publicCarteirinhaUrl(d.carteirinha_hash)} target="_blank" rel="noreferrer" className="text-[#0C2D48] hover:underline text-xs">
+                          ver carteirinha
+                        </a>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               ) : <p className="text-xs text-slate-400">Nenhum dependente cadastrado.</p>}
             </div>
@@ -553,6 +776,11 @@ export default function SindicatoAssociados() {
               <button onClick={() => { setModalDetalhe(null); openEdit(modalDetalhe.id); }} className="btn-secondary flex items-center gap-2">
                 <Pencil className="w-4 h-4" /> Editar
               </button>
+              {modalDetalhe.carteirinha_hash && (
+                <a href={publicCarteirinhaUrl(modalDetalhe.carteirinha_hash)} target="_blank" rel="noreferrer" className="btn-secondary flex items-center gap-2">
+                  <QrCode className="w-4 h-4" /> Ver Carteirinha
+                </a>
+              )}
               <button onClick={() => openEnviarUnico(modalDetalhe)} className="btn-primary flex items-center gap-2">
                 <Send className="w-4 h-4" /> Enviar Benefícios
               </button>

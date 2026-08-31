@@ -3,6 +3,7 @@ const db = require('../config/database');
 const CAMPOS_UPDATE = [
   'nome_completo', 'cpf', 'data_nascimento', 'sexo', 'categoria_profissional',
   'codigo_filiado', 'celular', 'whatsapp', 'email', 'cidade', 'estado', 'observacoes',
+  'dependentes_gerar_carteirinha',
 ];
 
 const GRAUS_VALIDOS = ['conjuge', 'filho', 'filha'];

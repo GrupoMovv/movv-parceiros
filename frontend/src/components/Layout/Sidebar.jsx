@@ -90,6 +90,7 @@ const MASTER_MENU = [
       { label: 'Minha Comissão',   icon: Landmark,      to: '/sindicato/minha-comissao', roles: ['sindicato_aprendiz'] },
       { label: 'Empresas',         icon: Building2,     to: '/sindicato/empresas',       roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Associados',       icon: Contact,       to: '/sindicato/associados',      roles: ['sindicato_aprendiz', 'admin'] },
+      { label: 'Carteirinhas',     icon: CreditCard,    to: '/sindicato/carteirinhas',    roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Benefícios',       icon: Gift,          to: '/sindicato/beneficios',      roles: ['sindicato_aprendiz', 'admin'] },
     ],
   },

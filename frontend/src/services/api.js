@@ -25,4 +25,14 @@ api.interceptors.response.use(
   }
 );
 
+// Resolve um path relativo do backend (ex.: "/uploads/associados/x.png",
+// devolvido por endpoints que salvam arquivo em disco) pra URL absoluta —
+// front e back vivem em domínios diferentes em produção.
+export function assetUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  const base = api.defaults.baseURL.replace(/\/api\/?$/, '');
+  return `${base}${path}`;
+}
+
 export default api;

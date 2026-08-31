@@ -34,6 +34,7 @@ import SindicatoEmpresasDaContabilidade from './pages/sindicato/Empresas/Empresa
 import SindicatoEmpresaDetalhe from './pages/sindicato/Empresas/EmpresaDetalhe';
 import SindicatoBeneficios from './pages/sindicato/Beneficios/SindicatoBeneficios';
 import SindicatoAssociados from './pages/sindicato/Associados/SindicatoAssociados';
+import SindicatoCarteirinhas from './pages/sindicato/Carteirinhas/SindicatoCarteirinhas';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -174,6 +175,7 @@ export default function App() {
           <Route path="sindicato/empresas/detalhe/:id" element={<RequireSindicatoEmpresas><SindicatoEmpresaDetalhe /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beneficios" element={<RequireSindicatoEmpresas><SindicatoBeneficios /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/associados" element={<RequireSindicatoEmpresas><SindicatoAssociados /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/carteirinhas" element={<RequireSindicatoEmpresas><SindicatoCarteirinhas /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
