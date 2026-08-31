@@ -97,7 +97,8 @@ export default function Carteirinha() {
     document.title = titulo;
     upsertMeta('property', 'og:title', `Carteirinha do Associado - ${dados.nome}`);
     upsertMeta('property', 'og:description', 'SECI - Sindicato dos Empregados no Comércio de Itumbiara/GO');
-    upsertMeta('property', 'og:image', assetUrl(dados.foto_url) || `${window.location.origin}/logo-header.png`);
+    const fotoPropria = dados.tipo !== 'dependente' ? dados.foto_url : null;
+    upsertMeta('property', 'og:image', assetUrl(fotoPropria) || `${window.location.origin}/logo-header.png`);
   }, [dados]);
 
   async function handleRegistrarUso() {
@@ -136,6 +137,10 @@ export default function Carteirinha() {
   const validaAteYMD = dados.valida_ate ? dados.valida_ate.slice(0, 10) : null;
   const vencida = !dados.ativo || !validaAteYMD || validaAteYMD < hojeYMD();
   const ehDependente = dados.tipo === 'dependente';
+  // Dependente ainda não tem foto própria — nunca renderiza a do titular,
+  // mesmo que a API volte a mandar algo por engano (defesa redundante ao
+  // fix do backend, que já não retorna foto_url pra dependente).
+  const fotoParaExibir = !ehDependente ? dados.foto_url : null;
   const categoriaLabel = CATEGORIA_LABEL[dados.categoria] || dados.categoria;
   const qrUrl = `${backendOrigin()}/carteirinha/${hash}`;
 
@@ -174,9 +179,9 @@ export default function Carteirinha() {
           </div>
 
           <div className="relative mt-5">
-            {dados.foto_url ? (
+            {fotoParaExibir ? (
               <img
-                src={assetUrl(dados.foto_url)} alt={dados.nome}
+                src={assetUrl(fotoParaExibir)} alt={dados.nome}
                 className="w-[140px] h-[140px] rounded-full object-cover mx-auto shadow-xl"
                 style={{ border: '4px solid #D4AF37' }}
               />

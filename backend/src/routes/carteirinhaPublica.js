@@ -29,12 +29,14 @@ async function buscarResumoPublico(hash) {
   if (associado.rows[0]) return associado.rows[0];
 
   const dependente = await db.query(
-    `SELECT d.nome AS nome_completo, a.foto_url
+    `SELECT d.nome AS nome_completo
      FROM sindicato_associados_dependentes d
      JOIN sindicato_associados a ON a.id = d.associado_id
      WHERE d.carteirinha_hash = $1`,
     [hash]
   );
+  // dependente não tem foto própria ainda — nunca usar a do titular aqui
+  // (paginaMeta já cai no fallback do logo quando foto_url é undefined)
   return dependente.rows[0] || null;
 }
 
