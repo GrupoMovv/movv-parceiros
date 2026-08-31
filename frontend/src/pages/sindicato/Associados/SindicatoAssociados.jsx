@@ -5,8 +5,9 @@ import Modal from '../../../components/ui/Modal';
 import {
   Contact, Loader2, Search, Plus, Pencil, Send, Users2, Power,
   ChevronLeft, ChevronRight, CheckSquare, Square, ArrowRight, X,
-  QrCode, RefreshCw, Camera,
+  QrCode, RefreshCw, Camera, CreditCard,
 } from 'lucide-react';
+import { iniciais, corAvatar } from '../../../utils/avatar';
 
 const LIMIT = 20;
 const CATEGORIAS = ['Empregado', 'Empregador patronal', 'Profissional liberal', 'Autonomo', 'Outros'];
@@ -62,6 +63,33 @@ function linkWhatsapp(numero) {
   return `https://api.whatsapp.com/send?phone=55${digits}`;
 }
 
+// api.whatsapp.com em vez de wa.me: wa.me faz um redirect server-side que
+// corrompe emoji (vira U+FFFD) mesmo com encodeURIComponent certo.
+function linkWhatsappComTexto(numero, mensagem) {
+  const digits = String(numero || '').replace(/\D/g, '');
+  return `https://api.whatsapp.com/send?phone=55${digits}&text=${encodeURIComponent(mensagem)}`;
+}
+
+function montarMensagemCarteirinha(url) {
+  return `Olá! 👋
+
+Aqui está sua carteirinha digital de associado ao SECI — Sindicato dos Empregados no Comércio de Itumbiara.
+
+🎫 Acesse pelo link:
+${url}
+
+Você pode salvar essa carteirinha no celular e apresentá-la sempre que precisar usar seus benefícios com nossos parceiros.
+
+Qualquer dúvida, estou à disposição!
+
+Renan Araújo
+SECI — Sindicato do Comércio de Itumbiara`;
+}
+
+function toastAviso(mensagem) {
+  toast(mensagem, { icon: '⚠️', style: { background: '#FEF3C7', color: '#92400E' } });
+}
+
 export default function SindicatoAssociados() {
   const [associados, setAssociados] = useState([]);
   const [total, setTotal] = useState(0);
@@ -90,6 +118,7 @@ export default function SindicatoAssociados() {
   const [fotoAtualUrl, setFotoAtualUrl] = useState(null);
 
   const [gerandoCarteirinhaId, setGerandoCarteirinhaId] = useState(null);
+  const [enviandoFotoDependenteIdx, setEnviandoFotoDependenteIdx] = useState(null);
 
   const [modalDetalhe, setModalDetalhe] = useState(null);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
@@ -182,7 +211,7 @@ export default function SindicatoAssociados() {
         email: a.email || '', cidade: a.cidade || '', estado: a.estado || '',
         observacoes: a.observacoes || '',
         dependentes: a.dependentes.map(d => ({
-          nome: d.nome, grau: d.grau || '',
+          id: d.id, nome: d.nome, grau: d.grau || '', foto_url: d.foto_url || null,
           data_nascimento: d.data_nascimento ? d.data_nascimento.slice(0, 10) : '',
         })),
         empresa_id: a.empresa_id || null,
@@ -251,6 +280,13 @@ export default function SindicatoAssociados() {
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao gerar carteirinha');
     } finally { setGerandoCarteirinhaId(null); }
+  }
+
+  function enviarCarteirinhaWhatsapp(a) {
+    if (!a.carteirinha_hash) return toastAviso('Gere a carteirinha primeiro');
+    if (!a.whatsapp) return toastAviso('Cadastre o WhatsApp do associado antes de enviar');
+    const url = publicCarteirinhaUrl(a.carteirinha_hash);
+    window.open(linkWhatsappComTexto(a.whatsapp, montarMensagemCarteirinha(url)), '_blank');
   }
 
   async function abrirDetalhe(id) {
@@ -370,6 +406,23 @@ export default function SindicatoAssociados() {
 
   function removeDependente(idx) {
     setForm(f => ({ ...f, dependentes: f.dependentes.filter((_, i) => i !== idx) }));
+  }
+
+  async function handleUploadFotoDependente(idx, file) {
+    const dep = form.dependentes[idx];
+    if (!dep?.id || !file) return;
+    setEnviandoFotoDependenteIdx(idx);
+    try {
+      const fd = new FormData();
+      fd.append('foto', file);
+      const res = await api.put(`/sindicato-associados/dependente/${dep.id}/foto`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setDependente(idx, 'foto_url', res.data.foto_url);
+      toast.success('Foto do dependente atualizada!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao enviar foto');
+    } finally { setEnviandoFotoDependenteIdx(null); }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
@@ -502,6 +555,14 @@ export default function SindicatoAssociados() {
                       >
                         <Send className="w-3.5 h-3.5" />
                       </a>
+                      <button
+                        onClick={() => enviarCarteirinhaWhatsapp(a)}
+                        className="p-1.5 rounded-lg text-white transition-colors hover:opacity-90"
+                        style={{ backgroundColor: '#0C2D48' }}
+                        title="Enviar carteirinha"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => handleGerarRenovar(a)}
                         disabled={gerandoCarteirinhaId === a.id}
@@ -702,13 +763,35 @@ export default function SindicatoAssociados() {
             <div className="space-y-2 mt-2">
               {form.dependentes.map((dep, idx) => (
                 <div key={idx} className="flex items-center gap-2">
+                  {dep.foto_url ? (
+                    <img src={assetUrl(dep.foto_url)} alt="" className="w-8 h-8 rounded-full object-cover border border-slate-200 flex-shrink-0" />
+                  ) : (
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                      style={{ backgroundColor: corAvatar(dep.nome) }}
+                    >
+                      {iniciais(dep.nome)}
+                    </div>
+                  )}
                   <input className="input flex-1" value={dep.nome} onChange={e => setDependente(idx, 'nome', e.target.value)} placeholder={`Nome do dependente ${idx + 1}`} />
                   <select className="input w-36" value={dep.grau} onChange={e => setDependente(idx, 'grau', e.target.value)}>
                     <option value="">Grau</option>
                     {GRAUS_DEPENDENTE.map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}
                   </select>
                   <input type="date" className="input w-40" value={dep.data_nascimento} onChange={e => setDependente(idx, 'data_nascimento', e.target.value)} />
-                  <button onClick={() => removeDependente(idx)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+                  {dep.id && (
+                    <label
+                      className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer flex-shrink-0"
+                      title="Upload foto"
+                    >
+                      {enviandoFotoDependenteIdx === idx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                      <input
+                        type="file" accept="image/png,image/jpeg" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadFotoDependente(idx, f); }}
+                      />
+                    </label>
+                  )}
+                  <button onClick={() => removeDependente(idx)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors flex-shrink-0">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>

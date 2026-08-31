@@ -12,7 +12,8 @@ async function buscarCarteirinhaPorHash(hash) {
   const associadoResult = await db.query(
     `SELECT a.id, a.nome_completo, a.foto_url, a.categoria_profissional, a.codigo_filiado,
             a.ativo, a.carteirinha_valida_ate, a.empresa_nome_livre,
-            COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social) AS empresa_cadastrada
+            COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social) AS empresa_cadastrada,
+            (SELECT COUNT(*)::int FROM sindicato_associados_dependentes dd WHERE dd.associado_id = a.id) AS dependentes_count
      FROM sindicato_associados a
      LEFT JOIN sindicato_empresas e ON e.id = a.empresa_id
      WHERE a.carteirinha_hash = $1`,
@@ -30,11 +31,12 @@ async function buscarCarteirinhaPorHash(hash) {
       categoria: a.categoria_profissional,
       valida_ate: a.carteirinha_valida_ate,
       ativo: a.ativo,
+      dependentes_count: a.dependentes_count,
     };
   }
 
   const depResult = await db.query(
-    `SELECT d.id, d.nome, d.grau, d.carteirinha_valida_ate,
+    `SELECT d.id, d.nome, d.grau, d.foto_url, d.carteirinha_valida_ate,
             a.id AS associado_id, a.nome_completo AS titular_nome,
             a.ativo AS titular_ativo, a.empresa_nome_livre,
             COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social) AS empresa_cadastrada
@@ -50,7 +52,7 @@ async function buscarCarteirinhaPorHash(hash) {
       tipo: 'dependente',
       dependente_id: d.id,
       nome: d.nome,
-      foto_url: null, // dependente não tem foto própria ainda — nunca usar a do titular
+      foto_url: d.foto_url, // foto própria do dependente — nunca a do titular
       empresa: d.empresa_cadastrada || d.empresa_nome_livre || null,
       grau: d.grau,
       titular_nome: d.titular_nome,

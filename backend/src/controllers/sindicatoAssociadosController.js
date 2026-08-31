@@ -137,7 +137,7 @@ async function getAssociado(req, res) {
     if (!associadoResult.rows[0]) return res.status(404).json({ error: 'Associado não encontrado' });
 
     const depResult = await db.query(
-      `SELECT id, nome, ordem, grau, data_nascimento, carteirinha_hash, carteirinha_valida_ate
+      `SELECT id, nome, ordem, grau, data_nascimento, foto_url, carteirinha_hash, carteirinha_valida_ate
        FROM sindicato_associados_dependentes WHERE associado_id = $1 ORDER BY ordem ASC`,
       [id]
     );
@@ -253,6 +253,31 @@ async function updateStatus(req, res) {
   }
 }
 
+async function uploadFotoDependente(req, res) {
+  try {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'Envie um arquivo de foto' });
+
+    const check = await db.query('SELECT id FROM sindicato_associados_dependentes WHERE id = $1', [id]);
+    if (!check.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
+
+    const urlArquivo = `/uploads/dependentes/${req.file.filename}`;
+    const uploadedPorId = req.user?.type === 'internal' ? req.user.id : null;
+
+    await db.query('UPDATE sindicato_associados_dependentes SET foto_url = $1 WHERE id = $2', [urlArquivo, id]);
+    await db.query(
+      `INSERT INTO sindicato_carteirinha_upload (dependente_id, tipo_dono, url_arquivo, uploaded_por_id)
+       VALUES ($1, 'dependente', $2, $3)`,
+      [id, urlArquivo, uploadedPorId]
+    );
+
+    return res.json({ foto_url: urlArquivo });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao enviar foto' });
+  }
+}
+
 module.exports = {
   listAssociados,
   stats,
@@ -260,4 +285,5 @@ module.exports = {
   createAssociado,
   updateAssociado,
   updateStatus,
+  uploadFotoDependente,
 };

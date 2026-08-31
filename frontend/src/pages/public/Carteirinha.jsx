@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Loader2, AlertCircle, Send } from 'lucide-react';
 import api, { assetUrl, backendOrigin } from '../../services/api';
 import Modal from '../../components/ui/Modal';
+import { iniciais, corAvatar } from '../../utils/avatar';
 
 const PARCEIROS = [
   'NOSSA DROGARIA', 'ACADEMIA ATLÉTICA', 'DIROMA FIORI', 'ÓTICAS DINIZ',
@@ -18,26 +19,10 @@ const CATEGORIA_LABEL = {
   'Profissional liberal': 'Liberal',
 };
 
-// Paleta harmoniosa pro fundo do avatar de iniciais (sem foto cadastrada).
-const AVATAR_CORES = ['#7C3AED', '#0D9488', '#D97706', '#E8604C', '#4F46E5', '#DB2777'];
-
 const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ];
-
-function iniciais(nome) {
-  const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return '?';
-  if (partes.length === 1) return partes[0][0].toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-}
-
-function corAvatar(nome) {
-  let hash = 0;
-  for (const ch of String(nome || '')) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff;
-  return AVATAR_CORES[Math.abs(hash) % AVATAR_CORES.length];
-}
 
 // Trabalha só com o texto "YYYY-MM-DD" (nunca com Date/timezone) — a data
 // que vem do backend é um DATE puro, sem hora, então parsear via `new
@@ -97,8 +82,7 @@ export default function Carteirinha() {
     document.title = titulo;
     upsertMeta('property', 'og:title', `Carteirinha do Associado - ${dados.nome}`);
     upsertMeta('property', 'og:description', 'SECI - Sindicato dos Empregados no Comércio de Itumbiara/GO');
-    const fotoPropria = dados.tipo !== 'dependente' ? dados.foto_url : null;
-    upsertMeta('property', 'og:image', assetUrl(fotoPropria) || `${window.location.origin}/logo-header.png`);
+    upsertMeta('property', 'og:image', assetUrl(dados.foto_url) || `${window.location.origin}/logo-header.png`);
   }, [dados]);
 
   async function handleRegistrarUso() {
@@ -137,11 +121,11 @@ export default function Carteirinha() {
   const validaAteYMD = dados.valida_ate ? dados.valida_ate.slice(0, 10) : null;
   const vencida = !dados.ativo || !validaAteYMD || validaAteYMD < hojeYMD();
   const ehDependente = dados.tipo === 'dependente';
-  // Dependente ainda não tem foto própria — nunca renderiza a do titular,
-  // mesmo que a API volte a mandar algo por engano (defesa redundante ao
-  // fix do backend, que já não retorna foto_url pra dependente).
-  const fotoParaExibir = !ehDependente ? dados.foto_url : null;
   const categoriaLabel = CATEGORIA_LABEL[dados.categoria] || dados.categoria;
+  const temDependentes = !ehDependente && dados.dependentes_count > 0;
+  const dependentesLabel = temDependentes
+    ? `${dados.dependentes_count} dependente${dados.dependentes_count > 1 ? 's' : ''} cadastrado${dados.dependentes_count > 1 ? 's' : ''}`
+    : null;
   const qrUrl = `${backendOrigin()}/carteirinha/${hash}`;
 
   return (
@@ -179,9 +163,9 @@ export default function Carteirinha() {
           </div>
 
           <div className="relative mt-5">
-            {fotoParaExibir ? (
+            {dados.foto_url ? (
               <img
-                src={assetUrl(fotoParaExibir)} alt={dados.nome}
+                src={assetUrl(dados.foto_url)} alt={dados.nome}
                 className="w-[140px] h-[140px] rounded-full object-cover mx-auto shadow-xl"
                 style={{ border: '4px solid #D4AF37' }}
               />
@@ -216,8 +200,8 @@ export default function Carteirinha() {
 
         {/* Seção 2 — corpo */}
         <div className="px-6 py-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className={`grid gap-4 ${dependentesLabel ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={dependentesLabel ? '' : 'text-center'}>
               <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Empresa</p>
               {dados.empresa ? (
                 <p className="text-slate-800 font-bold text-sm mt-0.5">{dados.empresa}</p>
@@ -225,14 +209,12 @@ export default function Carteirinha() {
                 <p className="text-slate-400 italic text-sm mt-0.5 opacity-50">Empresa não vinculada</p>
               )}
             </div>
-            <div>
-              <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Nº Associado</p>
-              {dados.numero_associado ? (
-                <p className="text-slate-800 font-mono font-bold text-sm mt-0.5">{dados.numero_associado}</p>
-              ) : (
-                <p className="text-slate-400 italic text-sm mt-0.5 opacity-50">Nº pendente</p>
-              )}
-            </div>
+            {dependentesLabel && (
+              <div>
+                <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Dependentes</p>
+                <p className="text-slate-800 font-bold text-sm mt-0.5">{dependentesLabel}</p>
+              </div>
+            )}
           </div>
 
           <div className="text-center">
