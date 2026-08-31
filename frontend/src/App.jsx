@@ -35,6 +35,7 @@ import SindicatoEmpresaDetalhe from './pages/sindicato/Empresas/EmpresaDetalhe';
 import SindicatoBeneficios from './pages/sindicato/Beneficios/SindicatoBeneficios';
 import SindicatoAssociados from './pages/sindicato/Associados/SindicatoAssociados';
 import SindicatoCarteirinhas from './pages/sindicato/Carteirinhas/SindicatoCarteirinhas';
+import Carteirinha from './pages/public/Carteirinha';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -136,6 +137,7 @@ export default function App() {
         <Route path="/seja-indicador"    element={<SejaIndicador />} />
         <Route path="/cadastro-indicador" element={<CadastroIndicador />} />
         <Route path="/termos-indicador"   element={<TermosIndicador />} />
+        <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
 
         <Route path="/trocar-senha-obrigatorio" element={
           <RequireAuth><TrocarSenhaObrigatorio /></RequireAuth>
