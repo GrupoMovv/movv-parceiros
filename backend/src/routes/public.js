@@ -12,7 +12,7 @@ async function buscarCarteirinhaPorHash(hash) {
   const associadoResult = await db.query(
     `SELECT a.id, a.nome_completo, a.foto_url, a.categoria_profissional, a.codigo_filiado,
             a.ativo, a.carteirinha_valida_ate, a.empresa_nome_livre,
-            e.nome_fantasia AS empresa_cadastrada
+            COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social) AS empresa_cadastrada
      FROM sindicato_associados a
      LEFT JOIN sindicato_empresas e ON e.id = a.empresa_id
      WHERE a.carteirinha_hash = $1`,
@@ -37,7 +37,7 @@ async function buscarCarteirinhaPorHash(hash) {
     `SELECT d.id, d.nome, d.grau, d.carteirinha_valida_ate,
             a.id AS associado_id, a.nome_completo AS titular_nome, a.foto_url,
             a.ativo AS titular_ativo, a.empresa_nome_livre,
-            e.nome_fantasia AS empresa_cadastrada
+            COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social) AS empresa_cadastrada
      FROM sindicato_associados_dependentes d
      JOIN sindicato_associados a ON a.id = d.associado_id
      LEFT JOIN sindicato_empresas e ON e.id = a.empresa_id

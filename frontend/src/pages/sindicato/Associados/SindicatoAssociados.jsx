@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import api, { assetUrl } from '../../../services/api';
+import api, { assetUrl, backendOrigin } from '../../../services/api';
 import toast from 'react-hot-toast';
 import Modal from '../../../components/ui/Modal';
 import {
@@ -20,8 +20,11 @@ const EMPTY_FORM = {
   dependentes_gerar_carteirinha: true,
 };
 
+// URL "canônica" da carteirinha: aponta pro backend, não pro frontend
+// direto — é ele quem detecta bots de preview (WhatsApp etc.) e serve as
+// meta tags certas; humanos são redirecionados pro app na hora.
 function publicCarteirinhaUrl(hash) {
-  return `${window.location.origin}/carteirinha/${hash}`;
+  return `${backendOrigin()}/carteirinha/${hash}`;
 }
 
 function carteirinhaBadge(a) {

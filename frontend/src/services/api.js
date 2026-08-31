@@ -25,14 +25,18 @@ api.interceptors.response.use(
   }
 );
 
+// Origem do backend (sem o "/api" final) — front e back vivem em domínios
+// diferentes em produção.
+export function backendOrigin() {
+  return api.defaults.baseURL.replace(/\/api\/?$/, '');
+}
+
 // Resolve um path relativo do backend (ex.: "/uploads/associados/x.png",
-// devolvido por endpoints que salvam arquivo em disco) pra URL absoluta —
-// front e back vivem em domínios diferentes em produção.
+// devolvido por endpoints que salvam arquivo em disco) pra URL absoluta.
 export function assetUrl(path) {
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;
-  const base = api.defaults.baseURL.replace(/\/api\/?$/, '');
-  return `${base}${path}`;
+  return `${backendOrigin()}${path}`;
 }
 
 export default api;
