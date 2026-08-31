@@ -1,0 +1,658 @@
+import { useEffect, useState, useCallback } from 'react';
+import api from '../../../services/api';
+import toast from 'react-hot-toast';
+import Modal from '../../../components/ui/Modal';
+import {
+  Contact, Loader2, Search, Plus, Pencil, Send, Users2, Power,
+  ChevronLeft, ChevronRight, CheckSquare, Square, ArrowRight, X,
+} from 'lucide-react';
+
+const LIMIT = 20;
+const CATEGORIAS = ['Empregado', 'Empregador patronal', 'Profissional liberal', 'Autonomo', 'Outros'];
+
+const EMPTY_FORM = {
+  nome_completo: '', cpf: '', data_nascimento: '', sexo: '', categoria_profissional: '',
+  codigo_filiado: '', celular: '', whatsapp: '', email: '', cidade: '', estado: '',
+  observacoes: '', dependentes: [],
+};
+
+function maskCPF(value) {
+  return String(value || '').replace(/\D/g, '').slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function maskPhone(value) {
+  const d = String(value || '').replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 10) return d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
+  return d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function fmtData(iso) {
+  if (!iso) return '—';
+  return iso.slice(0, 10).split('-').reverse().join('/');
+}
+
+function linkWhatsapp(numero) {
+  const digits = String(numero || '').replace(/\D/g, '');
+  return `https://api.whatsapp.com/send?phone=55${digits}`;
+}
+
+export default function SindicatoAssociados() {
+  const [associados, setAssociados] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [status, setStatus] = useState('ativo');
+  const [whatsappFiltro, setWhatsappFiltro] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const [stats, setStats] = useState(null);
+  const [templates, setTemplates] = useState([]);
+
+  const [modalForm, setModalForm] = useState(null); // 'create' | 'edit'
+  const [formAlvoId, setFormAlvoId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  const [modalDetalhe, setModalDetalhe] = useState(null);
+  const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
+
+  const [modalEnviar, setModalEnviar] = useState(null);
+  const [templateEnviarId, setTemplateEnviarId] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const [modalMassa, setModalMassa] = useState(false);
+  const [associadosMassa, setAssociadosMassa] = useState([]);
+  const [loadingMassa, setLoadingMassa] = useState(false);
+  const [selecionados, setSelecionados] = useState(new Set());
+  const [templateMassaId, setTemplateMassaId] = useState(null);
+  const [filaLinks, setFilaLinks] = useState(null);
+  const [filaIndex, setFilaIndex] = useState(0);
+  const [iniciandoMassa, setIniciandoMassa] = useState(false);
+
+  const load = useCallback(async (p = page) => {
+    setLoading(true);
+    try {
+      const res = await api.get('/sindicato-associados', {
+        params: {
+          page: p, limit: LIMIT,
+          search: search || undefined,
+          categoria: categoria || undefined,
+          status: status || undefined,
+          whatsapp: whatsappFiltro || undefined,
+        },
+      });
+      setAssociados(res.data.data);
+      setTotal(res.data.total);
+    } catch { toast.error('Erro ao carregar associados'); }
+    finally { setLoading(false); }
+  }, [page, search, categoria, status, whatsappFiltro]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await api.get('/sindicato-associados/stats');
+      setStats(res.data);
+    } catch { /* silencioso */ }
+  }, []);
+
+  useEffect(() => { setPage(1); load(1); loadStats(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [search, categoria, status, whatsappFiltro]);
+  useEffect(() => { load(page); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page]);
+
+  useEffect(() => {
+    api.get('/sindicato-beneficios/templates').then(res => setTemplates(res.data)).catch(() => {});
+  }, []);
+
+  function openCreate() {
+    setForm(EMPTY_FORM);
+    setModalForm('create');
+  }
+
+  async function openEdit(id) {
+    setModalForm('edit');
+    setFormAlvoId(id);
+    setForm(EMPTY_FORM);
+    try {
+      const res = await api.get(`/sindicato-associados/${id}`);
+      const a = res.data;
+      setForm({
+        nome_completo: a.nome_completo || '', cpf: a.cpf || '',
+        data_nascimento: a.data_nascimento ? a.data_nascimento.slice(0, 10) : '',
+        sexo: a.sexo || '', categoria_profissional: a.categoria_profissional || '',
+        codigo_filiado: a.codigo_filiado || '', celular: a.celular || '', whatsapp: a.whatsapp || '',
+        email: a.email || '', cidade: a.cidade || '', estado: a.estado || '',
+        observacoes: a.observacoes || '', dependentes: a.dependentes.map(d => d.nome),
+      });
+    } catch { toast.error('Erro ao carregar associado'); setModalForm(null); }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload = { ...form, cpf: form.cpf };
+      if (modalForm === 'create') {
+        await api.post('/sindicato-associados', payload);
+        toast.success('Associado cadastrado!');
+      } else {
+        await api.put(`/sindicato-associados/${formAlvoId}`, payload);
+        toast.success('Associado atualizado!');
+      }
+      setModalForm(null);
+      load(page); loadStats();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao salvar associado');
+    } finally { setSaving(false); }
+  }
+
+  async function abrirDetalhe(id) {
+    setCarregandoDetalhe(true);
+    setModalDetalhe({ id });
+    try {
+      const res = await api.get(`/sindicato-associados/${id}`);
+      setModalDetalhe(res.data);
+    } catch {
+      toast.error('Erro ao carregar detalhes');
+      setModalDetalhe(null);
+    } finally { setCarregandoDetalhe(false); }
+  }
+
+  async function toggleStatus(a) {
+    try {
+      await api.put(`/sindicato-associados/${a.id}/status`, { ativo: !a.ativo });
+      toast.success(a.ativo ? 'Associado desativado.' : 'Associado reativado.');
+      load(page); loadStats();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao atualizar status');
+    }
+  }
+
+  function openEnviarUnico(associado) {
+    setModalEnviar(associado);
+    setTemplateEnviarId(templates[0]?.id || null);
+  }
+
+  async function handleEnviarUnico() {
+    if (!templateEnviarId || !modalEnviar) return;
+    setEnviando(true);
+    try {
+      const res = await api.post('/sindicato-beneficios/enviar', {
+        associado_id: modalEnviar.id, template_id: templateEnviarId,
+      });
+      window.open(res.data.whatsapp_link, '_blank');
+      toast.success('Mensagem gerada!');
+      setModalEnviar(null);
+      setModalDetalhe(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao gerar mensagem');
+    } finally { setEnviando(false); }
+  }
+
+  async function abrirMassa() {
+    setModalMassa(true);
+    setSelecionados(new Set());
+    setFilaLinks(null);
+    setFilaIndex(0);
+    setTemplateMassaId(templates[0]?.id || null);
+    setLoadingMassa(true);
+    try {
+      const res = await api.get('/sindicato-associados', {
+        params: {
+          page: 1, limit: 500,
+          search: search || undefined, categoria: categoria || undefined,
+          status: 'ativo', whatsapp: 'com',
+        },
+      });
+      setAssociadosMassa(res.data.data);
+    } catch { toast.error('Erro ao carregar associados'); }
+    finally { setLoadingMassa(false); }
+  }
+
+  function toggleSelecionado(id) {
+    setSelecionados(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleTodos() {
+    setSelecionados(prev => prev.size === associadosMassa.length ? new Set() : new Set(associadosMassa.map(a => a.id)));
+  }
+
+  async function iniciarEnvioMassa() {
+    if (selecionados.size === 0 || !templateMassaId) return;
+    setIniciandoMassa(true);
+    try {
+      const res = await api.post('/sindicato-beneficios/enviar-massa', {
+        associado_ids: [...selecionados],
+        template_id: templateMassaId,
+      });
+      setFilaLinks(res.data.links);
+      setFilaIndex(0);
+      if (res.data.erros?.length) {
+        toast.error(`${res.data.erros.length} associado(s) não puderam ser incluídos`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao iniciar envio em massa');
+    } finally { setIniciandoMassa(false); }
+  }
+
+  function abrirLinkAtual() {
+    if (!filaLinks?.[filaIndex]) return;
+    window.open(filaLinks[filaIndex].whatsapp_link, '_blank');
+  }
+
+  function fecharMassa() {
+    setModalMassa(false);
+    load(page); loadStats();
+  }
+
+  function setDependente(idx, valor) {
+    setForm(f => {
+      const dependentes = [...f.dependentes];
+      dependentes[idx] = valor;
+      return { ...f, dependentes };
+    });
+  }
+
+  function addDependente() {
+    setForm(f => f.dependentes.length >= 6 ? f : { ...f, dependentes: [...f.dependentes, ''] });
+  }
+
+  function removeDependente(idx) {
+    setForm(f => ({ ...f, dependentes: f.dependentes.filter((_, i) => i !== idx) }));
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+  const podeSalvar = form.nome_completo.trim() && form.cpf.replace(/\D/g, '').length === 11;
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Contact className="w-6 h-6 text-[#0C2D48]" />
+            Associados
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">Base de associados do SECI — cadastro, WhatsApp e envio de benefícios.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={abrirMassa}
+            className="flex items-center gap-2 whitespace-nowrap bg-purple-600 hover:bg-purple-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200"
+          >
+            <Users2 className="w-4 h-4" /> Enviar Benefícios em Massa
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 whitespace-nowrap bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200"
+          >
+            <Plus className="w-4 h-4" /> Novo Associado
+          </button>
+        </div>
+      </div>
+
+      {/* Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card">
+          <p className="text-slate-500 text-xs font-medium">Total</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{stats?.total ?? '—'}</p>
+        </div>
+        <div className="card">
+          <p className="text-slate-500 text-xs font-medium">Ativos</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{stats?.ativos ?? '—'}</p>
+        </div>
+        <div className="card">
+          <p className="text-slate-500 text-xs font-medium">Com WhatsApp</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{stats?.com_wpp ?? '—'}</p>
+        </div>
+        <button
+          onClick={() => setWhatsappFiltro(whatsappFiltro === 'sem' ? '' : 'sem')}
+          className={`card text-left transition-all ${whatsappFiltro === 'sem' ? 'ring-2 ring-amber-400 bg-amber-50' : 'hover:bg-amber-50/50'}`}
+        >
+          <p className="text-amber-700 text-xs font-medium">⚠ Sem WhatsApp</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">{stats?.sem_wpp ?? '—'}</p>
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1 min-w-[220px]">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input className="input pl-9" placeholder="Buscar por nome, CPF ou código..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <select className="input w-auto" value={categoria} onChange={e => setCategoria(e.target.value)}>
+          <option value="">Todas as categorias</option>
+          {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select className="input w-auto" value={status} onChange={e => setStatus(e.target.value)}>
+          <option value="">Todos os status</option>
+          <option value="ativo">Ativos</option>
+          <option value="inativo">Inativos</option>
+        </select>
+        <select className="input w-auto" value={whatsappFiltro} onChange={e => setWhatsappFiltro(e.target.value)}>
+          <option value="">WhatsApp: todos</option>
+          <option value="com">Com WhatsApp</option>
+          <option value="sem">Sem WhatsApp</option>
+        </select>
+        {whatsappFiltro === 'sem' && (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
+            Priorizando quem está sem WhatsApp
+            <button onClick={() => setWhatsappFiltro('')}><X className="w-3 h-3" /></button>
+          </span>
+        )}
+      </div>
+
+      {/* Tabela */}
+      <div className="card !p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50">
+              <tr>
+                {['Nome', 'CPF', 'Categoria', 'Celular', 'WhatsApp', 'Cidade', 'Ações'].map(h => (
+                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-10 text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /></td></tr>
+              ) : associados.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-10 text-slate-400">Nenhum associado encontrado</td></tr>
+              ) : associados.map(a => (
+                <tr key={a.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${!a.ativo ? 'opacity-50' : ''}`}>
+                  <td className="py-3 px-4">
+                    <button onClick={() => abrirDetalhe(a.id)} className="text-slate-900 font-medium hover:text-[#0C2D48] hover:underline text-left">
+                      {a.nome_completo}
+                    </button>
+                  </td>
+                  <td className="py-3 px-4 text-slate-600">{a.cpf}</td>
+                  <td className="py-3 px-4 text-slate-600">{a.categoria_profissional || '—'}</td>
+                  <td className="py-3 px-4 text-slate-600">{a.celular || '—'}</td>
+                  <td className="py-3 px-4">
+                    {a.whatsapp ? (
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">{a.whatsapp}</span>
+                    ) : (
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-700">Sem WhatsApp</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-slate-600">{a.cidade || '—'}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={a.whatsapp ? linkWhatsapp(a.whatsapp) : undefined}
+                        target="_blank" rel="noreferrer"
+                        onClick={e => { if (!a.whatsapp) e.preventDefault(); }}
+                        title={a.whatsapp ? 'Abrir WhatsApp' : 'Sem WhatsApp cadastrado'}
+                        className={`p-1.5 rounded-lg transition-colors ${a.whatsapp ? 'text-white bg-emerald-500 hover:bg-emerald-600' : 'text-slate-300 bg-slate-100 cursor-not-allowed'}`}
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </a>
+                      <button onClick={() => openEdit(a.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => toggleStatus(a)} className={`p-1.5 rounded-lg transition-colors ${a.ativo ? 'text-slate-400 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`} title={a.ativo ? 'Desativar' : 'Reativar'}>
+                        <Power className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-xs text-slate-400">{total} associado(s) — página {page} de {totalPages}</span>
+            <div className="flex items-center gap-1">
+              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-30 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-30 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal: novo/editar associado */}
+      <Modal open={!!modalForm} onClose={() => setModalForm(null)} title={modalForm === 'create' ? 'Novo Associado' : 'Editar Associado'} maxWidth="max-w-2xl">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="label">Nome Completo</label>
+              <input className="input" value={form.nome_completo} onChange={e => setForm(f => ({ ...f, nome_completo: e.target.value }))} autoFocus />
+            </div>
+            <div>
+              <label className="label">CPF</label>
+              <input className="input" value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: maskCPF(e.target.value) }))} placeholder="000.000.000-00" />
+            </div>
+            <div>
+              <label className="label">Data de Nascimento</label>
+              <input type="date" className="input" value={form.data_nascimento} onChange={e => setForm(f => ({ ...f, data_nascimento: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Sexo</label>
+              <div className="flex gap-3 pt-2">
+                {[['F', 'Feminino'], ['M', 'Masculino'], ['P', 'Prefere não informar']].map(([v, lbl]) => (
+                  <label key={v} className="flex items-center gap-1.5 text-sm text-slate-700">
+                    <input type="radio" name="sexo" checked={form.sexo === v} onChange={() => setForm(f => ({ ...f, sexo: v }))} />
+                    {lbl}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="label">Categoria Profissional</label>
+              <select className="input" value={form.categoria_profissional} onChange={e => setForm(f => ({ ...f, categoria_profissional: e.target.value }))}>
+                <option value="">—</option>
+                {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Código do Filiado</label>
+              <input className="input" value={form.codigo_filiado} onChange={e => setForm(f => ({ ...f, codigo_filiado: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Celular</label>
+              <input className="input" value={form.celular} onChange={e => setForm(f => ({ ...f, celular: maskPhone(e.target.value) }))} placeholder="(64) 99999-8888" />
+            </div>
+            <div>
+              <label className="label">WhatsApp</label>
+              <input className="input" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: maskPhone(e.target.value) }))} placeholder="(64) 99999-8888" />
+            </div>
+            <div>
+              <label className="label">Email</label>
+              <input type="email" className="input" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Cidade</label>
+              <input className="input" value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Estado</label>
+              <input className="input" maxLength={2} value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value.toUpperCase() }))} placeholder="GO" />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Observações</label>
+            <textarea className="input min-h-[60px] resize-none" value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="label !mb-0">Dependentes</label>
+              {form.dependentes.length < 6 && (
+                <button onClick={addDependente} className="text-xs font-semibold text-[#0C2D48] hover:underline flex items-center gap-1">
+                  <Plus className="w-3 h-3" /> Adicionar
+                </button>
+              )}
+            </div>
+            <div className="space-y-2 mt-2">
+              {form.dependentes.map((dep, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input className="input flex-1" value={dep} onChange={e => setDependente(idx, e.target.value)} placeholder={`Dependente ${idx + 1}`} />
+                  <button onClick={() => removeDependente(idx)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              {form.dependentes.length === 0 && <p className="text-xs text-slate-400">Nenhum dependente adicionado.</p>}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+            <button onClick={() => setModalForm(null)} className="btn-secondary">Cancelar</button>
+            <button onClick={handleSave} disabled={saving || !podeSalvar} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Salvar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: detalhes do associado */}
+      <Modal open={!!modalDetalhe} onClose={() => setModalDetalhe(null)} title={modalDetalhe?.nome_completo || 'Detalhes do Associado'} maxWidth="max-w-xl">
+        {carregandoDetalhe || !modalDetalhe?.cpf ? (
+          <div className="text-center py-10 text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /></div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><span className="text-slate-400">CPF:</span> <span className="text-slate-800">{modalDetalhe.cpf}</span></div>
+              <div><span className="text-slate-400">Nascimento:</span> <span className="text-slate-800">{fmtData(modalDetalhe.data_nascimento)}</span></div>
+              <div><span className="text-slate-400">Categoria:</span> <span className="text-slate-800">{modalDetalhe.categoria_profissional || '—'}</span></div>
+              <div><span className="text-slate-400">Código Filiado:</span> <span className="text-slate-800">{modalDetalhe.codigo_filiado || '—'}</span></div>
+              <div><span className="text-slate-400">Celular:</span> <span className="text-slate-800">{modalDetalhe.celular || '—'}</span></div>
+              <div><span className="text-slate-400">WhatsApp:</span> <span className="text-slate-800">{modalDetalhe.whatsapp || 'Não cadastrado'}</span></div>
+              <div><span className="text-slate-400">Email:</span> <span className="text-slate-800">{modalDetalhe.email || '—'}</span></div>
+              <div><span className="text-slate-400">Cidade/UF:</span> <span className="text-slate-800">{[modalDetalhe.cidade, modalDetalhe.estado].filter(Boolean).join('/') || '—'}</span></div>
+              <div><span className="text-slate-400">Status:</span> <span className={modalDetalhe.ativo ? 'text-emerald-600' : 'text-red-500'}>{modalDetalhe.ativo ? 'Ativo' : 'Inativo'}</span></div>
+            </div>
+
+            {modalDetalhe.observacoes && (
+              <div>
+                <p className="text-slate-400 text-xs font-medium mb-1">Observações</p>
+                <p className="text-slate-700 text-sm bg-slate-50 rounded-xl p-3">{modalDetalhe.observacoes}</p>
+              </div>
+            )}
+
+            <div>
+              <p className="text-slate-400 text-xs font-medium mb-1">Dependentes ({modalDetalhe.dependentes?.length || 0})</p>
+              {modalDetalhe.dependentes?.length ? (
+                <ul className="text-sm text-slate-700 space-y-1">
+                  {modalDetalhe.dependentes.map(d => <li key={d.id}>• {d.nome}</li>)}
+                </ul>
+              ) : <p className="text-xs text-slate-400">Nenhum dependente cadastrado.</p>}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+              <button onClick={() => { setModalDetalhe(null); openEdit(modalDetalhe.id); }} className="btn-secondary flex items-center gap-2">
+                <Pencil className="w-4 h-4" /> Editar
+              </button>
+              <button onClick={() => openEnviarUnico(modalDetalhe)} className="btn-primary flex items-center gap-2">
+                <Send className="w-4 h-4" /> Enviar Benefícios
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal: enviar benefícios individual */}
+      <Modal open={!!modalEnviar} onClose={() => setModalEnviar(null)} title={`Enviar Benefícios — ${modalEnviar?.nome_completo || ''}`}>
+        <div className="space-y-4">
+          {!modalEnviar?.whatsapp ? (
+            <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3">Este associado não tem WhatsApp cadastrado. Edite o cadastro antes de enviar.</p>
+          ) : (
+            <div>
+              <label className="label">Mensagem</label>
+              <select className="input" value={templateEnviarId || ''} onChange={e => setTemplateEnviarId(Number(e.target.value))}>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.titulo}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+            <button onClick={() => setModalEnviar(null)} className="btn-secondary">Cancelar</button>
+            <button onClick={handleEnviarUnico} disabled={enviando || !templateEnviarId || !modalEnviar?.whatsapp} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50">
+              {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Abrir WhatsApp
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: envio em massa */}
+      <Modal open={modalMassa} onClose={fecharMassa} title="Enviar Benefícios em Massa" maxWidth="max-w-xl">
+        {!filaLinks ? (
+          <div className="space-y-4">
+            <div>
+              <label className="label">Mensagem</label>
+              <select className="input" value={templateMassaId || ''} onChange={e => setTemplateMassaId(Number(e.target.value))}>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.titulo}</option>)}
+              </select>
+            </div>
+            <p className="text-xs text-slate-400">Lista considera os filtros de busca/categoria atuais e só inclui associados ativos com WhatsApp cadastrado.</p>
+            <div className="flex items-center justify-between">
+              <label className="label !mb-0">Associados ({selecionados.size} selecionado{selecionados.size === 1 ? '' : 's'})</label>
+              <button onClick={toggleTodos} className="text-xs font-semibold text-[#0C2D48] hover:underline">
+                {selecionados.size === associadosMassa.length ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
+            </div>
+            <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+              {loadingMassa ? (
+                <div className="py-8 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin inline" /></div>
+              ) : associadosMassa.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-sm">Nenhum associado com WhatsApp para esses filtros</div>
+              ) : associadosMassa.map(a => (
+                <button
+                  key={a.id}
+                  onClick={() => toggleSelecionado(a.id)}
+                  className="w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors"
+                >
+                  {selecionados.has(a.id) ? <CheckSquare className="w-4 h-4 text-[#0C2D48] flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-300 flex-shrink-0" />}
+                  <span className="flex-1 text-slate-700">{a.nome_completo}</span>
+                  <span className="text-xs text-slate-400">{a.whatsapp}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+              <button onClick={fecharMassa} className="btn-secondary">Cancelar</button>
+              <button
+                onClick={iniciarEnvioMassa}
+                disabled={iniciandoMassa || selecionados.size === 0 || !templateMassaId}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50"
+              >
+                {iniciandoMassa && <Loader2 className="w-4 h-4 animate-spin" />}
+                Iniciar Envio ({selecionados.size})
+              </button>
+            </div>
+          </div>
+        ) : filaIndex >= filaLinks.length ? (
+          <div className="text-center py-8 space-y-4">
+            <p className="text-slate-700 font-semibold">Fila concluída! {filaLinks.length} mensagem(ns) geradas.</p>
+            <button onClick={fecharMassa} className="btn-primary">Fechar</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-slate-500 text-sm">Enviando {filaIndex + 1} de {filaLinks.length}</p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <p className="font-bold text-slate-900">{filaLinks[filaIndex].nome}</p>
+              <p className="text-slate-500 text-sm">{filaLinks[filaIndex].telefone}</p>
+            </div>
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+              <button onClick={abrirLinkAtual} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200">
+                <Send className="w-4 h-4" /> Abrir WhatsApp
+              </button>
+              <button onClick={() => setFilaIndex(i => i + 1)} className="btn-primary flex items-center gap-2">
+                Próximo <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}

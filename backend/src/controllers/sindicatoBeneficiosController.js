@@ -173,30 +173,53 @@ async function buscarColaboradorAtivo(id) {
   return result.rows[0] || null;
 }
 
+async function buscarAssociadoAtivo(id) {
+  const result = await db.query('SELECT * FROM sindicato_associados WHERE id = $1 AND ativo = true', [id]);
+  return result.rows[0] || null;
+}
+
+// Unifica colaborador (empresas) e associado (portal de associados) num só
+// formato pro envio de benefícios — ambos têm nome/whatsapp e reaproveitam
+// o mesmo fluxo de template + fila de wa.me.
+async function buscarAlvoAtivo({ colaborador_id, associado_id }) {
+  if (colaborador_id) {
+    const colaborador = await buscarColaboradorAtivo(colaborador_id);
+    return colaborador ? { tipo: 'colaborador', id: colaborador.id, nome: colaborador.nome, whatsapp: colaborador.whatsapp } : null;
+  }
+  if (associado_id) {
+    const associado = await buscarAssociadoAtivo(associado_id);
+    return associado ? { tipo: 'associado', id: associado.id, nome: associado.nome_completo, whatsapp: associado.whatsapp } : null;
+  }
+  return null;
+}
+
 async function buscarTemplate(id) {
   const result = await db.query('SELECT * FROM sindicato_mensagens_template WHERE id = $1', [id]);
   return result.rows[0] || null;
 }
 
-async function registrarEnvio({ colaborador, template, mensagem, enviadoPorId }) {
+async function registrarEnvio({ alvo, template, mensagem, enviadoPorId }) {
+  const colaboradorId = alvo.tipo === 'colaborador' ? alvo.id : null;
+  const associadoId = alvo.tipo === 'associado' ? alvo.id : null;
   const result = await db.query(
-    `INSERT INTO sindicato_envios (colaborador_id, template_id, enviado_por_id, telefone_usado, mensagem_enviada)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO sindicato_envios (colaborador_id, associado_id, template_id, enviado_por_id, telefone_usado, mensagem_enviada)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [colaborador.id, template ? template.id : null, enviadoPorId, colaborador.whatsapp, mensagem]
+    [colaboradorId, associadoId, template ? template.id : null, enviadoPorId, alvo.whatsapp, mensagem]
   );
   return result.rows[0];
 }
 
 async function enviar(req, res) {
   try {
-    const { colaborador_id, template_id, mensagem_custom } = req.body;
-    if (!colaborador_id || (!template_id && !mensagem_custom)) {
-      return res.status(400).json({ error: 'colaborador_id e (template_id ou mensagem_custom) são obrigatórios' });
+    const { colaborador_id, associado_id, template_id, mensagem_custom } = req.body;
+    if ((!colaborador_id && !associado_id) || (!template_id && !mensagem_custom)) {
+      return res.status(400).json({ error: '(colaborador_id ou associado_id) e (template_id ou mensagem_custom) são obrigatórios' });
     }
 
-    const colaborador = await buscarColaboradorAtivo(colaborador_id);
-    if (!colaborador) return res.status(404).json({ error: 'Colaborador não encontrado' });
+    const alvo = await buscarAlvoAtivo({ colaborador_id, associado_id });
+    if (!alvo) return res.status(404).json({ error: 'Colaborador/associado não encontrado' });
+    if (!alvo.whatsapp) return res.status(400).json({ error: 'Cadastre o WhatsApp antes de enviar' });
 
     let template = null;
     if (template_id) {
@@ -206,9 +229,9 @@ async function enviar(req, res) {
     const mensagem = mensagem_custom || template.conteudo;
     const enviadoPorId = req.user?.type === 'internal' ? req.user.id : null;
 
-    const envio = await registrarEnvio({ colaborador, template, mensagem, enviadoPorId });
+    const envio = await registrarEnvio({ alvo, template, mensagem, enviadoPorId });
 
-    return res.status(201).json({ envio, whatsapp_link: montarLinkWhatsapp(colaborador.whatsapp, mensagem) });
+    return res.status(201).json({ envio, whatsapp_link: montarLinkWhatsapp(alvo.whatsapp, mensagem) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao enviar mensagem' });
@@ -217,9 +240,13 @@ async function enviar(req, res) {
 
 async function enviarMassa(req, res) {
   try {
-    const { colaborador_ids, template_id } = req.body;
-    if (!Array.isArray(colaborador_ids) || colaborador_ids.length === 0 || !template_id) {
-      return res.status(400).json({ error: 'colaborador_ids (array) e template_id são obrigatórios' });
+    const { colaborador_ids, associado_ids, template_id } = req.body;
+    const alvos = [
+      ...(Array.isArray(colaborador_ids) ? colaborador_ids.map(id => ({ colaborador_id: id })) : []),
+      ...(Array.isArray(associado_ids) ? associado_ids.map(id => ({ associado_id: id })) : []),
+    ];
+    if (alvos.length === 0 || !template_id) {
+      return res.status(400).json({ error: '(colaborador_ids ou associado_ids) e template_id são obrigatórios' });
     }
 
     const template = await buscarTemplate(template_id);
@@ -229,17 +256,20 @@ async function enviarMassa(req, res) {
     const links = [];
     const erros = [];
 
-    for (const colaboradorId of colaborador_ids) {
-      const colaborador = await buscarColaboradorAtivo(colaboradorId);
-      if (!colaborador) { erros.push({ colaborador_id: colaboradorId, error: 'não encontrado' }); continue; }
+    for (const ref of alvos) {
+      const alvoId = ref.colaborador_id ?? ref.associado_id;
+      const alvo = await buscarAlvoAtivo(ref);
+      if (!alvo) { erros.push({ id: alvoId, error: 'não encontrado' }); continue; }
+      if (!alvo.whatsapp) { erros.push({ id: alvoId, nome: alvo.nome, error: 'sem WhatsApp cadastrado' }); continue; }
 
-      const envio = await registrarEnvio({ colaborador, template, mensagem: template.conteudo, enviadoPorId });
+      const envio = await registrarEnvio({ alvo, template, mensagem: template.conteudo, enviadoPorId });
       links.push({
-        colaborador_id: colaborador.id,
-        nome: colaborador.nome,
-        telefone: colaborador.whatsapp,
+        colaborador_id: alvo.tipo === 'colaborador' ? alvo.id : undefined,
+        associado_id: alvo.tipo === 'associado' ? alvo.id : undefined,
+        nome: alvo.nome,
+        telefone: alvo.whatsapp,
         envio_id: envio.id,
-        whatsapp_link: montarLinkWhatsapp(colaborador.whatsapp, template.conteudo),
+        whatsapp_link: montarLinkWhatsapp(alvo.whatsapp, template.conteudo),
       });
     }
 
