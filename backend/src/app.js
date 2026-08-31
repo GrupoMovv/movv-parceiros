@@ -48,6 +48,7 @@ app.use('/api/sindicato',              require('./routes/sindicato'));
 app.use('/api/sindicato-empresas',     require('./routes/sindicatoEmpresas'));
 app.use('/api/sindicato-beneficios',   require('./routes/sindicatoBeneficios'));
 app.use('/api/sindicato-associados',   require('./routes/sindicatoAssociados'));
+app.use('/api/sindicato-carteirinha',  require('./routes/sindicatoCarteirinha'));
 app.use('/api/public',                 require('./routes/public'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
