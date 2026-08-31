@@ -70,15 +70,52 @@ function linkWhatsappComTexto(numero, mensagem) {
   return `https://api.whatsapp.com/send?phone=55${digits}&text=${encodeURIComponent(mensagem)}`;
 }
 
-function montarMensagemCarteirinha(url) {
-  return `Olá! 👋
+const GRAU_LABEL = Object.fromEntries(GRAUS_DEPENDENTE);
+const GRAU_ORDEM = { conjuge: 0, filho: 1, filha: 2 };
+
+// Cônjuge primeiro, depois cada grau agrupado (filho, filha) e dentro de
+// cada grupo em ordem alfabética pelo nome.
+function ordenarDependentes(deps) {
+  return [...deps].sort((x, y) => {
+    const ox = GRAU_ORDEM[x.grau] ?? 99;
+    const oy = GRAU_ORDEM[y.grau] ?? 99;
+    if (ox !== oy) return ox - oy;
+    return (x.nome || '').localeCompare(y.nome || '', 'pt-BR');
+  });
+}
+
+function montarMensagemCarteirinha(nomeCurto, urlTitular, dependentesComCarteirinha) {
+  if (dependentesComCarteirinha.length === 0) {
+    return `Olá, ${nomeCurto}! 👋
 
 Aqui está sua carteirinha digital de associado ao SECI — Sindicato dos Empregados no Comércio de Itumbiara.
 
 🎫 Acesse pelo link:
-${url}
+${urlTitular}
 
-Você pode salvar essa carteirinha no celular e apresentá-la sempre que precisar usar seus benefícios com nossos parceiros.
+Você pode salvar a carteirinha no celular e apresentá-la sempre que precisar usar seus benefícios com nossos parceiros.
+
+Qualquer dúvida, estou à disposição!
+
+Renan Araújo
+SECI — Sindicato do Comércio de Itumbiara`;
+  }
+
+  const listaDependentes = ordenarDependentes(dependentesComCarteirinha)
+    .map(d => `• ${GRAU_LABEL[d.grau] || 'Dependente'} — ${d.nome}: ${publicCarteirinhaUrl(d.carteirinha_hash)}`)
+    .join('\n');
+
+  return `Olá, ${nomeCurto}! 👋
+
+Aqui estão as carteirinhas digitais SECI — Sindicato dos Empregados no Comércio de Itumbiara.
+
+🎫 Sua carteirinha:
+${urlTitular}
+
+👨‍👩‍👧 Carteirinhas dos dependentes:
+${listaDependentes}
+
+Você pode salvar as carteirinhas no celular e apresentá-las sempre que precisar usar seus benefícios com nossos parceiros. Compartilhe com sua família!
 
 Qualquer dúvida, estou à disposição!
 
@@ -118,6 +155,7 @@ export default function SindicatoAssociados() {
   const [fotoAtualUrl, setFotoAtualUrl] = useState(null);
 
   const [gerandoCarteirinhaId, setGerandoCarteirinhaId] = useState(null);
+  const [enviandoCarteirinhaId, setEnviandoCarteirinhaId] = useState(null);
   const [enviandoFotoDependenteIdx, setEnviandoFotoDependenteIdx] = useState(null);
 
   const [modalDetalhe, setModalDetalhe] = useState(null);
@@ -282,11 +320,22 @@ export default function SindicatoAssociados() {
     } finally { setGerandoCarteirinhaId(null); }
   }
 
-  function enviarCarteirinhaWhatsapp(a) {
-    if (!a.carteirinha_hash) return toastAviso('Gere a carteirinha primeiro');
+  async function enviarCarteirinhaWhatsapp(a) {
+    if (!a.carteirinha_hash) return toastAviso('Gere a carteirinha do titular primeiro');
     if (!a.whatsapp) return toastAviso('Cadastre o WhatsApp do associado antes de enviar');
-    const url = publicCarteirinhaUrl(a.carteirinha_hash);
-    window.open(linkWhatsappComTexto(a.whatsapp, montarMensagemCarteirinha(url)), '_blank');
+
+    setEnviandoCarteirinhaId(a.id);
+    try {
+      const res = await api.get(`/sindicato-associados/${a.id}`);
+      const dependentesComCarteirinha = (res.data.dependentes || []).filter(d => d.carteirinha_hash);
+
+      const nomeCurto = a.nome_completo.trim().split(/\s+/)[0];
+      const urlTitular = publicCarteirinhaUrl(a.carteirinha_hash);
+      const mensagem = montarMensagemCarteirinha(nomeCurto, urlTitular, dependentesComCarteirinha);
+      window.open(linkWhatsappComTexto(a.whatsapp, mensagem), '_blank');
+    } catch {
+      toast.error('Erro ao montar a mensagem da carteirinha');
+    } finally { setEnviandoCarteirinhaId(null); }
   }
 
   async function abrirDetalhe(id) {
@@ -557,11 +606,12 @@ export default function SindicatoAssociados() {
                       </a>
                       <button
                         onClick={() => enviarCarteirinhaWhatsapp(a)}
-                        className="p-1.5 rounded-lg text-white transition-colors hover:opacity-90"
+                        disabled={enviandoCarteirinhaId === a.id}
+                        className="p-1.5 rounded-lg text-white transition-colors hover:opacity-90 disabled:opacity-50"
                         style={{ backgroundColor: '#0C2D48' }}
                         title="Enviar carteirinha"
                       >
-                        <CreditCard className="w-3.5 h-3.5" />
+                        {enviandoCarteirinhaId === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
                       </button>
                       <button
                         onClick={() => handleGerarRenovar(a)}
