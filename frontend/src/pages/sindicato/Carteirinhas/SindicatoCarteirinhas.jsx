@@ -4,9 +4,11 @@ import toast from 'react-hot-toast';
 import {
   CreditCard, Loader2, CheckSquare, Square, RefreshCw, Clock, AlertTriangle, HelpCircle,
 } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 const CATEGORIAS = ['Empregado', 'Empregador patronal', 'Profissional liberal', 'Autonomo', 'Outros'];
 const LIMIT = 100;
+const AUTO_REFRESH_MS = 60000;
 
 const ABAS = [
   { value: 'vencendo', label: 'Vencendo em breve', icon: Clock, statsKey: 'carteirinha_vencendo' },
@@ -14,10 +16,26 @@ const ABAS = [
   { value: 'nao_gerada', label: 'Não geradas', icon: HelpCircle, statsKey: 'carteirinha_nao_gerada' },
 ];
 
+const CARDS_DASHBOARD = [
+  { chave: 'emitidas',    label: 'Emitidas',              icone: '🎫', cls: 'bg-blue-50 border-blue-100 text-blue-900' },
+  { chave: 'ativas',      label: 'Ativas',                icone: '✅', cls: 'bg-emerald-50 border-emerald-100 text-emerald-900' },
+  { chave: 'vencendo_15', label: 'Vencendo em 15 dias',   icone: '⏰', cls: 'bg-amber-50 border-amber-100 text-amber-900' },
+  { chave: 'vencidas',    label: 'Vencidas',              icone: '❌', cls: 'bg-red-50 border-red-100 text-red-900' },
+  { chave: 'nao_geradas', label: 'Não Geradas',           icone: '⚪', cls: 'bg-slate-50 border-slate-200 text-slate-700' },
+];
+
 function fmtData(iso) {
   if (!iso) return '—';
   return iso.slice(0, 10).split('-').reverse().join('/');
 }
+
+const CATEGORIA_LABEL_CURTO = {
+  'Empregado': 'Empregado',
+  'Empregador patronal': 'Empregador patronal',
+  'Profissional liberal': 'Profissional liberal',
+  'Autonomo': 'Autônomo',
+  'Outros': 'Outros',
+};
 
 export default function SindicatoCarteirinhas() {
   const [aba, setAba] = useState('vencendo');
@@ -33,6 +51,9 @@ export default function SindicatoCarteirinhas() {
   const [stats, setStats] = useState(null);
   const [selecionados, setSelecionados] = useState(new Set());
   const [gerandoMassa, setGerandoMassa] = useState(false);
+
+  const [dashboard, setDashboard] = useState(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,8 +78,23 @@ export default function SindicatoCarteirinhas() {
     } catch { /* silencioso */ }
   }, []);
 
+  const loadDashboard = useCallback(async ({ silencioso } = {}) => {
+    if (!silencioso) setLoadingDashboard(true);
+    try {
+      const res = await api.get('/sindicato-carteirinha/stats');
+      setDashboard(res.data);
+    } catch { if (!silencioso) toast.error('Erro ao carregar dashboard'); }
+    finally { setLoadingDashboard(false); }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadStats(); }, [loadStats]);
+
+  useEffect(() => {
+    loadDashboard();
+    const t = setInterval(() => loadDashboard({ silencioso: true }), AUTO_REFRESH_MS);
+    return () => clearInterval(t);
+  }, [loadDashboard]);
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -90,7 +126,7 @@ export default function SindicatoCarteirinhas() {
       const res = await api.post('/sindicato-carteirinha/gerar-massa', { associado_ids: [...selecionados] });
       toast.success(`${res.data.gerados.length} carteirinha(s) gerada(s)!`);
       if (res.data.erros?.length) toast.error(`${res.data.erros.length} não puderam ser geradas`);
-      load(); loadStats();
+      load(); loadStats(); loadDashboard();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao gerar carteirinhas em massa');
     } finally { setGerandoMassa(false); }
@@ -107,6 +143,96 @@ export default function SindicatoCarteirinhas() {
         </h1>
         <p className="text-slate-500 text-sm mt-1">Acompanhe validade e gere carteirinhas digitais em massa.</p>
       </div>
+
+      {/* Dashboard */}
+      {loadingDashboard ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-2xl bg-slate-100 animate-pulse" />
+          ))}
+        </div>
+      ) : dashboard && (
+        <div className="space-y-6">
+          {/* Cards principais */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {CARDS_DASHBOARD.map(c => (
+              <div key={c.chave} className={`rounded-2xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${c.cls}`}>
+                <span className="text-2xl">{c.icone}</span>
+                <p className="text-4xl font-bold mt-2">{dashboard[c.chave]}</p>
+                <p className="text-xs font-semibold mt-1 opacity-80">{c.label}</p>
+              </div>
+            ))}
+            <div className="rounded-2xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5 bg-purple-50 border-purple-100 text-purple-900">
+              <span className="text-2xl">📊</span>
+              <p className="text-4xl font-bold mt-2">{dashboard.cobertura_pct}%</p>
+              <p className="text-xs font-semibold mt-1 opacity-80">Cobertura</p>
+            </div>
+          </div>
+
+          {/* Emissões por mês + Top categorias */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="card lg:col-span-2">
+              <h3 className="font-semibold text-slate-900 mb-4 text-sm">Emissões por mês (últimos 6 meses)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={dashboard.emissoes_por_mes} layout="vertical" margin={{ left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="label" tick={{ fill: '#64748B', fontSize: 12 }} axisLine={false} tickLine={false} width={50} />
+                  <Tooltip
+                    contentStyle={{ background: '#ffffff', border: '1px solid #E2E8F0', borderRadius: 12, color: '#1E293B' }}
+                    cursor={{ fill: 'rgba(12,45,72,0.05)' }}
+                  />
+                  <Bar dataKey="total" name="Emitidas" fill="#0C2D48" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-slate-900 mb-4 text-sm">Top categorias com carteirinha</h3>
+              {dashboard.top_categorias.length === 0 ? (
+                <p className="text-sm text-slate-400">Nenhuma carteirinha emitida ainda.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {dashboard.top_categorias.map(c => (
+                    <li key={c.categoria}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-700 font-medium">{CATEGORIA_LABEL_CURTO[c.categoria] || c.categoria}</span>
+                        <span className="text-slate-500">{c.total} ({c.percentual}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-[#0C2D48] rounded-full" style={{ width: `${c.percentual}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Dependentes */}
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-3 text-sm">Dependentes</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="card">
+                <p className="text-2xl font-bold text-slate-900">{dashboard.dependentes.total}</p>
+                <p className="text-xs text-slate-500 mt-1">Total cadastrados</p>
+              </div>
+              <div className="card">
+                <p className="text-2xl font-bold text-emerald-600">{dashboard.dependentes.com_carteirinha}</p>
+                <p className="text-xs text-slate-500 mt-1">Com carteirinha</p>
+              </div>
+              <div className="card">
+                <p className="text-2xl font-bold text-slate-400">{dashboard.dependentes.sem_carteirinha}</p>
+                <p className="text-xs text-slate-500 mt-1">Sem carteirinha</p>
+              </div>
+              <div className="card">
+                <p className="text-2xl font-bold text-purple-600">{dashboard.dependentes.cobertura_pct}%</p>
+                <p className="text-xs text-slate-500 mt-1">Cobertura</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Abas */}
       <div className="flex gap-2 border-b border-slate-200">

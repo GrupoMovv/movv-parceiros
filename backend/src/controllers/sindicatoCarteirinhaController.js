@@ -206,4 +206,95 @@ async function setEmpresa(req, res) {
   }
 }
 
-module.exports = { gerar, renovar, gerarMassa, uploadFoto, setEmpresa };
+const MESES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+// Últimos 6 meses (mês atual incluso), mais antigo primeiro — mesma lógica
+// de componentes locais do calcularValidoAte(), sem depender de Date com
+// timezone pra evitar cair no mês errado perto da virada.
+function ultimosSeisMeses() {
+  const now = new Date();
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    const targetIndex = now.getMonth() - i;
+    const year = now.getFullYear() + Math.floor(targetIndex / 12);
+    const month = ((targetIndex % 12) + 12) % 12;
+    meses.push({ chave: `${year}-${pad2(month + 1)}`, label: `${MESES_ABREV[month]}/${String(year).slice(2)}` });
+  }
+  return meses;
+}
+
+async function stats(req, res) {
+  try {
+    const geralResult = await db.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE ativo)::int AS total_associados_ativos,
+         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL)::int AS emitidas,
+         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate >= CURRENT_DATE)::int AS ativas,
+         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS vencendo_15,
+         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate < CURRENT_DATE)::int AS vencidas,
+         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NULL)::int AS nao_geradas
+       FROM sindicato_associados`
+    );
+    const geral = geralResult.rows[0];
+    const coberturaPct = geral.total_associados_ativos > 0
+      ? Math.round((geral.emitidas / geral.total_associados_ativos) * 1000) / 10
+      : 0;
+
+    const porMesResult = await db.query(
+      `SELECT to_char(date_trunc('month', carteirinha_gerada_em), 'YYYY-MM') AS chave, COUNT(*)::int AS total
+       FROM sindicato_associados
+       WHERE carteirinha_gerada_em >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
+       GROUP BY 1`
+    );
+    const porMesMap = Object.fromEntries(porMesResult.rows.map(r => [r.chave, r.total]));
+    const emissoesPorMes = ultimosSeisMeses().map(m => ({ mes: m.chave, label: m.label, total: porMesMap[m.chave] || 0 }));
+
+    const categoriasResult = await db.query(
+      `SELECT categoria_profissional AS categoria, COUNT(*)::int AS total
+       FROM sindicato_associados
+       WHERE ativo AND carteirinha_hash IS NOT NULL AND categoria_profissional IS NOT NULL
+       GROUP BY categoria_profissional
+       ORDER BY total DESC
+       LIMIT 3`
+    );
+    const topCategorias = categoriasResult.rows.map(r => ({
+      categoria: r.categoria,
+      total: r.total,
+      percentual: geral.emitidas > 0 ? Math.round((r.total / geral.emitidas) * 1000) / 10 : 0,
+    }));
+
+    const dependentesResult = await db.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE d.carteirinha_hash IS NOT NULL)::int AS com_carteirinha
+       FROM sindicato_associados_dependentes d
+       JOIN sindicato_associados a ON a.id = d.associado_id
+       WHERE a.ativo = true`
+    );
+    const dep = dependentesResult.rows[0];
+    const depCoberturaPct = dep.total > 0 ? Math.round((dep.com_carteirinha / dep.total) * 1000) / 10 : 0;
+
+    return res.json({
+      emitidas: geral.emitidas,
+      ativas: geral.ativas,
+      vencendo_15: geral.vencendo_15,
+      vencidas: geral.vencidas,
+      nao_geradas: geral.nao_geradas,
+      total_associados_ativos: geral.total_associados_ativos,
+      cobertura_pct: coberturaPct,
+      emissoes_por_mes: emissoesPorMes,
+      top_categorias: topCategorias,
+      dependentes: {
+        total: dep.total,
+        com_carteirinha: dep.com_carteirinha,
+        sem_carteirinha: dep.total - dep.com_carteirinha,
+        cobertura_pct: depCoberturaPct,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao calcular estatísticas' });
+  }
+}
+
+module.exports = { gerar, renovar, gerarMassa, uploadFoto, setEmpresa, stats };
