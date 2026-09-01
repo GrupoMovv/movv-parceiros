@@ -7,12 +7,14 @@ import {
 import api, { assetUrl } from '../../../services/api';
 import { publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
 import CapturaFoto from './CapturaFoto';
+import InputDataBR from './InputDataBR';
 
 const NAVY = '#0B1F3A';
 const GOLD = '#D4AF37';
 const LIME = '#B8E62C';
 const GRAUS = [['conjuge', 'Cônjuge'], ['filho', 'Filho'], ['filha', 'Filha']];
 const DEP_VAZIO = { id: null, nome: '', grau: '', data_nascimento: '', foto_url: null };
+function novaChave() { return `novo${Date.now()}${Math.random()}`; }
 
 function iniciais(nome) {
   return String(nome || '').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -41,7 +43,7 @@ export default function MeuCadastro() {
       setDados(res.data);
       setWhatsapp(res.data.whatsapp || '');
       setEmail(res.data.email || '');
-      setDependentes(res.data.dependentes.map(d => ({ ...d })));
+      setDependentes(res.data.dependentes.map(d => ({ ...d, _key: `d${d.id}` })));
     } catch {
       setNaoEncontrado(true);
     } finally {
@@ -96,7 +98,7 @@ export default function MeuCadastro() {
 
   function addDependente() {
     if (dependentes.length >= 6) return;
-    setDependentes(d => [...d, { ...DEP_VAZIO }]);
+    setDependentes(d => [...d, { ...DEP_VAZIO, _key: novaChave() }]);
   }
   function updateDependente(idx, campo, valor) {
     setDependentes(d => d.map((dep, i) => i === idx ? { ...dep, [campo]: valor } : dep));
@@ -206,7 +208,7 @@ export default function MeuCadastro() {
             <h2 className="text-slate-900 font-bold text-sm">Dependentes</h2>
 
             {dependentes.map((dep, idx) => (
-              <div key={idx} className="border border-slate-200 rounded-xl p-3 space-y-2 relative">
+              <div key={dep._key} className="border border-slate-200 rounded-xl p-3 space-y-2 relative">
                 <button onClick={() => removeDependente(idx)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -226,7 +228,7 @@ export default function MeuCadastro() {
                         <option value="">Grau</option>
                         {GRAUS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select>
-                      <input type="date" className="input text-xs py-1.5" value={dep.data_nascimento ? String(dep.data_nascimento).slice(0, 10) : ''} onChange={e => updateDependente(idx, 'data_nascimento', e.target.value)} />
+                      <InputDataBR className="input text-xs py-1.5" valueISO={dep.data_nascimento} onChangeISO={iso => updateDependente(idx, 'data_nascimento', iso)} />
                     </div>
                   </div>
                 </div>

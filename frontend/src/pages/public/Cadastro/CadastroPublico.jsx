@@ -9,6 +9,7 @@ import api, { assetUrl } from '../../../services/api';
 import { montarMensagemCadastroPublico, linkWhatsappComTexto, publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
 import CapturaFoto from './CapturaFoto';
 import Confete from './Confete';
+import InputDataBR from './InputDataBR';
 
 const NAVY = '#0B1F3A';
 const GOLD = '#D4AF37';
@@ -55,6 +56,7 @@ function validCPF(cpf) {
 }
 
 const DEP_VAZIO = { nome: '', grau: '', data_nascimento: '' };
+function novaChave() { return `novo${Date.now()}${Math.random()}`; }
 const FORM_VAZIO = {
   nome_completo: '', cpf: '', data_nascimento: '', sexo: '', categoria_profissional: '',
   whatsapp: '', email: '', cidade: '', estado: '',
@@ -191,7 +193,7 @@ export default function CadastroPublico() {
   // ── Passo 3: dependentes ───────────────────────────────────────────────
   function addDependente() {
     if (dependentes.length >= 6) return;
-    setDependentes(d => [...d, { ...DEP_VAZIO }]);
+    setDependentes(d => [...d, { ...DEP_VAZIO, _key: novaChave() }]);
   }
   function updateDependente(idx, campo, valor) {
     setDependentes(d => d.map((dep, i) => i === idx ? { ...dep, [campo]: valor } : dep));
@@ -421,7 +423,7 @@ export default function CadastroPublico() {
               ) : (
                 <>
                   <Campo label="Data de nascimento *" erro={errors.data_nascimento}>
-                    <input type="date" className="input" value={form.data_nascimento} onChange={e => setCampo('data_nascimento', e.target.value)} />
+                    <InputDataBR valueISO={form.data_nascimento} onChangeISO={iso => setCampo('data_nascimento', iso || '')} idadeMinima={14} idadeMaxima={100} />
                   </Campo>
 
                   <Campo label="Sexo *" erro={errors.sexo}>
@@ -479,7 +481,7 @@ export default function CadastroPublico() {
               <Titulo numero={3} texto="Dependentes (opcional)" />
 
               {dependentes.map((dep, idx) => (
-                <div key={idx} className="border border-slate-200 rounded-xl p-3 space-y-2 relative">
+                <div key={dep._key} className="border border-slate-200 rounded-xl p-3 space-y-2 relative">
                   <button onClick={() => removeDependente(idx)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -494,7 +496,7 @@ export default function CadastroPublico() {
                       </select>
                     </Campo>
                     <Campo label="Nascimento">
-                      <input type="date" className="input" value={dep.data_nascimento} onChange={e => updateDependente(idx, 'data_nascimento', e.target.value)} />
+                      <InputDataBR valueISO={dep.data_nascimento} onChangeISO={iso => updateDependente(idx, 'data_nascimento', iso || '')} />
                     </Campo>
                   </div>
                 </div>
