@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import api, { assetUrl, backendOrigin } from '../../services/api';
 import { iniciais, corAvatar } from '../../utils/avatar';
