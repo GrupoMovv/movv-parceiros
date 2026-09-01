@@ -74,7 +74,7 @@ export default function MeuPainel() {
 
           {view === 'home' && <Home dados={dados} onNavegar={setView} />}
           {view === 'dados' && <EditarDados dados={dados} onSalvo={d => { setDados(d); setView('home'); }} />}
-          {view === 'foto' && <TrocarFoto dados={dados} onSalvo={d => setDados(d)} />}
+          {view === 'foto' && <TrocarFoto dados={dados} onSalvo={d => { setDados(d); setView('home'); }} />}
           {view === 'dependentes' && <Dependentes dados={dados} onSalvo={d => setDados(d)} />}
 
           {view === 'home' && (
@@ -215,17 +215,24 @@ function EditarDados({ dados, onSalvo }) {
 
 function TrocarFoto({ dados, onSalvo }) {
   const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState(null);
 
   async function handleCapturar(captura) {
     if (!captura) return;
     setEnviando(true);
+    setErro(null);
     try {
       const fd = new FormData();
       fd.append('foto', captura.blob, 'foto.jpg');
       const res = await apiPainel.post('/public/painel/foto', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      onSalvo(d => ({ ...d, foto_url: res.data.foto_url }));
       toast.success('Foto atualizada!');
-    } catch {
+      // Só volta pro painel depois de confirmar que o servidor salvou —
+      // o preview do CapturaFoto aparece na hora (é local, antes de
+      // qualquer request), então sem essa confirmação uma falha silenciosa
+      // no upload pareceria idêntica a um sucesso.
+      onSalvo({ ...dados, foto_url: res.data.foto_url });
+    } catch (err) {
+      setErro(err.response?.data?.error || 'Erro ao enviar foto. Tente novamente.');
       toast.error('Erro ao enviar foto');
     } finally {
       setEnviando(false);
@@ -237,6 +244,7 @@ function TrocarFoto({ dados, onSalvo }) {
       <h2 className="text-slate-900 font-bold text-sm">Trocar minha foto</h2>
       <CapturaFoto onCapturar={handleCapturar} />
       {enviando && <p className="text-center text-slate-400 text-xs flex items-center justify-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</p>}
+      {erro && <p className="text-center text-red-500 text-xs">{erro}</p>}
     </div>
   );
 }
