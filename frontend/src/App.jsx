@@ -40,6 +40,7 @@ import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolic
 import Carteirinha from './pages/public/Carteirinha';
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
+import MeuPainel from './pages/public/Cadastro/MeuPainel';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -144,6 +145,7 @@ export default function App() {
         <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
+        <Route path="/meu-painel"         element={<MeuPainel />} />
 
         <Route path="/trocar-senha-obrigatorio" element={
           <RequireAuth><TrocarSenhaObrigatorio /></RequireAuth>
