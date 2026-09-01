@@ -52,6 +52,7 @@ app.use('/api/sindicato-carteirinha',  require('./routes/sindicatoCarteirinha'))
 app.use('/api/sindicato-contribuintes', require('./routes/sindicatoContribuintes'));
 app.use('/api/sindicato-solicitacoes', require('./routes/sindicatoSolicitacoes'));
 app.use('/api/public/cadastro',        require('./routes/publicCadastro'));
+app.use('/api/public/meu-cadastro',    require('./routes/publicMeuCadastro'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 

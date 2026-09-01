@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { nanoid } = require('nanoid');
 const db = require('../config/database');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
@@ -79,6 +80,15 @@ async function verificarCpf(req, res) {
 // CPF já cadastrado (passo 2 do wizard): gera a carteirinha se ainda não
 // existir e devolve os dados pro front montar o link de WhatsApp (mesmo
 // utilitário client-side usado no botão "Enviar Carteirinha" do admin).
+async function gerarEditTokenUnico() {
+  for (let tentativa = 0; tentativa < 5; tentativa++) {
+    const token = nanoid(32);
+    const existe = await db.query('SELECT 1 FROM sindicato_associados WHERE edit_token = $1', [token]);
+    if (!existe.rows[0]) return token;
+  }
+  throw new Error('Não foi possível gerar um token de edição único');
+}
+
 async function reenviarCarteirinha(req, res) {
   try {
     const cpf = onlyDigits(req.body.cpf);
@@ -98,6 +108,18 @@ async function reenviarCarteirinha(req, res) {
       associado = upd.rows[0];
     }
 
+    // Associados criados antes do "Meu Cadastro" (importados do Higestor ou
+    // cadastrados pelo admin) não têm edit_token — gera na primeira vez que
+    // alguém reenvia, pra também ganhar acesso à edição.
+    if (!associado.edit_token) {
+      const editToken = await gerarEditTokenUnico();
+      const upd = await db.query(
+        'UPDATE sindicato_associados SET edit_token = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [editToken, associado.id]
+      );
+      associado = upd.rows[0];
+    }
+
     const depResult = await db.query(
       `SELECT nome, grau, carteirinha_hash FROM sindicato_associados_dependentes
        WHERE associado_id = $1 AND carteirinha_hash IS NOT NULL`,
@@ -108,6 +130,7 @@ async function reenviarCarteirinha(req, res) {
       nome_completo: associado.nome_completo,
       whatsapp: associado.whatsapp,
       carteirinha_hash: associado.carteirinha_hash,
+      edit_token: associado.edit_token,
       dependentes: depResult.rows,
     });
   } catch (err) {
@@ -116,9 +139,13 @@ async function reenviarCarteirinha(req, res) {
   }
 }
 
+// Só gera pra quem ainda não tem hash — reaproveitado tanto no cadastro
+// novo (todo mundo sem hash ainda) quanto na edição via Meu Cadastro
+// (dependente existente editado NUNCA pode trocar de hash, senão invalida
+// um QR que já pode ter sido compartilhado/impresso).
 async function gerarCarteirinhaDependentes(associadoId) {
   const deps = await db.query(
-    'SELECT id FROM sindicato_associados_dependentes WHERE associado_id = $1',
+    'SELECT id FROM sindicato_associados_dependentes WHERE associado_id = $1 AND carteirinha_hash IS NULL',
     [associadoId]
   );
   for (const dep of deps.rows) {
@@ -174,17 +201,18 @@ async function finalizarCadastro(req, res) {
 
     const emp = contribuinte.rows[0];
     const externalId = `PUBLICO-${Date.now()}`;
+    const editToken = await gerarEditTokenUnico();
 
     const result = await db.query(
       `INSERT INTO sindicato_associados
          (external_id, nome_completo, cpf, data_nascimento, sexo, categoria_profissional,
-          whatsapp, email, cidade, estado, empresa_nome_livre)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          whatsapp, email, cidade, estado, empresa_nome_livre, edit_token)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         externalId, nome_completo.trim(), cpfDigits, data_nascimento, sexo, categoria_profissional,
         onlyDigits(whatsapp), email?.trim() || null, cidade.trim(), estado.trim().toUpperCase(),
-        emp.nome_fantasia || emp.razao_social,
+        emp.nome_fantasia || emp.razao_social, editToken,
       ]
     );
 
@@ -225,6 +253,7 @@ async function finalizarCadastro(req, res) {
       foto_url: associado.foto_url,
       carteirinha_hash: associado.carteirinha_hash,
       carteirinha_valida_ate: associado.carteirinha_valida_ate,
+      edit_token: associado.edit_token,
       dependentes: depResult.rows,
     });
   } catch (err) {
@@ -236,4 +265,9 @@ async function finalizarCadastro(req, res) {
   }
 }
 
-module.exports = { validarCnpj, solicitarEmpresa, verificarCpf, reenviarCarteirinha, finalizarCadastro };
+module.exports = {
+  validarCnpj, solicitarEmpresa, verificarCpf, reenviarCarteirinha, finalizarCadastro,
+  // exportados pro publicMeuCadastroController reaproveitar (gera
+  // carteirinha de dependente novo adicionado na tela de edição).
+  gerarCarteirinhaDependentes,
+};
