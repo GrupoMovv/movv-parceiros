@@ -376,4 +376,9 @@ async function lista(req, res) {
   }
 }
 
-module.exports = { gerar, renovar, gerarDependente, gerarMassa, uploadFoto, setEmpresa, stats, lista };
+module.exports = {
+  gerar, renovar, gerarDependente, gerarMassa, uploadFoto, setEmpresa, stats, lista,
+  // expostos pro autocadastro público (publicCadastroController) gerar a
+  // carteirinha na hora, sem duplicar a lógica de hash/validade aqui.
+  gerarHashUnico, calcularValidoAte,
+};

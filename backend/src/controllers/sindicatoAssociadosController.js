@@ -286,4 +286,7 @@ module.exports = {
   updateAssociado,
   updateStatus,
   uploadFotoDependente,
+  // exposto pro autocadastro público (publicCadastroController) reaproveitar
+  // a mesma lógica de upsert-por-ordem dos dependentes.
+  substituirDependentes,
 };

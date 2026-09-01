@@ -50,6 +50,7 @@ app.use('/api/sindicato-beneficios',   require('./routes/sindicatoBeneficios'));
 app.use('/api/sindicato-associados',   require('./routes/sindicatoAssociados'));
 app.use('/api/sindicato-carteirinha',  require('./routes/sindicatoCarteirinha'));
 app.use('/api/sindicato-contribuintes', require('./routes/sindicatoContribuintes'));
+app.use('/api/public/cadastro',        require('./routes/publicCadastro'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 
