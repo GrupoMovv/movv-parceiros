@@ -17,10 +17,15 @@ const upload = multer({
 });
 
 router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 40 }));
+// Camada extra de proteção por IP no "login" público — o bloqueio por CPF
+// (3 tentativas/15min) já existe no controller, isso aqui é só contra
+// alguém varrendo vários CPFs do mesmo IP.
+const loginRateLimit = simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 15 });
 
 router.post('/validar-cnpj',         ctrl.validarCnpj);
 router.post('/solicitar-empresa',    ctrl.solicitarEmpresa);
 router.post('/verificar-cpf',        ctrl.verificarCpf);
+router.post('/login',                loginRateLimit, ctrl.login);
 router.post('/reenviar-carteirinha', ctrl.reenviarCarteirinha);
 router.post('/finalizar', upload.single('foto'), ctrl.finalizarCadastro);
 

@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
-const { onlyDigits } = require('../utils/validators');
 const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarCarteirinhaDependentes } = require('./publicCadastroController');
+const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
 const { montarViewAssociado } = require('../services/associadoPublicoView');
 
 const UPLOAD_DIR_ASSOCIADO = path.join(__dirname, '../../uploads/associados');
@@ -11,40 +11,29 @@ const UPLOAD_DIR_DEPENDENTE = path.join(__dirname, '../../uploads/dependentes');
 fs.mkdirSync(UPLOAD_DIR_ASSOCIADO, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR_DEPENDENTE, { recursive: true });
 
-async function buscarPorToken(token) {
-  const result = await db.query('SELECT * FROM sindicato_associados WHERE edit_token = $1', [token]);
-  return result.rows[0] || null;
-}
-
-async function getMeuCadastro(req, res) {
+async function getMe(req, res) {
   try {
-    const associado = await buscarPorToken(req.params.edit_token);
-    if (!associado) return res.status(404).json({ error: 'Cadastro não encontrado' });
-    return res.json(await montarViewAssociado(associado));
+    return res.json(await montarViewAssociado(req.painelAssociado));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar cadastro' });
   }
 }
 
-// Só campos de contato + lista de dependentes (nome/grau/nascimento) — nunca
+// Mesmos campos editáveis do /meu-cadastro/:edit_token, mais cidade/estado
+// (o painel novo pede tudo que a tela de "Editar dados" promete). Nunca
 // CPF, CNPJ da empresa ou data de nascimento do titular.
-async function updateMeuCadastro(req, res) {
+async function updateMe(req, res) {
   try {
-    const associado = await buscarPorToken(req.params.edit_token);
-    if (!associado) return res.status(404).json({ error: 'Cadastro não encontrado' });
-
-    const { whatsapp, email, dependentes } = req.body;
+    const associado = req.painelAssociado;
+    const { whatsapp, email, cidade, estado, dependentes } = req.body;
     const sets = [];
     const params = [];
-    if (whatsapp !== undefined) {
-      params.push(onlyDigits(whatsapp));
-      sets.push(`whatsapp = $${params.length}`);
-    }
-    if (email !== undefined) {
-      params.push(email?.trim() || null);
-      sets.push(`email = $${params.length}`);
-    }
+
+    if (whatsapp !== undefined) { params.push(whatsapp.replace(/\D/g, '')); sets.push(`whatsapp = $${params.length}`); }
+    if (email !== undefined) { params.push(email?.trim() || null); sets.push(`email = $${params.length}`); }
+    if (cidade !== undefined && cidade.trim()) { params.push(cidade.trim()); sets.push(`cidade = $${params.length}`); }
+    if (estado !== undefined && estado.trim()) { params.push(estado.trim().toUpperCase()); sets.push(`estado = $${params.length}`); }
 
     if (sets.length) {
       params.push(associado.id);
@@ -56,17 +45,50 @@ async function updateMeuCadastro(req, res) {
       await gerarCarteirinhaDependentes(associado.id);
     }
 
-    return getMeuCadastro(req, res);
+    const atualizado = await db.query('SELECT * FROM sindicato_associados WHERE id = $1', [associado.id]);
+    return res.json(await montarViewAssociado(atualizado.rows[0]));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao atualizar cadastro' });
   }
 }
 
-async function updateFotoTitular(req, res) {
+async function reenviarCarteirinha(req, res) {
   try {
-    const associado = await buscarPorToken(req.params.edit_token);
-    if (!associado) return res.status(404).json({ error: 'Cadastro não encontrado' });
+    let associado = req.painelAssociado;
+    if (!associado.carteirinha_hash) {
+      const hash = await gerarHashUnico('sindicato_associados');
+      const validaAte = calcularValidoAte();
+      const upd = await db.query(
+        `UPDATE sindicato_associados
+         SET carteirinha_hash = $1, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $2, updated_at = NOW()
+         WHERE id = $3 RETURNING *`,
+        [hash, validaAte, associado.id]
+      );
+      associado = upd.rows[0];
+    }
+
+    const depResult = await db.query(
+      `SELECT nome, grau, carteirinha_hash FROM sindicato_associados_dependentes
+       WHERE associado_id = $1 AND carteirinha_hash IS NOT NULL`,
+      [associado.id]
+    );
+
+    return res.json({
+      nome_completo: associado.nome_completo,
+      whatsapp: associado.whatsapp,
+      carteirinha_hash: associado.carteirinha_hash,
+      dependentes: depResult.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao reenviar carteirinha' });
+  }
+}
+
+async function uploadFoto(req, res) {
+  try {
+    const associado = req.painelAssociado;
     if (!req.file) return res.status(400).json({ error: 'Envie uma foto' });
 
     const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
@@ -87,10 +109,26 @@ async function updateFotoTitular(req, res) {
   }
 }
 
-async function updateFotoDependente(req, res) {
+async function updateDependentes(req, res) {
   try {
-    const associado = await buscarPorToken(req.params.edit_token);
-    if (!associado) return res.status(404).json({ error: 'Cadastro não encontrado' });
+    const associado = req.painelAssociado;
+    const { dependentes } = req.body;
+    if (!Array.isArray(dependentes)) return res.status(400).json({ error: 'dependentes (array) é obrigatório' });
+
+    await substituirDependentes(associado.id, dependentes);
+    await gerarCarteirinhaDependentes(associado.id);
+
+    const view = await montarViewAssociado(associado);
+    return res.json(view.dependentes);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao atualizar dependentes' });
+  }
+}
+
+async function uploadFotoDependente(req, res) {
+  try {
+    const associado = req.painelAssociado;
     if (!req.file) return res.status(400).json({ error: 'Envie uma foto' });
 
     const dep = await db.query(
@@ -117,4 +155,4 @@ async function updateFotoDependente(req, res) {
   }
 }
 
-module.exports = { getMeuCadastro, updateMeuCadastro, updateFotoTitular, updateFotoDependente };
+module.exports = { getMe, updateMe, reenviarCarteirinha, uploadFoto, updateDependentes, uploadFotoDependente };
