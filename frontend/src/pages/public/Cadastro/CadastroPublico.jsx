@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  Plus, Trash2, PartyPopper, ExternalLink, MessageCircle, Building2, Pencil, Bookmark,
+  Plus, Trash2, PartyPopper, ExternalLink, MessageCircle, Building2, Bookmark,
+  UserCircle2, LayoutDashboard,
 } from 'lucide-react';
 import api, { assetUrl } from '../../../services/api';
+import { setPainelToken } from '../../../services/apiPainel';
 import { montarMensagemCadastroPublico, linkWhatsappComTexto, publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
 import CapturaFoto from './CapturaFoto';
 import Confete from './Confete';
@@ -63,7 +65,18 @@ const FORM_VAZIO = {
 };
 
 export default function CadastroPublico() {
-  const [step, setStep] = useState(1);
+  const navigate = useNavigate();
+  const [step, setStep] = useState('cpf');
+
+  // Landing — CPF primeiro, decide entre login (CPF já existe) e wizard novo
+  const [cpfInicial, setCpfInicial] = useState('');
+  const [verificandoCpf, setVerificandoCpf] = useState(false);
+  const [nomeCurtoExistente, setNomeCurtoExistente] = useState('');
+
+  // Login (CPF + data de nascimento) pra quem já tem cadastro
+  const [dataLoginISO, setDataLoginISO] = useState(null);
+  const [fazendoLogin, setFazendoLogin] = useState(false);
+  const [erroLogin, setErroLogin] = useState(null);
 
   // Passo 1 — CNPJ
   const [cnpj, setCnpj] = useState('');
@@ -77,8 +90,6 @@ export default function CadastroPublico() {
   // Passo 2 — dados pessoais
   const [form, setForm] = useState(FORM_VAZIO);
   const [errors, setErrors] = useState({});
-  const [statusCpf, setStatusCpf] = useState(null); // 'verificando' | 'novo' | 'existente'
-  const [reenviando, setReenviando] = useState(false);
 
   // Passo 3 — dependentes
   const [dependentes, setDependentes] = useState([]);
@@ -147,41 +158,55 @@ export default function CadastroPublico() {
     }
   }
 
-  // ── Passo 2: verificação de CPF (debounce) ────────────────────────────
-  useEffect(() => {
-    const digits = form.cpf.replace(/\D/g, '');
-    if (digits.length !== 11 || !validCPF(digits)) { setStatusCpf(null); return; }
+  // ── Landing: CPF primeiro ──────────────────────────────────────────────
+  async function handleContinuarCpf() {
+    const digits = cpfInicial.replace(/\D/g, '');
+    if (!validCPF(digits)) { toast.error('CPF inválido'); return; }
 
-    setStatusCpf('verificando');
-    const t = setTimeout(async () => {
-      try {
-        const res = await api.post('/public/cadastro/verificar-cpf', { cpf: digits });
-        setStatusCpf(res.data.existe && res.data.tem_carteirinha ? 'existente' : 'novo');
-      } catch {
-        setStatusCpf('novo');
-      }
-    }, 500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.cpf]);
-
-  async function handleReenviarAgora() {
-    setReenviando(true);
+    setVerificandoCpf(true);
     try {
-      const res = await api.post('/public/cadastro/reenviar-carteirinha', { cpf: form.cpf.replace(/\D/g, '') });
-      setResultado({ ...res.data, tipo: 'reenvio' });
-      setStep('final');
+      const res = await api.post('/public/cadastro/verificar-cpf', { cpf: digits });
+      if (res.data.existe) {
+        setNomeCurtoExistente(res.data.nome_curto || '');
+        setErroLogin(null);
+        setStep('login_data');
+      } else {
+        setCampo('cpf', cpfInicial);
+        setStep(1);
+      }
     } catch {
-      toast.error('Erro ao buscar sua carteirinha. Procure o Sindicato.');
+      toast.error('Erro ao verificar CPF. Tente novamente.');
     } finally {
-      setReenviando(false);
+      setVerificandoCpf(false);
+    }
+  }
+
+  // ── Login: CPF + data de nascimento pra quem já tem cadastro ──────────
+  async function handleFazerLogin() {
+    if (!dataLoginISO) return;
+    setFazendoLogin(true);
+    setErroLogin(null);
+    try {
+      const res = await api.post('/public/cadastro/login', {
+        cpf: cpfInicial.replace(/\D/g, ''),
+        data_nascimento: dataLoginISO,
+      });
+      setPainelToken(res.data.token);
+      navigate('/meu-painel');
+    } catch (err) {
+      if (err.response?.status === 429) {
+        setStep('login_bloqueado');
+      } else {
+        setErroLogin(err.response?.data?.error || 'Erro ao validar login');
+      }
+    } finally {
+      setFazendoLogin(false);
     }
   }
 
   function validarPasso2() {
     const e = {};
     if (!form.nome_completo.trim()) e.nome_completo = 'Nome obrigatório';
-    if (!validCPF(form.cpf)) e.cpf = 'CPF inválido';
     if (!form.data_nascimento) e.data_nascimento = 'Data de nascimento obrigatória';
     if (!form.sexo) e.sexo = 'Selecione uma opção';
     if (!form.categoria_profissional) e.categoria_profissional = 'Selecione uma categoria';
@@ -253,9 +278,18 @@ export default function CadastroPublico() {
 
   if (step === 'final' && resultado) {
     const urlTitular = publicCarteirinhaUrl(resultado.carteirinha_hash);
-    const urlMeuCadastro = `${window.location.origin}/meu-cadastro/${resultado.edit_token}`;
-    const mensagem = montarMensagemCadastroPublico(urlTitular, urlMeuCadastro);
+    // Link da mensagem (pra quando a pessoa reabrir isso dias/semanas depois)
+    // aponta pro /cadastrar unificado, não pro token — quem tem sessão ativa
+    // agora (acabou de provar identidade) vai direto pro painel pelo botão
+    // "Ir para Meu Painel" abaixo, sem precisar digitar CPF+data de novo.
+    const urlEntradaFutura = `${window.location.origin}/cadastrar`;
+    const mensagem = montarMensagemCadastroPublico(urlTitular, urlEntradaFutura);
     const linkWpp = resultado.whatsapp ? linkWhatsappComTexto(resultado.whatsapp, mensagem) : null;
+
+    function irParaPainel() {
+      setPainelToken(resultado.token);
+      navigate('/meu-painel');
+    }
 
     return (
       <PageShell>
@@ -264,9 +298,7 @@ export default function CadastroPublico() {
           <PartyPopper className="w-14 h-14 mx-auto" style={{ color: GOLD }} />
           <div>
             <h1 className="text-2xl font-black text-slate-900">Parabéns!</h1>
-            <p className="text-slate-500 text-sm mt-1">
-              {resultado.tipo === 'reenvio' ? 'Sua carteirinha está pronta pra ser reenviada.' : 'Sua carteirinha digital está pronta!'}
-            </p>
+            <p className="text-slate-500 text-sm mt-1">Sua carteirinha digital está pronta!</p>
           </div>
 
           {resultado.foto_url && (
@@ -290,10 +322,10 @@ export default function CadastroPublico() {
               className="w-full flex items-center justify-center gap-2 font-semibold text-sm py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
               <ExternalLink className="w-4 h-4" /> Ver minha carteirinha
             </a>
-            <a href={urlMeuCadastro} target="_blank" rel="noreferrer"
+            <button onClick={irParaPainel}
               className="w-full flex items-center justify-center gap-2 font-semibold text-sm py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
-              <Pencil className="w-4 h-4" /> Editar meu cadastro
-            </a>
+              <LayoutDashboard className="w-4 h-4" /> Ir para Meu Painel
+            </button>
           </div>
 
           <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-left">
@@ -306,6 +338,77 @@ export default function CadastroPublico() {
           <Link to="/" className="text-slate-400 text-xs underline">Voltar ao início</Link>
         </div>
       </PageShell>
+    );
+  }
+
+  if (step === 'cpf') {
+    return (
+      <PageShell>
+        <div className="w-full max-w-[420px]">
+          <div className="text-center mb-6">
+            <p className="text-white font-black text-2xl tracking-wide">SECI</p>
+            <p className="text-white/60 text-sm mt-1">Faça sua carteirinha digital de associado</p>
+          </div>
+          <div className="bg-white rounded-[2rem] p-7 shadow-2xl space-y-4 text-center">
+            <UserCircle2 className="w-12 h-12 mx-auto text-slate-300" />
+            <h1 className="text-slate-900 font-bold text-lg">Digite seu CPF pra começar</h1>
+            <input
+              type="text" inputMode="numeric" placeholder="000.000.000-00"
+              value={cpfInicial} onChange={e => setCpfInicial(maskCPF(e.target.value))}
+              className="input text-center text-lg tracking-wide font-mono"
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') handleContinuarCpf(); }}
+            />
+            <p className="text-slate-400 text-xs">Se você já tem carteirinha, vamos identificar automaticamente</p>
+            <button
+              onClick={handleContinuarCpf}
+              disabled={verificandoCpf}
+              className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {verificandoCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} Continuar
+            </button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (step === 'login_data') {
+    return (
+      <PageShell>
+        <div className="w-full max-w-[420px]">
+          <div className="text-center mb-6">
+            <p className="text-white font-black text-2xl tracking-wide">SECI</p>
+          </div>
+          <div className="bg-white rounded-[2rem] p-7 shadow-2xl space-y-4">
+            <BotaoVoltar onClick={() => { setStep('cpf'); setErroLogin(null); }} />
+            <div className="text-center">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-2" style={{ color: LIME }} />
+              <h1 className="text-slate-900 font-bold text-lg">Olá, {nomeCurtoExistente || 'associado'}!</h1>
+              <p className="text-slate-500 text-sm mt-1">Encontramos seu cadastro. Pra continuar, confirme sua data de nascimento:</p>
+            </div>
+            <InputDataBR valueISO={dataLoginISO} onChangeISO={setDataLoginISO} autoFocus />
+            {erroLogin && <p className="text-red-500 text-xs text-center">{erroLogin}</p>}
+            <button
+              onClick={handleFazerLogin}
+              disabled={!dataLoginISO || fazendoLogin}
+              className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {fazendoLogin ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} Confirmar
+            </button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (step === 'login_bloqueado') {
+    return (
+      <TelaMensagem
+        icon={<AlertTriangle className="w-14 h-14 text-red-400" />}
+        titulo="Não foi possível validar"
+        texto="Você errou a data de nascimento algumas vezes. Por segurança, aguarde um tempo e tente de novo, ou fale com o Sindicato pra confirmar seu cadastro."
+      />
     );
   }
 
@@ -322,6 +425,7 @@ export default function CadastroPublico() {
         <div className="bg-white rounded-[2rem] p-6 sm:p-7 mt-4 shadow-2xl">
           {step === 1 && (
             <div className="space-y-4">
+              <BotaoVoltar onClick={() => setStep('cpf')} />
               <Titulo numero={1} texto="CNPJ da sua empresa" />
               <input
                 type="text" inputMode="numeric" placeholder="00.000.000/0000-00"
@@ -407,74 +511,54 @@ export default function CadastroPublico() {
                 <input type="text" className="input" value={form.nome_completo} onChange={e => setCampo('nome_completo', e.target.value)} />
               </Campo>
 
-              <Campo label="CPF *" erro={errors.cpf}>
-                <input type="text" inputMode="numeric" className="input" value={form.cpf} onChange={e => setCampo('cpf', maskCPF(e.target.value))} />
+              <Campo label="Data de nascimento *" erro={errors.data_nascimento}>
+                <InputDataBR valueISO={form.data_nascimento} onChangeISO={iso => setCampo('data_nascimento', iso || '')} idadeMinima={14} idadeMaxima={100} />
               </Campo>
 
-              {statusCpf === 'verificando' && (
-                <div className="flex items-center gap-2 text-slate-400 text-xs"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Verificando CPF...</div>
-              )}
-
-              {statusCpf === 'existente' ? (
-                <div className="space-y-3">
-                  <CardAviso cor="amber" icon={<AlertTriangle className="w-5 h-5" />}
-                    texto="Você já tem carteirinha! Vamos reenviar pro seu WhatsApp." />
-                  <button onClick={handleReenviarAgora} disabled={reenviando} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50">
-                    {reenviando && <Loader2 className="w-4 h-4 animate-spin" />} Reenviar agora
-                  </button>
+              <Campo label="Sexo *" erro={errors.sexo}>
+                <div className="flex gap-2">
+                  {[['F', 'Feminino'], ['M', 'Masculino'], ['P', 'Prefiro não dizer']].map(([v, l]) => (
+                    <button key={v} type="button" onClick={() => setCampo('sexo', v)}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${form.sexo === v ? 'text-white' : 'text-slate-500 border-slate-200'}`}
+                      style={form.sexo === v ? { backgroundColor: NAVY, borderColor: NAVY } : undefined}>
+                      {l}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <>
-                  <Campo label="Data de nascimento *" erro={errors.data_nascimento}>
-                    <InputDataBR valueISO={form.data_nascimento} onChangeISO={iso => setCampo('data_nascimento', iso || '')} idadeMinima={14} idadeMaxima={100} />
-                  </Campo>
+              </Campo>
 
-                  <Campo label="Sexo *" erro={errors.sexo}>
-                    <div className="flex gap-2">
-                      {[['F', 'Feminino'], ['M', 'Masculino'], ['P', 'Prefiro não dizer']].map(([v, l]) => (
-                        <button key={v} type="button" onClick={() => setCampo('sexo', v)}
-                          className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${form.sexo === v ? 'text-white' : 'text-slate-500 border-slate-200'}`}
-                          style={form.sexo === v ? { backgroundColor: NAVY, borderColor: NAVY } : undefined}>
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                  </Campo>
+              <Campo label="Categoria *" erro={errors.categoria_profissional}>
+                <select className="input" value={form.categoria_profissional} onChange={e => setCampo('categoria_profissional', e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Campo>
 
-                  <Campo label="Categoria *" erro={errors.categoria_profissional}>
-                    <select className="input" value={form.categoria_profissional} onChange={e => setCampo('categoria_profissional', e.target.value)}>
-                      <option value="">Selecione...</option>
-                      {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </Campo>
+              <Campo label="WhatsApp *" erro={errors.whatsapp}>
+                <input type="text" inputMode="numeric" className="input" value={form.whatsapp} onChange={e => setCampo('whatsapp', maskPhone(e.target.value))} />
+              </Campo>
 
-                  <Campo label="WhatsApp *" erro={errors.whatsapp}>
-                    <input type="text" inputMode="numeric" className="input" value={form.whatsapp} onChange={e => setCampo('whatsapp', maskPhone(e.target.value))} />
-                  </Campo>
+              <Campo label="E-mail (opcional)">
+                <input type="email" className="input" value={form.email} onChange={e => setCampo('email', e.target.value)} />
+              </Campo>
 
-                  <Campo label="E-mail (opcional)">
-                    <input type="email" className="input" value={form.email} onChange={e => setCampo('email', e.target.value)} />
-                  </Campo>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Cidade *" erro={errors.cidade}>
+                  <input type="text" className="input" value={form.cidade} onChange={e => setCampo('cidade', e.target.value)} />
+                </Campo>
+                <Campo label="Estado *" erro={errors.estado}>
+                  <select className="input" value={form.estado} onChange={e => setCampo('estado', e.target.value)}>
+                    <option value="">UF</option>
+                    {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                  </select>
+                </Campo>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <Campo label="Cidade *" erro={errors.cidade}>
-                      <input type="text" className="input" value={form.cidade} onChange={e => setCampo('cidade', e.target.value)} />
-                    </Campo>
-                    <Campo label="Estado *" erro={errors.estado}>
-                      <select className="input" value={form.estado} onChange={e => setCampo('estado', e.target.value)}>
-                        <option value="">UF</option>
-                        {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                      </select>
-                    </Campo>
-                  </div>
-
-                  <BotaoProximo onClick={() => {
-                    const e = validarPasso2();
-                    if (Object.keys(e).length) { setErrors(e); return; }
-                    setStep(3);
-                  }} />
-                </>
-              )}
+              <BotaoProximo onClick={() => {
+                const e = validarPasso2();
+                if (Object.keys(e).length) { setErrors(e); return; }
+                setStep(3);
+              }} />
             </div>
           )}
 
