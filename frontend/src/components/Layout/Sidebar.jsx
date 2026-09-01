@@ -1,10 +1,12 @@
-﻿import { NavLink, useNavigate } from 'react-router-dom';
+﻿import { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
-  Landmark, Gift, MessagesSquare, Contact,
+  Landmark, Gift, MessagesSquare, Contact, Inbox,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -93,6 +95,7 @@ const MASTER_MENU = [
       { label: 'Associados',       icon: Contact,       to: '/sindicato/associados',      roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Carteirinhas',     icon: CreditCard,    to: '/sindicato/carteirinhas',    roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Benefícios',       icon: Gift,          to: '/sindicato/beneficios',      roles: ['sindicato_aprendiz', 'admin'] },
+      { label: 'Solicitações de Empresas', icon: Inbox, to: '/sindicato/solicitacoes',    roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'solicitacoes' },
     ],
   },
   {
@@ -108,7 +111,7 @@ const MASTER_MENU = [
 
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 
-function NavItem({ to, icon: Icon, label, onClose, end }) {
+function NavItem({ to, icon: Icon, label, onClose, end, badge }) {
   return (
     <NavLink
       to={to}
@@ -125,6 +128,11 @@ function NavItem({ to, icon: Icon, label, onClose, end }) {
         <>
           <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-movv-900' : ''}`} />
           <span className="flex-1">{label}</span>
+          {!!badge && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${isActive ? 'bg-movv-900 text-white' : 'bg-red-500 text-white'}`}>
+              {badge}
+            </span>
+          )}
           {isActive && <ChevronRight className="w-3 h-3 text-movv-900" />}
         </>
       )}
@@ -176,6 +184,22 @@ export default function Sidebar({ onClose }) {
 
   const isInternal  = user?.type === 'internal';
   const isIndicator = user?.type === 'indicator';
+
+  const [badges, setBadges] = useState({});
+  const podeVerSolicitacoes = user?.is_admin || (isInternal && user?.role === 'sindicato_aprendiz');
+
+  useEffect(() => {
+    if (!podeVerSolicitacoes) return;
+    let cancelado = false;
+    const carregar = () => {
+      api.get('/sindicato-solicitacoes/count-pendentes')
+        .then(res => { if (!cancelado) setBadges(b => ({ ...b, solicitacoes: res.data.pendentes })); })
+        .catch(() => {});
+    };
+    carregar();
+    const interval = setInterval(carregar, 60000);
+    return () => { cancelado = true; clearInterval(interval); };
+  }, [podeVerSolicitacoes]);
 
   const tierColor = {
     Bronze: 'text-amber-300', Prata: 'text-slate-300', Ouro: 'text-gold-300', Diamante: 'text-blue-300',
@@ -256,6 +280,7 @@ export default function Sidebar({ onClose }) {
                       label={item.label}
                       onClose={onClose}
                       end={item.end}
+                      badge={item.badgeKey ? badges[item.badgeKey] : undefined}
                     />
                   );
                 }
