@@ -1,0 +1,12 @@
+# index.html referencia o bundle JS/CSS pelo hash do build atual — se o
+# Cloudflare guardar index.html em cache por qualquer tempo depois de um
+# deploy (o s-maxage default do Render é 300s), um usuário pode receber o
+# HTML antigo apontando pra um arquivo /assets/index-HASH.js que o deploy
+# novo já substituiu, resultando em tela branca (bundle não carrega).
+# Assets com hash no nome (Vite fingerprint) podem cachear pesado — o nome
+# muda a cada build, então cache antigo nunca fica "errado".
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
