@@ -86,6 +86,37 @@ Renan Araújo
 SECI — Sindicato do Comércio de Itumbiara`;
 }
 
+// Mesmo link fixo usado no template de Benefícios do Sindicato (backend
+// direto — o domínio do frontend não serve esse arquivo, ver migration
+// 016_sindicato_beneficios_link_pdf_backend_direto.sql).
+export function publicBeneficiosPdfUrl() {
+  return `${backendOrigin()}/api/public/beneficios/catalogo.pdf`;
+}
+
+// Mensagem da tela final do autocadastro público (/cadastrar e reenvio):
+// 3 links fixos — carteirinha, "Meu Cadastro" (edição) e o catálogo de
+// benefícios. Diferente de montarMensagemCarteirinha (usada pelo admin),
+// que lista carteirinha de cada dependente — aqui os dependentes são
+// geridos dentro do próprio "Meu Cadastro", não listados na mensagem.
+export function montarMensagemCadastroPublico(urlCarteirinha, urlMeuCadastro) {
+  return `Olá! Sua carteirinha digital SECI está pronta! 🎫
+
+🎫 Sua carteirinha:
+${urlCarteirinha}
+
+✏️ Editar seu cadastro ou adicionar fotos dos dependentes:
+${urlMeuCadastro}
+
+🎁 Conheça todos os benefícios exclusivos:
+${publicBeneficiosPdfUrl()}
+
+Guarde essa mensagem nos favoritos! Assim você sempre tem acesso rápido.
+
+Qualquer dúvida, estamos à disposição.
+
+SECI — Sindicato do Comércio de Itumbiara`;
+}
+
 export function toastAviso(mensagem) {
   toast(mensagem, { icon: '⚠️', style: { background: '#FEF3C7', color: '#92400E' } });
 }

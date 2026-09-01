@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  Plus, Trash2, PartyPopper, ExternalLink, MessageCircle, Building2,
+  Plus, Trash2, PartyPopper, ExternalLink, MessageCircle, Building2, Pencil, Bookmark,
 } from 'lucide-react';
 import api, { assetUrl } from '../../../services/api';
-import { montarMensagemCarteirinha, linkWhatsappComTexto, publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
+import { montarMensagemCadastroPublico, linkWhatsappComTexto, publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
 import CapturaFoto from './CapturaFoto';
 import Confete from './Confete';
 
@@ -247,9 +247,9 @@ export default function CadastroPublico() {
   }
 
   if (step === 'final' && resultado) {
-    const nomeCurto = resultado.nome_completo.trim().split(/\s+/)[0];
     const urlTitular = publicCarteirinhaUrl(resultado.carteirinha_hash);
-    const mensagem = montarMensagemCarteirinha(nomeCurto, urlTitular, resultado.dependentes || []);
+    const urlMeuCadastro = `${window.location.origin}/meu-cadastro/${resultado.edit_token}`;
+    const mensagem = montarMensagemCadastroPublico(urlTitular, urlMeuCadastro);
     const linkWpp = resultado.whatsapp ? linkWhatsappComTexto(resultado.whatsapp, mensagem) : null;
 
     return (
@@ -274,7 +274,7 @@ export default function CadastroPublico() {
               <a href={linkWpp} target="_blank" rel="noreferrer"
                 className="w-full flex items-center justify-center gap-2 font-bold text-sm py-3.5 rounded-xl transition-transform hover:scale-[1.02]"
                 style={{ backgroundColor: '#25D366', color: 'white' }}>
-                <MessageCircle className="w-4 h-4" /> Receber no meu WhatsApp
+                <MessageCircle className="w-4 h-4" /> Compartilhar via WhatsApp
               </a>
             ) : (
               <p className="text-amber-600 text-xs bg-amber-50 rounded-xl p-2.5">
@@ -285,6 +285,17 @@ export default function CadastroPublico() {
               className="w-full flex items-center justify-center gap-2 font-semibold text-sm py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
               <ExternalLink className="w-4 h-4" /> Ver minha carteirinha
             </a>
+            <a href={urlMeuCadastro} target="_blank" rel="noreferrer"
+              className="w-full flex items-center justify-center gap-2 font-semibold text-sm py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
+              <Pencil className="w-4 h-4" /> Editar meu cadastro
+            </a>
+          </div>
+
+          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-left">
+            <Bookmark className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-700 text-xs">
+              <strong>Importante:</strong> guarde essa mensagem no seu WhatsApp! Ela tem seu link exclusivo pra editar o cadastro depois.
+            </p>
           </div>
 
           <Link to="/" className="text-slate-400 text-xs underline">Voltar ao início</Link>
