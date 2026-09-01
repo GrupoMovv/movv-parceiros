@@ -87,6 +87,7 @@ export default function CadastroPublico() {
   const [foto, setFoto] = useState(null);
 
   // Passo 5 — revisão
+  const [declaracaoAceita, setDeclaracaoAceita] = useState(false);
   const [aceite, setAceite] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
@@ -205,6 +206,7 @@ export default function CadastroPublico() {
   // ── Passo 5: envio final ────────────────────────────────────────────────
   async function handleFinalizar() {
     if (!foto) { toast.error('Tire sua foto antes de continuar'); return; }
+    if (!declaracaoAceita) { toast.error('Aceite a declaração antes de continuar'); return; }
     if (!aceite) { toast.error('Aceite receber comunicações via WhatsApp'); return; }
 
     setEnviando(true);
@@ -222,6 +224,7 @@ export default function CadastroPublico() {
       fd.append('estado', form.estado);
       fd.append('dependentes', JSON.stringify(dependentes.filter(d => d.nome.trim())));
       fd.append('aceite_comunicacao', 'true');
+      fd.append('declaracao_aceita', 'true');
       fd.append('foto', foto.blob, 'foto.jpg');
 
       const res = await api.post('/public/cadastro/finalizar', fd, {
@@ -314,7 +317,7 @@ export default function CadastroPublico() {
           <p className="text-white/60 text-sm mt-1">Faça sua carteirinha digital de associado</p>
         </div>
 
-        <ProgressoTopo step={typeof step === 'number' ? step : 5} />
+        <ProgressoTopo step={typeof step === 'number' ? step : 6} />
 
         <div className="bg-white rounded-[2rem] p-6 sm:p-7 mt-4 shadow-2xl">
           {step === 1 && (
@@ -527,7 +530,39 @@ export default function CadastroPublico() {
           {step === 5 && (
             <div className="space-y-4">
               <BotaoVoltar onClick={() => setStep(4)} />
-              <Titulo numero={5} texto="Revisão e envio" />
+              <Titulo numero={5} texto="Declaração" />
+
+              <div className="border-2 rounded-2xl p-4 space-y-3" style={{ borderColor: '#F59E0B', backgroundColor: '#FFFBEB' }}>
+                <p className="flex items-center gap-2 font-bold text-amber-800 text-sm">
+                  <AlertTriangle className="w-4 h-4" /> IMPORTANTE
+                </p>
+                <p className="text-amber-900 text-sm">Declaro, sob minha responsabilidade, que:</p>
+                <ul className="space-y-1.5 text-amber-900 text-sm">
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" /> Sou colaborador ativo da empresa: <strong>{empresaInfo?.nome_fantasia || empresaInfo?.razao_social}</strong></li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" /> Autorizei o desconto da Contribuição Assistencial na minha empresa</li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" /> Todas as informações fornecidas são verdadeiras</li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" /> Estou ciente que informações falsas podem resultar no cancelamento da minha carteirinha e responsabilização</li>
+                </ul>
+
+                <label className="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-amber-200">
+                  <input type="checkbox" checked={declaracaoAceita} onChange={e => setDeclaracaoAceita(e.target.checked)} className="mt-0.5 w-4 h-4" style={{ accentColor: '#B45309' }} />
+                  <span className="text-amber-900 text-xs font-semibold">Li e concordo com a declaração acima</span>
+                </label>
+
+                <div>
+                  <p className="text-amber-700 text-[10px] font-semibold uppercase tracking-wide">Nome completo (assinatura digital)</p>
+                  <p className="text-amber-900 font-bold text-sm mt-0.5">{form.nome_completo || '—'}</p>
+                </div>
+              </div>
+
+              <BotaoProximo onClick={() => setStep(6)} texto={declaracaoAceita ? 'Próximo' : 'Marque a declaração para continuar'} className={!declaracaoAceita ? 'opacity-50 pointer-events-none' : ''} />
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-4">
+              <BotaoVoltar onClick={() => setStep(5)} />
+              <Titulo numero={6} texto="Revisão e envio" />
 
               <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
                 {foto && <img src={foto.previewUrl} alt="" className="w-16 h-16 rounded-full object-cover border-2" style={{ borderColor: GOLD }} />}
@@ -554,7 +589,7 @@ export default function CadastroPublico() {
 
               <button
                 onClick={handleFinalizar}
-                disabled={enviando || !aceite}
+                disabled={enviando || !aceite || !declaracaoAceita}
                 className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wide disabled:opacity-50 transition-transform hover:scale-[1.01] flex items-center justify-center gap-2"
                 style={{ backgroundColor: LIME, color: NAVY }}
               >
@@ -595,7 +630,7 @@ function TelaMensagem({ icon, titulo, texto }) {
 function ProgressoTopo({ step }) {
   return (
     <div className="flex gap-1.5">
-      {[1, 2, 3, 4, 5].map(n => (
+      {[1, 2, 3, 4, 5, 6].map(n => (
         <div key={n} className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: n <= step ? LIME : 'rgba(255,255,255,0.15)' }} />
       ))}
     </div>
