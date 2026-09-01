@@ -70,7 +70,7 @@ export default function Carteirinha() {
     document.title = titulo;
     upsertMeta('property', 'og:title', `Carteirinha do Associado - ${dados.nome}`);
     upsertMeta('property', 'og:description', 'SECI - Sindicato dos Empregados no Comércio de Itumbiara/GO');
-    upsertMeta('property', 'og:image', assetUrl(dados.foto_url) || `${window.location.origin}/logo-header.png`);
+    upsertMeta('property', 'og:image', assetUrl(dados.foto_url) || `${window.location.origin}/iub-logo-og.png`);
   }, [dados]);
 
   if (loading) {
@@ -222,7 +222,7 @@ export default function Carteirinha() {
             className="w-full h-14 flex items-center justify-center gap-2 font-bold uppercase tracking-wide text-white"
             style={{ backgroundColor: '#D4AF37', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)' }}
           >
-            🛒 IUB Marketplace
+            <img src="/iub-logo-sm.png" alt="" className="w-6 h-6 rounded-md" /> IUB Marketplace
           </Link>
         )}
       </div>

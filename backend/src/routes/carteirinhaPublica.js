@@ -85,12 +85,12 @@ router.get('/carteirinha/:hash', async (req, res) => {
       return res.status(404).send(paginaMeta({
         title: 'Carteirinha não encontrada — SECI',
         description: 'Este link de carteirinha não é válido.',
-        image: `${FRONTEND_URL}/logo-header.png`,
+        image: `${FRONTEND_URL}/iub-logo-og.png`,
         canonicalUrl, redirectUrl: destino,
       }));
     }
 
-    const image = dados.foto_url ? `${BACKEND_URL}${dados.foto_url}` : `${FRONTEND_URL}/logo-header.png`;
+    const image = dados.foto_url ? `${BACKEND_URL}${dados.foto_url}` : `${FRONTEND_URL}/iub-logo-og.png`;
 
     return res.send(paginaMeta({
       title: `${dados.nome_completo} - Carteirinha SECI`,
