@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { onlyDigits } = require('../utils/validators');
 
 const CAMPOS_UPDATE = [
   'nome_completo', 'cpf', 'data_nascimento', 'sexo', 'categoria_profissional',
@@ -155,6 +156,7 @@ async function createAssociado(req, res) {
     if (!nome_completo || !cpf) {
       return res.status(400).json({ error: 'nome_completo e cpf são obrigatórios' });
     }
+    const cpfDigits = onlyDigits(cpf);
 
     const cadastradoPorId = req.user?.type === 'internal' ? req.user.id : null;
     const externalId = `MANUAL-${Date.now()}`;
@@ -166,7 +168,7 @@ async function createAssociado(req, res) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
-        externalId, nome_completo, cpf,
+        externalId, nome_completo, cpfDigits,
         resto.data_nascimento || null, resto.sexo || null, resto.categoria_profissional || null,
         resto.codigo_filiado || null, resto.celular || null, resto.whatsapp || null,
         resto.email || null, resto.cidade || null, resto.estado || null, resto.observacoes || null,
@@ -198,7 +200,8 @@ async function updateAssociado(req, res) {
     const params = [];
     for (const campo of CAMPOS_UPDATE) {
       if (body[campo] === undefined) continue;
-      params.push(body[campo] === '' ? null : body[campo]);
+      const valor = campo === 'cpf' ? onlyDigits(body.cpf) || null : (body[campo] === '' ? null : body[campo]);
+      params.push(valor);
       sets.push(`${campo} = $${params.length}`);
     }
     if (!sets.length && dependentes === undefined) {

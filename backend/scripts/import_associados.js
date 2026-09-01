@@ -74,7 +74,7 @@ function extraiAssociado(row) {
   const externalId = normalizaTexto(row[COL.ID]);
   if (!externalId || !/^\d+$/.test(externalId)) return null; // rodapé / linha invalida
 
-  const cpf = normalizaTexto(row[COL.CPF]);
+  const cpf = normalizaDigitos(row[COL.CPF]);
   if (!cpf) return null;
 
   const celular = normalizaDigitos(row[COL.CELULAR]);
