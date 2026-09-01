@@ -50,7 +50,7 @@ export default function Marketplace() {
           style={{ opacity: 0.06, backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 14px)' }}
         />
         <h1 className="relative flex items-center justify-center gap-2.5 font-black text-2xl sm:text-3xl tracking-tight">
-          <img src="/iub-logo-sm.png" alt="IUB" className="h-10 sm:h-[60px] w-auto rounded-xl shadow-lg" />
+          <img src="/iub-logo-sm.png" alt="IUB" className="h-14 sm:h-24 w-auto rounded-xl shadow-lg" />
           <span className="text-white">MARKETPLACE</span>
         </h1>
         <p className="relative text-white/80 text-sm mt-2 max-w-xs mx-auto">Compre de quem faz parte da nossa comunidade</p>

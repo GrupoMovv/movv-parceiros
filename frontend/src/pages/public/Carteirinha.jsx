@@ -219,10 +219,10 @@ export default function Carteirinha() {
         {!vencida && (
           <Link
             to={`/marketplace?associado=${hash}`}
-            className="w-full h-14 flex items-center justify-center gap-2 font-bold uppercase tracking-wide text-white"
+            className="w-full h-20 flex items-center justify-center gap-3 font-bold uppercase tracking-wide text-white text-lg"
             style={{ backgroundColor: '#D4AF37', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)' }}
           >
-            <img src="/iub-logo-sm.png" alt="" className="w-6 h-6 rounded-md" /> IUB Marketplace
+            <img src="/iub-logo-sm.png" alt="" className="h-10 w-10 rounded-lg" /> IUB Marketplace
           </Link>
         )}
       </div>
