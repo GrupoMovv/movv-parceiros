@@ -217,11 +217,11 @@ export default function Carteirinha() {
         {/* Seção 3 — rodapé */}
         {!vencida && (
           <Link
-            to="/marketplace"
-            className="w-full h-14 flex items-center justify-center gap-2 font-bold uppercase tracking-wide text-[#0B1F3A]"
-            style={{ backgroundColor: '#B8E62C', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)' }}
+            to={`/marketplace?associado=${hash}`}
+            className="w-full h-14 flex items-center justify-center gap-2 font-bold uppercase tracking-wide text-white"
+            style={{ backgroundColor: '#D4AF37', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)' }}
           >
-            🎁 Acessar Marketplace
+            🛒 IUB Marketplace
           </Link>
         )}
       </div>

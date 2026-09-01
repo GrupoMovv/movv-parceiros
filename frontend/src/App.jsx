@@ -38,7 +38,8 @@ import SindicatoAssociados from './pages/sindicato/Associados/SindicatoAssociado
 import SindicatoCarteirinhas from './pages/sindicato/Carteirinhas/SindicatoCarteirinhas';
 import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolicitacoes';
 import Carteirinha from './pages/public/Carteirinha';
-import Marketplace from './pages/public/Marketplace';
+import Marketplace from './pages/public/Marketplace/Marketplace';
+import MarketplaceParceiro from './pages/public/Marketplace/ParceiroDetalhe';
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
@@ -145,6 +146,7 @@ export default function App() {
         <Route path="/termos-indicador"   element={<TermosIndicador />} />
         <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
         <Route path="/marketplace"        element={<Marketplace />} />
+        <Route path="/marketplace/parceiro/:slug" element={<MarketplaceParceiro />} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
         <Route path="/meu-painel"         element={<MeuPainel />} />
