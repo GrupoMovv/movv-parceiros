@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
-import toast from 'react-hot-toast';
-import { Loader2, AlertCircle, Send } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Loader2, AlertCircle } from 'lucide-react';
 import api, { assetUrl, backendOrigin } from '../../services/api';
-import Modal from '../../components/ui/Modal';
 import { iniciais, corAvatar } from '../../utils/avatar';
-
-const PARCEIROS = [
-  'NOSSA DROGARIA', 'ACADEMIA ATLÉTICA', 'DIROMA FIORI', 'ÓTICAS DINIZ',
-  'EZÉQUIEL REIS NUTRICIONISTA', 'PLENITUDE PSICOLOGIA', 'NESPLORA',
-  'LAURA CLEMENTE ESTETA', 'STUDIO VIP',
-];
 
 const CATEGORIA_LABEL = {
   'Empregado': 'Empregado',
@@ -61,10 +52,6 @@ export default function Carteirinha() {
   const [loading, setLoading] = useState(true);
   const [naoEncontrada, setNaoEncontrada] = useState(false);
 
-  const [modalUso, setModalUso] = useState(false);
-  const [parceiroEscolhido, setParceiroEscolhido] = useState('');
-  const [enviando, setEnviando] = useState(false);
-
   useEffect(() => {
     api.get(`/public/carteirinha/${hash}`)
       .then(res => setDados(res.data))
@@ -84,19 +71,6 @@ export default function Carteirinha() {
     upsertMeta('property', 'og:description', 'SECI - Sindicato dos Empregados no Comércio de Itumbiara/GO');
     upsertMeta('property', 'og:image', assetUrl(dados.foto_url) || `${window.location.origin}/logo-header.png`);
   }, [dados]);
-
-  async function handleRegistrarUso() {
-    if (!parceiroEscolhido) return;
-    setEnviando(true);
-    try {
-      await api.post(`/public/carteirinha/${hash}/registrar-uso`, { parceiro_nome: parceiroEscolhido });
-      setModalUso(false);
-      setParceiroEscolhido('');
-      toast.success('Uso registrado com sucesso!');
-    } catch {
-      toast.error('Erro ao registrar uso. Tente novamente.');
-    } finally { setEnviando(false); }
-  }
 
   if (loading) {
     return (
@@ -242,38 +216,15 @@ export default function Carteirinha() {
 
         {/* Seção 3 — rodapé */}
         {!vencida && (
-          <button
-            onClick={() => setModalUso(true)}
+          <Link
+            to="/marketplace"
             className="w-full h-14 flex items-center justify-center gap-2 font-bold uppercase tracking-wide text-[#0B1F3A]"
             style={{ backgroundColor: '#B8E62C', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)' }}
           >
-            <Send className="w-4 h-4" /> Registrar Uso
-          </button>
+            🎁 Acessar Marketplace
+          </Link>
         )}
       </div>
-
-      <Modal open={modalUso} onClose={() => setModalUso(false)} title="Registrar uso do benefício">
-        <div className="space-y-4">
-          <div>
-            <label className="label">Parceiro</label>
-            <select className="input" value={parceiroEscolhido} onChange={e => setParceiroEscolhido(e.target.value)} autoFocus>
-              <option value="">Selecione o parceiro...</option>
-              {PARCEIROS.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
-            <button onClick={() => setModalUso(false)} className="btn-secondary">Cancelar</button>
-            <button
-              onClick={handleRegistrarUso}
-              disabled={!parceiroEscolhido || enviando}
-              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50"
-            >
-              {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Confirmar
-            </button>
-          </div>
-        </div>
-      </Modal>
     </PageShell>
   );
 }
