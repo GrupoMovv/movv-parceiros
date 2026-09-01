@@ -24,6 +24,7 @@ import DiretaDashboardAdmin from './pages/admin/Direta/DiretaDashboard';
 import DiretaVendasAdmin from './pages/admin/Direta/DiretaVendas';
 import DiretaContabilidadesAdmin from './pages/admin/Direta/DiretaContabilidades';
 import SindicatoFaturamentoAdmin from './pages/admin/Sindicato/SindicatoFaturamento';
+import SindicatoContribuintesAdmin from './pages/admin/Sindicato/SindicatoContribuintes';
 import MinhasComissoes from './pages/MinhasComissoes';
 import DiretaFernandoDashboard from './pages/direta/Dashboard';
 import DiretaFernandoMinhasVendas from './pages/direta/MinhasVendas';
@@ -166,6 +167,7 @@ export default function App() {
           <Route path="admin/direta/vendas"      element={<RequireAdmin><DiretaVendasAdmin /></RequireAdmin>} />
           <Route path="admin/direta/contabilidades" element={<RequireAdmin><DiretaContabilidadesAdmin /></RequireAdmin>} />
           <Route path="admin/sindicato"          element={<RequireAdmin><SindicatoFaturamentoAdmin /></RequireAdmin>} />
+          <Route path="admin/empresas-contribuintes" element={<RequireAdmin><SindicatoContribuintesAdmin /></RequireAdmin>} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
           <Route path="direta/dashboard"         element={<RequireComercialFull><DiretaFernandoDashboard /></RequireComercialFull>} />
           <Route path="direta/minhas-vendas"     element={<RequireComercialFull><DiretaFernandoMinhasVendas /></RequireComercialFull>} />

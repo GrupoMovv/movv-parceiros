@@ -52,6 +52,7 @@ const MASTER_MENU = [
       { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
       { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
       { label: 'Sindicato — Renan',  icon: Landmark,     to: '/admin/sindicato',            roles: ['admin'] },
+      { label: 'Empresas Contribuintes', icon: Building2, to: '/admin/empresas-contribuintes', roles: ['admin'] },
       { label: 'Templates Benefícios', icon: MessagesSquare, to: '/sindicato/beneficios/templates', roles: ['admin'] },
     ],
   },
