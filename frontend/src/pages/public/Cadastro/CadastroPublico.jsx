@@ -379,6 +379,14 @@ export default function CadastroPublico() {
               <BotaoVoltar onClick={() => setStep(1)} />
               <Titulo numero={2} texto="Seus dados" />
 
+              {empresaInfo && (
+                <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 text-sm">
+                  <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="text-slate-500">Empresa:</span>
+                  <span className="text-slate-800 font-semibold truncate">{empresaInfo.nome_fantasia || empresaInfo.razao_social}</span>
+                </div>
+              )}
+
               <Campo label="Nome completo *" erro={errors.nome_completo}>
                 <input type="text" className="input" value={form.nome_completo} onChange={e => setCampo('nome_completo', e.target.value)} />
               </Campo>
