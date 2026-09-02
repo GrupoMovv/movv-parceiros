@@ -56,6 +56,7 @@ app.use('/api/public/meu-cadastro',    require('./routes/publicMeuCadastro'));
 app.use('/api/public/painel',          require('./routes/publicPainel'));
 app.use('/api/parceiro/auth',          require('./routes/parceiroAuth'));
 app.use('/api/parceiro/dashboard',     require('./routes/parceiroDashboard'));
+app.use('/api/parceiro/perfil',        require('./routes/parceiroPerfil'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 
