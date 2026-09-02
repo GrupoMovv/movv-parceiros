@@ -60,6 +60,28 @@ export default function ParceiroDashboard() {
         <GraficoPlaceholder />
       </div>
 
+      {stats?.ultimos_produtos?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-sm" style={{ color: PRETO }}>Últimos produtos cadastrados</h2>
+            <Link to="/parceiro/painel/produtos" className="text-xs font-semibold" style={{ color: ROXO }}>Ver todos →</Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {stats.ultimos_produtos.map(p => (
+              <Link key={p.id} to={`/parceiro/painel/produtos/${p.id}`} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div className="w-12 h-12 rounded-lg bg-slate-50 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  {p.fotos?.[0]?.url ? <img src={p.fotos[0].url} alt="" className="w-full h-full object-cover" /> : <Package className="w-4 h-4 text-slate-300" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: PRETO }}>{p.nome}</p>
+                  <p className="text-xs text-slate-400">R$ {parseFloat(p.preco).toFixed(2)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
         <h2 className="font-bold text-sm mb-4" style={{ color: PRETO }}>Comece agora</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

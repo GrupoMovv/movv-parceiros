@@ -9,8 +9,8 @@ async function stats(req, res) {
   try {
     const parceiroId = req.parceiro.id;
 
-    const [produtos, promocoes, visitas, cliquesWhatsapp] = await Promise.all([
-      db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND ativo = true', [parceiroId]),
+    const [produtos, promocoes, visitas, cliquesWhatsapp, ultimosProdutos] = await Promise.all([
+      db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1', [parceiroId]),
       db.query(
         `SELECT COUNT(*)::int AS n FROM sindicato_parceiro_promocoes
          WHERE parceiro_id = $1 AND ativo = true AND (valido_ate IS NULL OR valido_ate >= CURRENT_DATE)`,
@@ -26,6 +26,11 @@ async function stats(req, res) {
          WHERE parceiro_id = $1 AND tipo = 'clique_whatsapp' AND criado_em >= NOW() - INTERVAL '30 days'`,
         [parceiroId]
       ),
+      db.query(
+        `SELECT id, nome, preco, ativo, rascunho, fotos, created_at FROM sindicato_parceiro_produtos
+         WHERE parceiro_id = $1 ORDER BY created_at DESC LIMIT 3`,
+        [parceiroId]
+      ),
     ]);
 
     return res.json({
@@ -33,6 +38,7 @@ async function stats(req, res) {
       promocoes_ativas: promocoes.rows[0].n,
       visitas_30d: visitas.rows[0].n,
       cliques_whatsapp_30d: cliquesWhatsapp.rows[0].n,
+      ultimos_produtos: ultimosProdutos.rows,
     });
   } catch (err) {
     console.error(err);

@@ -50,6 +50,8 @@ import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
 import ParceiroPainelLayout from './pages/parceiro/PainelLayout';
 import ParceiroDashboard from './pages/parceiro/Dashboard';
 import ParceiroPerfil from './pages/parceiro/Perfil';
+import ParceiroProdutos from './pages/parceiro/Produtos';
+import ParceiroProdutoForm from './pages/parceiro/ProdutoForm';
 import ParceiroEmConstrucao from './pages/parceiro/EmConstrucao';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
@@ -177,7 +179,9 @@ export default function App() {
         <Route path="/parceiro/painel" element={<ParceiroPainelLayout />}>
           <Route index               element={<ParceiroDashboard />} />
           <Route path="perfil"       element={<ParceiroPerfil />} />
-          <Route path="produtos"     element={<ParceiroEmConstrucao titulo="Produtos" texto="O cadastro de produtos chega no próximo bloco do Portal do Parceiro." />} />
+          <Route path="produtos"     element={<ParceiroProdutos />} />
+          <Route path="produtos/novo" element={<ParceiroProdutoForm />} />
+          <Route path="produtos/:id" element={<ParceiroProdutoForm />} />
           <Route path="promocoes"    element={<ParceiroEmConstrucao titulo="Promoções" texto="Criar promoções com prazo de validade chega no próximo bloco do Portal do Parceiro." />} />
           <Route path="estatisticas" element={<ParceiroEmConstrucao titulo="Estatísticas" texto="Relatórios detalhados de visitas e cliques chegam em breve." />} />
           <Route path="configuracoes" element={<ParceiroEmConstrucao titulo="Configurações" texto="Troca de senha, notificações e outras preferências chegam em breve." />} />
