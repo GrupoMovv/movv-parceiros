@@ -75,6 +75,18 @@ router.get('/beneficios/catalogo.pdf', (req, res) => {
   res.sendFile(CATALOGO_PDF_PATH);
 });
 
+// Estatistica discreta pro hero do marketplace ("X associados") — so
+// contagem, sem nenhum dado pessoal, endpoint publico por design.
+router.get('/marketplace/stats', async (req, res) => {
+  try {
+    const r = await db.query('SELECT COUNT(*)::int AS total FROM sindicato_associados WHERE ativo = true');
+    return res.json({ associados: r.rows[0].total });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
+  }
+});
+
 router.get('/carteirinha/:hash', async (req, res) => {
   try {
     const dados = await buscarCarteirinhaPorHash(req.params.hash);
