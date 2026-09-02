@@ -2,6 +2,7 @@ const router = require('express').Router();
 const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
+const produtoCtrl = require('../controllers/produtoPublicoController');
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
@@ -86,6 +87,10 @@ router.get('/marketplace/stats', async (req, res) => {
     return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   }
 });
+
+router.get('/produtos/:id', produtoCtrl.getProduto);
+router.get('/produtos/:id/outros-do-parceiro', produtoCtrl.getOutrosDoParceiro);
+router.post('/produtos/:id/visualizacao', produtoCtrl.registrarEvento);
 
 router.get('/carteirinha/:hash', async (req, res) => {
   try {

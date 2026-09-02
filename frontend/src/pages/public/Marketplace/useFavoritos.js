@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const CHAVE = 'iub_marketplace_favoritos';
+const CHAVE_PADRAO = 'iub_marketplace_favoritos';
 
-function lerFavoritos() {
+function lerFavoritos(chave) {
   try {
-    const raw = localStorage.getItem(CHAVE);
+    const raw = localStorage.getItem(chave);
     const lista = raw ? JSON.parse(raw) : [];
     return Array.isArray(lista) ? lista : [];
   } catch {
@@ -12,24 +12,26 @@ function lerFavoritos() {
   }
 }
 
-export function useFavoritos() {
-  const [favoritos, setFavoritos] = useState(lerFavoritos);
+// chave customizada permite reusar o mesmo hook pra listas diferentes
+// (parceiros favoritos vs produtos favoritos), cada uma com seu storage.
+export function useFavoritos(chave = CHAVE_PADRAO) {
+  const [favoritos, setFavoritos] = useState(() => lerFavoritos(chave));
 
   useEffect(() => {
     try {
-      localStorage.setItem(CHAVE, JSON.stringify(favoritos));
+      localStorage.setItem(chave, JSON.stringify(favoritos));
     } catch {
       // localStorage indisponível (modo privado, etc.) — favoritos ficam só na sessão
     }
-  }, [favoritos]);
+  }, [chave, favoritos]);
 
-  const alternar = useCallback((slug) => {
+  const alternar = useCallback((id) => {
     setFavoritos((atual) => (
-      atual.includes(slug) ? atual.filter((s) => s !== slug) : [...atual, slug]
+      atual.includes(id) ? atual.filter((s) => s !== id) : [...atual, id]
     ));
   }, []);
 
-  const ehFavorito = useCallback((slug) => favoritos.includes(slug), [favoritos]);
+  const ehFavorito = useCallback((id) => favoritos.includes(id), [favoritos]);
 
   return { favoritos, alternar, ehFavorito };
 }

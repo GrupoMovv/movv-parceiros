@@ -60,6 +60,7 @@ app.use('/api/parceiro/perfil',        require('./routes/parceiroPerfil'));
 app.use('/api/parceiro/produtos',      require('./routes/parceiroProdutos'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
+app.use('/',                           require('./routes/produtoPublico'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
