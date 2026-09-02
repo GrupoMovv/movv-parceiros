@@ -1,0 +1,73 @@
+import { Link } from 'react-router-dom';
+import { Heart } from 'lucide-react';
+import { DOURADO } from '../theme';
+
+const ITENS = [
+  { label: 'Início', href: '#topo' },
+  { label: 'Ofertas', href: '#ofertas' },
+  { label: 'Parceiros', href: '#parceiros' },
+];
+
+function scrollPara(e, href) {
+  e.preventDefault();
+  const alvo = document.querySelector(href);
+  if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos }) {
+  return (
+    <header
+      id="topo"
+      className="sticky top-0 z-40 h-[70px] flex items-center backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(15,15,20,0.92)', borderBottom: '1px solid #1a1a1f' }}
+    >
+      <div className="max-w-7xl mx-auto px-8 lg:px-16 w-full flex items-center justify-between gap-4">
+        <Link to="/marketplace" className="flex items-center gap-2.5 flex-shrink-0">
+          <img src="/iub-logo-sm.png" alt="IUB" className="h-10 w-auto rounded-lg" />
+        </Link>
+
+        <nav className="flex items-center gap-1 sm:gap-2">
+          {ITENS.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={(e) => scrollPara(e, item.href)}
+              className="hidden sm:inline-block text-sm font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300"
+            >
+              {item.label}
+            </a>
+          ))}
+
+          <button
+            type="button"
+            onClick={onToggleFavoritos}
+            aria-pressed={favoritosAtivos}
+            aria-label="Meus favoritos"
+            className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-300 ${favoritosAtivos ? 'bg-white' : 'hover:bg-white/10'}`}
+          >
+            <Heart className="w-4 h-4" style={{ color: favoritosAtivos ? '#0F0F14' : 'rgba(255,255,255,0.7)' }} fill={favoritosAtivos ? '#0F0F14' : 'none'} />
+            {qtdFavoritos > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
+                style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+              >
+                {qtdFavoritos}
+              </span>
+            )}
+          </button>
+
+          {carregandoAssociado ? (
+            <div className="h-4 w-16 rounded-full bg-white/10 animate-pulse ml-1" />
+          ) : (
+            <Link
+              to={nomeAssociado ? '/meu-painel' : '/cadastrar'}
+              className="text-sm font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300 whitespace-nowrap"
+            >
+              {nomeAssociado ? nomeAssociado.split(' ')[0] : 'Login / Associado'}
+            </Link>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}

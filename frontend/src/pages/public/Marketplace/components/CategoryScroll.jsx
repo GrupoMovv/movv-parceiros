@@ -25,7 +25,7 @@ const ICONES = {
 
 export default function CategoryScroll({ categorias, ativa, onSelecionar }) {
   return (
-    <div className="sticky top-16 z-20 bg-white/85 backdrop-blur-md border-b border-slate-100 py-3">
+    <div className="sticky top-[70px] z-30 bg-white/85 backdrop-blur-md border-b border-slate-100 py-3">
       <div className="max-w-5xl mx-auto px-8 lg:px-16 flex gap-1 overflow-x-auto scrollbar-none">
         {categorias.map((c) => {
           const Icone = ICONES[c.label] || LayoutGrid;

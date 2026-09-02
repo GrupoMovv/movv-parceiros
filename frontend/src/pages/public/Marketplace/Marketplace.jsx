@@ -4,8 +4,11 @@ import api from '../../../services/api';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
 import { PRETO, DOURADO } from './theme';
-import Header from './components/Header';
-import Hero from './components/Hero';
+import TopNav from './components/TopNav';
+import HeroPremium from './components/HeroPremium';
+import PartnerMarquee from './components/PartnerMarquee';
+import SponsoredPartners from './components/SponsoredPartners';
+import SearchFilterBar from './components/SearchFilterBar';
 import CategoryScroll from './components/CategoryScroll';
 import PartnerCard from './components/PartnerCard';
 import Footer from './components/Footer';
@@ -19,14 +22,19 @@ const OFERTAS_DA_SEMANA = [
   { titulo: 'Academia Atlética', texto: 'Mensalidade especial por R$ 30,00', slug: 'academia-atletica' },
 ];
 
+// Ate o Portal do Parceiro ter o sistema Premium, os "patrocinados" sao so
+// os 3 primeiros da lista — combinado explicitamente, isso vira dinamico
+// quando existir assinatura de destaque de verdade.
+const PARCEIROS_DESTAQUE = PARCEIROS_INICIAIS.slice(0, 3);
+
 export default function Marketplace() {
   const [searchParams] = useSearchParams();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
+  const [bairroAtivo, setBairroAtivo] = useState('Todos');
   const [nomeAssociado, setNomeAssociado] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
   const [carregandoAssociado, setCarregandoAssociado] = useState(false);
-  const [qtdAssociados, setQtdAssociados] = useState(null);
   const { favoritos, alternar: alternarFavorito, ehFavorito } = useFavoritos();
 
   useEffect(() => {
@@ -48,32 +56,30 @@ export default function Marketplace() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    api.get('/public/marketplace/stats')
-      .then(res => setQtdAssociados(res.data.associados || null))
-      .catch(() => {});
-  }, []);
-
   const buscaAtiva = searchQuery.trim().length > 0;
   const buscaNormalizada = normalizarCategoria(searchQuery.trim());
+  const bairroNormalizado = normalizarCategoria(bairroAtivo);
 
   const combinaBusca = (p) => !buscaNormalizada
     || normalizarCategoria(p.nome).includes(buscaNormalizada)
     || normalizarCategoria(p.descricao).includes(buscaNormalizada);
 
+  const combinaBairro = (p) => bairroAtivo === 'Todos' || normalizarCategoria(p.endereco).includes(bairroNormalizado);
+
   const parceirosFiltrados = PARCEIROS_INICIAIS
     .filter(p => categoriaAtiva === 'Todas' || p.categorias.some(c => normalizarCategoria(c) === normalizarCategoria(categoriaAtiva)))
     .filter(p => !mostrarFavoritos || ehFavorito(p.slug))
-    .filter(combinaBusca);
+    .filter(combinaBusca)
+    .filter(combinaBairro);
 
   const exclusivos = parceirosFiltrados.filter(p => p.exclusivo);
   const novidades = parceirosFiltrados.filter(p => p.novo);
 
-  const modoNavegacao = buscaAtiva || mostrarFavoritos || categoriaAtiva !== 'Todas';
+  const modoNavegacao = buscaAtiva || mostrarFavoritos || categoriaAtiva !== 'Todas' || bairroAtivo !== 'Todos';
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col">
-      <Header
+      <TopNav
         nomeAssociado={nomeAssociado}
         carregandoAssociado={carregandoAssociado}
         favoritosAtivos={mostrarFavoritos}
@@ -82,26 +88,35 @@ export default function Marketplace() {
       />
 
       {!modoNavegacao && (
-        <Hero
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          qtdParceiros={PARCEIROS_INICIAIS.length}
-          qtdAssociados={qtdAssociados}
-        />
+        <>
+          <HeroPremium />
+          <PartnerMarquee parceiros={PARCEIROS_INICIAIS} />
+          <SponsoredPartners parceiros={PARCEIROS_DESTAQUE} />
+        </>
       )}
+
+      <SearchFilterBar
+        categorias={CATEGORIAS_FILTRO}
+        categoriaAtiva={categoriaAtiva}
+        setCategoriaAtiva={setCategoriaAtiva}
+        bairroAtivo={bairroAtivo}
+        setBairroAtivo={setBairroAtivo}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
 
       <CategoryScroll categorias={CATEGORIAS_FILTRO} ativa={categoriaAtiva} onSelecionar={setCategoriaAtiva} />
 
-      <div className="max-w-5xl mx-auto px-8 lg:px-16 py-10 w-full flex-1 space-y-16">
+      <div id="parceiros" className="max-w-5xl mx-auto px-8 lg:px-16 py-10 w-full flex-1 space-y-16 scroll-mt-[70px]">
         {!modoNavegacao && (
-          <section>
+          <section id="ofertas" className="scroll-mt-[70px]">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Selecionadas pra você</p>
             <h2 className="text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>Ofertas da semana</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {OFERTAS_DA_SEMANA.map(o => (
                 <Link
                   key={o.slug} to={`/marketplace/parceiro/${o.slug}`}
-                  className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300"
+                  className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
                 >
                   <span
                     className="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2.5"
