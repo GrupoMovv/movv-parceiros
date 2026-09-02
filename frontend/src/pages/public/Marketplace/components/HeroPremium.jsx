@@ -43,7 +43,7 @@ export default function HeroPremium() {
             Explorar Ofertas
           </a>
           <a
-            href="mailto:contato@grupomovv.com.br?subject=Quero%20ser%20parceiro%20do%20IUB%20Marketplace"
+            href="mailto:contato@grupomovv.com.br?subject=Quero%20ser%20parceiro%20do%20IUB%20MAIS"
             className="w-full sm:w-auto text-center font-semibold text-base px-8 py-4 rounded-xl border-2 border-white text-white transition-all duration-300 ease-out hover:bg-white/10"
           >
             Cadastrar minha empresa

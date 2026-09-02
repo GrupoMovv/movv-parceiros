@@ -1,4 +1,4 @@
-// Paleta do IUB Marketplace — refinada: fundo branco, roxo só em CTAs
+// Paleta do IUB MAIS (marketplace) — refinada: fundo branco, roxo só em CTAs
 // primários, dourado só em selos de exclusividade. Sem gradientes gritantes.
 export const ROXO = '#4C1D95';
 export const ROXO_ESCURO = '#3B0A78';

@@ -1,4 +1,4 @@
-// ⚠️ IUB MARKETPLACE - Fase 1 com dados hardcoded
+// ⚠️ IUB MAIS (marketplace) - Fase 1 com dados hardcoded
 // TODO Fase 2: buscar parceiros dinamicamente da tabela sindicato_parceiros
 // TODO Fase 2: sistema de promocoes com prazo
 // TODO Fase 2: cupom exclusivo pra associado

@@ -9,8 +9,11 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <img src="/iub-logo-sm.png" alt="IUB" className="h-7 w-auto rounded-lg" />
-            <span className="font-bold text-sm">IUB Marketplace</span>
+            <span className="font-bold text-sm">IUB MAIS</span>
           </div>
+          <p className="text-white/50 text-xs font-medium tracking-wide mb-3">
+            Mais qualidade. Mais confiança. Mais vantagens.
+          </p>
           <p className="text-white/50 text-sm leading-relaxed max-w-xs">
             Benefícios exclusivos pra associados SECI. Compre de quem faz parte da nossa comunidade.
           </p>
@@ -38,7 +41,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10 py-5 text-center">
-        <p className="text-white/30 text-xs">© {new Date().getFullYear()} IUB Marketplace — SECI. Todos os direitos reservados.</p>
+        <p className="text-white/30 text-xs">IUB MAIS © {new Date().getFullYear()} — SECI. Todos os direitos reservados.</p>
       </div>
     </footer>
   );
