@@ -1,6 +1,8 @@
+import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
+import IubSpinner from './pages/public/Marketplace/components/IubSpinner';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Statement from './pages/Statement';
@@ -38,8 +40,8 @@ import SindicatoAssociados from './pages/sindicato/Associados/SindicatoAssociado
 import SindicatoCarteirinhas from './pages/sindicato/Carteirinhas/SindicatoCarteirinhas';
 import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolicitacoes';
 import Carteirinha from './pages/public/Carteirinha';
-import Marketplace from './pages/public/Marketplace/Marketplace';
-import MarketplaceParceiro from './pages/public/Marketplace/ParceiroDetalhe';
+const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
+const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
@@ -114,6 +116,18 @@ function RequireSindicatoEmpresas({ children }) {
   return children;
 }
 
+function MarketplaceFallback({ children }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen w-full bg-white flex items-center justify-center">
+        <IubSpinner size={48} />
+      </div>
+    }>
+      {children}
+    </Suspense>
+  );
+}
+
 function RequireIndicator({ children }) {
   const { user } = useAuth();
   if (user?.type !== 'indicator') return <Navigate to="/login" replace />;
@@ -145,8 +159,8 @@ export default function App() {
         <Route path="/cadastro-indicador" element={<CadastroIndicador />} />
         <Route path="/termos-indicador"   element={<TermosIndicador />} />
         <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
-        <Route path="/marketplace"        element={<Marketplace />} />
-        <Route path="/marketplace/parceiro/:slug" element={<MarketplaceParceiro />} />
+        <Route path="/marketplace"        element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
+        <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
         <Route path="/meu-painel"         element={<MeuPainel />} />
