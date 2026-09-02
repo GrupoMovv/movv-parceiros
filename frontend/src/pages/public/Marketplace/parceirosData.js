@@ -15,6 +15,7 @@ export const PARCEIROS_INICIAIS = [
     beneficio: 'Super descontos pra associados SECI',
     whatsapp: '64992991403',
     endereco: 'Itumbiara/GO',
+    exclusivo: true,
   },
   {
     slug: 'academia-atletica',
@@ -26,6 +27,7 @@ export const PARCEIROS_INICIAIS = [
     beneficio: 'Mensalidade especial R$ 30,00',
     whatsapp: null,
     endereco: 'Itumbiara/GO',
+    exclusivo: true,
   },
   {
     slug: 'diroma-fiori',
@@ -48,6 +50,7 @@ export const PARCEIROS_INICIAIS = [
     beneficio: '20% de desconto',
     whatsapp: '6434320708',
     endereco: 'Itumbiara/GO',
+    exclusivo: true,
   },
   {
     slug: 'ezequiel-nutricionista',
@@ -92,6 +95,7 @@ export const PARCEIROS_INICIAIS = [
     beneficio: '10% de desconto em qualquer região',
     whatsapp: '64992300587',
     endereco: 'Itumbiara/GO',
+    novo: true,
   },
   {
     slug: 'studio-vip',
@@ -103,6 +107,7 @@ export const PARCEIROS_INICIAIS = [
     beneficio: '20% de desconto',
     whatsapp: null,
     endereco: 'Itumbiara/GO',
+    novo: true,
   },
 ];
 
