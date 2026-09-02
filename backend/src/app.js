@@ -54,6 +54,8 @@ app.use('/api/sindicato-solicitacoes', require('./routes/sindicatoSolicitacoes')
 app.use('/api/public/cadastro',        require('./routes/publicCadastro'));
 app.use('/api/public/meu-cadastro',    require('./routes/publicMeuCadastro'));
 app.use('/api/public/painel',          require('./routes/publicPainel'));
+app.use('/api/parceiro/auth',          require('./routes/parceiroAuth'));
+app.use('/api/parceiro/dashboard',     require('./routes/parceiroDashboard'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 

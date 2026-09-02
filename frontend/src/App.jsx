@@ -45,6 +45,11 @@ const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/Parcei
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
+import ParceiroLogin from './pages/parceiro/Login';
+import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
+import ParceiroPainelLayout from './pages/parceiro/PainelLayout';
+import ParceiroDashboard from './pages/parceiro/Dashboard';
+import ParceiroEmConstrucao from './pages/parceiro/EmConstrucao';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -164,6 +169,18 @@ export default function App() {
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
         <Route path="/meu-painel"         element={<MeuPainel />} />
+
+        {/* Portal do Parceiro IUB MAIS */}
+        <Route path="/parceiro/login"            element={<ParceiroLogin />} />
+        <Route path="/parceiro/redefinir-senha"  element={<ParceiroRedefinirSenha />} />
+        <Route path="/parceiro/painel" element={<ParceiroPainelLayout />}>
+          <Route index               element={<ParceiroDashboard />} />
+          <Route path="perfil"       element={<ParceiroEmConstrucao titulo="Meu Perfil" texto="Em breve você vai poder editar dados, logo e fotos do seu comércio por aqui." />} />
+          <Route path="produtos"     element={<ParceiroEmConstrucao titulo="Produtos" texto="O cadastro de produtos chega no próximo bloco do Portal do Parceiro." />} />
+          <Route path="promocoes"    element={<ParceiroEmConstrucao titulo="Promoções" texto="Criar promoções com prazo de validade chega no próximo bloco do Portal do Parceiro." />} />
+          <Route path="estatisticas" element={<ParceiroEmConstrucao titulo="Estatísticas" texto="Relatórios detalhados de visitas e cliques chegam em breve." />} />
+          <Route path="configuracoes" element={<ParceiroEmConstrucao titulo="Configurações" texto="Troca de senha, notificações e outras preferências chegam em breve." />} />
+        </Route>
 
         <Route path="/trocar-senha-obrigatorio" element={
           <RequireAuth><TrocarSenhaObrigatorio /></RequireAuth>

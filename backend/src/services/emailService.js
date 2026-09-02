@@ -103,6 +103,18 @@ async function enviarRecuperacaoSenha({ nome, email, token }) {
   return enviar({ to: email, subject: 'Movv Parceiros — Redefinicao de senha', html });
 }
 
+async function enviarRecuperacaoSenhaParceiro({ nome, email, token }) {
+  const link = `${PORTAL_URL}/parceiro/redefinir-senha?token=${token}`;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Redefinição de Senha — IUB MAIS</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Recebemos uma solicitação para redefinir a senha do painel do seu comércio.</p>
+    <p style="color:#555;line-height:1.6;">Clique no botão abaixo para criar uma nova senha. O link expira em <strong>1 hora</strong>.</p>
+    ${botao('Redefinir Minha Senha', link)}
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">Se você não solicitou isso, ignore este email. Sua senha permanece a mesma.</p>
+  `);
+  return enviar({ to: email, subject: 'IUB MAIS — Redefinição de senha do parceiro', html });
+}
+
 async function enviarComissaoAprovada({ nome, email, valor, mes }) {
   const valorFmt = parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const [ano, m] = mes.split('-');
@@ -216,6 +228,7 @@ async function enviarAprovacaoIndicador({ nome, email }) {
 module.exports = {
   enviarCredenciais,
   enviarRecuperacaoSenha,
+  enviarRecuperacaoSenhaParceiro,
   enviarComissaoAprovada,
   enviarRelatorioMensal,
   enviarNotificacaoPagamento,
