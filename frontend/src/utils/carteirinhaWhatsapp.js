@@ -58,6 +58,9 @@ ${urlTitular}
 
 Você pode salvar a carteirinha no celular e apresentá-la sempre que precisar usar seus benefícios com nossos parceiros.
 
+🎁 Conheça todos os benefícios exclusivos:
+${publicBeneficiosPdfUrl()}
+
 Qualquer dúvida, estou à disposição!
 
 Renan Araújo
@@ -79,6 +82,9 @@ ${urlTitular}
 ${listaDependentes}
 
 Você pode salvar as carteirinhas no celular e apresentá-las sempre que precisar usar seus benefícios com nossos parceiros. Compartilhe com sua família!
+
+🎁 Conheça todos os benefícios exclusivos:
+${publicBeneficiosPdfUrl()}
 
 Qualquer dúvida, estou à disposição!
 
