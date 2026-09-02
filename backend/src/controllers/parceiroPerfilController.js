@@ -2,17 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 const { isValidCNPJ, onlyDigits } = require('../utils/validators');
+const cloudinaryService = require('../services/cloudinaryService');
 
-const UPLOAD_ROOT = path.join(__dirname, '../../uploads/parceiros');
 const MAX_FOTOS_ESTABELECIMENTO = 5;
 const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 
-// Upload local no disco do Render — de propósito, enquanto o Cloudinary
-// está instável. É efêmero (some a cada deploy/restart); migrar pra
-// Cloudinary depois que estabilizar é o próximo passo natural, não algo
-// pra "consertar" às pressas.
-function dirLogo(parceiroId) { return path.join(UPLOAD_ROOT, String(parceiroId), 'logo'); }
-function dirEstabelecimento(parceiroId) { return path.join(UPLOAD_ROOT, String(parceiroId), 'estabelecimento'); }
+function pastaLogo(parceiroId) { return `iubmais/parceiros/${parceiroId}/logo`; }
+function pastaEstabelecimento(parceiroId) { return `iubmais/parceiros/${parceiroId}/estabelecimento`; }
 
 // Tira qualquer marcação de HTML (não usamos rich text, é textarea puro) e
 // limita tamanho — defesa em profundidade, o React já escapa na renderização.
@@ -22,12 +18,12 @@ function sanitizeText(v, maxLen) {
   return limpo ? limpo.slice(0, maxLen) : null;
 }
 
-function salvarArquivo(dir, file) {
-  fs.mkdirSync(dir, { recursive: true });
-  const ext = file.mimetype === 'image/png' ? '.png' : file.mimetype === 'image/webp' ? '.webp' : '.jpg';
-  const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-  fs.writeFileSync(path.join(dir, filename), file.buffer);
-  return filename;
+// Fotos antigas (de antes da migração pro Cloudinary) foram salvas em disco
+// local e não têm publicId — nesse caso a limpeza é o fs.unlink de sempre;
+// nunca vão ser deletadas do Cloudinary porque nunca estiveram lá.
+function removerArquivoLocalSeForCaminho(url) {
+  if (!url || !url.startsWith('/uploads/')) return;
+  fs.unlink(path.join(__dirname, '../..', url), () => {});
 }
 
 async function getPerfil(req, res) {
@@ -129,14 +125,22 @@ async function uploadLogo(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'Envie uma imagem' });
 
-    const filename = salvarArquivo(dirLogo(req.parceiro.id), req.file);
-    const logoUrl = `/uploads/parceiros/${req.parceiro.id}/logo/${filename}`;
+    const anterior = await db.query('SELECT logo_public_id FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
+    const { url, publicId } = await cloudinaryService.uploadFoto(req.file.buffer, pastaLogo(req.parceiro.id), 'LOGO');
 
-    await db.query('UPDATE sindicato_parceiros SET logo_url = $1, updated_at = NOW() WHERE id = $2', [logoUrl, req.parceiro.id]);
-    return res.json({ logo_url: logoUrl });
+    await db.query(
+      'UPDATE sindicato_parceiros SET logo_url = $1, logo_public_id = $2, updated_at = NOW() WHERE id = $3',
+      [url, publicId, req.parceiro.id]
+    );
+
+    // só apaga a antiga DEPOIS de confirmar a nova gravada, pra nunca ficar
+    // sem logo nenhuma se o passo do banco falhar entre os dois.
+    await cloudinaryService.deletarFoto(anterior.rows[0]?.logo_public_id);
+
+    return res.json({ logo_url: url });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Erro ao enviar logo' });
+    return res.status(502).json({ error: err.message || 'Erro ao enviar logo' });
   }
 }
 
@@ -151,18 +155,18 @@ async function uploadFotos(req, res) {
       return res.status(400).json({ error: `Máximo de ${MAX_FOTOS_ESTABELECIMENTO} fotos no total` });
     }
 
-    const dir = dirEstabelecimento(req.parceiro.id);
+    const folder = pastaEstabelecimento(req.parceiro.id);
     let ordem = fotos.length ? Math.max(...fotos.map(f => f.ordem)) + 1 : 1;
     for (const file of req.files) {
-      const filename = salvarArquivo(dir, file);
-      fotos.push({ url: `/uploads/parceiros/${req.parceiro.id}/estabelecimento/${filename}`, ordem: ordem++ });
+      const { url, publicId } = await cloudinaryService.uploadFoto(file.buffer, folder, 'ESTABELECIMENTO');
+      fotos.push({ url, publicId, ordem: ordem++ });
     }
 
     await db.query('UPDATE sindicato_parceiros SET fotos_estabelecimento = $1, updated_at = NOW() WHERE id = $2', [JSON.stringify(fotos), req.parceiro.id]);
     return res.json({ fotos_estabelecimento: fotos });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Erro ao enviar fotos' });
+    return res.status(502).json({ error: err.message || 'Erro ao enviar fotos' });
   }
 }
 
@@ -176,10 +180,8 @@ async function deleteFoto(req, res) {
     }
 
     const [removida] = fotos.splice(index, 1);
-    if (removida?.url) {
-      const caminho = path.join(__dirname, '../..', removida.url);
-      fs.unlink(caminho, () => {}); // silencioso — se o arquivo já não existe (deploy novo), tudo bem
-    }
+    if (removida?.publicId) await cloudinaryService.deletarFoto(removida.publicId);
+    else removerArquivoLocalSeForCaminho(removida?.url);
 
     await db.query('UPDATE sindicato_parceiros SET fotos_estabelecimento = $1, updated_at = NOW() WHERE id = $2', [JSON.stringify(fotos), req.parceiro.id]);
     return res.json({ fotos_estabelecimento: fotos });

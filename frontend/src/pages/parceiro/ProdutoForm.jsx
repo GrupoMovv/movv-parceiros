@@ -84,7 +84,7 @@ export default function ParceiroProdutoForm() {
   async function handleFotos(files) {
     const lista = Array.from(files || []);
     if (!lista.length) return;
-    if (lista.some(f => f.size > 2 * 1024 * 1024)) return toast.error('Cada foto precisa ter até 2MB');
+    if (lista.some(f => f.size > 5 * 1024 * 1024)) return toast.error('Cada foto precisa ter até 5MB');
     setEnviandoFotos(true);
     try {
       const fd = new FormData();
@@ -151,7 +151,7 @@ export default function ParceiroProdutoForm() {
                 {enviandoFotos ? <Loader2 className="w-5 h-5 mx-auto animate-spin" style={{ color: ROXO }} /> : (
                   <>
                     <Upload className="w-5 h-5 mx-auto text-slate-400" />
-                    <p className="text-sm font-medium text-slate-500 mt-2">Arraste fotos ou clique — até 3 fotos, 2MB cada</p>
+                    <p className="text-sm font-medium text-slate-500 mt-2">Arraste fotos ou clique — até 3 fotos, 5MB cada</p>
                   </>
                 )}
                 <input ref={fotosInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"

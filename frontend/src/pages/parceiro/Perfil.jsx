@@ -128,7 +128,7 @@ export default function ParceiroPerfil() {
 
   async function handleLogo(file) {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return toast.error('A logo precisa ter até 2MB');
+    if (file.size > 5 * 1024 * 1024) return toast.error('A logo precisa ter até 5MB');
     setEnviandoLogo(true);
     try {
       const fd = new FormData();
@@ -146,7 +146,7 @@ export default function ParceiroPerfil() {
   async function handleFotos(files) {
     const lista = Array.from(files || []);
     if (!lista.length) return;
-    if (lista.some(f => f.size > 2 * 1024 * 1024)) return toast.error('Cada foto precisa ter até 2MB');
+    if (lista.some(f => f.size > 5 * 1024 * 1024)) return toast.error('Cada foto precisa ter até 5MB');
     setEnviandoFotos(true);
     try {
       const fd = new FormData();
@@ -205,7 +205,7 @@ export default function ParceiroPerfil() {
             </button>
             <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
               onChange={(e) => handleLogo(e.target.files[0])} />
-            <p className="text-slate-400 text-xs mt-1.5">JPG, PNG ou WEBP, até 2MB</p>
+            <p className="text-slate-400 text-xs mt-1.5">JPG, PNG ou WEBP, até 5MB</p>
           </div>
         </div>
 
@@ -326,7 +326,7 @@ export default function ParceiroPerfil() {
             <>
               <Upload className="w-6 h-6 mx-auto text-slate-400" />
               <p className="text-sm font-medium text-slate-500 mt-2">Arraste fotos aqui ou clique pra escolher</p>
-              <p className="text-slate-400 text-xs mt-1">Até 5 fotos no total, 2MB cada</p>
+              <p className="text-slate-400 text-xs mt-1">Até 5 fotos no total, 5MB cada</p>
             </>
           )}
           <input ref={fotosInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
