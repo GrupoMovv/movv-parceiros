@@ -8,14 +8,29 @@ cloudinary.config({
   secure: true,
 });
 
-// width/height sao o teto do crop 'fill' (corta mantendo o foco automatico
-// via gravity: 'auto') — nunca aumenta imagem menor que isso.
+// crop 'fill' cortava a foto pra caber exatamente no quadro — problema
+// reportado: produto ficando cortado quando a foto original não é quadrada.
+// Trocado por 'pad': a foto INTEIRA é redimensionada pra caber dentro do
+// quadro e o espaço sobrando é preenchido com fundo, nunca corta conteúdo.
+//
+// gravity 'auto:subject' (deteccao de assunto por IA) foi cogitado pro
+// PRODUTO, mas com crop 'pad' a imagem inteira já é preservada — não há
+// corte pra decidir, então gravity não muda o resultado aqui. Como esse
+// modo de IA pode não estar disponível em todo plano do Cloudinary e não
+// dá pra testar contra a conta real agora, fica de fora: usar um valor não
+// suportado quebraria TODO upload de produto com erro da API. 'auto' (sem
+// ':subject') é o modo de deteccao de conteúdo padrão, sempre disponível.
+//
 // quality/fetch_format 'auto' ficam fora do preset porque sao sempre iguais
 // pra qualquer upload, ver uploadFoto().
 const PRESETS = {
-  LOGO: { width: 400, height: 400, crop: 'fill', gravity: 'auto' },
-  ESTABELECIMENTO: { width: 1200, height: 800, crop: 'fill', gravity: 'auto' },
-  PRODUTO: { width: 1200, height: 1200, crop: 'fill', gravity: 'auto' },
+  // format 'png' força o resultado a manter canal alfa (fundo transparente).
+  LOGO: { width: 400, height: 400, crop: 'pad', background: 'transparent', format: 'png' },
+  // background 'auto' pega uma cor dominante da própria foto em vez de uma
+  // barra branca/preta óbvia nas bordas — fica mais discreto numa foto de
+  // fachada/ambiente do que fundo fixo.
+  ESTABELECIMENTO: { width: 1200, height: 800, crop: 'pad', background: 'auto' },
+  PRODUTO: { width: 1200, height: 1200, crop: 'pad', background: 'white', gravity: 'auto' },
 };
 
 function bufferParaStream(buffer) {

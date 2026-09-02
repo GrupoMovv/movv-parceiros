@@ -1,14 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Upload, X, Loader2, Star, Lightbulb } from 'lucide-react';
+import { Upload, X, Loader2, Star, Lightbulb, Check, Send } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
-const DICAS = ['Foto boa vende mais!', 'Use boa iluminação', 'Mostre o produto inteiro', 'Fundo limpo, sem texto'];
+const DICAS = [
+  'Formato quadrado (1200x1200) fica melhor',
+  'Fundo branco ou neutro',
+  'Produto centralizado',
+  'Boa iluminação',
+  'Não precisa ser foto profissional!',
+];
+const LIMITE_FOTOS = 3;
+const DIMENSAO_MINIMA = 400;
 const VAZIO = { nome: '', descricao: '', categoria: '', marca: '', preco: '', preco_associado: '', estoque_disponivel: true, destaque: false };
+
+function lerDimensoes(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(url); };
+    img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+}
 
 export default function ParceiroProdutoForm() {
   const { id } = useParams();
@@ -18,11 +36,21 @@ export default function ParceiroProdutoForm() {
   const [produtoId, setProdutoId] = useState(modoEdicao ? id : null);
   const [form, setForm] = useState(VAZIO);
   const [fotos, setFotos] = useState([]);
+  const [pendentes, setPendentes] = useState([]); // fotos escolhidas, com preview local, antes de confirmar o envio
   const [carregando, setCarregando] = useState(modoEdicao);
   const [salvando, setSalvando] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
   const [arrastando, setArrastando] = useState(false);
   const fotosInputRef = useRef(null);
+  const pendentesRef = useRef(pendentes);
+  pendentesRef.current = pendentes;
+
+  // Libera a memória dos previews locais só ao desmontar a página — usa ref
+  // (não `pendentes` direto na dependência) pra não revogar os URLs ainda em
+  // uso toda vez que o usuário adiciona/remove uma foto da seleção.
+  useEffect(() => {
+    return () => pendentesRef.current.forEach(p => URL.revokeObjectURL(p.preview));
+  }, []);
 
   useEffect(() => {
     if (!modoEdicao) return;
@@ -81,16 +109,45 @@ export default function ParceiroProdutoForm() {
     }
   }
 
-  async function handleFotos(files) {
+  // Escolher um arquivo só monta o preview local — o upload de verdade só
+  // acontece quando o parceiro confirma em confirmarEnvio().
+  async function selecionarFotos(files) {
     const lista = Array.from(files || []);
     if (!lista.length) return;
+
     if (lista.some(f => f.size > 5 * 1024 * 1024)) return toast.error('Cada foto precisa ter até 5MB');
+    if (fotos.length + pendentes.length + lista.length > LIMITE_FOTOS) {
+      return toast.error(`Máximo de ${LIMITE_FOTOS} fotos por produto`);
+    }
+
+    const novos = [];
+    for (const file of lista) {
+      const dimensao = await lerDimensoes(file);
+      if (dimensao && (dimensao.width < DIMENSAO_MINIMA || dimensao.height < DIMENSAO_MINIMA)) {
+        toast(`"${file.name}" é só ${dimensao.width}×${dimensao.height}px — pode ficar borrada. Ideal: 1200×1200px.`, { icon: '⚠️', duration: 5000 });
+      }
+      novos.push({ file, preview: URL.createObjectURL(file), dimensao });
+    }
+    setPendentes(p => [...p, ...novos]);
+  }
+
+  function cancelarPendente(index) {
+    setPendentes(p => {
+      URL.revokeObjectURL(p[index].preview);
+      return p.filter((_, i) => i !== index);
+    });
+  }
+
+  async function confirmarEnvio() {
+    if (!pendentes.length) return;
     setEnviandoFotos(true);
     try {
       const fd = new FormData();
-      lista.forEach(f => fd.append('fotos', f));
+      pendentes.forEach(p => fd.append('fotos', p.file));
       const res = await apiParceiro.post(`/parceiro/produtos/${produtoId}/fotos`, fd);
       setFotos(res.data.fotos);
+      pendentes.forEach(p => URL.revokeObjectURL(p.preview));
+      setPendentes([]);
       toast.success('Fotos enviadas!');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao enviar fotos');
@@ -143,21 +200,19 @@ export default function ParceiroProdutoForm() {
               <div
                 onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
                 onDragLeave={() => setArrastando(false)}
-                onDrop={(e) => { e.preventDefault(); setArrastando(false); handleFotos(e.dataTransfer.files); }}
+                onDrop={(e) => { e.preventDefault(); setArrastando(false); selecionarFotos(e.dataTransfer.files); }}
                 onClick={() => fotosInputRef.current?.click()}
                 className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors"
                 style={{ borderColor: arrastando ? ROXO : '#E2E8F0', backgroundColor: arrastando ? `${ROXO}08` : 'transparent' }}
               >
-                {enviandoFotos ? <Loader2 className="w-5 h-5 mx-auto animate-spin" style={{ color: ROXO }} /> : (
-                  <>
-                    <Upload className="w-5 h-5 mx-auto text-slate-400" />
-                    <p className="text-sm font-medium text-slate-500 mt-2">Arraste fotos ou clique — até 3 fotos, 5MB cada</p>
-                  </>
-                )}
+                <Upload className="w-5 h-5 mx-auto text-slate-400" />
+                <p className="text-sm font-medium text-slate-500 mt-2">Arraste fotos ou clique — até {LIMITE_FOTOS} fotos, 5MB cada</p>
+                <p className="text-xs text-slate-400 mt-1">📸 Ideal: 1200×1200px, fundo branco ou neutro</p>
                 <input ref={fotosInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
-                  onChange={(e) => handleFotos(e.target.files)} />
+                  onChange={(e) => { selecionarFotos(e.target.files); e.target.value = ''; }} />
               </div>
 
+              {/* fotos ja enviadas de verdade */}
               {fotos.length > 0 && (
                 <div className="grid grid-cols-3 gap-3 mt-4">
                   {fotos.map((foto, i) => (
@@ -169,6 +224,35 @@ export default function ParceiroProdutoForm() {
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* pendentes: preview local antes de confirmar o envio */}
+              {pendentes.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Prévia — assim é a foto que você escolheu:</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {pendentes.map((p, i) => (
+                      <div key={p.preview} className="relative rounded-xl overflow-hidden aspect-square border border-dashed border-slate-300 group">
+                        <img src={p.preview} alt="" className="w-full h-full object-cover" />
+                        {p.dimensao && (p.dimensao.width < DIMENSAO_MINIMA || p.dimensao.height < DIMENSAO_MINIMA) && (
+                          <span className="absolute bottom-1 left-1 right-1 text-[9px] font-bold text-center px-1 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            Pequena ({p.dimensao.width}×{p.dimensao.height})
+                          </span>
+                        )}
+                        <button type="button" onClick={() => cancelarPendente(i)} disabled={enviandoFotos}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                          <X className="w-3 h-3 text-red-600" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={confirmarEnvio} disabled={enviandoFotos}
+                    className="mt-3 flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl text-white transition-colors disabled:opacity-60"
+                    style={{ backgroundColor: ROXO }}>
+                    {enviandoFotos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Enviar {pendentes.length} {pendentes.length === 1 ? 'foto' : 'fotos'}
+                  </button>
                 </div>
               )}
             </>
@@ -207,19 +291,29 @@ export default function ParceiroProdutoForm() {
 
       <div className="space-y-4">
         <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-          <p className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide text-amber-700 mb-2">
-            <Lightbulb className="w-3.5 h-3.5" /> Dicas de foto
+          <p className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide text-amber-700 mb-2.5">
+            📸 Dicas pra foto do produto
           </p>
           <ul className="space-y-1.5">
-            {DICAS.map(d => <li key={d} className="text-xs text-amber-800">• {d}</li>)}
+            {DICAS.map(d => (
+              <li key={d} className="flex items-start gap-1.5 text-xs text-amber-800">
+                <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#166534' }} /> {d}
+              </li>
+            ))}
           </ul>
+          <p className="flex items-start gap-1.5 text-xs text-amber-700 mt-3 pt-3 border-t border-amber-200">
+            <Lightbulb className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            Não tem foto ideal? Nosso sistema ajusta automaticamente pra ficar boa.
+          </p>
         </div>
 
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Como vai aparecer no marketplace</p>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center">
-              {fotos[0]?.url ? <img src={fotos[0].url} alt="" className="w-full h-full object-cover" /> : <span className="text-slate-300 text-xs">Sem foto</span>}
+              {fotos[0]?.url || pendentes[0]?.preview ? (
+                <img src={fotos[0]?.url || pendentes[0]?.preview} alt="" className="w-full h-full object-cover" />
+              ) : <span className="text-slate-300 text-xs">Sem foto</span>}
               {form.destaque && (
                 <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
                   <Star className="w-2.5 h-2.5" fill="#0F0F14" /> Destaque

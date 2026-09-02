@@ -13,6 +13,27 @@ const DIAS = [
 ];
 const DIAS_POR_INDICE = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 
+const DIMENSAO_MINIMA = 400;
+
+function lerDimensoes(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(url); };
+    img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+}
+
+async function avisarSeFotoPequena(files) {
+  for (const file of files) {
+    const dim = await lerDimensoes(file);
+    if (dim && (dim.width < DIMENSAO_MINIMA || dim.height < DIMENSAO_MINIMA)) {
+      toast(`"${file.name}" é só ${dim.width}×${dim.height}px — pode ficar borrada.`, { icon: '⚠️', duration: 5000 });
+    }
+  }
+}
+
 function formatarCnpj(v) {
   const d = String(v || '').replace(/\D/g, '').slice(0, 14);
   return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, '$1.$2.$3/$4-$5');
@@ -129,6 +150,7 @@ export default function ParceiroPerfil() {
   async function handleLogo(file) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return toast.error('A logo precisa ter até 5MB');
+    await avisarSeFotoPequena([file]);
     setEnviandoLogo(true);
     try {
       const fd = new FormData();
@@ -147,6 +169,7 @@ export default function ParceiroPerfil() {
     const lista = Array.from(files || []);
     if (!lista.length) return;
     if (lista.some(f => f.size > 5 * 1024 * 1024)) return toast.error('Cada foto precisa ter até 5MB');
+    await avisarSeFotoPequena(lista);
     setEnviandoFotos(true);
     try {
       const fd = new FormData();
@@ -205,7 +228,7 @@ export default function ParceiroPerfil() {
             </button>
             <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
               onChange={(e) => handleLogo(e.target.files[0])} />
-            <p className="text-slate-400 text-xs mt-1.5">JPG, PNG ou WEBP, até 5MB</p>
+            <p className="text-slate-400 text-xs mt-1.5">JPG, PNG ou WEBP, até 5MB — ideal 400×400px</p>
           </div>
         </div>
 
@@ -326,7 +349,7 @@ export default function ParceiroPerfil() {
             <>
               <Upload className="w-6 h-6 mx-auto text-slate-400" />
               <p className="text-sm font-medium text-slate-500 mt-2">Arraste fotos aqui ou clique pra escolher</p>
-              <p className="text-slate-400 text-xs mt-1">Até 5 fotos no total, 5MB cada</p>
+              <p className="text-slate-400 text-xs mt-1">Até 5 fotos no total, 5MB cada — ideal 1200×800px</p>
             </>
           )}
           <input ref={fotosInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
