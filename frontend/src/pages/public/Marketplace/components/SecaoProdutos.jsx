@@ -17,7 +17,11 @@ function SkeletonCard() {
 // de layout combinadas no Bloco 8: 1-2 produtos centraliza (sem scroll), 3+
 // vira scroll horizontal com "peek" no mobile e grid no desktop.
 export default function SecaoProdutos({ id, titulo, subtitulo, Icone, produtos, carregando, badge, verTodosHref, className = '', CardComponent = CardProduto }) {
-  if (!carregando && produtos.length === 0) return null;
+  // Mesmo vazia, a seção não pode sumir de vez: se ela tem um `id` usado
+  // pelo menu do topo (ex: #ofertas), sumir com o elemento inteiro faz o
+  // link virar clique morto — sem produto nenhum, o link simplesmente não
+  // vai a lugar nenhum. Um âncora vazia mantém o destino existindo.
+  if (!carregando && produtos.length === 0) return id ? <div id={id} className="scroll-mt-[70px]" /> : null;
 
   const poucosItens = !carregando && produtos.length <= 2;
 

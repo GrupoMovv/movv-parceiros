@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { DOURADO } from '../theme';
 
-function scrollParaParceiros(e) {
+function scrollParaOfertas(e) {
   e.preventDefault();
-  document.querySelector('#parceiros')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelector('#ofertas')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 export default function HeroPremium({ nomeAssociado }) {
@@ -44,8 +44,8 @@ export default function HeroPremium({ nomeAssociado }) {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 animate-fade-up" style={{ animationDelay: '400ms' }}>
           <a
-            href="#parceiros"
-            onClick={scrollParaParceiros}
+            href="#ofertas"
+            onClick={scrollParaOfertas}
             className="w-full sm:w-auto text-center font-semibold text-base px-8 py-4 rounded-xl shadow-lg transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >

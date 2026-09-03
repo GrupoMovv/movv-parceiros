@@ -114,7 +114,8 @@ export default function Marketplace() {
         <div className="max-w-7xl mx-auto px-8 lg:px-16 w-full space-y-16 sm:space-y-20 mt-14 sm:mt-20">
           {semNenhumProduto ? (
             <Reveal>
-              <div className="text-center py-16 bg-slate-50 rounded-3xl">
+              <div id="ofertas" className="scroll-mt-[70px] text-center py-16 bg-slate-50 rounded-3xl">
+                <div id="exclusivos" className="scroll-mt-[70px]" />
                 <ShoppingBagOpen size={40} weight="duotone" color={ROXO} className="mx-auto" />
                 <p className="font-bold text-lg mt-3" style={{ color: PRETO }}>Em breve, mais produtos</p>
                 <p className="text-slate-500 text-sm mt-1">Nossos parceiros estão cadastrando as ofertas. Volte em breve!</p>
@@ -127,7 +128,7 @@ export default function Marketplace() {
                 produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
               />
               <SecaoProdutos
-                Icone={Diamond} titulo="Exclusivos para associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
+                id="exclusivos" Icone={Diamond} titulo="Exclusivos para associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
                 produtos={exclusivos} carregando={carregandoExclusivos} badge="exclusivo"
               />
             </>
@@ -143,7 +144,7 @@ export default function Marketplace() {
           )}
 
           <Reveal>
-            <section>
+            <section id="categorias" className="scroll-mt-[70px]">
               <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>
                 <Tag size={22} weight="duotone" color={ROXO} /> Explore por categoria
               </h2>
@@ -161,10 +162,10 @@ export default function Marketplace() {
             </section>
           </Reveal>
 
-          <SecaoProdutos Icone={Star} titulo="Novidades" produtos={novidades} carregando={carregandoNovidades} badge="novo" />
+          <SecaoProdutos id="novidades" Icone={Star} titulo="Novidades" produtos={novidades} carregando={carregandoNovidades} badge="novo" />
 
           <Reveal>
-            <section id="parceiros-vitrine">
+            <section id="parceiros-vitrine" className="scroll-mt-[70px]">
               <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>
                 <Storefront size={22} weight="duotone" color={ROXO} /> Nossos parceiros
               </h2>
@@ -180,7 +181,7 @@ export default function Marketplace() {
             </section>
           </Reveal>
 
-          <SecaoProdutos Icone={TrendUp} titulo="Mais vendidos da semana" produtos={maisVendidos} carregando={carregandoMaisVendidos} />
+          <SecaoProdutos id="mais-vendidos" Icone={TrendUp} titulo="Mais vendidos da semana" produtos={maisVendidos} carregando={carregandoMaisVendidos} />
         </div>
       )}
 

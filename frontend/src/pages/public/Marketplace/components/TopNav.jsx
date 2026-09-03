@@ -6,7 +6,10 @@ import ModalEntrar from './ModalEntrar';
 
 const ITENS = [
   { label: 'Ofertas', href: '#ofertas' },
-  { label: 'Parceiros', href: '#parceiros' },
+  { label: 'Categorias', href: '#categorias' },
+  // aponta pra vitrine compacta "Nossos parceiros" do Bloco 8, não pro
+  // #parceiros mais abaixo (grade completa de busca/filtro, seção diferente).
+  { label: 'Parceiros', href: '#parceiros-vitrine' },
 ];
 
 function scrollPara(e, href) {
