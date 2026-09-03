@@ -5,7 +5,7 @@ function scrollParaParceiros(e) {
   document.querySelector('#parceiros')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-export default function HeroPremium() {
+export default function HeroPremium({ nomeAssociado }) {
   return (
     <section
       className="relative min-h-[calc(100vh-70px)] flex items-center justify-center overflow-hidden px-8"
@@ -21,6 +21,14 @@ export default function HeroPremium() {
       </svg>
 
       <div className="relative max-w-5xl mx-auto text-center">
+        {nomeAssociado && (
+          <p
+            className="text-sm sm:text-base font-bold uppercase tracking-wide mb-4 animate-fade-up"
+            style={{ color: DOURADO }}
+          >
+            Olá, {nomeAssociado}! 👋
+          </p>
+        )}
         <h1
           className="text-5xl md:text-7xl lg:text-8xl font-black text-white leading-tight tracking-tight animate-fade-up"
         >

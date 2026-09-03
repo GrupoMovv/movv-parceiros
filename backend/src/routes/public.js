@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 const produtoCtrl = require('../controllers/produtoPublicoController');
+const marketplaceHomeCtrl = require('../controllers/marketplaceHomeController');
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
@@ -87,6 +88,13 @@ router.get('/marketplace/stats', async (req, res) => {
     return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   }
 });
+
+router.get('/marketplace/ofertas-semana', marketplaceHomeCtrl.getOfertasSemana);
+router.get('/marketplace/exclusivos-associados', marketplaceHomeCtrl.getExclusivosAssociados);
+router.get('/marketplace/novidades', marketplaceHomeCtrl.getNovidades);
+router.get('/marketplace/mais-vendidos', marketplaceHomeCtrl.getMaisVendidos);
+router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);
+router.get('/marketplace/parceiros', marketplaceHomeCtrl.getParceiros);
 
 router.get('/produtos/:id', produtoCtrl.getProduto);
 router.get('/produtos/:id/outros-do-parceiro', produtoCtrl.getOutrosDoParceiro);

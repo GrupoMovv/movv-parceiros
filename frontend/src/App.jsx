@@ -43,6 +43,7 @@ import Carteirinha from './pages/public/Carteirinha';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
+const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender'));
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
@@ -169,8 +170,10 @@ export default function App() {
         <Route path="/termos-indicador"   element={<TermosIndicador />} />
         <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
         <Route path="/marketplace"        element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
+        <Route path="/marketplace/categoria/:categoriaSlug" element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
+        <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
         <Route path="/meu-painel"         element={<MeuPainel />} />

@@ -1,47 +1,51 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
-import { PRETO, DOURADO } from './theme';
+import { PRETO } from './theme';
 import TopNav from './components/TopNav';
 import HeroPremium from './components/HeroPremium';
-import PartnerMarquee from './components/PartnerMarquee';
-import SponsoredPartners from './components/SponsoredPartners';
 import SearchFilterBar from './components/SearchFilterBar';
 import CategoryScroll from './components/CategoryScroll';
 import PartnerCard from './components/PartnerCard';
+import CardCategoria from './components/CardCategoria';
+import CardParceiroCompacto from './components/CardParceiroCompacto';
+import SecaoProdutos from './components/SecaoProdutos';
+import CtaVenderRodape from './components/CtaVenderRodape';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import { useFavoritos } from './useFavoritos';
+import { useProdutosSecao, useCategorias, useParceirosCompactos } from './useSecaoData';
 
-// Ofertas hardcoded — Fase 1. Ver TODO em parceirosData.js.
-const OFERTAS_DA_SEMANA = [
-  { titulo: 'Óticas Diniz', texto: '20% de desconto em armações e lentes', slug: 'oticas-diniz' },
-  { titulo: 'Nossa Drogaria', texto: 'Super descontos em medicamentos', slug: 'nossa-drogaria' },
-  { titulo: 'Academia Atlética', texto: 'Mensalidade especial por R$ 30,00', slug: 'academia-atletica' },
-];
-
-// Ate o Portal do Parceiro ter o sistema Premium, os "patrocinados" sao so
-// os 3 primeiros da lista — combinado explicitamente, isso vira dinamico
-// quando existir assinatura de destaque de verdade.
-const PARCEIROS_DESTAQUE = PARCEIROS_INICIAIS.slice(0, 3);
+// Mapeia a categoria fixa da vitrine "Explore por categoria" (slug do
+// Bloco 8) pra um label do filtro de parceiros já existente — se não
+// existir correspondência (ex.: "Fitness", que hoje nenhum parceiro usa),
+// cai em "Todas" em vez de forçar um valor inválido no <select>.
+function mapearCategoriaSlugParaFiltro(slug) {
+  const alvo = normalizarCategoria(slug.replace(/-/g, ' '));
+  const encontrada = CATEGORIAS_FILTRO.find(c => normalizarCategoria(c.label).includes(alvo) || alvo.includes(normalizarCategoria(c.label)));
+  return encontrada?.label || 'Todas';
+}
 
 export default function Marketplace() {
   const [searchParams] = useSearchParams();
+  const { categoriaSlug } = useParams();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [bairroAtivo, setBairroAtivo] = useState('Todos');
   const [nomeAssociado, setNomeAssociado] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
   const [carregandoAssociado, setCarregandoAssociado] = useState(false);
+  const [qtdAssociados, setQtdAssociados] = useState(null);
   const { favoritos, alternar: alternarFavorito, ehFavorito } = useFavoritos();
 
+  const associadoHash = searchParams.get('associado');
+
   useEffect(() => {
-    const hash = searchParams.get('associado');
-    if (hash) {
+    if (associadoHash) {
       setCarregandoAssociado(true);
-      api.get(`/public/carteirinha/${hash}`)
+      api.get(`/public/carteirinha/${associadoHash}`)
         .then(res => setNomeAssociado(res.data.nome?.trim().split(/\s+/)[0] || null))
         .catch(() => {})
         .finally(() => setCarregandoAssociado(false));
@@ -54,7 +58,30 @@ export default function Marketplace() {
         .catch(() => {})
         .finally(() => setCarregandoAssociado(false));
     }
-  }, [searchParams]);
+  }, [associadoHash]);
+
+  useEffect(() => {
+    api.get('/public/marketplace/stats').then(res => setQtdAssociados(res.data.associados)).catch(() => {});
+  }, []);
+
+  // Vem da rota /marketplace/categoria/:slug (cards da seção "Explore por
+  // categoria") — sincroniza com o filtro sempre que o slug da URL muda,
+  // inclusive voltando pra "Todas" se o usuário navegar pra /marketplace puro.
+  useEffect(() => {
+    setCategoriaAtiva(categoriaSlug ? mapearCategoriaSlugParaFiltro(categoriaSlug) : 'Todas');
+    if (categoriaSlug) document.querySelector('#parceiros')?.scrollIntoView({ block: 'start' });
+  }, [categoriaSlug]);
+
+  const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana');
+  const { produtos: exclusivos, carregando: carregandoExclusivos } = useProdutosSecao('/public/marketplace/exclusivos-associados');
+  const { produtos: novidades, carregando: carregandoNovidades } = useProdutosSecao('/public/marketplace/novidades');
+  const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
+  const { categorias, carregando: carregandoCategorias } = useCategorias();
+  const { parceiros: parceirosCompactos, carregando: carregandoParceiros } = useParceirosCompactos();
+
+  const carregandoVitrine = carregandoOfertas || carregandoExclusivos || carregandoNovidades || carregandoMaisVendidos;
+  const semNenhumProduto = !carregandoVitrine
+    && ofertas.length === 0 && exclusivos.length === 0 && novidades.length === 0 && maisVendidos.length === 0;
 
   const buscaAtiva = searchQuery.trim().length > 0;
   const buscaNormalizada = normalizarCategoria(searchQuery.trim());
@@ -72,9 +99,6 @@ export default function Marketplace() {
     .filter(combinaBusca)
     .filter(combinaBairro);
 
-  const exclusivos = parceirosFiltrados.filter(p => p.exclusivo);
-  const novidades = parceirosFiltrados.filter(p => p.novo);
-
   const modoNavegacao = buscaAtiva || mostrarFavoritos || categoriaAtiva !== 'Todas' || bairroAtivo !== 'Todos';
 
   return (
@@ -87,51 +111,96 @@ export default function Marketplace() {
         qtdFavoritos={favoritos.length}
       />
 
+      {!modoNavegacao && <HeroPremium nomeAssociado={nomeAssociado} />}
+
       {!modoNavegacao && (
-        <>
-          <HeroPremium />
-          <PartnerMarquee parceiros={PARCEIROS_INICIAIS} />
-          <SponsoredPartners parceiros={PARCEIROS_DESTAQUE} />
-        </>
+        <div className="max-w-7xl mx-auto px-8 lg:px-16 w-full space-y-16 sm:space-y-20 mt-14 sm:mt-20">
+          {semNenhumProduto ? (
+            <Reveal>
+              <div className="text-center py-16 bg-slate-50 rounded-3xl">
+                <p className="text-4xl">🛍️</p>
+                <p className="font-bold text-lg mt-3" style={{ color: PRETO }}>Em breve, mais produtos</p>
+                <p className="text-slate-500 text-sm mt-1">Nossos parceiros estão cadastrando as ofertas. Volte em breve!</p>
+              </div>
+            </Reveal>
+          ) : (
+            <>
+              <SecaoProdutos
+                id="ofertas" emoji="🔥" titulo="Ofertas da semana" subtitulo="Maiores descontos da casa"
+                produtos={ofertas} carregando={carregandoOfertas} badge="desconto"
+              />
+              <SecaoProdutos
+                emoji="💎" titulo="Exclusivos para associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
+                produtos={exclusivos} carregando={carregandoExclusivos} badge="exclusivo"
+              />
+            </>
+          )}
+
+          {!nomeAssociado && !carregandoExclusivos && exclusivos.length > 0 && (
+            <Reveal className="-mt-10 sm:-mt-14">
+              <p className="text-center text-sm text-slate-500">
+                Ainda não é associado?{' '}
+                <a href="/cadastrar" className="font-semibold underline" style={{ color: PRETO }}>Vire associado grátis pra aproveitar</a>
+              </p>
+            </Reveal>
+          )}
+
+          <Reveal>
+            <section>
+              <h2 className="text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>🛍️ Explore por categoria</h2>
+              {carregandoCategorias ? (
+                <div className="flex gap-4 overflow-x-hidden">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-16 h-16 rounded-full bg-slate-100 animate-pulse flex-shrink-0" />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex gap-5 sm:gap-8 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+                  {categorias.map(c => <CardCategoria key={c.slug} categoria={c} />)}
+                </div>
+              )}
+            </section>
+          </Reveal>
+
+          <SecaoProdutos emoji="🆕" titulo="Novidades" produtos={novidades} carregando={carregandoNovidades} badge="novo" />
+
+          <Reveal>
+            <section id="parceiros-vitrine">
+              <h2 className="text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>🏪 Nossos parceiros</h2>
+              {carregandoParceiros ? (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-[76px] rounded-2xl bg-slate-100 animate-pulse" />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {parceirosCompactos.map(p => <CardParceiroCompacto key={p.id} parceiro={p} />)}
+                </div>
+              )}
+            </section>
+          </Reveal>
+
+          <SecaoProdutos emoji="🏆" titulo="Mais vendidos da semana" produtos={maisVendidos} carregando={carregandoMaisVendidos} />
+        </div>
       )}
 
-      <SearchFilterBar
-        categorias={CATEGORIAS_FILTRO}
-        categoriaAtiva={categoriaAtiva}
-        setCategoriaAtiva={setCategoriaAtiva}
-        bairroAtivo={bairroAtivo}
-        setBairroAtivo={setBairroAtivo}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
+      {/* SearchFilterBar tem -mt-8 embutido (pensado pra "flutuar" colado no
+          rodapé do Hero) — como agora vem depois de toda a vitrine, esse
+          wrapper com mt-16 evita sobrepor a última seção acima. */}
+      <div className={modoNavegacao ? undefined : 'mt-16'}>
+        <SearchFilterBar
+          categorias={CATEGORIAS_FILTRO}
+          categoriaAtiva={categoriaAtiva}
+          setCategoriaAtiva={setCategoriaAtiva}
+          bairroAtivo={bairroAtivo}
+          setBairroAtivo={setBairroAtivo}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />
+      </div>
 
       <CategoryScroll categorias={CATEGORIAS_FILTRO} ativa={categoriaAtiva} onSelecionar={setCategoriaAtiva} />
 
       <div id="parceiros" className="max-w-5xl mx-auto px-8 lg:px-16 py-10 w-full flex-1 space-y-16 scroll-mt-[70px]">
-        {!modoNavegacao && (
-          <section id="ofertas" className="scroll-mt-[70px]">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Selecionadas pra você</p>
-            <h2 className="text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>Ofertas da semana</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {OFERTAS_DA_SEMANA.map(o => (
-                <Link
-                  key={o.slug} to={`/marketplace/parceiro/${o.slug}`}
-                  className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
-                >
-                  <span
-                    className="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2.5"
-                    style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}
-                  >
-                    Oferta
-                  </span>
-                  <p className="text-sm font-bold" style={{ color: PRETO }}>{o.titulo}</p>
-                  <p className="text-slate-500 text-sm mt-1">{o.texto}</p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {mostrarFavoritos && (
           <SecaoParceiros
             titulo="Seus favoritos"
@@ -139,15 +208,6 @@ export default function Marketplace() {
             ehFavorito={ehFavorito}
             onToggleFavorito={alternarFavorito}
             vazio="Você ainda não favoritou nenhum parceiro."
-          />
-        )}
-
-        {!mostrarFavoritos && exclusivos.length > 0 && (
-          <SecaoParceiros
-            titulo="Exclusivo para associados"
-            parceiros={exclusivos}
-            ehFavorito={ehFavorito}
-            onToggleFavorito={alternarFavorito}
           />
         )}
 
@@ -160,16 +220,9 @@ export default function Marketplace() {
             vazio="Nenhum parceiro encontrado."
           />
         )}
-
-        {!mostrarFavoritos && !modoNavegacao && novidades.length > 0 && (
-          <SecaoParceiros
-            titulo="Novidades"
-            parceiros={novidades}
-            ehFavorito={ehFavorito}
-            onToggleFavorito={alternarFavorito}
-          />
-        )}
       </div>
+
+      {!modoNavegacao && <CtaVenderRodape qtdAssociados={qtdAssociados} />}
 
       <Footer />
     </div>
