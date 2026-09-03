@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
+import { Diamond } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -49,10 +50,10 @@ export default function CardProduto({ produto, badge, className = '', style }) {
         )}
         {badge === 'exclusivo' && (
           <span
-            className="absolute top-2.5 left-2.5 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-sm"
+            className="absolute top-2.5 left-2.5 flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-sm"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            💎 Exclusivo
+            <Diamond size={11} weight="duotone" /> Exclusivo
           </span>
         )}
         {mostrarNovo && (

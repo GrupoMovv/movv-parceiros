@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "axios": "^1.6.7",
     "date-fns": "^3.3.1",
     "jspdf": "^4.2.1",

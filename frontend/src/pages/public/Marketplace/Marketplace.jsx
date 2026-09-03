@@ -3,7 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
-import { PRETO } from './theme';
+import { PRETO, ROXO } from './theme';
+import { Fire, Diamond, Star, Storefront, TrendUp, Tag, ShoppingBagOpen } from '@phosphor-icons/react';
 import TopNav from './components/TopNav';
 import HeroPremium from './components/HeroPremium';
 import SearchFilterBar from './components/SearchFilterBar';
@@ -114,7 +115,7 @@ export default function Marketplace() {
           {semNenhumProduto ? (
             <Reveal>
               <div className="text-center py-16 bg-slate-50 rounded-3xl">
-                <p className="text-4xl">🛍️</p>
+                <ShoppingBagOpen size={40} weight="duotone" color={ROXO} className="mx-auto" />
                 <p className="font-bold text-lg mt-3" style={{ color: PRETO }}>Em breve, mais produtos</p>
                 <p className="text-slate-500 text-sm mt-1">Nossos parceiros estão cadastrando as ofertas. Volte em breve!</p>
               </div>
@@ -122,11 +123,11 @@ export default function Marketplace() {
           ) : (
             <>
               <SecaoProdutos
-                id="ofertas" emoji="🔥" titulo="Ofertas da semana" subtitulo="Promoções por tempo limitado"
+                id="ofertas" Icone={Fire} titulo="Ofertas da semana" subtitulo="Promoções por tempo limitado"
                 produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
               />
               <SecaoProdutos
-                emoji="💎" titulo="Exclusivos para associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
+                Icone={Diamond} titulo="Exclusivos para associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
                 produtos={exclusivos} carregando={carregandoExclusivos} badge="exclusivo"
               />
             </>
@@ -143,7 +144,9 @@ export default function Marketplace() {
 
           <Reveal>
             <section>
-              <h2 className="text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>🛍️ Explore por categoria</h2>
+              <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>
+                <Tag size={22} weight="duotone" color={ROXO} /> Explore por categoria
+              </h2>
               {carregandoCategorias ? (
                 <div className="flex gap-4 overflow-x-hidden">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -158,11 +161,13 @@ export default function Marketplace() {
             </section>
           </Reveal>
 
-          <SecaoProdutos emoji="🆕" titulo="Novidades" produtos={novidades} carregando={carregandoNovidades} badge="novo" />
+          <SecaoProdutos Icone={Star} titulo="Novidades" produtos={novidades} carregando={carregandoNovidades} badge="novo" />
 
           <Reveal>
             <section id="parceiros-vitrine">
-              <h2 className="text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>🏪 Nossos parceiros</h2>
+              <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight mb-5" style={{ color: PRETO }}>
+                <Storefront size={22} weight="duotone" color={ROXO} /> Nossos parceiros
+              </h2>
               {carregandoParceiros ? (
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-[76px] rounded-2xl bg-slate-100 animate-pulse" />)}
@@ -175,7 +180,7 @@ export default function Marketplace() {
             </section>
           </Reveal>
 
-          <SecaoProdutos emoji="🏆" titulo="Mais vendidos da semana" produtos={maisVendidos} carregando={carregandoMaisVendidos} />
+          <SecaoProdutos Icone={TrendUp} titulo="Mais vendidos da semana" produtos={maisVendidos} carregando={carregandoMaisVendidos} />
         </div>
       )}
 

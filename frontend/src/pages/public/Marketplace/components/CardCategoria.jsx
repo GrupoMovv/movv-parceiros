@@ -1,38 +1,32 @@
 import { Link } from 'react-router-dom';
-import { PRETO } from '../theme';
+import { Pill, Sparkle, ForkKnife, Wrench, Barbell, House, TShirt, Laptop } from '@phosphor-icons/react';
+import { ROXO, PRETO } from '../theme';
 
-// Paleta fixa por categoria — só decorativa (círculo grande colorido atrás
-// do emoji), não precisa vir do backend.
-const CORES = {
-  saude: '#10B981',
-  beleza: '#EC4899',
-  alimentacao: '#F97316',
-  servicos: '#0EA5E9',
-  fitness: '#F43F5E',
-  casa: '#8B5CF6',
-  moda: '#EAB308',
-  tecnologia: '#3B82F6',
+const ICONES = {
+  saude: Pill,
+  beleza: Sparkle,
+  alimentacao: ForkKnife,
+  servicos: Wrench,
+  fitness: Barbell,
+  casa: House,
+  moda: TShirt,
+  tecnologia: Laptop,
 };
 
 export default function CardCategoria({ categoria }) {
-  const cor = CORES[categoria.slug] || '#64748B';
+  const Icone = ICONES[categoria.slug] || Sparkle;
 
   return (
     <Link
       to={`/marketplace/categoria/${categoria.slug}`}
-      className="group flex flex-col items-center gap-2 flex-shrink-0 w-20 sm:w-24"
+      className="group flex flex-col items-center gap-2 flex-shrink-0 w-24 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105"
     >
-      <div
-        className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl sm:text-4xl shadow-sm transition-transform duration-300 group-hover:scale-105"
-        style={{ backgroundColor: `${cor}1A` }}
-      >
-        {categoria.emoji}
-      </div>
-      <span className="text-xs font-semibold text-center leading-tight" style={{ color: PRETO }}>
+      <Icone size={32} weight="duotone" color={ROXO} />
+      <span className="text-xs font-medium text-center leading-tight" style={{ color: PRETO }}>
         {categoria.label}
       </span>
       {categoria.count > 0 && (
-        <span className="text-[10px] text-slate-400 -mt-1.5">{categoria.count} parceiro{categoria.count > 1 ? 's' : ''}</span>
+        <span className="text-[10px] text-slate-400 -mt-1">{categoria.count} parceiro{categoria.count > 1 ? 's' : ''}</span>
       )}
     </Link>
   );

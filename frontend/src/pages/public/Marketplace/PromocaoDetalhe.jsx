@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ChevronRight, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, Timer,
 } from 'lucide-react';
+import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
@@ -209,8 +210,8 @@ export default function PromocaoDetalhe() {
               {descontoPct}% OFF
             </span>
             {promocao.exclusivo_associado && (
-              <span className="absolute top-3 right-3 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm text-white" style={{ backgroundColor: ROXO }}>
-                💎 SECI
+              <span className="absolute top-3 right-3 flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm text-white" style={{ backgroundColor: ROXO }}>
+                <Diamond size={13} weight="duotone" /> SECI
               </span>
             )}
           </div>
@@ -240,8 +241,8 @@ export default function PromocaoDetalhe() {
 
             {temPrecoAssociado && (
               <div className="mt-3 rounded-2xl p-4" style={{ backgroundColor: `${DOURADO}15`, border: `1px solid ${DOURADO}55` }}>
-                <p className="text-sm font-bold" style={{ color: '#92700C' }}>
-                  💎 Associados SECI: {formatarPreco(promocao.preco_associado)}
+                <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: '#92700C' }}>
+                  <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(promocao.preco_associado)}
                 </p>
                 {!ehAssociado && (
                   <div className="flex flex-wrap gap-2 mt-3">

@@ -1,7 +1,7 @@
 import CardProduto from './CardProduto';
 import BotaoVerTodos from './BotaoVerTodos';
 import Reveal from './Reveal';
-import { PRETO } from '../theme';
+import { PRETO, ROXO } from '../theme';
 
 function SkeletonCard() {
   return (
@@ -16,7 +16,7 @@ function SkeletonCard() {
 // Seção de vitrine reutilizada em todas as listas de produto da home. Regras
 // de layout combinadas no Bloco 8: 1-2 produtos centraliza (sem scroll), 3+
 // vira scroll horizontal com "peek" no mobile e grid no desktop.
-export default function SecaoProdutos({ id, titulo, subtitulo, emoji, produtos, carregando, badge, verTodosHref, className = '', CardComponent = CardProduto }) {
+export default function SecaoProdutos({ id, titulo, subtitulo, Icone, produtos, carregando, badge, verTodosHref, className = '', CardComponent = CardProduto }) {
   if (!carregando && produtos.length === 0) return null;
 
   const poucosItens = !carregando && produtos.length <= 2;
@@ -27,7 +27,9 @@ export default function SecaoProdutos({ id, titulo, subtitulo, emoji, produtos, 
         <div className="flex items-end justify-between gap-4 mb-5">
           <div>
             {subtitulo && <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">{subtitulo}</p>}
-            <h2 className="text-2xl font-bold tracking-tight" style={{ color: PRETO }}>{emoji ? `${emoji} ${titulo}` : titulo}</h2>
+            <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight" style={{ color: PRETO }}>
+              {Icone && <Icone size={22} weight="duotone" color={ROXO} />} {titulo}
+            </h2>
           </div>
           {verTodosHref && !carregando && produtos.length >= 8 && <BotaoVerTodos href={verTodosHref} />}
         </div>

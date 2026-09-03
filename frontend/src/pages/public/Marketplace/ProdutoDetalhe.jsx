@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX,
 } from 'lucide-react';
+import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
@@ -204,8 +205,8 @@ export default function ProdutoDetalhe() {
               <div>
                 <p className="text-4xl font-extrabold" style={{ color: PRETO }}>{formatarPreco(produto.preco)}</p>
                 <div className="mt-3 rounded-2xl p-4" style={{ backgroundColor: `${DOURADO}15`, border: `1px solid ${DOURADO}55` }}>
-                  <p className="text-sm font-bold" style={{ color: '#92700C' }}>
-                    💎 Associados SECI: {formatarPreco(produto.preco_associado)} <span className="font-normal">(economize {formatarPreco(economia)})</span>
+                  <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: '#92700C' }}>
+                    <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(produto.preco_associado)} <span className="font-normal">(economize {formatarPreco(economia)})</span>
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     <Link to="/meu-painel" className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}>

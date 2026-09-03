@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
+import { Diamond } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
 
 function formatarPreco(v) {
@@ -60,10 +61,10 @@ export default function CardPromocao({ produto: promocao, className = '', style 
         )}
         {promocao.exclusivo_associado && (
           <span
-            className="absolute top-2.5 right-2.5 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-sm text-white"
+            className="absolute top-2.5 right-2.5 flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-sm text-white"
             style={{ backgroundColor: ROXO }}
           >
-            💎 SECI
+            <Diamond size={11} weight="duotone" /> SECI
           </span>
         )}
 
