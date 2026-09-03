@@ -40,6 +40,7 @@ import SindicatoAssociados from './pages/sindicato/Associados/SindicatoAssociado
 import SindicatoCarteirinhas from './pages/sindicato/Carteirinhas/SindicatoCarteirinhas';
 import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolicitacoes';
 import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitacoes/SindicatoParceirosSolicitacoes';
+import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
 import Carteirinha from './pages/public/Carteirinha';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
@@ -56,6 +57,7 @@ import ParceiroDashboard from './pages/parceiro/Dashboard';
 import ParceiroPerfil from './pages/parceiro/Perfil';
 import ParceiroProdutos from './pages/parceiro/Produtos';
 import ParceiroProdutoForm from './pages/parceiro/ProdutoForm';
+import ParceiroPlanos from './pages/parceiro/Planos';
 import ParceiroPromocoes from './pages/parceiro/Promocoes';
 import ParceiroPromocaoForm from './pages/parceiro/PromocaoForm';
 import ParceiroEmConstrucao from './pages/parceiro/EmConstrucao';
@@ -196,6 +198,7 @@ export default function App() {
           <Route path="promocoes/novo" element={<ParceiroPromocaoForm />} />
           <Route path="promocoes/:id" element={<ParceiroPromocaoForm />} />
           <Route path="estatisticas" element={<ParceiroEmConstrucao titulo="Estatísticas" texto="Relatórios detalhados de visitas e cliques chegam em breve." />} />
+          <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="configuracoes" element={<ParceiroEmConstrucao titulo="Configurações" texto="Troca de senha, notificações e outras preferências chegam em breve." />} />
         </Route>
 
@@ -241,6 +244,7 @@ export default function App() {
           <Route path="sindicato/carteirinhas" element={<RequireSindicatoEmpresas><SindicatoCarteirinhas /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/solicitacoes" element={<RequireSindicatoEmpresas><SindicatoSolicitacoes /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/parceiros-solicitacoes" element={<RequireSindicatoEmpresas><SindicatoParceirosSolicitacoes /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/parceiro-interessados" element={<RequireSindicatoEmpresas><SindicatoParceiroInteressados /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />

@@ -11,6 +11,7 @@ const ABAS = [
   { label: 'Produtos', to: '/parceiro/painel/produtos' },
   { label: 'Promoções', to: '/parceiro/painel/promocoes' },
   { label: 'Estatísticas', to: '/parceiro/painel/estatisticas' },
+  { label: 'Planos', to: '/parceiro/painel/planos' },
   { label: 'Configurações', to: '/parceiro/painel/configuracoes' },
 ];
 
