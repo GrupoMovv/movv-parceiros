@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { ROXO, ROXO_ESCURO, PRETO } from '../theme';
@@ -19,11 +21,30 @@ const OPCOES = [
   },
 ];
 
+// Renderizado via portal direto no <body> — de propósito: TopNav é um
+// <header sticky> com z-index próprio, o que cria um stacking context
+// isolado. Um modal filho dele nunca consegue pintar por cima de outras
+// partes da página só com z-index alto (ficava com o topo encoberto pela
+// própria navbar). O portal escapa desse contexto de vez.
 export default function ModalEntrar({ onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.7)' }} onClick={onClose}>
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    function aoTeclar(e) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', aoTeclar);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', aoTeclar);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
+      style={{ backgroundColor: 'rgba(15,15,20,0.7)' }}
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 sm:p-8"
+        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 sm:p-8 animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -56,6 +77,7 @@ export default function ModalEntrar({ onClose }) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

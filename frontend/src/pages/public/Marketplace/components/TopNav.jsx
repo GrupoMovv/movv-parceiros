@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 
 const ITENS = [
-  { label: 'Início', href: '#topo' },
   { label: 'Ofertas', href: '#ofertas' },
   { label: 'Parceiros', href: '#parceiros' },
 ];
@@ -18,6 +17,19 @@ function scrollPara(e, href) {
 
 export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos }) {
   const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // "Início" mirava um scrollIntoView na própria navbar (sticky, sempre "à
+  // vista") — o browser não fazia nada porque já considerava ela visível.
+  function irParaInicio(e) {
+    e.preventDefault();
+    if (location.pathname === '/marketplace') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/marketplace');
+    }
+  }
 
   return (
     <header
@@ -31,6 +43,13 @@ export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAt
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2">
+          <a
+            href="/marketplace"
+            onClick={irParaInicio}
+            className="hidden sm:inline-block text-sm font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300"
+          >
+            Início
+          </a>
           {ITENS.map((item) => (
             <a
               key={item.label}
