@@ -37,7 +37,6 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
   const [carregandoAssociado, setCarregandoAssociado] = useState(false);
-  const [qtdAssociados, setQtdAssociados] = useState(null);
   const { favoritos, alternar: alternarFavorito, ehFavorito } = useFavoritos();
 
   const associadoHash = searchParams.get('associado');
@@ -59,10 +58,6 @@ export default function Marketplace() {
         .finally(() => setCarregandoAssociado(false));
     }
   }, [associadoHash]);
-
-  useEffect(() => {
-    api.get('/public/marketplace/stats').then(res => setQtdAssociados(res.data.associados)).catch(() => {});
-  }, []);
 
   // Vem da rota /marketplace/categoria/:slug (cards da seção "Explore por
   // categoria") — sincroniza com o filtro sempre que o slug da URL muda,
@@ -222,7 +217,7 @@ export default function Marketplace() {
         )}
       </div>
 
-      {!modoNavegacao && <CtaVenderRodape qtdAssociados={qtdAssociados} />}
+      {!modoNavegacao && <CtaVenderRodape />}
 
       <Footer />
     </div>

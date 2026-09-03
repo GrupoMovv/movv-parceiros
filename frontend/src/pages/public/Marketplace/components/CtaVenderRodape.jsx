@@ -1,13 +1,19 @@
 import { Link } from 'react-router-dom';
 import { ROXO_ESCURO, DOURADO } from '../theme';
 
-export default function CtaVenderRodape({ qtdAssociados }) {
+export default function CtaVenderRodape() {
   return (
     <section className="mt-24" style={{ backgroundColor: ROXO_ESCURO }}>
       <div className="max-w-3xl mx-auto px-8 py-16 text-center">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">Sua loja também pode estar aqui</h2>
+        <span
+          className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide px-4 py-1.5 rounded-full"
+          style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+        >
+          🆓 Cadastro gratuito
+        </span>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mt-4">Sua loja também pode estar aqui</h2>
         <p className="text-white/70 text-base mt-3 max-w-lg mx-auto">
-          Cadastre gratuitamente e alcance{qtdAssociados ? ` +${qtdAssociados}` : ''} pessoas em Itumbiara.
+          Fortalecer o comércio de Itumbiara nunca foi tão fácil.
         </p>
         <Link
           to="/vender"

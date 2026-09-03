@@ -25,7 +25,7 @@ const CATEGORIAS_POR_SEGMENTO = {
 
 function vantagens(qtdAssociados) {
   return [
-    { emoji: '🆓', titulo: 'Gratuito', texto: 'Cadastro sem mensalidade. Anuncie até 30 produtos.' },
+    { emoji: '🆓', titulo: '100% Gratuito', texto: 'Sem mensalidade, sem comissão. Anuncie até 30 produtos. Nossa missão: fortalecer o comércio de Itumbiara.' },
     { emoji: '💬', titulo: 'Cliente direto no seu WhatsApp', texto: 'Sem comissão, sem intermediário. Cliente fala com você.' },
     { emoji: '💎', titulo: 'Público qualificado', texto: `Alcance ${qtdAssociados ? `+${qtdAssociados} ` : ''}associados SECI ativos + toda Itumbiara.` },
     { emoji: '📊', titulo: 'Métricas em tempo real', texto: 'Veja quantos leads gerou, produtos mais vistos.' },
@@ -39,7 +39,7 @@ const PASSOS = [
 ];
 
 const FAQ = [
-  { p: 'Preciso pagar alguma coisa?', r: 'Não. O cadastro no IUB MAIS é 100% gratuito.' },
+  { p: 'Preciso pagar alguma coisa?', r: 'Não! O IUB MAIS é 100% gratuito. Nossa missão é fortalecer o comércio de Itumbiara, então não cobramos mensalidade nem comissão dos parceiros.' },
   { p: 'Quanto tempo demora a aprovação?', r: 'Até 24h úteis depois do envio do cadastro.' },
   { p: 'Como recebo os clientes?', r: 'Direto no seu WhatsApp — sem intermediário.' },
   { p: 'Posso cancelar quando quiser?', r: 'Sim, quando quiser, sem burocracia.' },
@@ -211,15 +211,26 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados }) {
             Anuncie seus produtos e serviços no IUB MAIS
           </h1>
           <p className="text-white/80 text-lg sm:text-xl mt-6 max-w-xl mx-auto">
-            O marketplace de Itumbiara. Simples, gratuito e direto no WhatsApp.
+            O marketplace de Itumbiara. Grátis, simples e direto no WhatsApp.
           </p>
-          <button
-            onClick={onComecar}
-            className="inline-flex items-center gap-2 mt-10 text-base font-bold px-10 py-4 rounded-xl shadow-lg transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl"
+
+          <span
+            className="inline-flex items-center gap-2 mt-6 text-sm sm:text-base font-black uppercase tracking-wide px-5 py-2.5 rounded-full"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            Começar cadastro agora <ArrowRight className="w-5 h-5" />
-          </button>
+            🆓 100% Gratuito
+          </span>
+          <p className="text-white/60 text-xs sm:text-sm mt-2.5">Sem mensalidade. Sem comissão. Sem taxas.</p>
+
+          <div>
+            <button
+              onClick={onComecar}
+              className="inline-flex items-center gap-2 mt-10 text-base font-bold px-10 py-4 rounded-xl shadow-lg transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl"
+              style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+            >
+              Começar cadastro agora <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -232,6 +243,17 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados }) {
               <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">{v.texto}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section style={{ backgroundColor: `${ROXO}0D` }}>
+        <div className="max-w-2xl mx-auto px-6 sm:px-10 py-16 text-center">
+          <span className="text-4xl">🌆</span>
+          <h2 className="text-2xl sm:text-3xl font-extrabold mt-4" style={{ color: PRETO }}>Fortalecer o comércio local</h2>
+          <p className="text-slate-600 text-sm sm:text-base leading-relaxed mt-5 whitespace-pre-line">
+            {'O IUB MAIS nasceu com um propósito: fortalecer o comércio de Itumbiara. Enquanto grandes marketplaces levam vendas pra fora da cidade, criamos um espaço onde o comerciante local tem visibilidade, o consumidor encontra o que precisa perto de casa, e nossa cidade se fortalece.\n\nPor isso, não cobramos nada dos parceiros. Nossa recompensa é ver Itumbiara crescendo.'}
+          </p>
+          <p className="text-slate-400 text-xs font-semibold mt-6">— Junior, fundador</p>
         </div>
       </section>
 
@@ -492,6 +514,9 @@ function TelaConfirmacao({ onVoltar }) {
         <h1 className="text-2xl sm:text-3xl font-black text-white">Cadastro enviado com sucesso!</h1>
         <p className="text-white/80 text-sm sm:text-base mt-3">
           Seu cadastro está em análise. Você receberá um e-mail ou WhatsApp em até 24h com o resultado e, se aprovado, suas credenciais de acesso.
+        </p>
+        <p className="font-semibold text-sm sm:text-base mt-5" style={{ color: DOURADO }}>
+          Bem-vindo(a) ao movimento IUB MAIS. Juntos vamos fortalecer o comércio da nossa cidade!
         </p>
         <button
           onClick={onVoltar}
