@@ -44,13 +44,13 @@ if (!CONFIGURADO) {
 // Trocado por 'pad': a foto INTEIRA é redimensionada pra caber dentro do
 // quadro e o espaço sobrando é preenchido com fundo, nunca corta conteúdo.
 //
-// gravity 'auto:subject' (deteccao de assunto por IA) foi cogitado pro
-// PRODUTO, mas com crop 'pad' a imagem inteira já é preservada — não há
-// corte pra decidir, então gravity não muda o resultado aqui. Como esse
-// modo de IA pode não estar disponível em todo plano do Cloudinary e não
-// dá pra testar contra a conta real agora, fica de fora: usar um valor não
-// suportado quebraria TODO upload de produto com erro da API. 'auto' (sem
-// ':subject') é o modo de deteccao de conteúdo padrão, sempre disponível.
+// IMPORTANTE: a API do Cloudinary rejeita QUALQUER `gravity` combinado com
+// `crop: 'pad'` (erro 400 "Auto gravity can only be used with crop: fill,
+// thumb, lfill, fill_pad, auto, auto_pad") — não é específico de
+// 'auto:subject', é qualquer valor de gravity. Foi isso que já quebrava todo
+// upload de PRODUTO em produção. Como com 'pad' a imagem inteira é sempre
+// preservada (nunca há corte pra decidir), gravity não mudaria o resultado
+// mesmo se fosse aceito — por isso nenhum preset abaixo usa gravity.
 //
 // quality/fetch_format 'auto' ficam fora do preset porque sao sempre iguais
 // pra qualquer upload, ver uploadFoto().
@@ -61,7 +61,7 @@ const PRESETS = {
   // barra branca/preta óbvia nas bordas — fica mais discreto numa foto de
   // fachada/ambiente do que fundo fixo.
   ESTABELECIMENTO: { width: 1200, height: 800, crop: 'pad', background: 'auto' },
-  PRODUTO: { width: 1200, height: 1200, crop: 'pad', background: 'white', gravity: 'auto' },
+  PRODUTO: { width: 1200, height: 1200, crop: 'pad', background: 'white' },
 };
 
 function bufferParaStream(buffer) {
