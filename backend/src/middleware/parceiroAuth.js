@@ -3,6 +3,9 @@ const db = require('../config/database');
 
 const TIPO = 'parceiro';
 const EXPIRA_EM = '24h';
+// 'pausado' é reversível pelo próprio parceiro (Zona de Perigo das
+// Configurações) — precisa continuar logando pra poder reativar sozinho.
+const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
 
 function gerarTokenParceiro({ parceiroId, usuarioId, cargo }) {
   return jwt.sign(
@@ -35,13 +38,13 @@ async function authenticateParceiro(req, res, next) {
     }
 
     const parceiroResult = await db.query(
-      'SELECT id, slug, nome, logo_url, status, plano FROM sindicato_parceiros WHERE id = $1',
+      'SELECT id, slug, nome, logo_url, status, plano, created_at FROM sindicato_parceiros WHERE id = $1',
       [usuario.parceiro_id]
     );
     const parceiro = parceiroResult.rows[0];
     if (!parceiro) return res.status(401).json({ error: 'Parceiro não encontrado' });
 
-    if (parceiro.status !== 'ativo') {
+    if (!STATUS_PERMITEM_LOGIN.includes(parceiro.status)) {
       return res.status(403).json({ error: 'Sua loja está inativa no momento. Fale com o Sindicato pra reativar o acesso.' });
     }
 

@@ -6,8 +6,13 @@ const { enviarRecuperacaoSenhaParceiro } = require('../services/emailService');
 
 const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 
+// 'pausado' é reversível pelo próprio parceiro (Zona de Perigo das
+// Configurações) — precisa continuar conseguindo logar pra poder reativar.
+// Qualquer outro status (ex.: bloqueado pelo Sindicato) barra o login mesmo.
+const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
+
 function parceiroPublico(p) {
-  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status, plano: p.plano };
+  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status, plano: p.plano, created_at: p.created_at };
 }
 
 async function login(req, res) {
@@ -36,7 +41,7 @@ async function login(req, res) {
 
     const parceiroResult = await db.query('SELECT * FROM sindicato_parceiros WHERE id = $1', [usuario.parceiro_id]);
     const parceiro = parceiroResult.rows[0];
-    if (!parceiro || parceiro.status !== 'ativo') {
+    if (!parceiro || !STATUS_PERMITEM_LOGIN.includes(parceiro.status)) {
       return res.status(403).json({ error: 'Sua loja está inativa no momento. Fale com o Sindicato pra reativar o acesso.' });
     }
 

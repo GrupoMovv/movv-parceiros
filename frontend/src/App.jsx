@@ -58,6 +58,7 @@ import ParceiroPerfil from './pages/parceiro/Perfil';
 import ParceiroProdutos from './pages/parceiro/Produtos';
 import ParceiroProdutoForm from './pages/parceiro/ProdutoForm';
 import ParceiroPlanos from './pages/parceiro/Planos';
+import ParceiroConfiguracoes from './pages/parceiro/Configuracoes';
 import ParceiroPromocoes from './pages/parceiro/Promocoes';
 import ParceiroPromocaoForm from './pages/parceiro/PromocaoForm';
 import ParceiroEmConstrucao from './pages/parceiro/EmConstrucao';
@@ -199,7 +200,7 @@ export default function App() {
           <Route path="promocoes/:id" element={<ParceiroPromocaoForm />} />
           <Route path="estatisticas" element={<ParceiroEmConstrucao titulo="Estatísticas" texto="Relatórios detalhados de visitas e cliques chegam em breve." />} />
           <Route path="planos" element={<ParceiroPlanos />} />
-          <Route path="configuracoes" element={<ParceiroEmConstrucao titulo="Configurações" texto="Troca de senha, notificações e outras preferências chegam em breve." />} />
+          <Route path="configuracoes" element={<ParceiroConfiguracoes />} />
         </Route>
 
         <Route path="/trocar-senha-obrigatorio" element={

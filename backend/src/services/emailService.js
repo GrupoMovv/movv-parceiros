@@ -277,6 +277,32 @@ async function enviarRejeicaoParceiro({ nome, nomeFantasia, email, motivo }) {
   return enviar({ to: email, subject: 'IUB MAIS — Sobre sua solicitação de cadastro', html });
 }
 
+async function enviarConfirmacaoEmailParceiro({ nome, emailNovo, token }) {
+  const link = `${PORTAL_URL}/parceiro/confirmar-email?token=${token}`;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Confirme seu novo e-mail</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Recebemos um pedido pra trocar o e-mail de acesso do painel do seu comércio no IUB MAIS pra este endereço.</p>
+    <p style="color:#555;line-height:1.6;">Clique no botão abaixo pra confirmar. Se não foi você, ignore este e-mail — seu login continua sendo o de sempre.</p>
+    ${botao('Confirmar novo e-mail', link)}
+  `);
+  return enviar({ to: emailNovo, subject: 'IUB MAIS — Confirme seu novo e-mail', html });
+}
+
+async function enviarConfirmacaoExclusaoParceiro({ nome, nomeFantasia, email, token }) {
+  const link = `${PORTAL_URL}/parceiro/confirmar-exclusao?token=${token}`;
+  const html = template(`
+    <h2 style="color:#991b1b;margin-top:0;font-size:22px;">Confirmação de exclusão de conta</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. Recebemos um pedido pra excluir permanentemente a conta de <strong>${nomeFantasia}</strong> no IUB MAIS.</p>
+    <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#991b1b;font-size:13px;line-height:1.6;"><strong>Essa ação é irreversível.</strong> Produtos, promoções, fotos e todo o histórico serão apagados permanentemente.</p>
+    </div>
+    <p style="color:#555;line-height:1.6;">Por segurança, o link abaixo só funciona depois de <strong>24 horas</strong> desta solicitação — assim, se foi engano ou arrependimento, dá tempo de mudar de ideia (é só não clicar).</p>
+    ${botao('Confirmar exclusão definitiva', link)}
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">Se não foi você quem pediu, ignore este e-mail — nada será apagado sem essa confirmação.</p>
+  `);
+  return enviar({ to: email, subject: 'IUB MAIS — Confirmação de exclusão de conta', html });
+}
+
 module.exports = {
   enviarCredenciais,
   enviarRecuperacaoSenha,
@@ -290,4 +316,6 @@ module.exports = {
   enviarNovaSolicitacaoParceiroAdmin,
   enviarAprovacaoParceiro,
   enviarRejeicaoParceiro,
+  enviarConfirmacaoEmailParceiro,
+  enviarConfirmacaoExclusaoParceiro,
 };
