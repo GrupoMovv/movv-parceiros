@@ -140,7 +140,7 @@ async function uploadLogo(req, res) {
     return res.json({ logo_url: url });
   } catch (err) {
     console.error(err);
-    return res.status(502).json({ error: err.message || 'Erro ao enviar logo' });
+    return res.status(502).json({ error: err.message || 'Erro ao enviar logo', detalhes: err.cloudinaryMessage, codigo: err.cloudinaryCode });
   }
 }
 
@@ -166,7 +166,7 @@ async function uploadFotos(req, res) {
     return res.json({ fotos_estabelecimento: fotos });
   } catch (err) {
     console.error(err);
-    return res.status(502).json({ error: err.message || 'Erro ao enviar fotos' });
+    return res.status(502).json({ error: err.message || 'Erro ao enviar fotos', detalhes: err.cloudinaryMessage, codigo: err.cloudinaryCode });
   }
 }
 

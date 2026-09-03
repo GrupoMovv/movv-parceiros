@@ -159,7 +159,8 @@ export default function ParceiroPerfil() {
       setPerfil(p => ({ ...p, logo_url: res.data.logo_url }));
       toast.success('Logo atualizada!');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao enviar logo');
+      const d = err.response?.data;
+      toast.error(d?.detalhes ? `${d.error} (${d.detalhes} — código ${d.codigo})` : (d?.error || 'Erro ao enviar logo'), { duration: 8000 });
     } finally {
       setEnviandoLogo(false);
     }
@@ -178,7 +179,8 @@ export default function ParceiroPerfil() {
       setPerfil(p => ({ ...p, fotos_estabelecimento: res.data.fotos_estabelecimento }));
       toast.success('Fotos enviadas!');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao enviar fotos');
+      const d = err.response?.data;
+      toast.error(d?.detalhes ? `${d.error} (${d.detalhes} — código ${d.codigo})` : (d?.error || 'Erro ao enviar fotos'), { duration: 8000 });
     } finally {
       setEnviandoFotos(false);
     }

@@ -151,7 +151,11 @@ export default function ParceiroProdutoForm() {
       setPendentes([]);
       toast.success('Fotos enviadas!');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao enviar fotos');
+      const d = err.response?.data;
+      // "detalhes"/"codigo" só vêm quando o erro é do Cloudinary (ver
+      // cloudinaryService.js) — mostrar isso no toast é temporário, pra
+      // debugar o bug de upload sem precisar abrir log do Render.
+      toast.error(d?.detalhes ? `${d.error} (${d.detalhes} — código ${d.codigo})` : (d?.error || 'Erro ao enviar fotos'), { duration: 8000 });
     } finally {
       setEnviandoFotos(false);
     }

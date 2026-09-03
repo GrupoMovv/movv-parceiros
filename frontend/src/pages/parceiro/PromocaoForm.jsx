@@ -166,7 +166,8 @@ export default function ParceiroPromocaoForm() {
       setFotoPendente(null);
       toast.success('Foto enviada!');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao enviar foto');
+      const d = err.response?.data;
+      toast.error(d?.detalhes ? `${d.error} (${d.detalhes} — código ${d.codigo})` : (d?.error || 'Erro ao enviar foto'), { duration: 8000 });
     } finally {
       setEnviandoFoto(false);
     }

@@ -212,7 +212,14 @@ async function uploadFotos(req, res) {
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    return res.status(502).json({ error: err.message || 'Erro ao enviar fotos' });
+    // detalhes/codigo vêm do cloudinaryService (ver montarErroUpload) — só
+    // existem quando o erro veio de lá; ficam de bônus na resposta pra
+    // debug sem precisar abrir o log do servidor toda vez.
+    return res.status(502).json({
+      error: err.message || 'Erro ao enviar fotos',
+      detalhes: err.cloudinaryMessage,
+      codigo: err.cloudinaryCode,
+    });
   }
 }
 

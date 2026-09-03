@@ -332,7 +332,11 @@ async function uploadFoto(req, res) {
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    return res.status(502).json({ error: err.message || 'Erro ao enviar foto' });
+    return res.status(502).json({
+      error: err.message || 'Erro ao enviar foto',
+      detalhes: err.cloudinaryMessage,
+      codigo: err.cloudinaryCode,
+    });
   }
 }
 
