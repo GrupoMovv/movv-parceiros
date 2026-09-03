@@ -15,8 +15,8 @@ const OPCOES = [
   {
     to: '/parceiro/login',
     emoji: '🏢',
-    titulo: 'Sou parceiro',
-    subtitulo: 'Gerencie sua loja, produtos e promoções',
+    titulo: 'Sou empresa parceira',
+    subtitulo: 'Cadastre sua empresa, produtos, serviços e ofertas',
     botao: 'Entrar como parceiro',
   },
 ];
@@ -68,7 +68,7 @@ export default function ModalEntrar({ onClose }) {
               <p className="font-bold text-sm" style={{ color: PRETO }}>{op.titulo}</p>
               <p className="text-slate-500 text-xs leading-relaxed">{op.subtitulo}</p>
               <span
-                className="mt-2 text-xs font-semibold px-4 py-2 rounded-xl text-white w-full"
+                className="mt-2 text-xs font-semibold uppercase tracking-wide px-4 py-2 rounded-xl text-white w-full"
                 style={{ backgroundColor: op.to === '/cadastrar' ? ROXO : ROXO_ESCURO }}
               >
                 {op.botao}
