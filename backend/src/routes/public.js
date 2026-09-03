@@ -90,6 +90,7 @@ router.get('/marketplace/stats', async (req, res) => {
 
 router.get('/produtos/:id', produtoCtrl.getProduto);
 router.get('/produtos/:id/outros-do-parceiro', produtoCtrl.getOutrosDoParceiro);
+router.get('/produtos/:id/mensagem-whatsapp', produtoCtrl.getMensagemWhatsapp);
 router.post('/produtos/:id/visualizacao', produtoCtrl.registrarEvento);
 
 router.get('/carteirinha/:hash', async (req, res) => {

@@ -27,6 +27,7 @@ export default function ProdutoDetalhe() {
   const [fotoAtiva, setFotoAtiva] = useState(0);
   const [nomeAssociado, setNomeAssociado] = useState(null);
   const [descricaoExpandida, setDescricaoExpandida] = useState(false);
+  const [carregandoWhatsapp, setCarregandoWhatsapp] = useState(false);
   const { alternar: alternarFavorito, ehFavorito } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
 
   const ehAssociado = Boolean(nomeAssociado);
@@ -70,7 +71,26 @@ export default function ProdutoDetalhe() {
     return `Olá! Vi seu produto ${produto.nome} no IUB MAIS e tenho interesse. Poderia me passar mais informações?`;
   }, [produto]);
 
-  function handleCliqueWhatsapp() {
+  // Abre a aba em branco de forma síncrona (dentro do gesto de clique) e só
+  // depois navega ela pra URL do WhatsApp — abrir a aba só após o await do
+  // fetch é bloqueado por popup blocker em boa parte dos navegadores mobile.
+  async function handleWhatsappClick() {
+    if (carregandoWhatsapp || !produto?.parceiro_whatsapp || !produto.estoque_disponivel) return;
+    const novaAba = window.open('', '_blank');
+    setCarregandoWhatsapp(true);
+    try {
+      const res = await api.get(`/public/produtos/${id}/mensagem-whatsapp`, {
+        params: associadoHash ? { associado: associadoHash } : {},
+      });
+      if (novaAba) novaAba.location.href = res.data.url_final;
+      else window.open(res.data.url_final, '_blank');
+    } catch {
+      const fallback = linkWhatsappComTexto(produto.parceiro_whatsapp, mensagemWhatsapp);
+      if (novaAba) novaAba.location.href = fallback;
+      else window.open(fallback, '_blank');
+    } finally {
+      setCarregandoWhatsapp(false);
+    }
     api.post(`/public/produtos/${id}/visualizacao`, { tipo: 'clique_whatsapp', associado_hash: associadoHash }).catch(() => {});
   }
 
@@ -101,9 +121,7 @@ export default function ProdutoDetalhe() {
 
   if (!produto) return <ProdutoSkeleton />;
 
-  const linkWpp = produto.parceiro_whatsapp && produto.estoque_disponivel
-    ? linkWhatsappComTexto(produto.parceiro_whatsapp, mensagemWhatsapp)
-    : null;
+  const whatsappHabilitado = Boolean(produto.parceiro_whatsapp) && produto.estoque_disponivel;
 
   const temPrecoAssociado = Boolean(produto.preco_associado);
   const economia = temPrecoAssociado ? parseFloat(produto.preco) - parseFloat(produto.preco_associado) : 0;
@@ -214,16 +232,16 @@ export default function ProdutoDetalhe() {
           </p>
 
           {/* CTA whatsapp — inline (desktop / mobile no fluxo normal) */}
-          <a
-            href={linkWpp || undefined}
-            target="_blank" rel="noreferrer"
-            onClick={linkWpp ? handleCliqueWhatsapp : (e) => e.preventDefault()}
-            aria-disabled={!linkWpp}
-            className={`mt-6 w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-xl transition-all duration-300 ease-out ${linkWpp ? 'hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
-            style={{ backgroundColor: '#25D366', boxShadow: linkWpp ? `0 4px 20px ${DOURADO}33` : 'none' }}
+          <button
+            type="button"
+            onClick={handleWhatsappClick}
+            disabled={!whatsappHabilitado || carregandoWhatsapp}
+            className={`mt-6 w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-xl transition-all duration-300 ease-out ${whatsappHabilitado ? 'hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+            style={{ backgroundColor: '#25D366', boxShadow: whatsappHabilitado ? `0 4px 20px ${DOURADO}33` : 'none' }}
           >
-            <MessageCircle className="w-5 h-5" /> Chamar no WhatsApp
-          </a>
+            {carregandoWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
+            Chamar no WhatsApp
+          </button>
 
           <div className="flex items-center gap-3 mt-3">
             <button onClick={() => alternarFavorito(produto.id)} className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700">
@@ -305,15 +323,16 @@ export default function ProdutoDetalhe() {
 
       {/* whatsapp fixo mobile */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40">
-        <a
-          href={linkWpp || undefined}
-          target="_blank" rel="noreferrer"
-          onClick={linkWpp ? handleCliqueWhatsapp : (e) => e.preventDefault()}
-          className={`w-full flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${linkWpp ? '' : 'opacity-50'}`}
+        <button
+          type="button"
+          onClick={handleWhatsappClick}
+          disabled={!whatsappHabilitado || carregandoWhatsapp}
+          className={`w-full flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado ? '' : 'opacity-50'}`}
           style={{ backgroundColor: '#25D366' }}
         >
-          <MessageCircle className="w-4.5 h-4.5" /> Chamar no WhatsApp
-        </a>
+          {carregandoWhatsapp ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <MessageCircle className="w-4.5 h-4.5" />}
+          Chamar no WhatsApp
+        </button>
       </div>
     </div>
   );
