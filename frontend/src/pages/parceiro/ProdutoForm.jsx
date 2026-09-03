@@ -5,6 +5,7 @@ import { Upload, X, Loader2, Star, Lightbulb, Check, Send } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
+import CampoPreco from '../../components/ui/CampoPreco';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DICAS = [
@@ -261,8 +262,8 @@ export default function ParceiroProdutoForm() {
 
         <Secao titulo="Preços e status">
           <div className="grid grid-cols-2 gap-4">
-            <Campo label="Preço normal (R$)" value={form.preco} onChange={v => setCampo('preco', v)} type="number" />
-            <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="number" />
+            <Campo label="Preço normal" value={form.preco} onChange={v => setCampo('preco', v)} type="money" />
+            <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" />
           </div>
           <div className="flex flex-col gap-2 mt-4">
             <label className="flex items-center gap-2 text-sm font-medium" style={{ color: PRETO }}>
@@ -349,7 +350,11 @@ function Campo({ label, value, onChange, type = 'text' }) {
   return (
     <div>
       <Label>{label}</Label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} className={campoCls} />
+      {type === 'money' ? (
+        <CampoPreco value={value} onChange={onChange} className={campoCls} />
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} className={campoCls} />
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Upload, Loader2, Send, TrendingDown } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
+import CampoPreco from '../../components/ui/CampoPreco';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DURACOES_RAPIDAS = [
@@ -245,8 +246,8 @@ export default function ParceiroPromocaoForm() {
 
         <Secao titulo="Preços e vigência">
           <div className="grid grid-cols-2 gap-4">
-            <Campo label="Preço original — De (R$)" value={form.preco_de} onChange={v => setCampo('preco_de', v)} type="number" />
-            <Campo label="Preço promocional — Por (R$)" value={form.preco_por} onChange={v => setCampo('preco_por', v)} type="number" />
+            <Campo label="Preço original — De" value={form.preco_de} onChange={v => setCampo('preco_de', v)} type="money" />
+            <Campo label="Preço promocional — Por" value={form.preco_por} onChange={v => setCampo('preco_por', v)} type="money" />
           </div>
           {descontoPct !== null && (
             <p className="flex items-center gap-1.5 text-xs font-semibold mt-2" style={{ color: '#166534' }}>
@@ -271,7 +272,7 @@ export default function ParceiroPromocaoForm() {
             <Campo label="Data de término" value={form.data_fim} onChange={v => setCampo('data_fim', v)} type="datetime-local" />
           </div>
 
-          <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="number" className="mt-4" />
+          <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" className="mt-4" />
           <Campo label="Limite de usos (opcional — ex: primeiros 20)" value={form.limite_usos} onChange={v => setCampo('limite_usos', v)} type="number" className="mt-4" />
 
           <div className="flex flex-col gap-2 mt-4">
@@ -338,7 +339,11 @@ function Campo({ label, value, onChange, type = 'text', className = '' }) {
   return (
     <div className={className}>
       <Label>{label}</Label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} className={campoCls} />
+      {type === 'money' ? (
+        <CampoPreco value={value} onChange={onChange} className={campoCls} />
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} className={campoCls} />
+      )}
     </div>
   );
 }
