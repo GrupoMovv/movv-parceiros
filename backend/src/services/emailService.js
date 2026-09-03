@@ -225,6 +225,58 @@ async function enviarAprovacaoIndicador({ nome, email }) {
   return enviar({ to: email, subject: 'Movv — Seu cadastro foi aprovado!', html });
 }
 
+async function enviarNovaSolicitacaoParceiroAdmin({ nomeFantasia, cnpj, segmento, whatsapp, email }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Nova Solicitação de Parceiro — IUB MAIS</h2>
+    <p style="color:#555;line-height:1.6;">Um comerciante se cadastrou pela página <strong>/vender</strong> e aguarda aprovação.</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('Nome fantasia', nomeFantasia)}
+      ${linha('CNPJ', cnpj)}
+      ${linha('Segmento', segmento)}
+      ${linha('WhatsApp', whatsapp)}
+      ${linha('E-mail', email)}
+    </table>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;"><strong>Ação necessária:</strong> Acesse o portal pra aprovar ou rejeitar o cadastro.</p>
+    </div>
+    ${botao('Acessar o Portal', PORTAL_URL)}
+  `);
+  return enviar({ to: ADMIN_EMAIL, subject: `Novo parceiro IUB MAIS — ${nomeFantasia}`, html });
+}
+
+async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha }) {
+  const link = `${PORTAL_URL}/parceiro/login`;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Sua loja foi aprovada!</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A solicitação de <strong>${nomeFantasia}</strong> pro IUB MAIS foi aprovada.</p>
+    <p style="color:#555;line-height:1.6;">Já pode acessar o painel e começar a anunciar seus produtos.</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('E-mail de acesso', email)}
+      ${linha(`<span style="color:#4A0E8F;font-weight:700;">Senha temporária</span>`,
+        `<span style="font-size:20px;letter-spacing:2px;color:#4A0E8F;font-weight:700;">${senha}</span>`, true)}
+    </table>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;"><strong>Recomendamos alterar a senha no primeiro acesso.</strong></p>
+    </div>
+    ${botao('Acessar o Painel do Parceiro', link)}
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">IUB MAIS — Mais qualidade. Mais confiança. Mais vantagens.</p>
+  `);
+  return enviar({ to: email, subject: '🎉 IUB MAIS - Sua loja foi aprovada!', html });
+}
+
+async function enviarRejeicaoParceiro({ nome, nomeFantasia, email, motivo }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Sobre sua solicitação no IUB MAIS</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. Analisamos a solicitação de <strong>${nomeFantasia}</strong> e, por enquanto, não conseguimos aprová-la.</p>
+    ${motivo ? `<div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#991b1b;font-size:13px;"><strong>Motivo:</strong> ${motivo}</p>
+    </div>` : ''}
+    <p style="color:#555;line-height:1.6;">Se quiser corrigir e enviar um novo cadastro, é só acessar a página novamente.</p>
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">Dúvidas? Fale com a gente pelo WhatsApp.</p>
+  `);
+  return enviar({ to: email, subject: 'IUB MAIS — Sobre sua solicitação de cadastro', html });
+}
+
 module.exports = {
   enviarCredenciais,
   enviarRecuperacaoSenha,
@@ -235,4 +287,7 @@ module.exports = {
   enviarConfirmacaoIndicacao,
   enviarNovoIndicadorAdmin,
   enviarAprovacaoIndicador,
+  enviarNovaSolicitacaoParceiroAdmin,
+  enviarAprovacaoParceiro,
+  enviarRejeicaoParceiro,
 };

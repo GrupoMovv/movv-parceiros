@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { DOURADO } from '../theme';
 
 function scrollParaParceiros(e) {
@@ -50,12 +51,12 @@ export default function HeroPremium({ nomeAssociado }) {
           >
             Explorar Ofertas
           </a>
-          <a
-            href="mailto:contato@grupomovv.com.br?subject=Quero%20ser%20parceiro%20do%20IUB%20MAIS"
+          <Link
+            to="/vender"
             className="w-full sm:w-auto text-center font-semibold text-base px-8 py-4 rounded-xl border-2 border-white text-white transition-all duration-300 ease-out hover:bg-white/10"
           >
             Cadastrar minha empresa
-          </a>
+          </Link>
         </div>
       </div>
     </section>

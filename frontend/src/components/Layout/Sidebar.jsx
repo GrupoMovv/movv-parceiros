@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
-  Landmark, Gift, MessagesSquare, Contact, Inbox,
+  Landmark, Gift, MessagesSquare, Contact, Inbox, Store,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -96,6 +96,7 @@ const MASTER_MENU = [
       { label: 'Carteirinhas',     icon: CreditCard,    to: '/sindicato/carteirinhas',    roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Benefícios',       icon: Gift,          to: '/sindicato/beneficios',      roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Solicitações de Empresas', icon: Inbox, to: '/sindicato/solicitacoes',    roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'solicitacoes' },
+      { label: 'Solicitações de Parceiros IUB MAIS', icon: Store, to: '/sindicato/parceiros-solicitacoes', roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'parceirosSolicitacoes' },
     ],
   },
   {
@@ -194,6 +195,9 @@ export default function Sidebar({ onClose }) {
     const carregar = () => {
       api.get('/sindicato-solicitacoes/count-pendentes')
         .then(res => { if (!cancelado) setBadges(b => ({ ...b, solicitacoes: res.data.pendentes })); })
+        .catch(() => {});
+      api.get('/sindicato-parceiros-solicitacoes/count-pendentes')
+        .then(res => { if (!cancelado) setBadges(b => ({ ...b, parceirosSolicitacoes: res.data.pendentes })); })
         .catch(() => {});
     };
     carregar();
