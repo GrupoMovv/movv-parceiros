@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { DOURADO } from '../theme';
+import ModalEntrar from './ModalEntrar';
 
 const ITENS = [
   { label: 'Início', href: '#topo' },
@@ -15,6 +17,8 @@ function scrollPara(e, href) {
 }
 
 export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos }) {
+  const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
+
   return (
     <header
       id="topo"
@@ -58,16 +62,27 @@ export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAt
 
           {carregandoAssociado ? (
             <div className="h-4 w-16 rounded-full bg-white/10 animate-pulse ml-1" />
-          ) : (
+          ) : nomeAssociado ? (
             <Link
-              to={nomeAssociado ? '/meu-painel' : '/cadastrar'}
+              to="/meu-painel"
               className="text-sm font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300 whitespace-nowrap"
             >
-              {nomeAssociado ? nomeAssociado.split(' ')[0] : 'Login / Associado'}
+              {nomeAssociado.split(' ')[0]}
             </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalEntrarAberto(true)}
+              className="text-sm font-semibold px-4 py-2 rounded-lg transition-colors duration-300 whitespace-nowrap"
+              style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+            >
+              Entrar
+            </button>
           )}
         </nav>
       </div>
+
+      {modalEntrarAberto && <ModalEntrar onClose={() => setModalEntrarAberto(false)} />}
     </header>
   );
 }

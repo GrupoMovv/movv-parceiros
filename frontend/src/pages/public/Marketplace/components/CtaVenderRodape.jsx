@@ -22,6 +22,10 @@ export default function CtaVenderRodape() {
         >
           Cadastrar minha loja
         </Link>
+        <p className="text-white/50 text-sm mt-4">
+          Já tem cadastro?{' '}
+          <Link to="/parceiro/login" className="text-white/70 hover:text-white underline">Fazer login como parceiro</Link>
+        </p>
       </div>
     </section>
   );

@@ -303,6 +303,10 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados }) {
           >
             Cadastrar minha loja agora
           </button>
+          <p className="text-white/50 text-sm mt-4">
+            Já é parceiro cadastrado?{' '}
+            <Link to="/parceiro/login" className="text-white/70 hover:text-white underline">Faça login</Link>
+          </p>
         </div>
       </section>
     </div>
