@@ -9,10 +9,13 @@ const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG
 
 const SEGMENTOS = [
   { valor: 'produtos', label: 'Produtos', emoji: '🛍️', desc: 'Roupas, eletrônicos, casa, beleza, saúde...' },
-  { valor: 'servicos', label: 'Serviços', emoji: '🔧', desc: 'Consultoria, reparo, estética, saúde...' },
+  { valor: 'servicos', label: 'Serviços', emoji: '🛠️', desc: 'Consultoria, reparos, estética, saúde...' },
   { valor: 'alimentacao', label: 'Alimentação', emoji: '🍔', desc: 'Restaurante, lanchonete, padaria, cafeteria...' },
   { valor: 'hospedagem', label: 'Hospedagem', emoji: '🏨', desc: 'Hotel, pousada, camping, temporada...' },
-  { valor: 'outro', label: 'Outro', emoji: '🎯', desc: 'Não encontrei meu segmento' },
+  { valor: 'automotivo', label: 'Automotivo', emoji: '🚗', desc: 'Veículos, peças, acessórios, oficinas, serviços automotivos...' },
+  { valor: 'imoveis', label: 'Imóveis', emoji: '🏠', desc: 'Venda, aluguel, terrenos, casas, apartamentos, imóveis comerciais...' },
+  { valor: 'turismo', label: 'Turismo, Lazer & Experiências', emoji: '🎯', desc: 'Passeios, atrações, eventos, lazer e experiências...' },
+  { valor: 'outro', label: 'Outro', emoji: '🏷️', desc: 'Não encontrei meu segmento' },
 ];
 
 const CATEGORIAS_POR_SEGMENTO = {
@@ -20,6 +23,9 @@ const CATEGORIAS_POR_SEGMENTO = {
   servicos: ['Consultoria', 'Reparo e manutenção', 'Estética', 'Saúde', 'Educação', 'Outros serviços'],
   alimentacao: ['Restaurante', 'Lanchonete', 'Padaria', 'Cafeteria', 'Doces e salgados', 'Outros alimentos'],
   hospedagem: ['Hotel', 'Pousada', 'Camping', 'Temporada', 'Outros'],
+  automotivo: ['Veículos', 'Peças e acessórios', 'Oficina mecânica', 'Funilaria e pintura', 'Outros serviços automotivos'],
+  imoveis: ['Venda de imóveis', 'Aluguel', 'Terrenos', 'Imóveis comerciais', 'Outros'],
+  turismo: ['Passeios e excursões', 'Atrações turísticas', 'Eventos', 'Lazer', 'Outras experiências'],
   outro: ['Outro'],
 };
 
@@ -324,8 +330,8 @@ function TelaSegmento({ onVoltar, onEscolher }) {
         </button>
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8">
-          <h1 className="text-xl sm:text-2xl font-extrabold" style={{ color: PRETO }}>O que você vai vender?</h1>
-          <p className="text-slate-500 text-sm mt-1">Selecione o segmento principal:</p>
+          <h1 className="text-xl sm:text-2xl font-extrabold" style={{ color: PRETO }}>O que sua empresa oferece?</h1>
+          <p className="text-slate-500 text-sm mt-1">Escolha o segmento principal da sua empresa.</p>
 
           <div className="space-y-3 mt-6">
             {SEGMENTOS.map(s => (

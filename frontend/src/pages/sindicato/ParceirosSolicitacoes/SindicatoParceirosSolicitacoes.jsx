@@ -16,7 +16,8 @@ const STATUS_LABEL = {
 };
 
 const SEGMENTO_LABEL = {
-  produtos: 'Produtos', servicos: 'Serviços', alimentacao: 'Alimentação', hospedagem: 'Hospedagem', outro: 'Outro',
+  produtos: 'Produtos', servicos: 'Serviços', alimentacao: 'Alimentação', hospedagem: 'Hospedagem',
+  automotivo: 'Automotivo', imoveis: 'Imóveis', turismo: 'Turismo, Lazer & Experiências', outro: 'Outro',
 };
 
 function fmtCnpj(v) {

@@ -10,9 +10,12 @@ const MAX_SOLICITACOES_POR_IP_24H = 3;
 // parceiro pode trocar depois pelo próprio painel, quando existir essa tela).
 const SEGMENTOS = {
   produtos:     { label: 'Produtos',     icone: '🛍️', cor: '#8B5CF6' },
-  servicos:     { label: 'Serviços',     icone: '🔧', cor: '#0EA5E9' },
+  servicos:     { label: 'Serviços',     icone: '🛠️', cor: '#0EA5E9' },
   alimentacao:  { label: 'Alimentação',  icone: '🍔', cor: '#F97316' },
   hospedagem:   { label: 'Hospedagem',   icone: '🏨', cor: '#10B981' },
+  automotivo:   { label: 'Automotivo',   icone: '🚗', cor: '#334155' },
+  imoveis:      { label: 'Imóveis',      icone: '🏠', cor: '#0369A1' },
+  turismo:      { label: 'Turismo, Lazer & Experiências', icone: '🎯', cor: '#DB2777' },
   outro:        { label: 'Outro',        icone: '🎯', cor: '#64748B' },
 };
 
