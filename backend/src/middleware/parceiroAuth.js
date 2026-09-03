@@ -35,7 +35,7 @@ async function authenticateParceiro(req, res, next) {
     }
 
     const parceiroResult = await db.query(
-      'SELECT id, slug, nome, logo_url, status FROM sindicato_parceiros WHERE id = $1',
+      'SELECT id, slug, nome, logo_url, status, plano FROM sindicato_parceiros WHERE id = $1',
       [usuario.parceiro_id]
     );
     const parceiro = parceiroResult.rows[0];

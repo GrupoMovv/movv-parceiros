@@ -20,6 +20,7 @@ export default function ParceiroPainelLayout() {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [promosTerminandoEm24h, setPromosTerminandoEm24h] = useState(0);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -32,6 +33,19 @@ export default function ParceiroPainelLayout() {
       .catch(() => navigate('/parceiro/login', { replace: true }))
       .finally(() => setCarregando(false));
   }, [navigate]);
+
+  // Badge simples de "vai vencer" — reusa a listagem de promoções ativas e
+  // filtra no cliente quem termina em menos de 24h (sem endpoint dedicado).
+  useEffect(() => {
+    if (!getParceiroToken()) return;
+    apiParceiro.get('/parceiro/promocoes', { params: { status: 'ativa' } })
+      .then(res => {
+        const agora = Date.now();
+        const emBreve = res.data.promocoes.filter(p => new Date(p.data_fim).getTime() - agora < 24 * 3600 * 1000);
+        setPromosTerminandoEm24h(emBreve.length);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     function fecharAoClicarFora(e) {
@@ -112,6 +126,11 @@ export default function ParceiroPainelLayout() {
               style={({ isActive }) => isActive ? { borderColor: ROXO, color: ROXO } : undefined}
             >
               {aba.label}
+              {aba.to === '/parceiro/painel/promocoes' && promosTerminandoEm24h > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white bg-red-500">
+                  {promosTerminandoEm24h}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

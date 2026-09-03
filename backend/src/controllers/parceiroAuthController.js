@@ -7,7 +7,7 @@ const { enviarRecuperacaoSenhaParceiro } = require('../services/emailService');
 const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 
 function parceiroPublico(p) {
-  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status };
+  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status, plano: p.plano };
 }
 
 async function login(req, res) {

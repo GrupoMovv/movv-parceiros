@@ -4,18 +4,18 @@ import api from '../../../services/api';
 // Cada seção de produto da home busca seu próprio endpoint, em paralelo e
 // independente das outras — uma seção lenta ou vazia nunca bloqueia o
 // resto da página (Bloco 8: "não bloquear render inicial").
-export function useProdutosSecao(endpoint) {
+export function useProdutosSecao(endpoint, chave = 'produtos') {
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     let ativo = true;
     api.get(endpoint)
-      .then(res => { if (ativo) setProdutos(res.data.produtos); })
+      .then(res => { if (ativo) setProdutos(res.data[chave]); })
       .catch(() => { if (ativo) setProdutos([]); })
       .finally(() => { if (ativo) setCarregando(false); });
     return () => { ativo = false; };
-  }, [endpoint]);
+  }, [endpoint, chave]);
 
   return { produtos, carregando };
 }

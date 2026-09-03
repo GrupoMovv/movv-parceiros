@@ -44,6 +44,7 @@ import Carteirinha from './pages/public/Carteirinha';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
+const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
 const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender'));
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
@@ -55,6 +56,8 @@ import ParceiroDashboard from './pages/parceiro/Dashboard';
 import ParceiroPerfil from './pages/parceiro/Perfil';
 import ParceiroProdutos from './pages/parceiro/Produtos';
 import ParceiroProdutoForm from './pages/parceiro/ProdutoForm';
+import ParceiroPromocoes from './pages/parceiro/Promocoes';
+import ParceiroPromocaoForm from './pages/parceiro/PromocaoForm';
 import ParceiroEmConstrucao from './pages/parceiro/EmConstrucao';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
@@ -174,6 +177,7 @@ export default function App() {
         <Route path="/marketplace/categoria/:categoriaSlug" element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
+        <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
         <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
@@ -188,7 +192,9 @@ export default function App() {
           <Route path="produtos"     element={<ParceiroProdutos />} />
           <Route path="produtos/novo" element={<ParceiroProdutoForm />} />
           <Route path="produtos/:id" element={<ParceiroProdutoForm />} />
-          <Route path="promocoes"    element={<ParceiroEmConstrucao titulo="Promoções" texto="Criar promoções com prazo de validade chega no próximo bloco do Portal do Parceiro." />} />
+          <Route path="promocoes"     element={<ParceiroPromocoes />} />
+          <Route path="promocoes/novo" element={<ParceiroPromocaoForm />} />
+          <Route path="promocoes/:id" element={<ParceiroPromocaoForm />} />
           <Route path="estatisticas" element={<ParceiroEmConstrucao titulo="Estatísticas" texto="Relatórios detalhados de visitas e cliques chegam em breve." />} />
           <Route path="configuracoes" element={<ParceiroEmConstrucao titulo="Configurações" texto="Troca de senha, notificações e outras preferências chegam em breve." />} />
         </Route>

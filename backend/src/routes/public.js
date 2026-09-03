@@ -4,6 +4,7 @@ const path = require('path');
 const db = require('../config/database');
 const produtoCtrl = require('../controllers/produtoPublicoController');
 const marketplaceHomeCtrl = require('../controllers/marketplaceHomeController');
+const promocaoCtrl = require('../controllers/promocaoPublicoController');
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
@@ -100,6 +101,10 @@ router.get('/produtos/:id', produtoCtrl.getProduto);
 router.get('/produtos/:id/outros-do-parceiro', produtoCtrl.getOutrosDoParceiro);
 router.get('/produtos/:id/mensagem-whatsapp', produtoCtrl.getMensagemWhatsapp);
 router.post('/produtos/:id/visualizacao', produtoCtrl.registrarEvento);
+
+router.get('/promocoes/:id', promocaoCtrl.getPromocao);
+router.get('/promocoes/:id/mensagem-whatsapp', promocaoCtrl.getMensagemWhatsapp);
+router.post('/promocoes/:id/visualizacao', promocaoCtrl.registrarEvento);
 
 router.get('/carteirinha/:hash', async (req, res) => {
   try {

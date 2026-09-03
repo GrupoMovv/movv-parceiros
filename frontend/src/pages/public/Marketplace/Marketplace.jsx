@@ -12,6 +12,7 @@ import PartnerCard from './components/PartnerCard';
 import CardCategoria from './components/CardCategoria';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
+import CardPromocao from './components/CardPromocao';
 import CtaVenderRodape from './components/CtaVenderRodape';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
@@ -67,7 +68,7 @@ export default function Marketplace() {
     if (categoriaSlug) document.querySelector('#parceiros')?.scrollIntoView({ block: 'start' });
   }, [categoriaSlug]);
 
-  const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana');
+  const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana', 'promocoes');
   const { produtos: exclusivos, carregando: carregandoExclusivos } = useProdutosSecao('/public/marketplace/exclusivos-associados');
   const { produtos: novidades, carregando: carregandoNovidades } = useProdutosSecao('/public/marketplace/novidades');
   const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
@@ -121,8 +122,8 @@ export default function Marketplace() {
           ) : (
             <>
               <SecaoProdutos
-                id="ofertas" emoji="🔥" titulo="Ofertas da semana" subtitulo="Maiores descontos da casa"
-                produtos={ofertas} carregando={carregandoOfertas} badge="desconto"
+                id="ofertas" emoji="🔥" titulo="Ofertas da semana" subtitulo="Promoções por tempo limitado"
+                produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
               />
               <SecaoProdutos
                 emoji="💎" titulo="Exclusivos para associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"

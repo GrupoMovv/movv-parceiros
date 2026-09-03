@@ -60,6 +60,7 @@ app.use('/api/parceiro/auth',          require('./routes/parceiroAuth'));
 app.use('/api/parceiro/dashboard',     require('./routes/parceiroDashboard'));
 app.use('/api/parceiro/perfil',        require('./routes/parceiroPerfil'));
 app.use('/api/parceiro/produtos',      require('./routes/parceiroProdutos'));
+app.use('/api/parceiro/promocoes',     require('./routes/parceiroPromocoes'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 app.use('/',                           require('./routes/produtoPublico'));

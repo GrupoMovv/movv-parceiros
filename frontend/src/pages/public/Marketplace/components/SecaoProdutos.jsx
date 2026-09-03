@@ -16,7 +16,7 @@ function SkeletonCard() {
 // Seção de vitrine reutilizada em todas as listas de produto da home. Regras
 // de layout combinadas no Bloco 8: 1-2 produtos centraliza (sem scroll), 3+
 // vira scroll horizontal com "peek" no mobile e grid no desktop.
-export default function SecaoProdutos({ id, titulo, subtitulo, emoji, produtos, carregando, badge, verTodosHref, className = '' }) {
+export default function SecaoProdutos({ id, titulo, subtitulo, emoji, produtos, carregando, badge, verTodosHref, className = '', CardComponent = CardProduto }) {
   if (!carregando && produtos.length === 0) return null;
 
   const poucosItens = !carregando && produtos.length <= 2;
@@ -39,7 +39,7 @@ export default function SecaoProdutos({ id, titulo, subtitulo, emoji, produtos, 
         ) : poucosItens ? (
           <div className="flex flex-wrap justify-center sm:justify-start gap-4">
             {produtos.map(p => (
-              <CardProduto key={p.id} produto={p} badge={badge} className="w-[200px]" />
+              <CardComponent key={p.id} produto={p} badge={badge} className="w-[200px]" />
             ))}
           </div>
         ) : (
@@ -47,13 +47,13 @@ export default function SecaoProdutos({ id, titulo, subtitulo, emoji, produtos, 
             {/* mobile: scroll horizontal com peek do próximo card */}
             <div className="flex sm:hidden gap-3.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1" style={{ scrollSnapType: 'x mandatory' }}>
               {produtos.map(p => (
-                <CardProduto key={p.id} produto={p} badge={badge} className="flex-shrink-0" style={{ width: '42vw', scrollSnapAlign: 'start' }} />
+                <CardComponent key={p.id} produto={p} badge={badge} className="flex-shrink-0" style={{ width: '42vw', scrollSnapAlign: 'start' }} />
               ))}
             </div>
             {/* tablet/desktop: grid */}
             <div className="hidden sm:grid grid-cols-3 lg:grid-cols-4 gap-6">
               {produtos.map(p => (
-                <CardProduto key={p.id} produto={p} badge={badge} />
+                <CardComponent key={p.id} produto={p} badge={badge} />
               ))}
             </div>
           </>
