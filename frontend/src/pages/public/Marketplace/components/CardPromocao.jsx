@@ -37,55 +37,44 @@ export default function CardPromocao({ produto: promocao, className = '', style 
     <Link
       to={`/marketplace/promocao/${promocao.id}`}
       style={style}
-      className={`group flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 ease-out hover:-translate-y-1 ${className}`}
+      className={`group flex flex-col bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-200 ease-out ${className}`}
     >
-      <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-50">
+      <div className="relative w-full h-[140px] sm:h-[180px] rounded-md overflow-hidden bg-white flex items-center justify-center">
         {promocao.foto_url ? (
-          <img
-            src={promocao.foto_url} alt={promocao.titulo} loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+          <img src={promocao.foto_url} alt={promocao.titulo} loading="lazy" className="w-full h-full object-contain" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-300">
-            <ImageOff className="w-8 h-8" />
+          <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50">
+            <ImageOff className="w-7 h-7" />
           </div>
         )}
 
         {promocao.desconto_pct && (
-          <span
-            className="absolute top-2.5 left-2.5 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-sm"
-            style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
-          >
-            {promocao.desconto_pct}% OFF
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+            -{promocao.desconto_pct}% OFF
           </span>
         )}
         {promocao.exclusivo_associado && (
-          <span
-            className="absolute top-2.5 right-2.5 flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-sm text-white"
-            style={{ backgroundColor: ROXO }}
-          >
-            <Diamond size={11} weight="duotone" /> SECI
+          <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide text-white" style={{ backgroundColor: ROXO }}>
+            <Diamond size={9} weight="fill" /> SECI
           </span>
         )}
-
         {(contagem || vagasRestantes !== null) && (
-          <span className="absolute bottom-2.5 left-2.5 right-2.5 text-[10px] font-bold text-center px-2 py-1 rounded-full text-white" style={{ backgroundColor: 'rgba(15,15,20,0.75)' }}>
+          <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[9px] font-bold text-center px-1.5 py-0.5 rounded text-white truncate" style={{ backgroundColor: 'rgba(15,15,20,0.75)' }}>
             {contagem || `Faltam ${vagasRestantes} ${vagasRestantes === 1 ? 'vaga' : 'vagas'}!`}
           </span>
         )}
       </div>
 
-      <div className="pt-2.5 flex-1 flex flex-col">
-        <p className="text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" style={{ color: PRETO }}>
+      <div className="pt-2 flex-1 flex flex-col">
+        <p className="text-[11px] text-gray-500 truncate">{promocao.parceiro_nome}</p>
+        <p className="text-sm font-medium leading-snug line-clamp-2 min-h-[2.4em] mt-0.5" style={{ color: PRETO }}>
           {promocao.titulo}
         </p>
 
         <div className="mt-1.5">
-          <p className="text-slate-400 text-xs line-through">{formatarPreco(promocao.preco_de)}</p>
-          <p className="font-extrabold text-base" style={{ color: ROXO }}>{formatarPreco(promocao.preco_por)}</p>
+          <p className="text-gray-400 text-xs line-through">{formatarPreco(promocao.preco_de)}</p>
+          <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(promocao.preco_por)}</p>
         </div>
-
-        <p className="text-slate-400 text-xs mt-1 truncate">{promocao.parceiro_nome}</p>
       </div>
     </Link>
   );
