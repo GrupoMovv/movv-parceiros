@@ -82,15 +82,20 @@ router.get('/beneficios/catalogo.pdf', (req, res) => {
 // contagem, sem nenhum dado pessoal, endpoint publico por design.
 router.get('/marketplace/stats', async (req, res) => {
   try {
-    const [associadosResult, produtosResult] = await Promise.all([
+    const [associadosResult, produtosResult, parceirosResult] = await Promise.all([
       db.query('SELECT COUNT(*)::int AS total FROM sindicato_associados WHERE ativo = true'),
       db.query(
         `SELECT COUNT(*)::int AS total FROM sindicato_parceiro_produtos pr
          JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
          WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`
       ),
+      db.query(`SELECT COUNT(*)::int AS total FROM sindicato_parceiros WHERE status = 'ativo'`),
     ]);
-    return res.json({ associados: associadosResult.rows[0].total, produtos: produtosResult.rows[0].total });
+    return res.json({
+      associados: associadosResult.rows[0].total,
+      produtos: produtosResult.rows[0].total,
+      parceiros: parceirosResult.rows[0].total,
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
@@ -105,6 +110,27 @@ router.get('/marketplace/mais-vendidos', marketplaceHomeCtrl.getMaisVendidos);
 router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);
 router.get('/marketplace/categoria/:slug/produtos', marketplaceHomeCtrl.getProdutosPorCategoria);
 router.get('/marketplace/parceiros', marketplaceHomeCtrl.getParceiros);
+
+// Nomes das empresas com lista de colaboradores aprovados (Bloco de
+// autocadastro por CPF+CNPJ) — só nome + contagem, nunca CPF/matrícula/
+// dados de colaborador, pro slide "colaborador de empresa parceira" do
+// banner rotativo saber quais empresas mostrar sem precisar de admin logado.
+router.get('/marketplace/empresas-parceiras', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT COALESCE(NULLIF(TRIM(razao_social_empresa), ''), 'Empresa parceira') AS nome,
+              COUNT(*)::int AS total_colaboradores
+       FROM sindicato_lista_aprovada
+       GROUP BY 1
+       ORDER BY total_colaboradores DESC
+       LIMIT 12`
+    );
+    return res.json({ empresas: result.rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar empresas parceiras' });
+  }
+});
 
 router.get('/produtos/:id', produtoCtrl.getProduto);
 router.get('/produtos/:id/outros-do-parceiro', produtoCtrl.getOutrosDoParceiro);

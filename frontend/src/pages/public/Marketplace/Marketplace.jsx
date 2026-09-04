@@ -73,9 +73,9 @@ export default function Marketplace() {
 
       <CategoriaFaixa categoriaAtiva={categoriaAtiva} onSelecionar={handleSelecionarCategoriaLocal} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
-        <HeroBannerCarousel associado={associado} />
+      <HeroBannerCarousel associado={associado} />
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
         <SecaoProdutos
           id="ofertas" Icone={Lightning} titulo="Ofertas do Dia"
           produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}

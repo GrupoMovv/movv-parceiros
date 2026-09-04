@@ -1,65 +1,59 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CaretLeft, CaretRight, Play, Pause } from '@phosphor-icons/react';
+import api from '../../../../services/api';
 import ModalEntrar from './ModalEntrar';
+import SlideInstitucional from './heroSlides/SlideInstitucional';
+import SlideProdutosDestaque from './heroSlides/SlideProdutosDestaque';
+import SlideComerciantes from './heroSlides/SlideComerciantes';
+import SlideAssociados from './heroSlides/SlideAssociados';
+import SlideColaboradores from './heroSlides/SlideColaboradores';
 import { DOURADO } from '../theme';
 
-const INTERVALO_MS = 5000;
+const INTERVALO_MS = 6500;
 
-function montarSlides(ehAssociado, onAbrirLogin) {
-  return [
-    {
-      id: 'vender',
-      emoji: '🎉',
-      titulo: '100% Gratuito pra Comerciantes',
-      texto: 'Cadastre sua empresa e comece a vender pra Itumbiara hoje mesmo.',
-      gradiente: 'linear-gradient(135deg, #3B0A78 0%, #4C1D95 100%)',
-      botao: 'Cadastrar minha empresa',
-      to: '/vender',
-    },
-    ehAssociado ? null : {
-      id: 'associado',
-      emoji: '💎',
-      titulo: 'Sou Associado SECI — Preço Especial',
-      texto: 'Preço especial em todos os parceiros do marketplace.',
-      gradiente: 'linear-gradient(135deg, #1F1F27 0%, #3B0A78 100%)',
-      botao: 'Fazer login',
-      onClick: onAbrirLogin,
-    },
-    {
-      id: 'explorar',
-      emoji: '🏆',
-      titulo: 'Descubra o Comércio Local',
-      texto: 'Produtos e serviços de Itumbiara, tudo num só lugar.',
-      gradiente: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%)',
-      botao: 'Explorar produtos',
-      href: '#ofertas',
-    },
-    {
-      id: 'carteirinha',
-      emoji: '🎫',
-      titulo: 'Colaborador de Empresa Parceira?',
-      texto: 'Ative sua carteirinha SECI + IUB MAIS em 2 minutos.',
-      gradiente: 'linear-gradient(135deg, #0B1F3A 0%, #3B0A78 100%)',
-      botao: 'Ativar carteirinha',
-      to: '/cadastrar-associado',
-    },
-  ].filter(Boolean);
-}
+// TODO (painel admin futuro, não implementado ainda):
+//  - editor de slides do banner (texto, imagem, botão, ordem)
+//  - upload de imagens customizadas por slide
+//  - ativar/desativar slide específico sem precisar de deploy
+//  - configurar intervalo do autoplay
 
-// Hero rotativo no topo da home — 4 chamadas institucionais/promocionais
-// fixas (não vêm do backend), pra dar movimento visual logo na primeira
-// dobra, antes das vitrines de produto. `associado` vem por prop (não
-// chama useAssociadoSessao aqui) pra não disparar o fluxo de login por
-// ?associado=hash em duplicidade com o Marketplace, que já usa o hook.
+// Banner hero full-width — orquestra só a mecânica do carrossel (autoplay,
+// setas, dots, play/pause, contador); cada slide é um componente próprio em
+// ./heroSlides, alguns com dado real buscado aqui uma vez só (produtos
+// exclusivos, empresas da lista aprovada, total de parceiros) e passado
+// por prop, pra não competir com o timer do carrossel nem duplicar fetch.
+// `associado` vem por prop (não chama useAssociadoSessao aqui) pra não
+// disparar o fluxo de login por ?associado=hash em duplicidade com quem
+// já usa o hook (Marketplace.jsx).
 export default function HeroBannerCarousel({ associado }) {
-  const navigate = useNavigate();
   const [indice, setIndice] = useState(0);
+  const [pausado, setPausado] = useState(false);
   const [modalLoginAberto, setModalLoginAberto] = useState(false);
+  const [produtosDestaque, setProdutosDestaque] = useState([]);
+  const [empresasParceiras, setEmpresasParceiras] = useState([]);
+  const [totalParceiros, setTotalParceiros] = useState(null);
   const timerRef = useRef(null);
 
-  const slides = montarSlides(Boolean(associado), () => setModalLoginAberto(true));
+  useEffect(() => {
+    api.get('/public/marketplace/exclusivos-associados').then(res => setProdutosDestaque(res.data.produtos || [])).catch(() => {});
+    api.get('/public/marketplace/empresas-parceiras').then(res => setEmpresasParceiras(res.data.empresas || [])).catch(() => {});
+    api.get('/public/marketplace/stats').then(res => setTotalParceiros(res.data.parceiros)).catch(() => {});
+  }, []);
+
+  const slides = useMemo(() => [
+    { id: 'institucional', Componente: SlideInstitucional, props: {} },
+    produtosDestaque.length > 0 && { id: 'produtos', Componente: SlideProdutosDestaque, props: { produtos: produtosDestaque } },
+    { id: 'comerciantes', Componente: SlideComerciantes, props: { totalParceiros } },
+    !associado && { id: 'associados', Componente: SlideAssociados, props: { onAbrirLogin: () => setModalLoginAberto(true) } },
+    empresasParceiras.length > 0 && { id: 'colaboradores', Componente: SlideColaboradores, props: { empresas: empresasParceiras } },
+  ].filter(Boolean), [produtosDestaque, empresasParceiras, totalParceiros, associado]);
+
   const total = slides.length;
+
+  // slides que só entram depois que o próprio fetch resolve (produtos,
+  // colaboradores) ou saem quando a sessão de associado carrega podem
+  // deixar o índice atual apontando pra fora da lista — corrige na hora.
+  useEffect(() => { if (indice >= total) setIndice(0); }, [total, indice]);
 
   const pararAutoplay = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -67,65 +61,35 @@ export default function HeroBannerCarousel({ associado }) {
 
   const iniciarAutoplay = useCallback(() => {
     pararAutoplay();
-    if (total <= 1) return;
+    if (total <= 1 || pausado) return;
     timerRef.current = setInterval(() => setIndice(i => (i + 1) % total), INTERVALO_MS);
-  }, [pararAutoplay, total]);
+  }, [pararAutoplay, total, pausado]);
 
   useEffect(() => {
     iniciarAutoplay();
     return pararAutoplay;
   }, [iniciarAutoplay, pararAutoplay]);
 
-  // slide "associado" pode entrar/sair da lista quando a sessão carrega —
-  // evita ficar preso num índice que não existe mais.
-  useEffect(() => { if (indice >= total) setIndice(0); }, [total, indice]);
-
   function irPara(i) {
-    pararAutoplay();
     setIndice(((i % total) + total) % total);
-    iniciarAutoplay();
-  }
-
-  function handleClickSlide(slide) {
-    if (slide.onClick) return slide.onClick();
-    if (slide.to) return navigate(slide.to);
-    if (slide.href) document.querySelector(slide.href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   if (total === 0) return null;
 
   return (
     <section
-      className="relative w-full overflow-hidden rounded-2xl h-[200px] sm:h-[300px] lg:h-[380px]"
-      onMouseEnter={pararAutoplay}
-      onMouseLeave={iniciarAutoplay}
+      className="relative w-full h-[250px] sm:h-[350px] lg:h-[450px] overflow-hidden"
+      onMouseEnter={() => setPausado(true)}
+      onMouseLeave={() => setPausado(false)}
     >
       <div
         className="flex h-full transition-transform duration-500 ease-in-out"
         style={{ transform: `translateX(-${indice * 100}%)` }}
       >
-        {slides.map(slide => (
-          <button
-            key={slide.id}
-            type="button"
-            onClick={() => handleClickSlide(slide)}
-            className="relative w-full h-full flex-shrink-0 flex items-center text-left px-6 sm:px-12 lg:px-16"
-            style={{ background: slide.gradiente }}
-          >
-            <div className="relative max-w-lg">
-              <p className="text-3xl sm:text-4xl">{slide.emoji}</p>
-              <h2 className="text-white font-black text-lg sm:text-2xl lg:text-3xl tracking-tight mt-1.5 leading-tight">
-                {slide.titulo}
-              </h2>
-              <p className="text-white/70 text-xs sm:text-sm mt-1.5 hidden sm:block">{slide.texto}</p>
-              <span
-                className="inline-block mt-3 sm:mt-4 text-xs sm:text-sm font-bold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl"
-                style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
-              >
-                {slide.botao}
-              </span>
-            </div>
-          </button>
+        {slides.map(({ id, Componente, props }) => (
+          <div key={id} className="w-full h-full flex-shrink-0">
+            <Componente {...props} />
+          </div>
         ))}
       </div>
 
@@ -133,33 +97,59 @@ export default function HeroBannerCarousel({ associado }) {
         <>
           <button
             type="button" onClick={() => irPara(indice - 1)} aria-label="Slide anterior"
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
           >
-            <CaretLeft size={18} weight="bold" />
+            <CaretLeft size={20} weight="bold" />
           </button>
           <button
             type="button" onClick={() => irPara(indice + 1)} aria-label="Próximo slide"
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
           >
-            <CaretRight size={18} weight="bold" />
+            <CaretRight size={20} weight="bold" />
           </button>
 
-          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setPausado(p => !p)}
+            aria-label={pausado ? 'Retomar rotação' : 'Pausar rotação'}
+            className="absolute left-3 sm:left-5 bottom-3 sm:bottom-4 z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/25 hover:bg-black/40 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+          >
+            {pausado ? <Play size={13} weight="fill" /> : <Pause size={13} weight="fill" />}
+          </button>
+
+          <span className="absolute right-3 sm:right-5 bottom-3 sm:bottom-4 z-10 text-[11px] sm:text-xs font-bold text-white bg-black/25 px-2.5 py-1 rounded-full backdrop-blur-sm">
+            {indice + 1} / {total}
+          </span>
+
+          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
             {slides.map((slide, i) => (
               <button
                 key={slide.id}
                 type="button"
                 aria-label={`Ir para o slide ${i + 1}`}
                 onClick={() => irPara(i)}
-                className="h-1.5 rounded-full bg-white/40 transition-all duration-300"
-                style={{ width: i === indice ? 20 : 6, backgroundColor: i === indice ? DOURADO : 'rgba(255,255,255,0.4)' }}
-              />
+                className="relative h-1.5 w-7 rounded-full bg-white/30 overflow-hidden"
+              >
+                {i === indice && (
+                  <span
+                    key={indice}
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      backgroundColor: DOURADO,
+                      animation: `preencherHero ${INTERVALO_MS}ms linear forwards`,
+                      animationPlayState: pausado ? 'paused' : 'running',
+                    }}
+                  />
+                )}
+              </button>
             ))}
           </div>
         </>
       )}
 
       {modalLoginAberto && <ModalEntrar onClose={() => setModalLoginAberto(false)} />}
+
+      <style>{`@keyframes preencherHero { from { width: 0%; } to { width: 100%; } }`}</style>
     </section>
   );
 }
