@@ -78,7 +78,7 @@ export default function HeroBannerCarousel({ associado }) {
 
   return (
     <section
-      className="relative w-full h-[250px] sm:h-[350px] lg:h-[450px] overflow-hidden"
+      className="relative w-full h-[250px] sm:h-[480px] lg:h-[620px] overflow-hidden"
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
     >

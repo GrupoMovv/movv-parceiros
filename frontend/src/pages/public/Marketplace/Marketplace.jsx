@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { assetUrl } from '../../../services/api';
 import { PARCEIROS_INICIAIS, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
 import { Lightning, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons/react';
@@ -60,6 +61,8 @@ export default function Marketplace() {
     <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
       <TopNav
         nomeAssociado={nomeAssociado}
+        nomeCompleto={associado?.nome_completo}
+        fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carregandoAssociado={carregandoAssociado}
         favoritosAtivos={mostrarFavoritos}
         onToggleFavoritos={() => setMostrarFavoritos(v => !v)}
@@ -71,9 +74,21 @@ export default function Marketplace() {
         onSearchSubmit={handleSearchSubmit}
       />
 
-      <CategoriaFaixa categoriaAtiva={categoriaAtiva} onSelecionar={handleSelecionarCategoriaLocal} />
+      {/* categorias flutuam sobre o banner a partir do tablet (fundo branco
+          garante legibilidade); no mobile ficam em fluxo normal, acima do
+          banner, porque não sobra altura suficiente pra sobrepor sem
+          esconder o conteúdo do slide. */}
+      <div className="relative">
+        <div id="categorias" className="scroll-mt-16 sm:absolute sm:top-0 sm:inset-x-0 sm:z-10">
+          <div className="border-b border-slate-100 sm:border-0 sm:max-w-7xl sm:mx-auto sm:px-8 lg:px-16 sm:pt-5 lg:pt-6">
+            <div className="bg-white sm:rounded-2xl sm:shadow-lg sm:p-3 lg:p-4">
+              <CategoriaFaixa categoriaAtiva={categoriaAtiva} onSelecionar={handleSelecionarCategoriaLocal} />
+            </div>
+          </div>
+        </div>
 
-      <HeroBannerCarousel associado={associado} />
+        <HeroBannerCarousel associado={associado} />
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
         <SecaoProdutos

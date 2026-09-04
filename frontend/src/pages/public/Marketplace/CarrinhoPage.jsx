@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ShoppingCart, MessageCircle, X, Loader2 } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
+import { assetUrl } from '../../../services/api';
 import TopNav from './components/TopNav';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
@@ -56,6 +57,8 @@ export default function CarrinhoPage() {
     <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
       <TopNav
         nomeAssociado={nomeAssociado}
+        nomeCompleto={associado?.nome_completo}
+        fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carregandoAssociado={carregandoAssociado}
         favoritosAtivos={false}
         onToggleFavoritos={() => navigate('/marketplace')}

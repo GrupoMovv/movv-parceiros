@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, SlidersHorizontal, ImageOff, X } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
-import api from '../../../services/api';
+import api, { assetUrl } from '../../../services/api';
 import TopNav from './components/TopNav';
 import CardProduto from './components/CardProduto';
 import MobileBottomNav from './components/MobileBottomNav';
@@ -88,6 +88,8 @@ export default function MarketplaceCategoria() {
     <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
       <TopNav
         nomeAssociado={nomeAssociado}
+        nomeCompleto={associado?.nome_completo}
+        fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carregandoAssociado={carregandoAssociado}
         favoritosAtivos={false}
         onToggleFavoritos={() => navigate('/marketplace')}

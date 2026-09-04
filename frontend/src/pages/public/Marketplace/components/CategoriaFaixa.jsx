@@ -26,37 +26,37 @@ const SLUG_POR_LABEL = {
 // outro lugar da página. Ícone Phosphor em círculo pastel roxo + nome
 // embaixo, scroll horizontal livre (sem setas). Quem tem página de
 // produtos própria navega pra lá; o resto filtra a grade de parceiros
-// mais abaixo.
+// mais abaixo. Só o conteúdo — o container (fundo branco, posição sobre o
+// banner, id="categorias" pro link do menu) é responsabilidade de quem usa
+// (ver Marketplace.jsx).
 export default function CategoriaFaixa({ categoriaAtiva, onSelecionar }) {
   return (
-    <section id="categorias" className="scroll-mt-16 border-b border-slate-100 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 flex items-start gap-3 sm:gap-5 overflow-x-auto scrollbar-none py-4">
-        {CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => {
-          const Icone = ICONES[c.label] || ShoppingBag;
-          const slug = SLUG_POR_LABEL[c.label];
-          const ativa = normalizarCategoria(categoriaAtiva) === normalizarCategoria(c.label);
-          const conteudo = (
-            <>
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-                style={{ backgroundColor: ativa ? ROXO : '#F5F0FC' }}
-              >
-                <Icone size={26} weight="duotone" color={ativa ? '#fff' : ROXO} />
-              </div>
-              <span className="text-[11px] font-medium text-center leading-tight whitespace-nowrap" style={{ color: ativa ? ROXO : '#475569' }}>
-                {c.label}
-              </span>
-            </>
-          );
-          const className = 'flex flex-col items-center gap-1.5 flex-shrink-0 w-[76px]';
+    <div className="flex items-start gap-3 sm:gap-5 overflow-x-auto scrollbar-none px-4 sm:px-0 py-4 sm:py-0">
+      {CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => {
+        const Icone = ICONES[c.label] || ShoppingBag;
+        const slug = SLUG_POR_LABEL[c.label];
+        const ativa = normalizarCategoria(categoriaAtiva) === normalizarCategoria(c.label);
+        const conteudo = (
+          <>
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{ backgroundColor: ativa ? ROXO : '#F5F0FC' }}
+            >
+              <Icone size={26} weight="duotone" color={ativa ? '#fff' : ROXO} />
+            </div>
+            <span className="text-[11px] font-medium text-center leading-tight whitespace-nowrap" style={{ color: ativa ? ROXO : '#475569' }}>
+              {c.label}
+            </span>
+          </>
+        );
+        const className = 'flex flex-col items-center gap-1.5 flex-shrink-0 w-[76px]';
 
-          return slug ? (
-            <Link key={c.label} to={`/marketplace/categoria/${slug}`} className={className}>{conteudo}</Link>
-          ) : (
-            <button key={c.label} type="button" onClick={() => onSelecionar(c.label)} className={className}>{conteudo}</button>
-          );
-        })}
-      </div>
-    </section>
+        return slug ? (
+          <Link key={c.label} to={`/marketplace/categoria/${slug}`} className={className}>{conteudo}</Link>
+        ) : (
+          <button key={c.label} type="button" onClick={() => onSelecionar(c.label)} className={className}>{conteudo}</button>
+        );
+      })}
+    </div>
   );
 }

@@ -18,11 +18,15 @@ function scrollPara(e, href) {
   document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function iniciais(nome) {
+  return String(nome || '').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
 // Header estilo marketplace grande (fundo roxo escuro) — logo + busca
 // central + localização + perfil na linha principal, com um menu
 // secundário claro logo abaixo (categorias/ofertas/lojas/SECI/vender).
 export default function TopNav({
-  nomeAssociado, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos,
+  nomeAssociado, nomeCompleto, fotoUrl, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos,
   onSair, onLoginSuccess, searchQuery, onSearchChange, onSearchSubmit,
 }) {
   const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
@@ -41,8 +45,8 @@ export default function TopNav({
   }
 
   return (
-    <header className="sticky top-0 z-40 shadow-md">
-      <div className="h-[68px] flex items-center gap-3 sm:gap-5 max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full" style={{ backgroundColor: ROXO }}>
+    <header className="sticky top-0 z-40 shadow-md w-full" style={{ backgroundColor: ROXO }}>
+      <div className="h-[68px] flex items-center gap-3 sm:gap-5 max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full">
         <Link to="/marketplace" onClick={irParaInicio} className="flex items-center gap-2 flex-shrink-0">
           <img src="/iub-logo-sm.png" alt="IUB" className="h-10 w-auto rounded-lg" />
           <span className="hidden lg:inline font-black text-sm tracking-tight text-white">IUB MAIS</span>
@@ -105,9 +109,22 @@ export default function TopNav({
         {carregandoAssociado ? (
           <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
         ) : nomeAssociado ? (
-          <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
-            <Link to="/meu-painel" className="text-sm font-medium text-white px-2.5 py-1.5 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap">
-              💎 {nomeAssociado.split(' ')[0]}
+          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+            <Link
+              to="/meu-painel"
+              className="flex items-center gap-2 text-sm font-medium text-white pl-1 pr-2.5 py-1 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap hover:scale-[1.03]"
+            >
+              {fotoUrl ? (
+                <img src={fotoUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white flex-shrink-0" />
+              ) : (
+                <span
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white flex-shrink-0"
+                  style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+                >
+                  {iniciais(nomeCompleto || nomeAssociado)}
+                </span>
+              )}
+              {nomeAssociado.split(' ')[0]}
             </Link>
             <button type="button" onClick={onSair} aria-label="Sair" title="Sair" className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors">
               <LogOut className="w-3.5 h-3.5" />
