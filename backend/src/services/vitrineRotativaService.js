@@ -1,10 +1,23 @@
 const db = require('../config/database');
 
-// Quantos produtos cada parceiro pode colocar na fila da vitrine rotativa,
-// por plano — mesmos números vendidos na página /parceiro/painel/planos
-// ("X produtos em destaque"). Todo mundo participa, mesmo o Grátis.
-const LIMITE_VITRINE_POR_PLANO = { gratis: 1, oficial: 3, premium: 8, master: 15 };
+// Regra oficial (Fase 1): Grátis NÃO entra na rotativa — só planos pagos
+// disputam a vitrine. Números batem com o que é vendido em
+// /parceiro/painel/planos ("X produtos em destaque").
+//
+// Exceção temporária: como ninguém pagou plano ainda (fase 100% grátis),
+// PARCEIROS_SEED lista quem aparece como demonstração da vitrine mesmo
+// estando no Grátis — tratados como se fossem `seed` (mesmo limite do
+// Premium). Quando os planos pagos forem ativados de verdade, é só
+// esvaziar essa lista.
+const LIMITES = { gratis: 0, oficial: 3, premium: 8, master: 15, seed: 8 };
+const PARCEIROS_SEED = ['nossa-drogaria', 'azul-emprestimo'];
+
 const LIMITE_TOTAL = 50;
+
+function limiteDoParceiro(row) {
+  if (PARCEIROS_SEED.includes(row.parceiro_slug)) return LIMITES.seed;
+  return LIMITES[row.plano] ?? LIMITES.gratis;
+}
 
 // Regenera tudo a cada 4h (produtos elegíveis + nova ordem de round-robin);
 // entre uma regeneração e outra, qualquer request só serve o array já
@@ -75,7 +88,7 @@ async function gerarRotacao() {
 
   const porParceiro = new Map();
   for (const row of result.rows) {
-    const limite = LIMITE_VITRINE_POR_PLANO[row.plano] ?? LIMITE_VITRINE_POR_PLANO.gratis;
+    const limite = limiteDoParceiro(row);
     const lista = porParceiro.get(row.parceiro_id) || [];
     if (lista.length < limite) {
       lista.push(row);

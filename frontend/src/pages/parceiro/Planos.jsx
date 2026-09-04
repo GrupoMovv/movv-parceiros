@@ -5,9 +5,10 @@ import { Check, Bell, BellRinging, Sparkle, Diamond, Fire } from '@phosphor-icon
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from '../public/Marketplace/theme';
 
-// Espelha LIMITE_VITRINE_POR_PLANO do backend (vitrineRotativaService) —
-// quantos produtos cada plano coloca na fila da vitrine rotativa da home.
-const VITRINE_POR_PLANO = { gratis: 1, oficial: 3, premium: 8, master: 15 };
+// Espelha LIMITES do backend (vitrineRotativaService) — quantos produtos
+// cada plano coloca na fila da vitrine rotativa da home. Grátis não entra
+// na rotativa (0) nessa fase — só quem paga disputa a vitrine.
+const VITRINE_POR_PLANO = { gratis: 0, oficial: 3, premium: 8, master: 15 };
 
 const PLANOS = [
   {
@@ -20,7 +21,6 @@ const PLANOS = [
       'Até 30 produtos',
       'WhatsApp direto',
       'Aparece no marketplace',
-      '1 produto na vitrine rotativa da home',
       'Selo "Parceiro IUB"',
     ],
   },
@@ -122,10 +122,10 @@ export default function ParceiroPlanos() {
           <div>
             <h2 className="text-lg font-extrabold">No IUB MAIS, sua empresa não fica apenas cadastrada</h2>
             <p className="text-white/70 text-sm mt-2 leading-relaxed">
-              Seus produtos entram numa <strong className="text-white">vitrine rotativa</strong> que gira todos os dias na home do marketplace pra milhares de consumidores de Itumbiara. Mais produtos na fila = mais oportunidades de aparecer!
+              Nos planos pagos, seus produtos entram numa <strong className="text-white">vitrine rotativa</strong> que gira todos os dias na home do marketplace pra milhares de consumidores de Itumbiara. Mais produtos na fila = mais oportunidades de aparecer!
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-              {PLANOS.map(p => (
+            <div className="grid grid-cols-3 gap-3 mt-5">
+              {PLANOS.filter(p => p.valor !== 'gratis').map(p => (
                 <div key={p.valor} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-center">
                   <p className="text-xl font-black" style={{ color: DOURADO }}>{VITRINE_POR_PLANO[p.valor]}</p>
                   <p className="text-[11px] text-white/60 mt-0.5">produto{VITRINE_POR_PLANO[p.valor] > 1 ? 's' : ''} — {p.nome.replace('Parceiro IUB — ', '')}</p>
