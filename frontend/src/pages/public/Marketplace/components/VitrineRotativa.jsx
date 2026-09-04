@@ -5,16 +5,16 @@ import CardVitrineRotativa from './CardVitrineRotativa';
 import { PRETO, ROXO } from '../theme';
 
 const INTERVALO_MS = 5000;
-const LARGURA_CARD = 'w-[calc((100%-0.75rem)/2)] sm:w-[calc((100%-1.5rem)/3)] lg:w-[calc((100%-3rem)/5)]';
+const LARGURA_CARD = 'w-[calc((100%-1.5rem)/2)] sm:w-[calc((100%-3rem)/3)] lg:w-[calc((100%-4.5rem)/4)]';
 
-// 2 no mobile / 3 no tablet / 5 no desktop — espelha exatamente as larguras
+// 2 no mobile / 3 no tablet / 4 no desktop — espelha exatamente as larguras
 // dos cards em LARGURA_CARD, usado só pra calcular quantas "páginas" (dots)
 // existem e destacar a página atual.
 function useVisibleCount() {
-  const [count, setCount] = useState(() => (typeof window === 'undefined' ? 5 : calcular()));
+  const [count, setCount] = useState(() => (typeof window === 'undefined' ? 4 : calcular()));
 
   function calcular() {
-    if (window.matchMedia('(min-width: 1024px)').matches) return 5;
+    if (window.matchMedia('(min-width: 1024px)').matches) return 4;
     if (window.matchMedia('(min-width: 640px)').matches) return 3;
     return 2;
   }
@@ -49,10 +49,10 @@ function comMovimentoGarantido(produtos, visiveis) {
 function SkeletonCard() {
   return (
     <div className={`${LARGURA_CARD} flex-shrink-0 animate-pulse`}>
-      <div className="h-[140px] sm:h-[180px] rounded-md bg-slate-100" />
-      <div className="h-3.5 bg-slate-100 rounded-full mt-2 w-5/6" />
-      <div className="h-2.5 bg-slate-100 rounded-full mt-1.5 w-1/2" />
-      <div className="h-4 bg-slate-100 rounded-full mt-1.5 w-2/3" />
+      <div className="h-[200px] sm:h-[240px] lg:h-[260px] rounded-lg bg-slate-100" />
+      <div className="h-3 bg-slate-100 rounded-full mt-3 w-5/6" />
+      <div className="h-3 bg-slate-100 rounded-full mt-2 w-1/2" />
+      <div className="h-5 bg-slate-100 rounded-full mt-2 w-2/3" />
     </div>
   );
 }
@@ -135,12 +135,12 @@ export default function VitrineRotativa() {
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
     >
-      <div className="flex items-end justify-between gap-4 mb-3">
+      <div className="flex items-end justify-between gap-4 mb-5">
         <div>
-          <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight" style={{ color: PRETO }}>
-            <Fire size={20} weight="duotone" color={ROXO} /> Produtos em Destaque
+          <h2 className="flex items-center gap-2 text-2xl md:text-3xl font-bold tracking-tight" style={{ color: PRETO }}>
+            <Fire size={26} weight="duotone" color={ROXO} /> Produtos em Destaque
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Produtos dos nossos parceiros aparecendo para você</p>
+          <p className="text-sm text-slate-400 mt-1">Produtos dos nossos parceiros aparecendo para você</p>
         </div>
       </div>
 
@@ -157,11 +157,11 @@ export default function VitrineRotativa() {
         <div
           ref={trilhaRef}
           onScroll={aoRolar}
-          className="flex gap-3 overflow-x-auto scrollbar-none scroll-smooth"
+          className="flex gap-6 overflow-x-auto scrollbar-none scroll-smooth"
           style={{ scrollSnapType: 'x mandatory' }}
         >
           {carregando
-            ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+            ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
             : produtos.map((p, i) => (
               <div key={p._key || p.id || i} className={`${LARGURA_CARD} flex-shrink-0`} style={{ scrollSnapAlign: 'start' }}>
                 <CardVitrineRotativa produto={p} />

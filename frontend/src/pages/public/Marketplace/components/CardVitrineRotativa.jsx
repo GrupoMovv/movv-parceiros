@@ -19,43 +19,43 @@ export default function CardVitrineRotativa({ produto }) {
     : null;
 
   return (
-    <div className="flex flex-col bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm hover:shadow-md transition-shadow duration-200 h-full">
+    <div className="flex flex-col bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 h-full">
       <Link to={`/marketplace/produto/${produto.id}`} className="block group">
-        <div className="relative w-full h-[140px] sm:h-[180px] rounded-md overflow-hidden bg-white flex items-center justify-center">
+        <div className="relative w-full h-[200px] sm:h-[240px] lg:h-[260px] rounded-lg overflow-hidden bg-white flex items-center justify-center">
           {foto ? (
             <img src={foto} alt={produto.nome} loading="lazy" className="w-full h-full object-contain" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50">
-              <ImageOff className="w-7 h-7" />
+              <ImageOff className="w-10 h-10" />
             </div>
           )}
           {descontoPct > 0 && (
-            <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+            <span className="absolute top-2 left-2 text-sm font-black px-3 py-1 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
               -{descontoPct}% OFF
             </span>
           )}
         </div>
 
-        <p className="text-sm font-medium leading-snug line-clamp-2 min-h-[2.4em] mt-2 group-hover:underline" style={{ color: PRETO }}>
+        <p className="text-base font-medium leading-snug line-clamp-2 min-h-[2.6em] mt-3 group-hover:underline" style={{ color: PRETO }}>
           {produto.nome}
         </p>
       </Link>
 
-      <Link to={`/marketplace/parceiro/${produto.parceiro_slug}`} className="text-[11px] text-gray-500 hover:text-gray-700 hover:underline truncate w-fit">
+      <Link to={`/marketplace/parceiro/${produto.parceiro_slug}`} className="text-sm text-gray-500 hover:text-gray-700 hover:underline truncate w-fit">
         {produto.parceiro_nome}
       </Link>
 
-      <div className="mt-1.5">
+      <div className="mt-2">
         {temPrecoAssociado ? (
           <>
-            <p className="text-gray-400 text-xs line-through">{formatarPreco(produto.preco)}</p>
-            <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(produto.preco_associado)}</p>
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold mt-0.5" style={{ color: DOURADO }}>
-              <Diamond size={9} weight="fill" /> assoc
+            <p className="text-gray-400 text-sm line-through">{formatarPreco(produto.preco)}</p>
+            <p className="font-bold text-xl leading-tight" style={{ color: ROXO }}>{formatarPreco(produto.preco_associado)}</p>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold mt-1" style={{ color: DOURADO }}>
+              <Diamond size={11} weight="fill" /> assoc
             </span>
           </>
         ) : (
-          <p className="font-bold text-lg leading-tight text-gray-900">{formatarPreco(produto.preco)}</p>
+          <p className="font-bold text-xl leading-tight text-gray-900">{formatarPreco(produto.preco)}</p>
         )}
       </div>
     </div>
