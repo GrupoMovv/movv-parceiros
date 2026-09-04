@@ -50,6 +50,7 @@ export default function TopNav({
         >
           <Search className="w-4 h-4 text-slate-400 ml-3 flex-shrink-0" />
           <input
+            id="busca-marketplace"
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}

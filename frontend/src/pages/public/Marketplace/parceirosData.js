@@ -132,6 +132,19 @@ export const CATEGORIAS_FILTRO = [
   { label: 'Bem-estar', emoji: '🧠' },
 ];
 
+// Espelha CATEGORIAS_HOME do backend (marketplaceHomeController) — só os
+// slugs/labels usados no footer, sem precisar buscar da API pra isso.
+export const CATEGORIAS_HOME_FOOTER = [
+  { slug: 'saude', label: 'Saúde' },
+  { slug: 'beleza', label: 'Beleza' },
+  { slug: 'alimentacao', label: 'Alimentação' },
+  { slug: 'servicos', label: 'Serviços' },
+  { slug: 'fitness', label: 'Fitness' },
+  { slug: 'casa', label: 'Casa' },
+  { slug: 'moda', label: 'Moda' },
+  { slug: 'tecnologia', label: 'Tecnologia' },
+];
+
 export function normalizarCategoria(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }

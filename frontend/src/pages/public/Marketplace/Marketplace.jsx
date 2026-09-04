@@ -9,7 +9,7 @@ import PartnerCard from './components/PartnerCard';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
 import CardPromocao from './components/CardPromocao';
-import CtaVenderRodape from './components/CtaVenderRodape';
+import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import { useFavoritos } from './useFavoritos';
@@ -49,7 +49,7 @@ export default function Marketplace() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white flex flex-col">
+    <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
       <TopNav
         nomeAssociado={nomeAssociado}
         carregandoAssociado={carregandoAssociado}
@@ -132,8 +132,14 @@ export default function Marketplace() {
         )}
       </div>
 
-      <CtaVenderRodape />
       <Footer />
+
+      <MobileBottomNav
+        favoritosAtivos={mostrarFavoritos}
+        onToggleFavoritos={() => setMostrarFavoritos(v => !v)}
+        nomeAssociado={nomeAssociado}
+        onLoginSuccess={recarregar}
+      />
     </div>
   );
 }

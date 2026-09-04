@@ -5,6 +5,7 @@ import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import TopNav from './components/TopNav';
 import CardProduto from './components/CardProduto';
+import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
@@ -84,7 +85,7 @@ export default function MarketplaceCategoria() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white flex flex-col">
+    <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
       <TopNav
         nomeAssociado={nomeAssociado}
         carregandoAssociado={carregandoAssociado}
@@ -184,6 +185,13 @@ export default function MarketplaceCategoria() {
       )}
 
       <Footer />
+
+      <MobileBottomNav
+        favoritosAtivos={false}
+        onToggleFavoritos={() => navigate('/marketplace')}
+        nomeAssociado={nomeAssociado}
+        onLoginSuccess={recarregar}
+      />
     </div>
   );
 }

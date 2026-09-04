@@ -1,47 +1,44 @@
 import { Link } from 'react-router-dom';
-import { PRETO, ROXO } from '../theme';
-import { CATEGORIAS_FILTRO } from '../parceirosData';
+import { PRETO } from '../theme';
+import { CATEGORIAS_HOME_FOOTER } from '../parceirosData';
 
 export default function Footer() {
   return (
-    <footer style={{ backgroundColor: PRETO }} className="text-white mt-24">
-      <div className="max-w-5xl mx-auto px-8 lg:px-16 py-16 grid grid-cols-1 sm:grid-cols-3 gap-10">
+    <footer style={{ backgroundColor: PRETO }} className="text-white mt-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8 grid grid-cols-1 sm:grid-cols-3 gap-8">
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <img src="/iub-logo-sm.png" alt="IUB" className="h-7 w-auto rounded-lg" />
+          <div className="flex items-center gap-2 mb-2.5">
+            <img src="/iub-logo-sm.png" alt="IUB" className="h-6 w-auto rounded-lg" />
             <span className="font-bold text-sm">IUB MAIS</span>
           </div>
-          <p className="text-white/50 text-xs font-medium tracking-wide mb-3">
-            Mais qualidade. Mais confiança. Mais vantagens.
-          </p>
-          <p className="text-white/50 text-sm leading-relaxed max-w-xs">
-            Benefícios exclusivos pra associados SECI. Compre de quem faz parte da nossa comunidade.
+          <p className="text-white/50 text-xs leading-relaxed max-w-xs">
+            Mais qualidade. Mais confiança. Mais vantagens. Benefícios exclusivos pra associados SECI.
           </p>
         </div>
 
         <div>
-          <p className="font-semibold text-xs uppercase tracking-wide mb-4 text-white/40">Categorias</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').slice(0, 8).map((c) => (
-              <span key={c.label} className="text-white/60 text-sm">{c.label}</span>
+          <p className="font-semibold text-xs uppercase tracking-wide mb-3 text-white/40">Categorias populares</p>
+          <div className="flex flex-col gap-1.5">
+            {CATEGORIAS_HOME_FOOTER.map((c) => (
+              <Link key={c.slug} to={`/marketplace/categoria/${c.slug}`} className="text-white/60 hover:text-white text-sm transition-colors w-fit">
+                {c.label}
+              </Link>
             ))}
           </div>
         </div>
 
         <div>
-          <p className="font-semibold text-xs uppercase tracking-wide mb-4 text-white/40">Faça parte</p>
-          <Link
-            to="/cadastrar"
-            className="inline-block text-sm font-semibold px-8 py-4 rounded-xl transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-lg"
-            style={{ backgroundColor: ROXO }}
-          >
-            Quero ser associado
-          </Link>
+          <p className="font-semibold text-xs uppercase tracking-wide mb-3 text-white/40">Ajuda</p>
+          <div className="flex flex-col gap-1.5">
+            <Link to="/cadastrar-associado" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Sou associado SECI</Link>
+            <Link to="/parceiro/login" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Já sou parceiro — Entrar</Link>
+            <Link to="/vender" className="text-white/40 hover:text-white/70 text-xs transition-colors w-fit mt-1">Cadastrar minha empresa</Link>
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-5 text-center">
-        <p className="text-white/30 text-xs">IUB MAIS © {new Date().getFullYear()} — SECI. Todos os direitos reservados.</p>
+      <div className="border-t border-white/10 py-4 text-center">
+        <p className="text-white/30 text-xs">IUB MAIS {new Date().getFullYear()} — Marketplace de Itumbiara</p>
       </div>
     </footer>
   );
