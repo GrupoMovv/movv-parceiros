@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { House, MagnifyingGlass, Heart, UserCircle } from '@phosphor-icons/react';
+import { House, MagnifyingGlass, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
 import { ROXO } from '../theme';
 import ModalEntrar from './ModalEntrar';
+import { useCarrinho } from '../CarrinhoContext';
 
 function focarBusca() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -15,6 +16,8 @@ export default function MobileBottomNav({ favoritosAtivos, onToggleFavoritos, no
   const [modalAberto, setModalAberto] = useState(false);
   const location = useLocation();
   const emCasa = location.pathname === '/marketplace';
+  const noCarrinho = location.pathname === '/marketplace/carrinho';
+  const { totalItens } = useCarrinho();
 
   return (
     <>
@@ -33,6 +36,16 @@ export default function MobileBottomNav({ favoritosAtivos, onToggleFavoritos, no
           <Heart size={20} weight={favoritosAtivos ? 'fill' : 'regular'} color={favoritosAtivos ? '#EF4444' : '#94A3B8'} />
           <span className="text-[10px] font-medium" style={{ color: favoritosAtivos ? '#EF4444' : '#94A3B8' }}>Favoritos</span>
         </button>
+
+        <Link to="/marketplace/carrinho" className="relative flex-1 flex flex-col items-center justify-center gap-0.5">
+          <ShoppingCart size={20} weight={noCarrinho ? 'fill' : 'regular'} color={noCarrinho ? ROXO : '#94A3B8'} />
+          {totalItens > 0 && (
+            <span className="absolute top-1 right-[27%] min-w-[13px] h-[13px] px-0.5 rounded-full text-[8px] font-bold flex items-center justify-center text-white" style={{ backgroundColor: '#FFB800', color: '#0F0F14' }}>
+              {totalItens}
+            </span>
+          )}
+          <span className="text-[10px] font-medium" style={{ color: noCarrinho ? ROXO : '#94A3B8' }}>Carrinho</span>
+        </Link>
 
         {nomeAssociado ? (
           <Link to="/meu-painel" className="flex-1 flex flex-col items-center justify-center gap-0.5">

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, LogOut, Search, MapPin, List, X } from 'lucide-react';
+import { ShoppingCart } from '@phosphor-icons/react';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
+import { useCarrinho } from '../CarrinhoContext';
 
 const MENU_SECUNDARIO = [
   { label: 'Categorias', href: '#categorias' },
@@ -27,6 +29,7 @@ export default function TopNav({
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { totalItens: itensCarrinho, pulsar: carrinhoPulsando } = useCarrinho();
 
   function irParaInicio(e) {
     e.preventDefault();
@@ -85,6 +88,19 @@ export default function TopNav({
             </span>
           )}
         </button>
+
+        <Link
+          to="/marketplace/carrinho"
+          aria-label="Meu carrinho"
+          className={`hidden sm:flex relative w-9 h-9 rounded-full flex-shrink-0 items-center justify-center hover:bg-white/10 transition-colors duration-200 ${carrinhoPulsando ? 'animate-carrinho-pulso' : ''}`}
+        >
+          <ShoppingCart size={18} weight="duotone" color="#fff" />
+          {itensCarrinho > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+              {itensCarrinho}
+            </span>
+          )}
+        </Link>
 
         {carregandoAssociado ? (
           <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
@@ -177,6 +193,11 @@ export default function TopNav({
       {modalEntrarAberto && (
         <ModalEntrar onClose={() => setModalEntrarAberto(false)} onLoginSuccess={onLoginSuccess} />
       )}
+
+      <style>{`
+        @keyframes carrinho-pulso { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.25); } }
+        .animate-carrinho-pulso { animation: carrinho-pulso 0.7s ease-in-out; }
+      `}</style>
     </header>
   );
 }

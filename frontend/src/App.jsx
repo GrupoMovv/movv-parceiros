@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import IubSpinner from './pages/public/Marketplace/components/IubSpinner';
+import { CarrinhoProvider } from './pages/public/Marketplace/CarrinhoContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Statement from './pages/Statement';
@@ -50,6 +51,7 @@ const MarketplaceCategoria = lazy(() => import('./pages/public/Marketplace/Marke
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
+const MarketplaceCarrinho = lazy(() => import('./pages/public/Marketplace/CarrinhoPage'));
 const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender'));
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
@@ -145,7 +147,9 @@ function MarketplaceFallback({ children }) {
         <IubSpinner size={48} />
       </div>
     }>
-      {children}
+      <CarrinhoProvider>
+        {children}
+      </CarrinhoProvider>
     </Suspense>
   );
 }
@@ -186,6 +190,7 @@ export default function App() {
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
+        <Route path="/marketplace/carrinho"       element={<MarketplaceFallback><MarketplaceCarrinho /></MarketplaceFallback>} />
         <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/cadastrar-associado" element={<CadastrarAssociado />} />

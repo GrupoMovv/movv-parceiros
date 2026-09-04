@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX,
+  ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, CheckCircle2,
 } from 'lucide-react';
-import { Diamond } from '@phosphor-icons/react';
+import { Diamond, ShoppingCart } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
+import { useCarrinho } from './CarrinhoContext';
 import ModalLoginAssociado from './components/ModalLoginAssociado';
 
 const CHAVE_FAVORITOS_PRODUTOS = 'iub_mais_produtos_favoritos';
@@ -31,6 +32,7 @@ export default function ProdutoDetalhe() {
   const [carregandoWhatsapp, setCarregandoWhatsapp] = useState(false);
   const [modalLoginAberto, setModalLoginAberto] = useState(false);
   const { alternar: alternarFavorito, ehFavorito } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
+  const { adicionar: adicionarCarrinho, remover: removerCarrinho, estaNoCarrinho } = useCarrinho();
 
   const ehAssociado = Boolean(associado);
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
@@ -116,6 +118,12 @@ export default function ProdutoDetalhe() {
   const economia = temPrecoAssociado ? parseFloat(produto.preco) - parseFloat(produto.preco_associado) : 0;
   const favorito = ehFavorito(produto.id);
   const descricaoLonga = (produto.descricao || '').length > 180;
+  const noCarrinho = estaNoCarrinho(produto.id);
+
+  function handleCarrinho() {
+    if (noCarrinho) removerCarrinho(produto.id);
+    else adicionarCarrinho(produto.id);
+  }
 
   return (
     <div className="min-h-screen w-full bg-white pb-24 sm:pb-10">
@@ -233,6 +241,15 @@ export default function ProdutoDetalhe() {
           >
             {carregandoWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
             Chamar no WhatsApp
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCarrinho}
+            className={`mt-2.5 w-full flex items-center justify-center gap-2 font-bold text-sm py-3 rounded-xl border transition-colors ${noCarrinho ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'hover:bg-purple-50'}`}
+            style={noCarrinho ? {} : { borderColor: ROXO, color: ROXO }}
+          >
+            {noCarrinho ? <><CheckCircle2 className="w-4 h-4" /> No carrinho</> : <><ShoppingCart className="w-4 h-4" /> Adicionar ao carrinho</>}
           </button>
 
           <div className="flex items-center gap-3 mt-3">

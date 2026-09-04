@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
-import { Diamond } from '@phosphor-icons/react';
+import { Diamond, ShoppingCart, Check } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
+import { useCarrinho } from '../CarrinhoContext';
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -25,6 +26,15 @@ export default function CardProduto({ produto, badge, className = '', style }) {
   const descontoPct = temPrecoAssociado
     ? Math.round((1 - parseFloat(produto.preco_associado) / parseFloat(produto.preco)) * 100)
     : produto.desconto_pct;
+  const { adicionar, remover, estaNoCarrinho } = useCarrinho();
+  const noCarrinho = estaNoCarrinho(produto.id);
+
+  function handleCarrinho(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (noCarrinho) remover(produto.id);
+    else adicionar(produto.id);
+  }
 
   return (
     <Link
@@ -78,6 +88,17 @@ export default function CardProduto({ produto, badge, className = '', style }) {
             <p className="font-bold text-lg leading-tight text-gray-900">{formatarPreco(produto.preco)}</p>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={handleCarrinho}
+          className={`mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold py-1.5 rounded-md border transition-colors ${
+            noCarrinho ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'hover:bg-purple-50'
+          }`}
+          style={noCarrinho ? {} : { borderColor: ROXO, color: ROXO }}
+        >
+          {noCarrinho ? <><Check size={12} weight="bold" /> No carrinho</> : <><ShoppingCart size={12} weight="bold" /> Adicionar</>}
+        </button>
       </div>
     </Link>
   );
