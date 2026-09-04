@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, Bell, BellRinging, Sparkle, Diamond } from '@phosphor-icons/react';
+import { Check, Bell, BellRinging, Sparkle, Diamond, Fire } from '@phosphor-icons/react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from '../public/Marketplace/theme';
+
+// Espelha LIMITE_VITRINE_POR_PLANO do backend (vitrineRotativaService) —
+// quantos produtos cada plano coloca na fila da vitrine rotativa da home.
+const VITRINE_POR_PLANO = { gratis: 1, oficial: 3, premium: 8, master: 15 };
 
 const PLANOS = [
   {
@@ -16,6 +20,7 @@ const PLANOS = [
       'Até 30 produtos',
       'WhatsApp direto',
       'Aparece no marketplace',
+      '1 produto na vitrine rotativa da home',
       'Selo "Parceiro IUB"',
     ],
   },
@@ -109,6 +114,26 @@ export default function ParceiroPlanos() {
         <p className="text-slate-500 text-sm mt-4">
           Estamos ativando planos pagos em breve. Enquanto isso, aproveite o Grátis sem limites e garanta seu bônus como Pioneiro do IUB MAIS!
         </p>
+      </div>
+
+      <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, ${PRETO} 0%, #1F1F27 100%)` }}>
+        <div className="flex items-start gap-4 max-w-2xl mx-auto">
+          <Fire size={32} weight="duotone" color={DOURADO} className="flex-shrink-0 mt-1" />
+          <div>
+            <h2 className="text-lg font-extrabold">No IUB MAIS, sua empresa não fica apenas cadastrada</h2>
+            <p className="text-white/70 text-sm mt-2 leading-relaxed">
+              Seus produtos entram numa <strong className="text-white">vitrine rotativa</strong> que gira todos os dias na home do marketplace pra milhares de consumidores de Itumbiara. Mais produtos na fila = mais oportunidades de aparecer!
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+              {PLANOS.map(p => (
+                <div key={p.valor} className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-center">
+                  <p className="text-xl font-black" style={{ color: DOURADO }}>{VITRINE_POR_PLANO[p.valor]}</p>
+                  <p className="text-[11px] text-white/60 mt-0.5">produto{VITRINE_POR_PLANO[p.valor] > 1 ? 's' : ''} — {p.nome.replace('Parceiro IUB — ', '')}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

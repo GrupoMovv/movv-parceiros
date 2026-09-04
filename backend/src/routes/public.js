@@ -90,6 +90,7 @@ router.get('/marketplace/stats', async (req, res) => {
   }
 });
 
+router.get('/marketplace/vitrine-rotativa', marketplaceHomeCtrl.getVitrineRotativa);
 router.get('/marketplace/ofertas-semana', marketplaceHomeCtrl.getOfertasSemana);
 router.get('/marketplace/exclusivos-associados', marketplaceHomeCtrl.getExclusivosAssociados);
 router.get('/marketplace/novidades', marketplaceHomeCtrl.getNovidades);

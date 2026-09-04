@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
-import { Fire, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons/react';
+import { Lightning, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons/react';
 import TopNav from './components/TopNav';
 import CategoriaFaixa from './components/CategoriaFaixa';
 import CategoryScroll from './components/CategoryScroll';
@@ -9,6 +9,7 @@ import PartnerCard from './components/PartnerCard';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
 import CardPromocao from './components/CardPromocao';
+import VitrineRotativa from './components/VitrineRotativa';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
@@ -66,8 +67,10 @@ export default function Marketplace() {
       <CategoriaFaixa categorias={categorias} carregando={carregandoCategorias} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
+        <VitrineRotativa />
+
         <SecaoProdutos
-          id="ofertas" Icone={Fire} titulo="Ofertas do Dia"
+          id="ofertas" Icone={Lightning} titulo="Ofertas do Dia"
           produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
         />
         <SecaoProdutos

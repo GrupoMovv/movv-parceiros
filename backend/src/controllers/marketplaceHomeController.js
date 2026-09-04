@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
 
 // Colunas comuns de produto pra qualquer vitrine da home — sempre junto do
 // parceiro (nome/slug), porque todo CardProduto mostra "vendido por X".
@@ -221,6 +222,19 @@ async function getProdutosPorCategoria(req, res) {
   }
 }
 
+// Vitrine única rotativa: todo parceiro participa, mas quem tem plano maior
+// contribui mais produtos pra fila (ver vitrineRotativaService). Não existe
+// "destaque premium" separado do "destaque master" — é uma vitrine só.
+async function getVitrineRotativa(req, res) {
+  try {
+    const { geradoEm, produtos } = await obterVitrineRotativa();
+    return res.json({ produtos, gerado_em: new Date(geradoEm).toISOString() });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar vitrine rotativa' });
+  }
+}
+
 async function getParceiros(req, res) {
   try {
     const result = await db.query(
@@ -241,5 +255,6 @@ module.exports = {
   getMaisVendidos,
   getCategorias,
   getProdutosPorCategoria,
+  getVitrineRotativa,
   getParceiros,
 };
