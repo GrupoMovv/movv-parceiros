@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart, Star } from 'lucide-react';
-import { ROXO_ESCURO, DOURADO, PRETO } from '../theme';
+import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from '../theme';
+import IconePorCategoria from './IconePorCategoria';
 
 export default function PartnerCard({ parceiro, favorito, onToggleFavorito }) {
   return (
@@ -8,11 +9,15 @@ export default function PartnerCard({ parceiro, favorito, onToggleFavorito }) {
       to={`/marketplace/parceiro/${parceiro.slug}`}
       className="group flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 ease-out hover:-translate-y-1"
     >
-      <div
-        className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden flex items-center justify-center text-6xl"
-        style={{ backgroundColor: `${parceiro.corIcone}1A` }}
-      >
-        {parceiro.icone}
+      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden flex items-center justify-center bg-purple-50">
+        {parceiro.logo_url ? (
+          <img src={parceiro.logo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+        ) : (
+          <IconePorCategoria
+            nome={parceiro.nome} descricao={parceiro.descricao} categorias={parceiro.categorias}
+            size={44} weight="duotone" color={ROXO}
+          />
+        )}
 
         <button
           type="button"

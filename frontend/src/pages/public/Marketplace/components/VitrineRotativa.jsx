@@ -118,10 +118,10 @@ export default function VitrineRotativa() {
     >
       <div className="flex items-end justify-between gap-4 mb-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Produtos dos nossos parceiros aparecendo para você</p>
           <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight" style={{ color: PRETO }}>
             <Fire size={20} weight="duotone" color={ROXO} /> Produtos em Destaque
           </h2>
+          <p className="text-xs text-slate-400 mt-0.5">Produtos dos nossos parceiros aparecendo para você</p>
         </div>
         {totalPaginas > 1 && !carregando && (
           <div className="hidden sm:flex items-center gap-1.5">
