@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Fire } from '@phosphor-icons/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CaretLeft, CaretRight, Fire } from '@phosphor-icons/react';
 import api from '../../../../services/api';
 import CardVitrineRotativa from './CardVitrineRotativa';
 import { PRETO, ROXO } from '../theme';
@@ -29,6 +28,24 @@ function useVisibleCount() {
   return count;
 }
 
+// Enquanto o catálogo é pequeno, uma vitrine com só 1-2 produtos não passa
+// sensação nenhuma de "rotativo" (nem dá pra rolar). Repete a lista (com
+// key própria por cópia) até ter pelo menos 2 páginas cheias, num teto de
+// 3 repetições — só um efeito visual de movimento, nunca finge ter mais
+// produtos distintos do que realmente existem (mesmo produto, mesmo link).
+function comMovimentoGarantido(produtos, visiveis) {
+  if (produtos.length === 0) return produtos;
+  const minimo = visiveis * 2;
+  if (produtos.length >= minimo) return produtos;
+
+  const repeticoes = Math.min(3, Math.ceil(minimo / produtos.length));
+  const resultado = [];
+  for (let copia = 0; copia < repeticoes; copia++) {
+    for (const p of produtos) resultado.push({ ...p, _key: `${p.id}-${copia}` });
+  }
+  return resultado;
+}
+
 function SkeletonCard() {
   return (
     <div className={`${LARGURA_CARD} flex-shrink-0 animate-pulse`}>
@@ -44,20 +61,24 @@ function SkeletonCard() {
 // separado de "destaque master") — quem tem plano maior só contribui mais
 // produtos pra fila do round-robin do backend. Carrossel com scroll nativo
 // (funciona com swipe/touch de graça), autoplay pausado no hover, setas e
-// dots — ver vitrineRotativaService.js pro algoritmo de distribuição.
+// dots com barrinha de progresso — ver vitrineRotativaService.js pro
+// algoritmo de distribuição.
 export default function VitrineRotativa() {
-  const [produtos, setProdutos] = useState([]);
+  const [produtosBrutos, setProdutosBrutos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [paginaAtual, setPaginaAtual] = useState(0);
+  const [pausado, setPausado] = useState(false);
   const trilhaRef = useRef(null);
   const timerRef = useRef(null);
   const visiveis = useVisibleCount();
+
+  const produtos = useMemo(() => comMovimentoGarantido(produtosBrutos, visiveis), [produtosBrutos, visiveis]);
   const totalPaginas = Math.max(1, Math.ceil(produtos.length / visiveis));
 
   useEffect(() => {
     api.get('/public/marketplace/vitrine-rotativa')
-      .then(res => setProdutos(res.data.produtos))
-      .catch(() => setProdutos([]))
+      .then(res => setProdutosBrutos(res.data.produtos))
+      .catch(() => setProdutosBrutos([]))
       .finally(() => setCarregando(false));
   }, []);
 
@@ -74,7 +95,7 @@ export default function VitrineRotativa() {
 
   const iniciarAutoplay = useCallback(() => {
     pararAutoplay();
-    if (totalPaginas <= 1) return;
+    if (totalPaginas <= 1 || pausado) return;
     timerRef.current = setInterval(() => {
       setPaginaAtual(p => {
         const proxima = (p + 1) % totalPaginas;
@@ -82,13 +103,13 @@ export default function VitrineRotativa() {
         return proxima;
       });
     }, INTERVALO_MS);
-  }, [pararAutoplay, irParaPagina, totalPaginas]);
+  }, [pararAutoplay, irParaPagina, totalPaginas, pausado]);
 
   useEffect(() => {
     if (!carregando && produtos.length > 0) iniciarAutoplay();
     return pararAutoplay;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [carregando, produtos.length, visiveis]);
+  }, [carregando, produtos.length, visiveis, pausado]);
 
   // Mantém os dots corretos mesmo quando o avanço vem de swipe manual
   // (não só do timer/setas) — throttle simples via rAF em vez de debounce
@@ -101,11 +122,9 @@ export default function VitrineRotativa() {
   }
 
   function handleSeta(direcao) {
-    pararAutoplay();
     const proxima = paginaAtual + direcao;
     setPaginaAtual(((proxima % totalPaginas) + totalPaginas) % totalPaginas);
     irParaPagina(proxima);
-    iniciarAutoplay();
   }
 
   if (!carregando && produtos.length === 0) return null;
@@ -113,8 +132,8 @@ export default function VitrineRotativa() {
   return (
     <section
       className="relative"
-      onMouseEnter={pararAutoplay}
-      onMouseLeave={iniciarAutoplay}
+      onMouseEnter={() => setPausado(true)}
+      onMouseLeave={() => setPausado(false)}
     >
       <div className="flex items-end justify-between gap-4 mb-3">
         <div>
@@ -123,47 +142,70 @@ export default function VitrineRotativa() {
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">Produtos dos nossos parceiros aparecendo para você</p>
         </div>
+      </div>
+
+      <div className="relative">
         {totalPaginas > 1 && !carregando && (
-          <div className="hidden sm:flex items-center gap-1.5">
-            <button type="button" onClick={() => handleSeta(-1)} aria-label="Anterior" className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button type="button" onClick={() => handleSeta(1)} aria-label="Próximo" className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            type="button" onClick={() => handleSeta(-1)} aria-label="Anterior"
+            className="hidden sm:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center hover:scale-105 transition-transform"
+          >
+            <CaretLeft size={18} weight="bold" color={ROXO} />
+          </button>
+        )}
+
+        <div
+          ref={trilhaRef}
+          onScroll={aoRolar}
+          className="flex gap-3 overflow-x-auto scrollbar-none scroll-smooth"
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+          {carregando
+            ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+            : produtos.map((p, i) => (
+              <div key={p._key || p.id || i} className={`${LARGURA_CARD} flex-shrink-0`} style={{ scrollSnapAlign: 'start' }}>
+                <CardVitrineRotativa produto={p} />
+              </div>
+            ))}
+        </div>
+
+        {totalPaginas > 1 && !carregando && (
+          <button
+            type="button" onClick={() => handleSeta(1)} aria-label="Próximo"
+            className="hidden sm:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center hover:scale-105 transition-transform"
+          >
+            <CaretRight size={18} weight="bold" color={ROXO} />
+          </button>
         )}
       </div>
 
-      <div
-        ref={trilhaRef}
-        onScroll={aoRolar}
-        className="flex gap-3 overflow-x-auto scrollbar-none scroll-smooth"
-        style={{ scrollSnapType: 'x mandatory' }}
-      >
-        {carregando
-          ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
-          : produtos.map(p => (
-            <div key={p.id} className={`${LARGURA_CARD} flex-shrink-0`} style={{ scrollSnapAlign: 'start' }}>
-              <CardVitrineRotativa produto={p} />
-            </div>
-          ))}
-      </div>
-
       {totalPaginas > 1 && !carregando && (
-        <div className="flex items-center justify-center gap-1.5 mt-3">
+        <div className="flex items-center justify-center gap-2 mt-4">
           {Array.from({ length: totalPaginas }).map((_, i) => (
             <button
               key={i}
               type="button"
               aria-label={`Ir para página ${i + 1}`}
-              onClick={() => { pararAutoplay(); setPaginaAtual(i); irParaPagina(i); iniciarAutoplay(); }}
-              className="h-1.5 rounded-full transition-all duration-300"
-              style={{ width: i === paginaAtual ? 18 : 6, backgroundColor: i === paginaAtual ? ROXO : '#E2E8F0' }}
-            />
+              onClick={() => { setPaginaAtual(i); irParaPagina(i); }}
+              className="relative h-1.5 w-6 rounded-full bg-slate-200 overflow-hidden"
+            >
+              {i === paginaAtual && (
+                <span
+                  key={paginaAtual}
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{
+                    backgroundColor: ROXO,
+                    animation: `preencherDot ${INTERVALO_MS}ms linear forwards`,
+                    animationPlayState: pausado ? 'paused' : 'running',
+                  }}
+                />
+              )}
+            </button>
           ))}
         </div>
       )}
+
+      <style>{`@keyframes preencherDot { from { width: 0%; } to { width: 100%; } }`}</style>
     </section>
   );
 }

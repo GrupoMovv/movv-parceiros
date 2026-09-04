@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
+import { PARCEIROS_INICIAIS, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
 import { Lightning, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons/react';
 import TopNav from './components/TopNav';
 import CategoriaFaixa from './components/CategoriaFaixa';
-import CategoryScroll from './components/CategoryScroll';
+import HeroBannerCarousel from './components/HeroBannerCarousel';
 import PartnerCard from './components/PartnerCard';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
@@ -15,7 +15,7 @@ import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
-import { useProdutosSecao, useCategorias, useParceirosCompactos } from './useSecaoData';
+import { useProdutosSecao, useParceirosCompactos } from './useSecaoData';
 
 export default function Marketplace() {
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
@@ -30,7 +30,6 @@ export default function Marketplace() {
   const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
   const { produtos: novidades, carregando: carregandoNovidades } = useProdutosSecao('/public/marketplace/novidades');
   const { produtos: exclusivos, carregando: carregandoExclusivos } = useProdutosSecao('/public/marketplace/exclusivos-associados');
-  const { categorias, carregando: carregandoCategorias } = useCategorias();
   const { parceiros: parceirosCompactos, carregando: carregandoParceiros } = useParceirosCompactos();
 
   const buscaAtiva = searchQuery.trim().length > 0;
@@ -49,6 +48,14 @@ export default function Marketplace() {
     document.querySelector('#parceiros')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Categorias sem página de produtos própria (ver CategoriaFaixa) filtram
+  // a grade "Compre de empresas de Itumbiara" aqui embaixo — rola até lá
+  // pra pessoa ver o resultado na hora, já que a faixa fica lá no topo.
+  function handleSelecionarCategoriaLocal(label) {
+    setCategoriaAtiva(label);
+    document.querySelector('#parceiros')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
       <TopNav
@@ -64,9 +71,11 @@ export default function Marketplace() {
         onSearchSubmit={handleSearchSubmit}
       />
 
-      <CategoriaFaixa categorias={categorias} carregando={carregandoCategorias} />
+      <CategoriaFaixa categoriaAtiva={categoriaAtiva} onSelecionar={handleSelecionarCategoriaLocal} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
+        <HeroBannerCarousel associado={associado} />
+
         <VitrineRotativa />
 
         <SecaoProdutos
@@ -111,11 +120,7 @@ export default function Marketplace() {
         </Reveal>
       </div>
 
-      <div className="mt-8">
-        <CategoryScroll categorias={CATEGORIAS_FILTRO} ativa={categoriaAtiva} onSelecionar={setCategoriaAtiva} />
-      </div>
-
-      <div id="parceiros" className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8 w-full flex-1 space-y-8 scroll-mt-16">
+      <div id="parceiros" className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8 w-full flex-1 space-y-8 scroll-mt-16 mt-8">
         {mostrarFavoritos ? (
           <SecaoParceiros
             titulo="Seus favoritos"

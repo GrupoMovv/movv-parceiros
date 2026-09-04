@@ -82,8 +82,15 @@ router.get('/beneficios/catalogo.pdf', (req, res) => {
 // contagem, sem nenhum dado pessoal, endpoint publico por design.
 router.get('/marketplace/stats', async (req, res) => {
   try {
-    const r = await db.query('SELECT COUNT(*)::int AS total FROM sindicato_associados WHERE ativo = true');
-    return res.json({ associados: r.rows[0].total });
+    const [associadosResult, produtosResult] = await Promise.all([
+      db.query('SELECT COUNT(*)::int AS total FROM sindicato_associados WHERE ativo = true'),
+      db.query(
+        `SELECT COUNT(*)::int AS total FROM sindicato_parceiro_produtos pr
+         JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
+         WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`
+      ),
+    ]);
+    return res.json({ associados: associadosResult.rows[0].total, produtos: produtosResult.rows[0].total });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
