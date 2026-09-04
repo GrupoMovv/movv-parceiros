@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   ChevronRight, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, Timer,
 } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
-import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
+import { useAssociadoSessao } from './useAssociadoSessao';
+import ModalLoginAssociado from './components/ModalLoginAssociado';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -39,16 +40,16 @@ function useContagemDetalhada(dataFim) {
 
 export default function PromocaoDetalhe() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
-  const associadoHash = searchParams.get('associado');
+  const { associado, recarregar: recarregarAssociado } = useAssociadoSessao();
+  const associadoHash = associado?.carteirinha_hash || null;
 
   const [promocao, setPromocao] = useState(null);
   const [naoEncontrada, setNaoEncontrada] = useState(false);
   const [erroRede, setErroRede] = useState(false);
-  const [nomeAssociado, setNomeAssociado] = useState(null);
   const [carregandoWhatsapp, setCarregandoWhatsapp] = useState(false);
+  const [modalLoginAberto, setModalLoginAberto] = useState(false);
 
-  const ehAssociado = Boolean(nomeAssociado);
+  const ehAssociado = Boolean(associado);
 
   function carregarPromocao() {
     setErroRede(false);
@@ -62,20 +63,6 @@ export default function PromocaoDetalhe() {
   }
 
   useEffect(() => { carregarPromocao(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (associadoHash) {
-      api.get(`/public/carteirinha/${associadoHash}`)
-        .then(res => setNomeAssociado(res.data.nome?.trim().split(/\s+/)[0] || null))
-        .catch(() => {});
-      return;
-    }
-    if (getPainelToken()) {
-      apiPainel.get('/public/painel/me')
-        .then(res => setNomeAssociado(res.data.nome_completo?.trim().split(/\s+/)[0] || null))
-        .catch(() => {});
-    }
-  }, [associadoHash]);
 
   useEffect(() => {
     if (!promocao) return;
@@ -246,9 +233,12 @@ export default function PromocaoDetalhe() {
                 </p>
                 {!ehAssociado && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Link to="/meu-painel" className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}>
+                    <button
+                      type="button" onClick={() => setModalLoginAberto(true)}
+                      className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
+                    >
                       Sou associado — Fazer login
-                    </Link>
+                    </button>
                     <Link to="/cadastrar" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
                       Quero ser associado
                     </Link>
@@ -339,6 +329,13 @@ export default function PromocaoDetalhe() {
           {esgotada ? 'Vagas esgotadas' : expirada ? 'Promoção encerrada' : 'Chamar no WhatsApp'}
         </button>
       </div>
+
+      {modalLoginAberto && (
+        <ModalLoginAssociado
+          onClose={() => setModalLoginAberto(false)}
+          onLoginSuccess={() => { recarregarAssociado(); setModalLoginAberto(false); }}
+        />
+      )}
     </div>
   );
 }

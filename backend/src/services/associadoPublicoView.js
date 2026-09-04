@@ -38,6 +38,8 @@ async function montarViewAssociado(associado) {
     estado: associado.estado,
     empresa: empresaNome,
     carteirinha_hash: associado.carteirinha_hash,
+    numero_associado: associado.codigo_filiado,
+    carteirinha_valida_ate: associado.carteirinha_valida_ate,
     ativo: associado.ativo,
     dependentes: depResult.rows,
   };

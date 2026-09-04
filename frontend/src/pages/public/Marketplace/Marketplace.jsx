@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import api from '../../../services/api';
-import apiPainel, { getPainelToken } from '../../../services/apiPainel';
+import { useParams } from 'react-router-dom';
 import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
 import { Fire, Diamond, Star, Storefront, TrendUp, Tag, ShoppingBagOpen } from '@phosphor-icons/react';
@@ -18,6 +16,7 @@ import CtaVenderRodape from './components/CtaVenderRodape';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import { useFavoritos } from './useFavoritos';
+import { useAssociadoSessao } from './useAssociadoSessao';
 import { useProdutosSecao, useCategorias, useParceirosCompactos } from './useSecaoData';
 
 // Mapeia a categoria fixa da vitrine "Explore por categoria" (slug do
@@ -31,35 +30,15 @@ function mapearCategoriaSlugParaFiltro(slug) {
 }
 
 export default function Marketplace() {
-  const [searchParams] = useSearchParams();
   const { categoriaSlug } = useParams();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [bairroAtivo, setBairroAtivo] = useState('Todos');
-  const [nomeAssociado, setNomeAssociado] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
-  const [carregandoAssociado, setCarregandoAssociado] = useState(false);
   const { favoritos, alternar: alternarFavorito, ehFavorito } = useFavoritos();
+  const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
-  const associadoHash = searchParams.get('associado');
-
-  useEffect(() => {
-    if (associadoHash) {
-      setCarregandoAssociado(true);
-      api.get(`/public/carteirinha/${associadoHash}`)
-        .then(res => setNomeAssociado(res.data.nome?.trim().split(/\s+/)[0] || null))
-        .catch(() => {})
-        .finally(() => setCarregandoAssociado(false));
-      return;
-    }
-    if (getPainelToken()) {
-      setCarregandoAssociado(true);
-      apiPainel.get('/public/painel/me')
-        .then(res => setNomeAssociado(res.data.nome_completo?.trim().split(/\s+/)[0] || null))
-        .catch(() => {})
-        .finally(() => setCarregandoAssociado(false));
-    }
-  }, [associadoHash]);
+  const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
   // Vem da rota /marketplace/categoria/:slug (cards da seção "Explore por
   // categoria") — sincroniza com o filtro sempre que o slug da URL muda,
@@ -106,6 +85,8 @@ export default function Marketplace() {
         favoritosAtivos={mostrarFavoritos}
         onToggleFavoritos={() => setMostrarFavoritos(v => !v)}
         qtdFavoritos={favoritos.length}
+        onSair={logout}
+        onLoginSuccess={recarregar}
       />
 
       {!modoNavegacao && <HeroPremium nomeAssociado={nomeAssociado} />}

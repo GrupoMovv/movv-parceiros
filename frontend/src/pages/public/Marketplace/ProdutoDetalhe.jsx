@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX,
 } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
-import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useFavoritos } from './useFavoritos';
+import { useAssociadoSessao } from './useAssociadoSessao';
+import ModalLoginAssociado from './components/ModalLoginAssociado';
 
 const CHAVE_FAVORITOS_PRODUTOS = 'iub_mais_produtos_favoritos';
 
@@ -18,20 +19,21 @@ function formatarPreco(v) {
 
 export default function ProdutoDetalhe() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
-  const associadoHash = searchParams.get('associado');
+  const { associado, recarregar: recarregarAssociado } = useAssociadoSessao();
+  const associadoHash = associado?.carteirinha_hash || null;
 
   const [produto, setProduto] = useState(null);
   const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [erroRede, setErroRede] = useState(false);
   const [outros, setOutros] = useState([]);
   const [fotoAtiva, setFotoAtiva] = useState(0);
-  const [nomeAssociado, setNomeAssociado] = useState(null);
   const [descricaoExpandida, setDescricaoExpandida] = useState(false);
   const [carregandoWhatsapp, setCarregandoWhatsapp] = useState(false);
+  const [modalLoginAberto, setModalLoginAberto] = useState(false);
   const { alternar: alternarFavorito, ehFavorito } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
 
-  const ehAssociado = Boolean(nomeAssociado);
+  const ehAssociado = Boolean(associado);
+  const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
   function carregarProduto() {
     setErroRede(false);
@@ -45,20 +47,6 @@ export default function ProdutoDetalhe() {
   }
 
   useEffect(() => { carregarProduto(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (associadoHash) {
-      api.get(`/public/carteirinha/${associadoHash}`)
-        .then(res => setNomeAssociado(res.data.nome?.trim().split(/\s+/)[0] || null))
-        .catch(() => {});
-      return;
-    }
-    if (getPainelToken()) {
-      apiPainel.get('/public/painel/me')
-        .then(res => setNomeAssociado(res.data.nome_completo?.trim().split(/\s+/)[0] || null))
-        .catch(() => {});
-    }
-  }, [associadoHash]);
 
   useEffect(() => {
     if (!produto) return;
@@ -209,9 +197,12 @@ export default function ProdutoDetalhe() {
                     <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(produto.preco_associado)} <span className="font-normal">(economize {formatarPreco(economia)})</span>
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Link to="/meu-painel" className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}>
+                    <button
+                      type="button" onClick={() => setModalLoginAberto(true)}
+                      className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
+                    >
                       Sou associado — Fazer login
-                    </Link>
+                    </button>
                     <Link to="/cadastrar" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
                       Quero ser associado
                     </Link>
@@ -335,6 +326,13 @@ export default function ProdutoDetalhe() {
           Chamar no WhatsApp
         </button>
       </div>
+
+      {modalLoginAberto && (
+        <ModalLoginAssociado
+          onClose={() => setModalLoginAberto(false)}
+          onLoginSuccess={() => { recarregarAssociado(); setModalLoginAberto(false); }}
+        />
+      )}
     </div>
   );
 }

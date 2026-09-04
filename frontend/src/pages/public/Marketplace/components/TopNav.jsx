@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, LogOut } from 'lucide-react';
 import { DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 
@@ -18,7 +18,10 @@ function scrollPara(e, href) {
   if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos }) {
+export default function TopNav({
+  nomeAssociado, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos,
+  onSair, onLoginSuccess,
+}) {
   const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -85,12 +88,24 @@ export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAt
           {carregandoAssociado ? (
             <div className="h-4 w-16 rounded-full bg-white/10 animate-pulse ml-1" />
           ) : nomeAssociado ? (
-            <Link
-              to="/meu-painel"
-              className="text-sm font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300 whitespace-nowrap"
-            >
-              {nomeAssociado.split(' ')[0]}
-            </Link>
+            <div className="flex items-center gap-1">
+              <Link
+                to="/meu-painel"
+                className="text-sm font-medium text-white/90 hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300 whitespace-nowrap"
+                title="Minha carteirinha"
+              >
+                💎 Olá, {nomeAssociado.split(' ')[0]}!
+              </Link>
+              <button
+                type="button"
+                onClick={onSair}
+                aria-label="Sair"
+                title="Sair"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors duration-300"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ) : (
             <button
               type="button"
@@ -104,7 +119,9 @@ export default function TopNav({ nomeAssociado, carregandoAssociado, favoritosAt
         </nav>
       </div>
 
-      {modalEntrarAberto && <ModalEntrar onClose={() => setModalEntrarAberto(false)} />}
+      {modalEntrarAberto && (
+        <ModalEntrar onClose={() => setModalEntrarAberto(false)} onLoginSuccess={onLoginSuccess} />
+      )}
     </header>
   );
 }

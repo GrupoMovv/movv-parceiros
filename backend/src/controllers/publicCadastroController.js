@@ -145,6 +145,31 @@ async function login(req, res) {
   }
 }
 
+// Login automático do Marketplace via ?associado=hash (link da carteirinha
+// digital) — mesma sessão de 30 dias do login por CPF+nascimento, só que a
+// prova de identidade aqui é o hash já ter sido entregue pra pessoa. Hash
+// inexistente/vencido/associado inativo tudo cai no mesmo 404 genérico: o
+// front trata como "carteirinha expirada" e segue como visitante normal.
+async function loginPorHash(req, res) {
+  try {
+    const hash = String(req.body.hash || '').trim();
+    if (!hash) return res.status(400).json({ error: 'hash é obrigatório' });
+
+    const result = await db.query(
+      `SELECT id FROM sindicato_associados
+       WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE`,
+      [hash]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Carteirinha inválida ou expirada' });
+
+    const token = gerarTokenPainel(result.rows[0].id);
+    return res.json({ token });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao validar carteirinha' });
+  }
+}
+
 // CPF já cadastrado (passo 2 do wizard): gera a carteirinha se ainda não
 // existir e devolve os dados pro front montar o link de WhatsApp (mesmo
 // utilitário client-side usado no botão "Enviar Carteirinha" do admin).
@@ -338,7 +363,7 @@ async function finalizarCadastro(req, res) {
 }
 
 module.exports = {
-  validarCnpj, solicitarEmpresa, verificarCpf, login, reenviarCarteirinha, finalizarCadastro,
+  validarCnpj, solicitarEmpresa, verificarCpf, login, loginPorHash, reenviarCarteirinha, finalizarCadastro,
   // exportados pro publicMeuCadastroController reaproveitar (gera
   // carteirinha de dependente novo adicionado na tela de edição).
   gerarCarteirinhaDependentes,

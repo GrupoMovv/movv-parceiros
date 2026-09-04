@@ -26,6 +26,7 @@ router.post('/validar-cnpj',         ctrl.validarCnpj);
 router.post('/solicitar-empresa',    ctrl.solicitarEmpresa);
 router.post('/verificar-cpf',        ctrl.verificarCpf);
 router.post('/login',                loginRateLimit, ctrl.login);
+router.post('/login-hash',           loginRateLimit, ctrl.loginPorHash);
 router.post('/reenviar-carteirinha', ctrl.reenviarCarteirinha);
 router.post('/finalizar', upload.single('foto'), ctrl.finalizarCadastro);
 

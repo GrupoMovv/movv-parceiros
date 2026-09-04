@@ -2,16 +2,21 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
 const TIPO = 'painel_publico';
-const EXPIRA_EM = '1h';
+// 30 dias — essa sessão também é a "sessão do associado" no Marketplace
+// (login automático via ?associado=hash ou manual por CPF+nascimento), não
+// só o "Meu Painel". Precisa sobreviver a vários dias de navegação, não só
+// uma visita.
+const EXPIRA_EM = '30d';
 
 function gerarTokenPainel(associadoId) {
   return jwt.sign({ associado_id: associadoId, type: TIPO }, process.env.JWT_SECRET, { expiresIn: EXPIRA_EM });
 }
 
-// Sessão pública curta (1h) pro "Meu Painel" — não é o mesmo JWT dos
-// usuários internos/parceiros (não tem is_admin, role etc.), só carrega o
-// id do associado. authenticate() padrão não serve aqui porque essa sessão
-// nasce de CPF + data de nascimento, não de partners/internal_collaborators.
+// Sessão pública (30 dias) pro "Meu Painel" e pro Marketplace — não é o
+// mesmo JWT dos usuários internos/parceiros (não tem is_admin, role etc.),
+// só carrega o id do associado. authenticate() padrão não serve aqui porque
+// essa sessão nasce de CPF + data de nascimento (ou do hash da carteirinha),
+// não de partners/internal_collaborators.
 async function authenticatePainelPublico(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
