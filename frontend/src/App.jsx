@@ -38,6 +38,9 @@ import SindicatoEmpresaDetalhe from './pages/sindicato/Empresas/EmpresaDetalhe';
 import SindicatoBeneficios from './pages/sindicato/Beneficios/SindicatoBeneficios';
 import SindicatoAssociados from './pages/sindicato/Associados/SindicatoAssociados';
 import SindicatoCarteirinhas from './pages/sindicato/Carteirinhas/SindicatoCarteirinhas';
+import SindicatoListaAprovadosTodasEmpresas from './pages/sindicato/ListaAprovados/TodasEmpresas';
+import SindicatoListaAprovadosEmpresaDetalhe from './pages/sindicato/ListaAprovados/EmpresaDetalhe';
+import SindicatoListaAprovadosImportar from './pages/sindicato/ListaAprovados/Importar';
 import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolicitacoes';
 import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitacoes/SindicatoParceirosSolicitacoes';
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
@@ -48,6 +51,7 @@ const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/Produto
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
 const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender'));
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
+import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
 import ParceiroLogin from './pages/parceiro/Login';
@@ -183,6 +187,7 @@ export default function App() {
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
         <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
+        <Route path="/cadastrar-associado" element={<CadastrarAssociado />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
         <Route path="/meu-painel"         element={<MeuPainel />} />
 
@@ -243,6 +248,9 @@ export default function App() {
           <Route path="sindicato/beneficios" element={<RequireSindicatoEmpresas><SindicatoBeneficios /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/associados" element={<RequireSindicatoEmpresas><SindicatoAssociados /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/carteirinhas" element={<RequireSindicatoEmpresas><SindicatoCarteirinhas /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/lista-aprovados" element={<RequireSindicatoEmpresas><SindicatoListaAprovadosTodasEmpresas /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/lista-aprovados/importar" element={<RequireSindicatoEmpresas><SindicatoListaAprovadosImportar /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/lista-aprovados/empresa/:nome" element={<RequireSindicatoEmpresas><SindicatoListaAprovadosEmpresaDetalhe /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/solicitacoes" element={<RequireSindicatoEmpresas><SindicatoSolicitacoes /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/parceiros-solicitacoes" element={<RequireSindicatoEmpresas><SindicatoParceirosSolicitacoes /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/parceiro-interessados" element={<RequireSindicatoEmpresas><SindicatoParceiroInteressados /></RequireSindicatoEmpresas>} />

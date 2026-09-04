@@ -303,8 +303,25 @@ async function enviarConfirmacaoExclusaoParceiro({ nome, nomeFantasia, email, to
   return enviar({ to: email, subject: 'IUB MAIS — Confirmação de exclusão de conta', html });
 }
 
+async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
+  const backendUrl = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+  const linkCarteirinha = `${backendUrl}/carteirinha/${carteirinhaHash}`;
+  const linkMarketplace = `${PORTAL_URL}/marketplace?associado=${carteirinhaHash}`;
+  const primeiroNome = String(nome || '').trim().split(/\s+/)[0];
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Sua carteirinha está ativa!</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${primeiroNome}</strong>! Seu cadastro no SECI foi confirmado e sua carteirinha digital já está pronta pra usar.</p>
+    ${botao('Ver Minha Carteirinha', linkCarteirinha)}
+    <p style="color:#555;line-height:1.6;margin-top:28px;">Agora você também tem acesso ao <strong>IUB MAIS</strong>, o marketplace de descontos exclusivos pra associados SECI.</p>
+    ${botao('Ir Pro IUB MAIS', linkMarketplace)}
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">Guarde o link da sua carteirinha — é seu acesso rápido sempre que precisar usar um benefício.</p>
+  `);
+  return enviar({ to: email, subject: '🎉 Sua carteirinha SECI está ativa!', html });
+}
+
 module.exports = {
   enviarCredenciais,
+  enviarCarteirinhaAtivada,
   enviarRecuperacaoSenha,
   enviarRecuperacaoSenhaParceiro,
   enviarComissaoAprovada,

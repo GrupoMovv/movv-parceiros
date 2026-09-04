@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
-  Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell,
+  Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -93,6 +93,7 @@ const MASTER_MENU = [
       { label: 'Minha Comissão',   icon: Landmark,      to: '/sindicato/minha-comissao', roles: ['sindicato_aprendiz'] },
       { label: 'Empresas',         icon: Building2,     to: '/sindicato/empresas',       roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Associados',       icon: Contact,       to: '/sindicato/associados',      roles: ['sindicato_aprendiz', 'admin'] },
+      { label: 'Lista Aprovados',  icon: UserCheck,     to: '/sindicato/lista-aprovados', roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Carteirinhas',     icon: CreditCard,    to: '/sindicato/carteirinhas',    roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Benefícios',       icon: Gift,          to: '/sindicato/beneficios',      roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Solicitações de Empresas', icon: Inbox, to: '/sindicato/solicitacoes',    roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'solicitacoes' },
