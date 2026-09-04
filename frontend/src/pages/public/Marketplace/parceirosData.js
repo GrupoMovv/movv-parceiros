@@ -32,7 +32,7 @@ export const PARCEIROS_INICIAIS = [
   {
     slug: 'diroma-fiori',
     nome: 'Diroma Fiori — Caldas Novas',
-    categorias: ['Hotelaria', 'Servicos'],
+    categorias: ['Hospedagem', 'Servicos'],
     icone: '🏨',
     corIcone: '#0EA5E9',
     descricao: 'Pacote de final de semana em Caldas Novas',
@@ -116,19 +116,19 @@ export const PARCEIROS_INICIAIS = [
 // é feita sem diferenciar acento/maiúsculas, ver normalizarCategoria().
 export const CATEGORIAS_FILTRO = [
   { label: 'Todas', emoji: null },
-  { label: 'Produtos', emoji: '🛍️' },
-  { label: 'Serviços', emoji: '🔧' },
-  { label: 'Alimentação', emoji: '🍔' },
-  { label: 'Moda', emoji: '👕' },
-  { label: 'Casa', emoji: '🏠' },
-  { label: 'Automotivo', emoji: '🚗' },
-  { label: 'Tecnologia', emoji: '💻' },
+  { label: 'Saúde', emoji: '💊' },
   { label: 'Beleza', emoji: '💄' },
+  { label: 'Alimentação', emoji: '🍔' },
+  { label: 'Serviços', emoji: '🔧' },
+  { label: 'Fitness', emoji: '🏋️' },
+  { label: 'Casa', emoji: '🏠' },
+  { label: 'Moda', emoji: '👕' },
+  { label: 'Tecnologia', emoji: '💻' },
+  { label: 'Automotivo', emoji: '🚗' },
   { label: 'Presentes', emoji: '🎁' },
   { label: 'Educação', emoji: '📚' },
-  { label: 'Esportes', emoji: '🏋️' },
-  { label: 'Saúde', emoji: '💊' },
-  { label: 'Hotelaria', emoji: '🏨' },
+  { label: 'Esportes', emoji: '⚽' },
+  { label: 'Hospedagem', emoji: '🏨' },
   { label: 'Bem-estar', emoji: '🧠' },
 ];
 

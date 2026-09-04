@@ -76,8 +76,6 @@ export default function Marketplace() {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
         <HeroBannerCarousel associado={associado} />
 
-        <VitrineRotativa />
-
         <SecaoProdutos
           id="ofertas" Icone={Lightning} titulo="Ofertas do Dia"
           produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
@@ -94,6 +92,8 @@ export default function Marketplace() {
           id="exclusivos" Icone={Diamond} titulo="Exclusivos para Associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
           produtos={exclusivos} carregando={carregandoExclusivos} badge="exclusivo"
         />
+
+        <VitrineRotativa />
 
         {!nomeAssociado && !carregandoExclusivos && exclusivos.length > 0 && (
           <p className="text-center text-sm text-slate-500 -mt-6">

@@ -1,27 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
-import api from '../../../../services/api';
 import ModalEntrar from './ModalEntrar';
 import { DOURADO } from '../theme';
 
 const INTERVALO_MS = 5000;
 
-function montarSlides(totalProdutos, ehAssociado, onAbrirLogin) {
+function montarSlides(ehAssociado, onAbrirLogin) {
   return [
     {
       id: 'vender',
       emoji: '🎉',
-      titulo: 'IUB MAIS 100% Grátis pra Comerciantes',
+      titulo: '100% Gratuito pra Comerciantes',
       texto: 'Cadastre sua empresa e comece a vender pra Itumbiara hoje mesmo.',
       gradiente: 'linear-gradient(135deg, #3B0A78 0%, #4C1D95 100%)',
-      botao: 'Cadastre sua empresa',
+      botao: 'Cadastrar minha empresa',
       to: '/vender',
     },
     ehAssociado ? null : {
       id: 'associado',
       emoji: '💎',
-      titulo: 'Já é associado SECI?',
+      titulo: 'Sou Associado SECI — Preço Especial',
       texto: 'Preço especial em todos os parceiros do marketplace.',
       gradiente: 'linear-gradient(135deg, #1F1F27 0%, #3B0A78 100%)',
       botao: 'Fazer login',
@@ -29,17 +28,17 @@ function montarSlides(totalProdutos, ehAssociado, onAbrirLogin) {
     },
     {
       id: 'explorar',
-      emoji: '🚀',
-      titulo: `Descubra${totalProdutos ? ` +${totalProdutos}` : ''} produtos e serviços em Itumbiara`,
-      texto: 'Tudo perto de você, num só lugar.',
+      emoji: '🏆',
+      titulo: 'Descubra o Comércio Local',
+      texto: 'Produtos e serviços de Itumbiara, tudo num só lugar.',
       gradiente: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%)',
-      botao: 'Explorar',
-      href: '#categorias',
+      botao: 'Explorar produtos',
+      href: '#ofertas',
     },
     {
       id: 'carteirinha',
       emoji: '🎫',
-      titulo: 'Sou colaborador de empresa parceira',
+      titulo: 'Colaborador de Empresa Parceira?',
       texto: 'Ative sua carteirinha SECI + IUB MAIS em 2 minutos.',
       gradiente: 'linear-gradient(135deg, #0B1F3A 0%, #3B0A78 100%)',
       botao: 'Ativar carteirinha',
@@ -55,16 +54,11 @@ function montarSlides(totalProdutos, ehAssociado, onAbrirLogin) {
 // ?associado=hash em duplicidade com o Marketplace, que já usa o hook.
 export default function HeroBannerCarousel({ associado }) {
   const navigate = useNavigate();
-  const [totalProdutos, setTotalProdutos] = useState(null);
   const [indice, setIndice] = useState(0);
   const [modalLoginAberto, setModalLoginAberto] = useState(false);
   const timerRef = useRef(null);
 
-  useEffect(() => {
-    api.get('/public/marketplace/stats').then(res => setTotalProdutos(res.data.produtos)).catch(() => {});
-  }, []);
-
-  const slides = montarSlides(totalProdutos, Boolean(associado), () => setModalLoginAberto(true));
+  const slides = montarSlides(Boolean(associado), () => setModalLoginAberto(true));
   const total = slides.length;
 
   const pararAutoplay = useCallback(() => {
@@ -102,7 +96,7 @@ export default function HeroBannerCarousel({ associado }) {
 
   return (
     <section
-      className="relative w-full overflow-hidden rounded-2xl h-[170px] sm:h-[220px] lg:h-[260px]"
+      className="relative w-full overflow-hidden rounded-2xl h-[200px] sm:h-[300px] lg:h-[380px]"
       onMouseEnter={pararAutoplay}
       onMouseLeave={iniciarAutoplay}
     >
