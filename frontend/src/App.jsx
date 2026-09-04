@@ -46,6 +46,7 @@ import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitac
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
 import Carteirinha from './pages/public/Carteirinha';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
+const MarketplaceCategoria = lazy(() => import('./pages/public/Marketplace/MarketplaceCategoria'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
@@ -181,7 +182,7 @@ export default function App() {
         <Route path="/termos-indicador"   element={<TermosIndicador />} />
         <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
         <Route path="/marketplace"        element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
-        <Route path="/marketplace/categoria/:categoriaSlug" element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
+        <Route path="/marketplace/categoria/:slug" element={<MarketplaceFallback><MarketplaceCategoria /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />

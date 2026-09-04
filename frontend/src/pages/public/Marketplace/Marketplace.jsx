@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState } from 'react';
 import { PARCEIROS_INICIAIS, CATEGORIAS_FILTRO, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
 import { Fire, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons/react';
@@ -17,17 +16,7 @@ import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useProdutosSecao, useCategorias, useParceirosCompactos } from './useSecaoData';
 
-// Mapeia a categoria fixa da faixa de categorias pra um label do filtro de
-// parceiros já existente — se não existir correspondência, cai em "Todas"
-// em vez de forçar um valor inválido no filtro.
-function mapearCategoriaSlugParaFiltro(slug) {
-  const alvo = normalizarCategoria(slug.replace(/-/g, ' '));
-  const encontrada = CATEGORIAS_FILTRO.find(c => normalizarCategoria(c.label).includes(alvo) || alvo.includes(normalizarCategoria(c.label)));
-  return encontrada?.label || 'Todas';
-}
-
 export default function Marketplace() {
-  const { categoriaSlug } = useParams();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
@@ -35,14 +24,6 @@ export default function Marketplace() {
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
-
-  // Vem da rota /marketplace/categoria/:slug — sincroniza com o filtro
-  // sempre que o slug da URL muda, inclusive voltando pra "Todas" se o
-  // usuário navegar pra /marketplace puro.
-  useEffect(() => {
-    setCategoriaAtiva(categoriaSlug ? mapearCategoriaSlugParaFiltro(categoriaSlug) : 'Todas');
-    if (categoriaSlug) document.querySelector('#parceiros')?.scrollIntoView({ block: 'start' });
-  }, [categoriaSlug]);
 
   const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana', 'promocoes');
   const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');

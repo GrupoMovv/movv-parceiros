@@ -95,6 +95,7 @@ router.get('/marketplace/exclusivos-associados', marketplaceHomeCtrl.getExclusiv
 router.get('/marketplace/novidades', marketplaceHomeCtrl.getNovidades);
 router.get('/marketplace/mais-vendidos', marketplaceHomeCtrl.getMaisVendidos);
 router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);
+router.get('/marketplace/categoria/:slug/produtos', marketplaceHomeCtrl.getProdutosPorCategoria);
 router.get('/marketplace/parceiros', marketplaceHomeCtrl.getParceiros);
 
 router.get('/produtos/:id', produtoCtrl.getProduto);

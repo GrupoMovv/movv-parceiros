@@ -129,6 +129,98 @@ async function getCategorias(req, res) {
   }
 }
 
+const ORDENACOES = {
+  relevancia: 'pr.destaque DESC, pr.created_at DESC',
+  menor_preco: 'COALESCE(pr.preco_associado, pr.preco) ASC',
+  maior_preco: 'COALESCE(pr.preco_associado, pr.preco) DESC',
+  recente: 'pr.created_at DESC',
+};
+
+// Página de categoria (/marketplace/categoria/:slug) — produtos filtrados
+// por bairro/preço/associado/desconto/subcategoria, com paginação. A
+// categoria em si não existe como coluna própria: um produto "pertence" a
+// uma categoria porque o PARCEIRO dono dele está marcado nela (mesmo
+// critério de getCategorias) — por isso resolve a lista de parceiros da
+// categoria em JS (sem depender de unaccent no Postgres) e só then filtra
+// produtos por parceiro_id.
+async function getProdutosPorCategoria(req, res) {
+  try {
+    const { slug } = req.params;
+    const {
+      bairro, preco_min, preco_max, ordenar, somente_associado, somente_desconto, subcategoria,
+      pagina = '1', limite = '24',
+    } = req.query;
+
+    const categoriaHome = CATEGORIAS_HOME.find(c => c.slug === slug);
+    if (slug !== 'todas' && !categoriaHome) return res.status(404).json({ error: 'Categoria não encontrada' });
+
+    const parceirosResult = await db.query(`SELECT id, bairro, categorias FROM sindicato_parceiros WHERE status = 'ativo'`);
+    let parceiros = parceirosResult.rows;
+    if (categoriaHome) {
+      const alvo = normalizarCategoria(categoriaHome.label);
+      parceiros = parceiros.filter(p => (p.categorias || []).some(c => normalizarCategoria(c) === alvo));
+    }
+    if (bairro) parceiros = parceiros.filter(p => normalizarCategoria(p.bairro) === normalizarCategoria(bairro));
+
+    const bairrosDisponiveis = [...new Set(parceirosResult.rows.map(p => p.bairro).filter(Boolean))].sort();
+    const parceiroIds = parceiros.map(p => p.id);
+
+    if (parceiroIds.length === 0) {
+      return res.json({
+        categoria: categoriaHome || { slug: 'todas', label: 'Todas as categorias' },
+        produtos: [], total: 0, pagina: 1, total_paginas: 0, subcategorias: [], bairros: bairrosDisponiveis,
+      });
+    }
+
+    const params = [parceiroIds];
+    let where = `WHERE pr.parceiro_id = ANY($1) AND pr.ativo = true AND pr.rascunho = false`;
+
+    if (preco_min) { params.push(parseFloat(preco_min)); where += ` AND pr.preco >= $${params.length}`; }
+    if (preco_max) { params.push(parseFloat(preco_max)); where += ` AND pr.preco <= $${params.length}`; }
+    if (somente_associado === 'true' || somente_desconto === 'true') { where += ` AND pr.preco_associado IS NOT NULL`; }
+    if (subcategoria) { params.push(subcategoria); where += ` AND pr.categoria = $${params.length}`; }
+
+    const subcategoriasResult = await db.query(
+      `SELECT DISTINCT pr.categoria FROM sindicato_parceiro_produtos pr
+       WHERE pr.parceiro_id = ANY($1) AND pr.ativo = true AND pr.rascunho = false AND pr.categoria IS NOT NULL
+       ORDER BY pr.categoria ASC`,
+      [parceiroIds]
+    );
+
+    const totalResult = await db.query(`SELECT COUNT(*)::int AS total FROM sindicato_parceiro_produtos pr ${where}`, params);
+    const total = totalResult.rows[0].total;
+
+    const limiteNum = Math.min(60, Math.max(1, parseInt(limite, 10) || 24));
+    const paginaNum = Math.max(1, parseInt(pagina, 10) || 1);
+    const orderBy = ORDENACOES[ordenar] || ORDENACOES.relevancia;
+    params.push(limiteNum, (paginaNum - 1) * limiteNum);
+
+    const produtosResult = await db.query(
+      `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.categoria, pr.fotos, pr.created_at,
+              pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.bairro AS parceiro_bairro
+       FROM sindicato_parceiro_produtos pr
+       JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
+       ${where}
+       ORDER BY ${orderBy}
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    return res.json({
+      categoria: categoriaHome || { slug: 'todas', label: 'Todas as categorias' },
+      produtos: produtosResult.rows,
+      total,
+      pagina: paginaNum,
+      total_paginas: Math.max(1, Math.ceil(total / limiteNum)),
+      subcategorias: subcategoriasResult.rows.map(r => r.categoria),
+      bairros: bairrosDisponiveis,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar produtos da categoria' });
+  }
+}
+
 async function getParceiros(req, res) {
   try {
     const result = await db.query(
@@ -148,5 +240,6 @@ module.exports = {
   getNovidades,
   getMaisVendidos,
   getCategorias,
+  getProdutosPorCategoria,
   getParceiros,
 };
