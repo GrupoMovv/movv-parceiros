@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, Bell, BellRinging, Sparkle, Diamond, Fire } from '@phosphor-icons/react';
+import api from '../../services/api';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from '../public/Marketplace/theme';
 
@@ -80,12 +81,21 @@ export default function ParceiroPlanos() {
   const [planoModal, setPlanoModal] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
+  const [vagasPioneiro, setVagasPioneiro] = useState(null);
+
   const planoAtual = parceiro?.plano || 'gratis';
+  const jaEhPioneiro = Boolean(parceiro?.e_pioneiro);
 
   useEffect(() => {
     apiParceiro.get('/parceiro/interessados')
       .then(res => setInteresses(res.data.planos))
       .catch(() => setInteresses([]));
+  }, []);
+
+  useEffect(() => {
+    api.get('/public/marketplace/pioneiro-vagas')
+      .then(res => setVagasPioneiro(res.data))
+      .catch(() => setVagasPioneiro(null));
   }, []);
 
   async function confirmarInteresse() {
@@ -149,13 +159,39 @@ export default function ParceiroPlanos() {
         ))}
       </div>
 
-      <div className="rounded-3xl p-8 text-center text-white" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
-        <p className="text-2xl">💎</p>
-        <h2 className="text-xl font-extrabold mt-2">Pioneiros ganham prêmio especial!</h2>
-        <p className="text-white/80 text-sm mt-3 max-w-xl mx-auto leading-relaxed">
-          Todos os parceiros que se cadastrarem agora (fase gratuita) ganham <strong>3 meses de Premium grátis</strong> quando ativarmos os planos pagos!
+      <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
+        <div className="text-center max-w-xl mx-auto">
+          <p className="text-2xl">⭐</p>
+          <h2 className="text-xl font-extrabold mt-2 flex items-center justify-center gap-2">
+            {jaEhPioneiro ? 'Você é um parceiro Pioneiro!' : 'Vire um parceiro Pioneiro'}
+          </h2>
+          {vagasPioneiro && !jaEhPioneiro && (
+            <p className="text-xs font-bold mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: DOURADO }}>
+              🔥 Só restam {vagasPioneiro.vagas_restantes} de {vagasPioneiro.total} vagas
+            </p>
+          )}
+        </div>
+
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 max-w-xl mx-auto">
+          {[
+            'Primeiros 20 parceiros pagantes: 50% OFF nos 3 primeiros meses',
+            'Selo dourado "PIONEIRO IUB MAIS" vitalício no perfil',
+            '1 post grátis no Instagram @iubmais',
+            'Aparece no Mural da Fama do site',
+            'Prioridade em novas funcionalidades',
+          ].map(b => (
+            <li key={b} className="flex items-start gap-2 text-sm text-white/85">
+              <Check size={16} weight="bold" className="flex-shrink-0 mt-0.5" style={{ color: DOURADO }} />
+              {b}
+            </li>
+          ))}
+        </ul>
+
+        <p className="text-white/60 text-xs text-center mt-6">
+          {jaEhPioneiro
+            ? 'Seu selo é vitalício — obrigado por confiar no IUB MAIS desde o início!'
+            : 'Vaga garantida assim que seu plano pago for ativado (o desconto é combinado com nossa equipe).'}
         </p>
-        <p className="text-white/80 text-sm mt-2">Aproveita e já garante seu lugar como parceiro Pioneiro.</p>
       </div>
 
       {planoModal && (

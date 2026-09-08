@@ -1,6 +1,6 @@
 const db = require('../config/database');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
-const { PLANOS, PARCEIROS_SEED_DEMONSTRACAO, PLANO_SEED_DEMONSTRACAO, planoEfetivo } = require('../config/planos');
+const { PLANOS, PARCEIROS_SEED_DEMONSTRACAO, PLANO_SEED_DEMONSTRACAO, PIONEIRO_VAGAS_TOTAL, planoEfetivo } = require('../config/planos');
 
 const PLANOS_COM_DESTAQUE = Object.entries(PLANOS).filter(([, cfg]) => cfg.aparece_destaques_parceiros).map(([plano]) => plano);
 
@@ -284,7 +284,7 @@ async function getVitrineRotativa(req, res) {
 async function getParceiros(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
        FROM sindicato_parceiros WHERE status = 'ativo' ORDER BY nome ASC`
     );
     return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
@@ -303,7 +303,7 @@ async function getParceirosDestaques(req, res) {
     const planosLiteral = PLANOS_COM_DESTAQUE.map(p => `'${p}'`).join(',') || `''`;
     const seedLiteral = PARCEIROS_SEED_DEMONSTRACAO.map(s => `'${s}'`).join(',') || `''`;
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
        FROM sindicato_parceiros
        WHERE status = 'ativo' AND (plano IN (${planosLiteral}) OR slug IN (${seedLiteral}))
        ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC
@@ -313,6 +313,35 @@ async function getParceirosDestaques(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar parceiros em destaque' });
+  }
+}
+
+// Contador público de "vagas restantes" da promoção Pioneiro — usado nas
+// páginas de venda (/vender, /parceiro/painel/planos) pra urgência real,
+// nunca inventada (vem direto da contagem de e_pioneiro=true).
+async function getPioneiroVagas(req, res) {
+  try {
+    const result = await db.query(`SELECT COUNT(*)::int AS n FROM sindicato_parceiros WHERE e_pioneiro = true`);
+    const preenchidas = result.rows[0].n;
+    return res.json({ total: PIONEIRO_VAGAS_TOTAL, preenchidas, vagas_restantes: Math.max(0, PIONEIRO_VAGAS_TOTAL - preenchidas) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar vagas de pioneiro' });
+  }
+}
+
+// "Muro da Fama" — todo parceiro Pioneiro, pra mostrar como prova social
+// nas páginas de venda.
+async function getPioneiros(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
+       FROM sindicato_parceiros WHERE status = 'ativo' AND e_pioneiro = true ORDER BY plano_ativo_desde ASC`
+    );
+    return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar pioneiros' });
   }
 }
 
@@ -326,7 +355,7 @@ async function getParceirosDestaques(req, res) {
 async function getParceiroPlanoPorSlug(req, res) {
   try {
     const result = await db.query(
-      `SELECT slug, plano, banner_personalizado_url, instagram_username
+      `SELECT slug, plano, e_pioneiro, banner_personalizado_url, instagram_username
        FROM sindicato_parceiros WHERE slug = $1 AND status = 'ativo'`,
       [req.params.slug]
     );
@@ -349,5 +378,7 @@ module.exports = {
   getVitrineRotativa,
   getParceiros,
   getParceirosDestaques,
+  getPioneiroVagas,
+  getPioneiros,
   getParceiroPlanoPorSlug,
 };

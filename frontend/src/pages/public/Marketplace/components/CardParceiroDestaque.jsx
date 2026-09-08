@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { PRETO } from '../theme';
 import IconePorCategoria from './IconePorCategoria';
 import SeloPlano from './SeloPlano';
+import SeloPioneiro from './SeloPioneiro';
 
 // Card "grande" só pra vitrine Parceiros em Destaque (Premium/Master) —
 // mesma base do PartnerCard normal, mas com foto maior e selo do plano em
@@ -24,6 +25,11 @@ export default function CardParceiroDestaque({ parceiro }) {
         <div className="absolute top-2.5 left-2.5">
           <SeloPlano plano={parceiro.plano} size="lg" />
         </div>
+        {parceiro.e_pioneiro && (
+          <div className="absolute top-2.5 right-2.5">
+            <SeloPioneiro pioneiro size="lg" />
+          </div>
+        )}
       </div>
 
       <div className="p-3.5">

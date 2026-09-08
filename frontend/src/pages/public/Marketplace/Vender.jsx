@@ -118,11 +118,15 @@ export default function Vender() {
   const [faqAberta, setFaqAberta] = useState(null);
   const [statusCnpj, setStatusCnpj] = useState(null); // null | 'checando' | 'ok' | { erro }
   const [qtdAssociados, setQtdAssociados] = useState(null);
+  const [vagasPioneiro, setVagasPioneiro] = useState(null);
+  const [pioneiros, setPioneiros] = useState([]);
 
   useEffect(() => { window.scrollTo(0, 0); }, [tela]);
 
   useEffect(() => {
     api.get('/public/marketplace/stats').then(res => setQtdAssociados(res.data.associados)).catch(() => {});
+    api.get('/public/marketplace/pioneiro-vagas').then(res => setVagasPioneiro(res.data)).catch(() => {});
+    api.get('/public/marketplace/pioneiros').then(res => setPioneiros(res.data.parceiros || [])).catch(() => {});
   }, []);
 
   const cnpjDigits = form.cnpj.replace(/\D/g, '');
@@ -192,7 +196,12 @@ export default function Vender() {
     }
   }
 
-  if (tela === 'landing') return <TelaLanding onComecar={() => setTela('segmento')} faqAberta={faqAberta} setFaqAberta={setFaqAberta} qtdAssociados={qtdAssociados} />;
+  if (tela === 'landing') return (
+    <TelaLanding
+      onComecar={() => setTela('segmento')} faqAberta={faqAberta} setFaqAberta={setFaqAberta}
+      qtdAssociados={qtdAssociados} vagasPioneiro={vagasPioneiro} pioneiros={pioneiros}
+    />
+  );
   if (tela === 'segmento') return <TelaSegmento onVoltar={() => setTela('landing')} onEscolher={escolherSegmento} />;
   if (tela === 'confirmacao') return <TelaConfirmacao onVoltar={() => navigate('/marketplace')} />;
 
@@ -208,7 +217,7 @@ export default function Vender() {
 
 // ─── Tela 1: Landing ────────────────────────────────────────────────────────
 
-function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados }) {
+function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasPioneiro, pioneiros }) {
   return (
     <div className="min-h-screen w-full bg-white">
       <section className="relative px-6 py-20 sm:py-28 text-center overflow-hidden" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 55%, #7C3AED 100%)` }}>
@@ -296,6 +305,50 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados }) {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
+        <div className="max-w-2xl mx-auto px-6 py-16 text-center">
+          <p className="text-2xl">⭐</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">Vire um parceiro Pioneiro</h2>
+          {vagasPioneiro && (
+            <p className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold px-4 py-2 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: DOURADO }}>
+              🔥 Só restam {vagasPioneiro.vagas_restantes} de {vagasPioneiro.total} vagas
+            </p>
+          )}
+          <p className="text-white/70 text-sm mt-4 max-w-lg mx-auto leading-relaxed">
+            Os 20 primeiros parceiros a assinarem um plano pago ganham benefícios vitalícios:
+          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 text-left max-w-lg mx-auto">
+            {[
+              '50% OFF nos 3 primeiros meses',
+              'Selo dourado "PIONEIRO" vitalício',
+              '1 post grátis no Instagram @iubmais',
+              'Aparece no Mural da Fama do site',
+              'Prioridade em novas funcionalidades',
+            ].map(b => (
+              <li key={b} className="flex items-start gap-2 text-sm text-white/85">
+                <span className="flex-shrink-0" style={{ color: DOURADO }}>✓</span> {b}
+              </li>
+            ))}
+          </ul>
+
+          {pioneiros.length > 0 && (
+            <div className="mt-10">
+              <p className="text-white/50 text-xs font-bold uppercase tracking-wide mb-4">🏆 Mural da Fama</p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {pioneiros.map(p => (
+                  <div key={p.id} className="flex items-center gap-2 bg-white/10 rounded-full pl-1.5 pr-3.5 py-1.5">
+                    <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20 flex items-center justify-center flex-shrink-0 text-sm">
+                      {p.logo_url ? <img src={p.logo_url} alt="" className="w-full h-full object-cover" /> : (p.icone || '⭐')}
+                    </div>
+                    <span className="text-white text-xs font-semibold">{p.nome}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -95,6 +95,12 @@ const PLANOS = {
 const PARCEIROS_SEED_DEMONSTRACAO = ['nossa-drogaria', 'azul-emprestimo'];
 const PLANO_SEED_DEMONSTRACAO = 'premium';
 
+// Promoção Pioneiro: os primeiros N parceiros que virarem plano pago ganham
+// o selo vitalício + 50% off nos 3 primeiros meses (o desconto em si é
+// negociado manualmente pelo admin na troca de plano — esse número aqui só
+// limita QUEM pode ganhar o selo `e_pioneiro`, ver sindicatoPlanosController).
+const PIONEIRO_VAGAS_TOTAL = 20;
+
 function planoValido(plano) {
   return Object.prototype.hasOwnProperty.call(PLANOS, plano);
 }
@@ -122,6 +128,7 @@ module.exports = {
   PLANOS,
   PARCEIROS_SEED_DEMONSTRACAO,
   PLANO_SEED_DEMONSTRACAO,
+  PIONEIRO_VAGAS_TOTAL,
   planoValido,
   planoEfetivo,
   beneficios,

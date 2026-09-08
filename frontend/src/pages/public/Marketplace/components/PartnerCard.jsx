@@ -3,6 +3,7 @@ import { Heart, Star } from 'lucide-react';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from '../theme';
 import IconePorCategoria from './IconePorCategoria';
 import SeloPlano from './SeloPlano';
+import SeloPioneiro from './SeloPioneiro';
 
 export default function PartnerCard({ parceiro, favorito, onToggleFavorito }) {
   return (
@@ -50,6 +51,7 @@ export default function PartnerCard({ parceiro, favorito, onToggleFavorito }) {
             <span className="text-xs text-slate-500 font-medium">5.0</span>
           </div>
           <SeloPlano plano={parceiro.plano} size="sm" />
+          <SeloPioneiro pioneiro={parceiro.e_pioneiro} size="sm" />
         </div>
       </div>
     </Link>

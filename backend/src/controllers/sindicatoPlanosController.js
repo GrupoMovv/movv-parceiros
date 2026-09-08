@@ -1,6 +1,6 @@
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
-const { PLANOS, planoValido } = require('../config/planos');
+const { PLANOS, planoValido, PIONEIRO_VAGAS_TOTAL } = require('../config/planos');
 
 function quemAlterou(req) {
   return req.user?.email || req.user?.name || 'admin';
@@ -24,7 +24,7 @@ async function listarParceiros(req, res) {
 
     params.push(limiteNum, (paginaNum - 1) * limiteNum);
     const dataResult = await db.query(
-      `SELECT id, slug, nome, plano, plano_ativo_desde, plano_expira_em, plano_status,
+      `SELECT id, slug, nome, plano, plano_ativo_desde, plano_expira_em, plano_status, e_pioneiro,
               banner_personalizado_url, instagram_username, observacoes_plano, status
        FROM sindicato_parceiros ${where}
        ORDER BY nome ASC LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -49,18 +49,28 @@ async function alterarPlano(req, res) {
       return res.status(400).json({ error: 'Motivo inválido' });
     }
 
-    const atual = await db.query('SELECT plano FROM sindicato_parceiros WHERE id = $1', [id]);
+    const atual = await db.query('SELECT plano, e_pioneiro FROM sindicato_parceiros WHERE id = $1', [id]);
     if (!atual.rows[0]) return res.status(404).json({ error: 'Parceiro não encontrado' });
     const planoAnterior = atual.rows[0].plano;
+
+    // Promoção Pioneiro: primeiro upgrade de Grátis pra plano pago, se ainda
+    // sobrar vaga entre os primeiros PIONEIRO_VAGAS_TOTAL — vitalício, então
+    // só marca uma vez (nunca desmarca num downgrade/cancelamento depois).
+    let virouPioneiro = false;
+    if (motivo === 'upgrade' && planoAnterior === 'gratis' && plano_novo !== 'gratis' && !atual.rows[0].e_pioneiro) {
+      const contagem = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiros WHERE e_pioneiro = true');
+      virouPioneiro = contagem.rows[0].n < PIONEIRO_VAGAS_TOTAL;
+    }
 
     await db.query('BEGIN');
     try {
       await db.query(
         `UPDATE sindicato_parceiros
          SET plano = $1, plano_ativo_desde = NOW(), plano_expira_em = $2,
-             observacoes_plano = COALESCE($3, observacoes_plano)
-         WHERE id = $4`,
-        [plano_novo, plano_expira_em || null, observacoes?.trim() || null, id]
+             observacoes_plano = COALESCE($3, observacoes_plano),
+             e_pioneiro = e_pioneiro OR $4
+         WHERE id = $5`,
+        [plano_novo, plano_expira_em || null, observacoes?.trim() || null, virouPioneiro, id]
       );
       await db.query(
         `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por)
@@ -76,7 +86,7 @@ async function alterarPlano(req, res) {
     // Preparado, não disparado ainda (ver emailService) — troca manual de
     // plano não manda email sozinha até decidirmos ativar de verdade.
 
-    return res.json({ ok: true, plano_anterior: planoAnterior, plano_novo });
+    return res.json({ ok: true, plano_anterior: planoAnterior, plano_novo, virou_pioneiro: virouPioneiro });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao alterar plano' });

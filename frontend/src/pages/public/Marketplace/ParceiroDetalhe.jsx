@@ -5,6 +5,7 @@ import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { buscarParceiroPorSlug } from './parceirosData';
 import api from '../../../services/api';
 import SeloPlano from './components/SeloPlano';
+import SeloPioneiro from './components/SeloPioneiro';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 
 // Info de plano (selo/banner Master/Instagram) vem de um lookup à parte no
@@ -88,6 +89,7 @@ export default function ParceiroDetalhe() {
             </span>
           )}
           <SeloPlano plano={planoInfo?.plano} size="lg" />
+          <SeloPioneiro pioneiro={planoInfo?.e_pioneiro} size="lg" />
         </div>
 
         <div
