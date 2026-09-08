@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Loader2, AlertCircle, Download, Share2, Users2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, AlertCircle, Download, Share2, Users2, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { assetUrl, backendOrigin } from '../../services/api';
 import AvatarPlaceholder from '../../components/AvatarPlaceholder';
@@ -307,6 +307,15 @@ export default function Carteirinha() {
               <Share2 className="w-3.5 h-3.5" /> Compartilhar
             </button>
           </div>
+
+          {!ehDependente && (
+            <Link
+              to="/meu"
+              className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors pt-1"
+            >
+              <Settings className="w-3.5 h-3.5" /> Configurar meus dados
+            </Link>
+          )}
         </div>
 
         {/* Seção 3 — rodapé */}
