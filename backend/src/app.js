@@ -54,6 +54,7 @@ app.use('/api/sindicato-solicitacoes', require('./routes/sindicatoSolicitacoes')
 app.use('/api/sindicato-parceiros-solicitacoes', require('./routes/parceiroSolicitacoes'));
 app.use('/api/sindicato-parceiro-interessados', require('./routes/sindicatoParceiroInteressados'));
 app.use('/api/sindicato-planos',              require('./routes/sindicatoPlanos'));
+app.use('/api/sindicato-fecha-mes',            require('./routes/sindicatoFechaMes'));
 app.use('/api/sindicato-lista-aprovada', require('./routes/sindicatoListaAprovada'));
 app.use('/api/public/vender',          require('./routes/vender'));
 app.use('/api/public/cadastrar-associado', require('./routes/cadastrarAssociado'));
@@ -68,6 +69,7 @@ app.use('/api/parceiro/produtos',      require('./routes/parceiroProdutos'));
 app.use('/api/parceiro/promocoes',     require('./routes/parceiroPromocoes'));
 app.use('/api/parceiro/interessados',  require('./routes/parceiroInteressados'));
 app.use('/api/parceiro/conteudo-master', require('./routes/parceiroConteudoMaster'));
+app.use('/api/parceiro/fecha-mes',      require('./routes/parceiroFechaMes'));
 app.use('/api/parceiro',               require('./routes/parceiroConta'));
 app.use('/api/public/parceiro',        require('./routes/publicParceiroConta'));
 app.use('/api/public',                 require('./routes/public'));

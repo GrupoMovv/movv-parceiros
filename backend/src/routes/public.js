@@ -5,6 +5,7 @@ const db = require('../config/database');
 const produtoCtrl = require('../controllers/produtoPublicoController');
 const marketplaceHomeCtrl = require('../controllers/marketplaceHomeController');
 const promocaoCtrl = require('../controllers/promocaoPublicoController');
+const fechaMesCtrl = require('../controllers/fechaMesPublicoController');
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
@@ -115,6 +116,10 @@ router.get('/marketplace/parceiros-destaques', marketplaceHomeCtrl.getParceirosD
 router.get('/marketplace/pioneiro-vagas', marketplaceHomeCtrl.getPioneiroVagas);
 router.get('/marketplace/pioneiros', marketplaceHomeCtrl.getPioneiros);
 router.get('/marketplace/parceiro-plano/:slug', marketplaceHomeCtrl.getParceiroPlanoPorSlug);
+
+router.get('/fecha-mes/proximo', fechaMesCtrl.getProximo);
+router.get('/fecha-mes/ativo', fechaMesCtrl.getAtivo);
+router.get('/fecha-mes/produtos', fechaMesCtrl.getProdutos);
 
 // Nomes das empresas com lista de colaboradores aprovados (Bloco de
 // autocadastro por CPF+CNPJ) — só nome + contagem, nunca CPF/matrícula/

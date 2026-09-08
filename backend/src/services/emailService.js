@@ -380,6 +380,48 @@ async function enviarPlanoExpirado({ nome, nomeFantasia, email, planoAnterior })
   return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfgAnterior.nome} expirou`, html });
 }
 
+// --- Templates do Fecha Mês -------------------------------------------
+// Preparados, NÃO disparados por nenhum job automático ainda (não existe
+// cron nesse projeto — ver comentário em config/fechaMes.js sobre por que
+// a ativação/desativação do evento em si já não depende de um). Ficam
+// prontos pra quando alguém decidir plugar um agendador de verdade.
+
+async function enviarLembreteFechaMes({ nome, nomeFantasia, email, dataEvento, limiteProdutos }) {
+  const dataFmt = new Date(`${dataEvento}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🔥 Não esqueça do Fecha Mês!</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! O Fecha Mês da <strong>${nomeFantasia}</strong> é amanhã, <strong>${dataFmt}</strong>.</p>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;">Seu plano permite até <strong>${limiteProdutos} produtos</strong> na vitrine especial — confirme os preços até hoje 23:59, depois não dá mais pra mudar.</p>
+    </div>
+    ${botao('Confirmar Meus Produtos', `${PORTAL_URL}/parceiro/painel/fecha-mes`)}
+  `);
+  return enviar({ to: email, subject: '🔥 IUB MAIS — Confirme seus produtos do Fecha Mês (prazo hoje!)', html });
+}
+
+async function enviarFechaMesAtivo({ nome, nomeFantasia, email, produtosConfirmados }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🔥 O Fecha Mês está ativo agora!</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Os <strong>${produtosConfirmados} produtos</strong> da <strong>${nomeFantasia}</strong> já estão no ar na vitrine especial do Fecha Mês, com destaque na home do marketplace até 23:59 de hoje.</p>
+    ${botao('Ver Minha Vitrine no Marketplace', `${PORTAL_URL}/marketplace`)}
+  `);
+  return enviar({ to: email, subject: '🔥 IUB MAIS — Fecha Mês está no ar!', html });
+}
+
+async function enviarRelatorioFechaMes({ nome, nomeFantasia, email, cliques, mediaClicquesDiaNormal }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">📊 Resultado do seu Fecha Mês</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! O Fecha Mês de ontem já acabou — aqui está o resultado da <strong>${nomeFantasia}</strong>:</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('Cliques no WhatsApp (ontem)', `<span style="color:#4A0E8F;font-weight:700;">${cliques}</span>`, true)}
+      ${linha('Média num dia normal', mediaClicquesDiaNormal)}
+    </table>
+    ${botao('Ver Meu Painel', `${PORTAL_URL}/parceiro/painel/fecha-mes`)}
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">Até o próximo Fecha Mês!</p>
+  `);
+  return enviar({ to: email, subject: '📊 IUB MAIS — Resultado do seu Fecha Mês', html });
+}
+
 module.exports = {
   enviarCredenciais,
   enviarCarteirinhaAtivada,
@@ -400,4 +442,7 @@ module.exports = {
   enviarDowngradePlano,
   enviarPlanoExpirandoBreve,
   enviarPlanoExpirado,
+  enviarLembreteFechaMes,
+  enviarFechaMesAtivo,
+  enviarRelatorioFechaMes,
 };
