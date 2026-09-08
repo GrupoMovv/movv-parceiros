@@ -1,6 +1,24 @@
 const db = require('../config/database');
 const { parseXlsxBuffer } = require('../services/contribuintesXlsxParser');
-const { importarLista, normalizarCnpj, classificarStatus } = require('../services/contribuintesImportService');
+const { parseRecebimentosBuffer } = require('../services/contribuintesRecebimentosParser');
+const { importarLista, desativarAusentes, normalizarCnpj, classificarStatus } = require('../services/contribuintesImportService');
+
+// O financeiro exporta dois formatos possíveis: o "Relatório de
+// Recebimentos" bruto (1 linha por pagamento, com Referência/Exercício —
+// o formato real usado hoje) ou uma planilha já agregada (1 linha por
+// empresa, coluna "meses pagos" pronta — formato legado). Tenta o formato
+// novo primeiro; se a planilha não tiver as colunas esperadas, cai pro
+// parser antigo. Só o formato novo aciona a desativação de ausentes
+// (a planilha agregada não necessariamente representa "todo mundo".
+function parseArquivo(buffer) {
+  try {
+    const { empresas, tresMesesRecentes, linhasIgnoradasCpf } = parseRecebimentosBuffer(buffer);
+    return { empresas, formato: 'recebimentos', tresMesesRecentes, linhasIgnoradasCpf };
+  } catch {
+    const empresas = parseXlsxBuffer(buffer);
+    return { empresas, formato: 'agregado' };
+  }
+}
 
 async function listContribuintes(req, res) {
   try {
@@ -47,6 +65,10 @@ async function stats(req, res) {
          COUNT(*) FILTER (WHERE status = 'adimplente')::int AS adimplentes,
          COUNT(*) FILTER (WHERE status = 'atrasada')::int AS atrasadas,
          COUNT(*) FILTER (WHERE status = 'inativa')::int AS inativas,
+         COALESCE(SUM(total_pago_periodo) FILTER (WHERE status != 'inativa'), 0) AS contribuicao_total_3m,
+         COUNT(*) FILTER (WHERE status != 'inativa' AND meses_pagos = 1)::int AS dist_1_mes,
+         COUNT(*) FILTER (WHERE status != 'inativa' AND meses_pagos = 2)::int AS dist_2_meses,
+         COUNT(*) FILTER (WHERE status != 'inativa' AND meses_pagos = 3)::int AS dist_3_meses,
          MAX(ultima_atualizacao) AS ultima_atualizacao
        FROM sindicato_empresas_contribuintes`
     );
@@ -64,7 +86,7 @@ async function uploadPreview(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'Envie um arquivo .xlsx' });
 
-    const empresas = parseXlsxBuffer(req.file.buffer);
+    const { empresas, formato, tresMesesRecentes, linhasIgnoradasCpf } = parseArquivo(req.file.buffer);
     if (empresas.length === 0) {
       return res.status(400).json({ error: 'Nenhuma linha válida encontrada na planilha' });
     }
@@ -88,9 +110,26 @@ async function uploadPreview(req, res) {
       }
     }
 
+    // Só o formato "recebimentos" (relatório bruto) representa o universo
+    // inteiro de empresas pagantes — só nesse caso faz sentido prever
+    // quantas vão ser desativadas por ausência (planilha agregada pode ser
+    // uma lista parcial, não dá pra presumir "quem não está aqui, saiu").
+    let desativarPreview = 0;
+    if (formato === 'recebimentos') {
+      const ausentesResult = await db.query(
+        `SELECT COUNT(*)::int AS total FROM sindicato_empresas_contribuintes
+         WHERE NOT (cnpj = ANY($1)) AND status != 'inativa'`,
+        [cnpjs]
+      );
+      desativarPreview = ausentesResult.rows[0].total;
+    }
+
     return res.json({
-      resumo: { novas, atualizadas, status_mudou: statusMudou, total_linhas: empresas.length },
+      resumo: { novas, atualizadas, status_mudou: statusMudou, total_linhas: empresas.length, desativar_preview: desativarPreview },
       empresas,
+      formato,
+      tres_meses_recentes: tresMesesRecentes,
+      linhas_ignoradas_cpf: linhasIgnoradasCpf,
     });
   } catch (err) {
     console.error(err);
@@ -100,22 +139,29 @@ async function uploadPreview(req, res) {
 
 async function confirmarImportacao(req, res) {
   try {
-    const { empresas } = req.body;
+    const { empresas, formato } = req.body;
     if (!Array.isArray(empresas) || empresas.length === 0) {
       return res.status(400).json({ error: 'empresas (array) é obrigatório' });
     }
 
     const resumo = await importarLista(empresas);
+
+    let desativadas = 0;
+    if (formato === 'recebimentos') {
+      const cnpjsPresentes = empresas.map(e => normalizarCnpj(e.cnpj)).filter(Boolean);
+      desativadas = await desativarAusentes(cnpjsPresentes);
+    }
+
     const importadoPorId = req.user?.type === 'internal' ? req.user.id : null;
 
     await db.query(
       `INSERT INTO sindicato_contribuintes_importacoes
-         (importado_por_id, novas, atualizadas, status_mudou, total_linhas)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [importadoPorId, resumo.novas, resumo.atualizadas, resumo.status_mudou, resumo.total_linhas]
+         (importado_por_id, novas, atualizadas, status_mudou, total_linhas, desativadas)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [importadoPorId, resumo.novas, resumo.atualizadas, resumo.status_mudou, resumo.total_linhas, desativadas]
     );
 
-    return res.status(201).json(resumo);
+    return res.status(201).json({ ...resumo, desativadas });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao confirmar importação' });

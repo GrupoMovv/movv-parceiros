@@ -100,8 +100,8 @@ export default function SindicatoContribuintes() {
     if (!preview) return;
     setConfirmando(true);
     try {
-      await api.post('/sindicato-contribuintes/upload/confirmar', { empresas: preview.empresas });
-      toast.success('Importação confirmada!');
+      const res = await api.post('/sindicato-contribuintes/upload/confirmar', { empresas: preview.empresas, formato: preview.formato });
+      toast.success(res.data.desativadas > 0 ? `Importação confirmada! ${res.data.desativadas} empresa(s) desativada(s).` : 'Importação confirmada!');
       setModalUpload(false);
       setPreview(null);
       setPage(1);
@@ -135,10 +135,30 @@ export default function SindicatoContribuintes() {
 
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total" value={stats.total} />
-          <StatCard label="Adimplentes" value={stats.adimplentes} accentCls="text-emerald-600" />
-          <StatCard label="Atrasadas" value={stats.atrasadas} accentCls="text-red-600" />
+          <StatCard label="Empresas sindicalizadas" value={stats.adimplentes} accentCls="text-emerald-600" />
+          <StatCard label="Contribuição total 3m" value={fmtMoeda(stats.contribuicao_total_3m)} accentCls="text-movv-900" />
+          <StatCard label="Atrasadas / Inativas" value={`${stats.atrasadas} / ${stats.inativas}`} accentCls="text-red-600" />
           <StatCard label="Última atualização" value={fmtDataHora(stats.ultima_atualizacao).split(' ')[0]} small />
+        </div>
+      )}
+
+      {stats && (stats.dist_1_mes + stats.dist_2_meses + stats.dist_3_meses > 0) && (
+        <div className="card">
+          <p className="text-sm font-semibold text-slate-700 mb-3">Distribuição por meses pagos (últimos 3)</p>
+          <div className="space-y-2">
+            {[['1 mês', stats.dist_1_mes], ['2 meses', stats.dist_2_meses], ['3 meses', stats.dist_3_meses]].map(([label, valor]) => {
+              const max = Math.max(stats.dist_1_mes, stats.dist_2_meses, stats.dist_3_meses, 1);
+              return (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="text-xs text-slate-500 w-14 flex-shrink-0">{label}</span>
+                  <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-movv-900" style={{ width: `${(valor / max) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-700 w-10 text-right flex-shrink-0">{valor}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -158,6 +178,7 @@ export default function SindicatoContribuintes() {
                   <p className="text-slate-800 font-medium">{fmtDataHora(h.created_at)} — {h.importado_por_nome || 'Sistema'}</p>
                   <p className="text-slate-500 text-xs mt-0.5">
                     {h.total_linhas} linhas · {h.novas} novas · {h.atualizadas} atualizadas · {h.status_mudou} mudaram de status
+                    {h.desativadas > 0 && ` · ${h.desativadas} desativadas`}
                   </p>
                 </div>
               </div>
@@ -283,8 +304,19 @@ export default function SindicatoContribuintes() {
                 </div>
               </div>
               <p className="text-slate-500 text-xs flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> {preview.resumo.total_linhas} linhas reconhecidas na planilha
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                {preview.resumo.total_linhas} empresas reconhecidas
+                {preview.formato === 'recebimentos' && preview.tres_meses_recentes && ` — meses considerados: ${preview.tres_meses_recentes.join(', ')}`}
               </p>
+              {preview.linhas_ignoradas_cpf > 0 && (
+                <p className="text-slate-400 text-xs">{preview.linhas_ignoradas_cpf} linha(s) de CPF (pessoa física) ignoradas</p>
+              )}
+              {preview.resumo.desativar_preview > 0 && (
+                <div className="flex items-center gap-1.5 text-red-600 text-xs bg-red-50 rounded-xl p-2.5">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {preview.resumo.desativar_preview} empresa(s) cadastrada(s) hoje NÃO aparecem nessa planilha e serão marcadas como inativas.
+                </div>
+              )}
               <div className="flex items-center gap-1.5 text-amber-600 text-xs bg-amber-50 rounded-xl p-2.5">
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                 Confirme só depois de revisar os números acima — a importação substitui o status de pagamento das empresas já cadastradas.
