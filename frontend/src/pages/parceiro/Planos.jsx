@@ -117,7 +117,7 @@ export default function ParceiroPlanos() {
         </p>
       </div>
 
-      <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, ${PRETO} 0%, #1F1F27 100%)` }}>
+      <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
         <div className="flex items-start gap-4 max-w-2xl mx-auto">
           <Fire size={32} weight="duotone" color={DOURADO} className="flex-shrink-0 mt-1" />
           <div>
