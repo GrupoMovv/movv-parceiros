@@ -17,6 +17,7 @@ import FechaMesBanner from './components/FechaMesBanner';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
+import OnboardingTour from './components/OnboardingTour';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useProdutosSecao, useParceirosCompactos } from './useSecaoData';
@@ -30,6 +31,20 @@ export default function Marketplace() {
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
+
+  // Captura ANTES do useAssociadoSessao limpar a URL — só assim dá pra saber
+  // se essa visita veio do botão "Ir pro IUB MAIS" da carteirinha (é esse o
+  // gatilho do tour de primeira vez, não qualquer login).
+  const [chegouViaCarteirinha] = useState(() => new URLSearchParams(window.location.search).has('associado'));
+  const [tourFechado, setTourFechado] = useState(false);
+  const chaveTourVisto = associado?.carteirinha_hash ? `iub_tour_visto_${associado.carteirinha_hash}` : null;
+  const mostrarTour = chegouViaCarteirinha && !carregandoAssociado && !!associado && !tourFechado
+    && chaveTourVisto && !localStorage.getItem(chaveTourVisto);
+
+  function fecharTour() {
+    if (chaveTourVisto) { try { localStorage.setItem(chaveTourVisto, '1'); } catch { /* localStorage indisponível */ } }
+    setTourFechado(true);
+  }
 
   const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana', 'promocoes');
   const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
@@ -64,10 +79,12 @@ export default function Marketplace() {
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">
+      {mostrarTour && <OnboardingTour onFechar={fecharTour} />}
       <TopNav
         nomeAssociado={nomeAssociado}
         nomeCompleto={associado?.nome_completo}
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
+        carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
         favoritosAtivos={mostrarFavoritos}
         onToggleFavoritos={() => setMostrarFavoritos(v => !v)}

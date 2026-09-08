@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, LogOut, Search, MapPin, List, X } from 'lucide-react';
+import { Heart, LogOut, Search, MapPin, List, X, CreditCard, Users2, ChevronDown } from 'lucide-react';
 import { ShoppingCart } from '@phosphor-icons/react';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
@@ -26,14 +26,25 @@ function iniciais(nome) {
 // central + localização + perfil na linha principal, com um menu
 // secundário claro logo abaixo (categorias/ofertas/lojas/SECI/vender).
 export default function TopNav({
-  nomeAssociado, nomeCompleto, fotoUrl, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos,
+  nomeAssociado, nomeCompleto, fotoUrl, carteirinhaHash, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos,
   onSair, onLoginSuccess, searchQuery, onSearchChange, onSearchSubmit,
 }) {
   const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+  const [menuPerfilAberto, setMenuPerfilAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { totalItens: itensCarrinho, pulsar: carrinhoPulsando } = useCarrinho();
+  const menuPerfilRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuPerfilAberto) return;
+    function aoClicarFora(e) {
+      if (menuPerfilRef.current && !menuPerfilRef.current.contains(e.target)) setMenuPerfilAberto(false);
+    }
+    document.addEventListener('mousedown', aoClicarFora);
+    return () => document.removeEventListener('mousedown', aoClicarFora);
+  }, [menuPerfilAberto]);
 
   function irParaInicio(e) {
     e.preventDefault();
@@ -109,10 +120,11 @@ export default function TopNav({
         {carregandoAssociado ? (
           <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
         ) : nomeAssociado ? (
-          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-            <Link
-              to="/meu-painel"
-              className="flex items-center gap-2 text-sm font-medium text-white pl-1 pr-2.5 py-1 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap hover:scale-[1.03]"
+          <div className="hidden sm:block relative flex-shrink-0" ref={menuPerfilRef}>
+            <button
+              type="button"
+              onClick={() => setMenuPerfilAberto(v => !v)}
+              className="flex items-center gap-2 text-sm font-medium text-white pl-1 pr-2 py-1 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap"
             >
               {fotoUrl ? (
                 <img src={fotoUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white flex-shrink-0" />
@@ -125,10 +137,48 @@ export default function TopNav({
                 </span>
               )}
               {nomeAssociado.split(' ')[0]}
-            </Link>
-            <button type="button" onClick={onSair} aria-label="Sair" title="Sair" className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-              <LogOut className="w-3.5 h-3.5" />
+              <ChevronDown className={`w-3.5 h-3.5 text-white/60 transition-transform ${menuPerfilAberto ? 'rotate-180' : ''}`} />
             </button>
+
+            {menuPerfilAberto && (
+              <div className="absolute right-0 top-[calc(100%+6px)] w-60 bg-white rounded-xl shadow-2xl border border-slate-100 py-1.5 overflow-hidden">
+                <div className="px-3.5 py-2 border-b border-slate-100">
+                  <p className="text-sm font-bold text-slate-800 truncate">{nomeCompleto || nomeAssociado}</p>
+                  <p className="text-[11px] text-slate-400">Associado SECI</p>
+                </div>
+                {carteirinhaHash && (
+                  <Link
+                    to={`/carteirinha/${carteirinhaHash}`}
+                    onClick={() => setMenuPerfilAberto(false)}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <CreditCard className="w-4 h-4" style={{ color: ROXO }} /> Ver minha carteirinha
+                  </Link>
+                )}
+                <Link
+                  to="/meu-painel"
+                  onClick={() => setMenuPerfilAberto(false)}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <Users2 className="w-4 h-4" style={{ color: ROXO }} /> Editar dados / dependentes
+                </Link>
+                <button
+                  type="button"
+                  disabled
+                  title="Em breve"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-300 cursor-not-allowed"
+                >
+                  <Heart className="w-4 h-4" /> Meus favoritos <span className="ml-auto text-[10px] font-bold uppercase text-slate-300">Em breve</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMenuPerfilAberto(false); onSair(); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors border-t border-slate-100"
+                >
+                  <LogOut className="w-4 h-4" /> Sair
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <button

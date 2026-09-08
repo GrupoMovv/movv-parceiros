@@ -90,6 +90,7 @@ export default function MarketplaceCategoria() {
         nomeAssociado={nomeAssociado}
         nomeCompleto={associado?.nome_completo}
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
+        carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
         favoritosAtivos={false}
         onToggleFavoritos={() => navigate('/marketplace')}

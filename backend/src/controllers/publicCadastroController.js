@@ -237,11 +237,17 @@ async function reenviarCarteirinha(req, res) {
 // novo (todo mundo sem hash ainda) quanto na edição via Meu Cadastro
 // (dependente existente editado NUNCA pode trocar de hash, senão invalida
 // um QR que já pode ter sido compartilhado/impresso).
+// Devolve os dependentes que acabaram de ganhar carteirinha nessa chamada
+// (nome + hash) — quem chama fora do cadastro inicial (painel do associado,
+// meu-cadastro antigo) usa isso pra saber se deve mandar o email de "novo
+// dependente"; no cadastro inicial ninguém usa o retorno (o email de boas-
+// vindas já cobre a família toda).
 async function gerarCarteirinhaDependentes(associadoId) {
   const deps = await db.query(
-    'SELECT id FROM sindicato_associados_dependentes WHERE associado_id = $1 AND carteirinha_hash IS NULL',
+    'SELECT id, nome FROM sindicato_associados_dependentes WHERE associado_id = $1 AND carteirinha_hash IS NULL',
     [associadoId]
   );
+  const novos = [];
   for (const dep of deps.rows) {
     const hash = await gerarHashUnico('sindicato_associados_dependentes');
     const validaAte = calcularValidoAte();
@@ -250,7 +256,9 @@ async function gerarCarteirinhaDependentes(associadoId) {
        SET carteirinha_hash = $1, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $2 WHERE id = $3`,
       [hash, validaAte, dep.id]
     );
+    novos.push({ nome: dep.nome, carteirinha_hash: hash });
   }
+  return novos;
 }
 
 // Fluxo completo do wizard público: valida tudo de novo no servidor (nunca

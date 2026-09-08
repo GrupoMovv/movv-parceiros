@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Loader2, ArrowLeft, CreditCard, Users2, Camera, Pencil, Gift,
-  ExternalLink, MessageCircle, Plus, Trash2, Save, LogOut, CheckCircle2,
+  ExternalLink, MessageCircle, Plus, Trash2, Save, LogOut, CheckCircle2, ShoppingBag,
 } from 'lucide-react';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
-import { assetUrl } from '../../../services/api';
+import api, { assetUrl } from '../../../services/api';
 import {
   publicCarteirinhaUrl, publicBeneficiosPdfUrl, montarMensagemCadastroPublico, linkWhatsappComTexto,
 } from '../../../utils/carteirinhaWhatsapp';
@@ -90,6 +90,11 @@ export default function MeuPainel() {
 
 function Home({ dados, onNavegar }) {
   const [reenviando, setReenviando] = useState(false);
+  const [qtdParceiros, setQtdParceiros] = useState(null);
+
+  useEffect(() => {
+    api.get('/public/marketplace/stats').then(res => setQtdParceiros(res.data.parceiros)).catch(() => {});
+  }, []);
 
   async function handleReenviar() {
     setReenviando(true);
@@ -129,6 +134,27 @@ function Home({ dados, onNavegar }) {
           </span>
         </div>
       </div>
+
+      <Link
+        to={`/marketplace?associado=${dados.carteirinha_hash}`}
+        className="block rounded-2xl p-4 text-white relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)' }}
+      >
+        <div className="relative flex items-center gap-3">
+          <span className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <ShoppingBag className="w-5 h-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-black text-sm">🛍️ Marketplace IUB MAIS</p>
+            <p className="text-white/85 text-xs mt-0.5">
+              Compre com desconto exclusivo{qtdParceiros ? ` em ${qtdParceiros} parceiros` : ''}!
+            </p>
+          </div>
+        </div>
+        <span className="relative block mt-3 w-full text-center text-sm font-bold py-2.5 rounded-xl bg-white" style={{ color: '#15803D' }}>
+          Ir pro marketplace agora
+        </span>
+      </Link>
 
       <div className="space-y-2.5">
         <CardAcao icon={<CreditCard className="w-4 h-4" />} titulo="Minha Carteirinha" sub="Ver ou reenviar pelo WhatsApp">

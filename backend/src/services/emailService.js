@@ -320,6 +320,24 @@ async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
   return enviar({ to: email, subject: '🎉 Sua carteirinha SECI está ativa!', html });
 }
 
+// Disparado só quando um dependente GANHA carteirinha depois do cadastro
+// inicial do titular (edição no painel) — no cadastro inicial o email de
+// boas-vindas acima já cobre a família toda, então não duplica aqui.
+async function enviarNovoDependente({ nomeTitular, email, dependenteNome, dependenteCarteirinhaHash, titularCarteirinhaHash }) {
+  const backendUrl = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+  const linkCarteirinhaDependente = `${backendUrl}/carteirinha/${dependenteCarteirinhaHash}`;
+  const linkMarketplace = `${PORTAL_URL}/marketplace?associado=${titularCarteirinhaHash}`;
+  const primeiroNome = String(nomeTitular || '').trim().split(/\s+/)[0];
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">👨‍👩‍👧 Novo dependente adicionado!</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${primeiroNome}</strong>! A carteirinha digital de <strong>${dependenteNome}</strong> já está pronta.</p>
+    ${botao('Ver Carteirinha do Dependente', linkCarteirinhaDependente)}
+    <p style="color:#555;line-height:1.6;margin-top:28px;">As compras com desconto de associado no <strong>IUB MAIS</strong> são feitas por você — o benefício vale pra família toda.</p>
+    ${botao('Ir Pro IUB MAIS', linkMarketplace)}
+  `);
+  return enviar({ to: email, subject: '👨‍👩‍👧 Novo dependente adicionado à sua carteirinha SECI', html });
+}
+
 // --- Templates do sistema de planos pagos (Bloco de planos) ---------------
 // Preparados, mas NÃO chamados em lugar nenhum ainda (só o admin dispara a
 // troca de plano hoje, e o controller não envia email sozinho — ver
@@ -425,6 +443,7 @@ async function enviarRelatorioFechaMes({ nome, nomeFantasia, email, cliques, med
 module.exports = {
   enviarCredenciais,
   enviarCarteirinhaAtivada,
+  enviarNovoDependente,
   enviarRecuperacaoSenha,
   enviarRecuperacaoSenhaParceiro,
   enviarComissaoAprovada,

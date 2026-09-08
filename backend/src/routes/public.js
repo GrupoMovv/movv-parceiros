@@ -25,6 +25,21 @@ async function buscarCarteirinhaPorHash(hash) {
   );
   if (associadoResult.rows[0]) {
     const a = associadoResult.rows[0];
+    let dependentes = [];
+    if (a.dependentes_count > 0) {
+      const depsResult = await db.query(
+        `SELECT id, nome, foto_url, grau, carteirinha_hash
+         FROM sindicato_associados_dependentes
+         WHERE associado_id = $1
+         ORDER BY ordem`,
+        [a.id]
+      );
+      // Só entra na lista quem já tem carteirinha própria gerada — sem hash
+      // não tem link válido pra levar (carteirinha ainda em processamento).
+      dependentes = depsResult.rows.filter(d => d.carteirinha_hash).map(d => ({
+        nome: d.nome, foto_url: d.foto_url, grau: d.grau, carteirinha_hash: d.carteirinha_hash,
+      }));
+    }
     return {
       tipo: 'associado',
       associado_id: a.id,
@@ -36,12 +51,13 @@ async function buscarCarteirinhaPorHash(hash) {
       valida_ate: a.carteirinha_valida_ate,
       ativo: a.ativo,
       dependentes_count: a.dependentes_count,
+      dependentes,
     };
   }
 
   const depResult = await db.query(
     `SELECT d.id, d.nome, d.grau, d.foto_url, d.carteirinha_valida_ate,
-            a.id AS associado_id, a.nome_completo AS titular_nome,
+            a.id AS associado_id, a.nome_completo AS titular_nome, a.carteirinha_hash AS titular_carteirinha_hash,
             a.ativo AS titular_ativo, a.empresa_nome_livre,
             COALESCE(NULLIF(e.nome_fantasia, ''), e.razao_social) AS empresa_cadastrada
      FROM sindicato_associados_dependentes d
@@ -60,6 +76,9 @@ async function buscarCarteirinhaPorHash(hash) {
       empresa: d.empresa_cadastrada || d.empresa_nome_livre || null,
       grau: d.grau,
       titular_nome: d.titular_nome,
+      // Dependente não loga sozinho (sem senha) — o botão "Ir pro IUB MAIS"
+      // usa o hash do TITULAR, então o preço associado vale pra família toda.
+      titular_carteirinha_hash: d.titular_carteirinha_hash,
       valida_ate: d.carteirinha_valida_ate,
       ativo: d.titular_ativo,
     };

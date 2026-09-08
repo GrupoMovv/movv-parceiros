@@ -5,6 +5,23 @@ const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarCarteirinhaDependentes } = require('./publicCadastroController');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
 const { montarViewAssociado } = require('../services/associadoPublicoView');
+const emailService = require('../services/emailService');
+
+// Dispara "novo dependente" só pra quem realmente ganhou carteirinha nessa
+// chamada (gerarCarteirinhaDependentes já filtra isso) — no ar-e-fogo, não
+// atrasa nem derruba a resposta do painel se o Resend falhar.
+function notificarNovosDependentes(associado, novos) {
+  if (!associado.email || !novos.length || !associado.carteirinha_hash) return;
+  for (const dep of novos) {
+    emailService.enviarNovoDependente({
+      nomeTitular: associado.nome_completo,
+      email: associado.email,
+      dependenteNome: dep.nome,
+      dependenteCarteirinhaHash: dep.carteirinha_hash,
+      titularCarteirinhaHash: associado.carteirinha_hash,
+    }).catch(err => console.error('[painel] falha ao enviar email de novo dependente:', err.message));
+  }
+}
 
 const UPLOAD_DIR_ASSOCIADO = path.join(__dirname, '../../uploads/associados');
 const UPLOAD_DIR_DEPENDENTE = path.join(__dirname, '../../uploads/dependentes');
@@ -42,7 +59,8 @@ async function updateMe(req, res) {
 
     if (Array.isArray(dependentes)) {
       await substituirDependentes(associado.id, dependentes);
-      await gerarCarteirinhaDependentes(associado.id);
+      const novos = await gerarCarteirinhaDependentes(associado.id);
+      notificarNovosDependentes(associado, novos);
     }
 
     const atualizado = await db.query('SELECT * FROM sindicato_associados WHERE id = $1', [associado.id]);
@@ -116,7 +134,8 @@ async function updateDependentes(req, res) {
     if (!Array.isArray(dependentes)) return res.status(400).json({ error: 'dependentes (array) é obrigatório' });
 
     await substituirDependentes(associado.id, dependentes);
-    await gerarCarteirinhaDependentes(associado.id);
+    const novos = await gerarCarteirinhaDependentes(associado.id);
+    notificarNovosDependentes(associado, novos);
 
     const view = await montarViewAssociado(associado);
     return res.json(view.dependentes);

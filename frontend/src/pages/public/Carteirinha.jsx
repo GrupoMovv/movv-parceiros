@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Download, Share2, Users2, ChevronDown, ChevronUp } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api, { assetUrl, backendOrigin } from '../../services/api';
 import { iniciais, corAvatar } from '../../utils/avatar';
 
@@ -52,6 +53,41 @@ export default function Carteirinha() {
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
   const [naoEncontrada, setNaoEncontrada] = useState(false);
+  const [mostrarDependentes, setMostrarDependentes] = useState(false);
+  const [baixando, setBaixando] = useState(false);
+  const cardRef = useRef(null);
+
+  async function handleBaixar() {
+    if (!cardRef.current || baixando) return;
+    setBaixando(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#111111', scale: 2, useCORS: true });
+      const link = document.createElement('a');
+      link.download = `carteirinha-seci-${(dados?.nome || 'associado').toLowerCase().replace(/\s+/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      toast.error('Não deu pra baixar a carteirinha agora. Tenta de novo.');
+    } finally {
+      setBaixando(false);
+    }
+  }
+
+  async function handleCompartilhar() {
+    const url = window.location.href;
+    const texto = `Minha carteirinha digital SECI — ${dados?.nome || ''}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Carteirinha SECI', text: texto, url }); } catch { /* usuário cancelou */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copiado!');
+    } catch {
+      toast.error('Não deu pra copiar o link');
+    }
+  }
 
   useEffect(() => {
     api.get(`/public/carteirinha/${hash}`)
@@ -102,10 +138,14 @@ export default function Carteirinha() {
     ? `${dados.dependentes_count} dependente${dados.dependentes_count > 1 ? 's' : ''} cadastrado${dados.dependentes_count > 1 ? 's' : ''}`
     : null;
   const qrUrl = `${backendOrigin()}/carteirinha/${hash}`;
+  // Dependente não tem login próprio — o CTA do marketplace sempre entra
+  // com a sessão do titular (preço associado vale pra família toda).
+  const hashMarketplace = ehDependente ? dados.titular_carteirinha_hash : hash;
 
   return (
     <PageShell>
       <div
+        ref={cardRef}
         className="w-full max-w-[380px] bg-white rounded-[2rem] overflow-hidden"
         style={{ boxShadow: '0 25px 60px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)' }}
       >
@@ -123,9 +163,12 @@ export default function Carteirinha() {
           />
 
           <div className="relative flex items-start justify-between">
-            <div className="text-left">
-              <p className="text-white font-black text-lg tracking-wide leading-none">SECI</p>
-              <p className="text-white/70 text-[10px] mt-1 leading-tight max-w-[140px]">Sindicato Comércio Itumbiara</p>
+            <div className="text-left flex items-center gap-2">
+              <img src="/iub-logo-sm.png" alt="" className="h-7 w-7 rounded-md" />
+              <div>
+                <p className="text-white font-black text-lg tracking-wide leading-none">SECI</p>
+                <p className="text-white/70 text-[10px] mt-1 leading-tight max-w-[140px]">Sindicato Comércio Itumbiara</p>
+              </div>
             </div>
             <div
               className={`w-14 h-14 rounded-full flex items-center justify-center text-center leading-none font-bold uppercase flex-shrink-0 ${
@@ -171,6 +214,12 @@ export default function Carteirinha() {
               </span>
             )
           )}
+
+          {!ehDependente && dados.numero_associado && (
+            <p className="relative text-white/50 text-[11px] font-mono tracking-[0.2em] mt-3">
+              Nº {String(dados.numero_associado).padStart(6, '0')}
+            </p>
+          )}
         </div>
 
         {/* Seção 2 — corpo */}
@@ -213,17 +262,72 @@ export default function Carteirinha() {
             </div>
             <p className="text-slate-400 italic text-[11px]">Escaneie para validar</p>
           </div>
+
+          {temDependentes && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setMostrarDependentes(v => !v)}
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors py-1"
+              >
+                <Users2 className="w-3.5 h-3.5" /> Ver carteirinhas dos dependentes
+                {mostrarDependentes ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              {mostrarDependentes && (
+                <div className="mt-2 space-y-1.5">
+                  {dados.dependentes.length === 0 ? (
+                    <p className="text-center text-slate-400 text-[11px] italic py-2">Carteirinhas dos dependentes ainda em processamento.</p>
+                  ) : dados.dependentes.map(dep => (
+                    <Link
+                      key={dep.carteirinha_hash}
+                      to={`/carteirinha/${dep.carteirinha_hash}`}
+                      className="flex items-center gap-2.5 p-2 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                      {dep.foto_url ? (
+                        <img src={assetUrl(dep.foto_url)} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: corAvatar(dep.nome) }}>
+                          {iniciais(dep.nome)}
+                        </span>
+                      )}
+                      <span className="text-slate-700 text-sm font-medium truncate">{dep.nome}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button" onClick={handleBaixar} disabled={baixando}
+              className="flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              {baixando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Baixar
+            </button>
+            <button
+              type="button" onClick={handleCompartilhar}
+              className="flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" /> Compartilhar
+            </button>
+          </div>
         </div>
 
         {/* Seção 3 — rodapé */}
-        {!vencida && (
+        {!vencida && hashMarketplace && (
           <Link
-            to={`/marketplace?associado=${hash}`}
+            to={`/marketplace?associado=${hashMarketplace}`}
             className="w-full h-20 flex items-center justify-center gap-3 font-bold uppercase tracking-wide text-white text-lg"
-            style={{ backgroundColor: '#D4AF37', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)' }}
+            style={{ backgroundColor: '#16A34A', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)' }}
           >
-            <img src="/iub-logo-sm.png" alt="" className="h-10 w-10 rounded-lg" /> 🛒 IUB Marketplace
+            <img src="/iub-logo-sm.png" alt="" className="h-10 w-10 rounded-lg" /> 🛍️ Ir pro IUB MAIS
           </Link>
+        )}
+        {ehDependente && (
+          <p className="text-center text-slate-400 text-[11px] py-2.5 px-4 bg-slate-50">
+            Compras com desconto de associado são feitas pelo titular, <strong>{dados.titular_nome}</strong>.
+          </p>
         )}
       </div>
     </PageShell>
