@@ -41,10 +41,32 @@ async function getOfertasSemana(req, res) {
   }
 }
 
-// Slide 2 do banner hero — prioriza quem dá mais desconto pro associado E
-// tem foto de verdade (Cloudinary), pra não cair card feio/quebrado no
-// carrossel maior. LIMIT 8 porque o slide mostra 4 por vez e rotaciona.
+// Vitrine "Exclusivos pra Associados" na home — TODOS os parceiros com
+// produto de preço associado entram, maior desconto primeiro. LIMIT 24
+// porque a home agora pagina 2 fileiras (6x2) por vez.
 async function getExclusivosAssociados(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT ${SELECT_PRODUTO},
+              ROUND(((pr.preco - pr.preco_associado) / NULLIF(pr.preco, 0)) * 100) AS desconto_pct
+       ${FROM_PRODUTO_ATIVO}
+         AND pr.preco_associado IS NOT NULL
+       ORDER BY desconto_pct DESC NULLS LAST, pr.destaque DESC, pr.created_at DESC
+       LIMIT 24`
+    );
+    return res.json({ produtos: result.rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar exclusivos para associados' });
+  }
+}
+
+// Só pro slide 2 do banner hero (poucos cards, bem grandes) — aqui sim
+// precisa de foto Cloudinary de verdade, senão o card fica feio/quebrado
+// no carrossel maior. Separado da vitrine normal acima de propósito: a
+// vitrine da home mostra qualquer exclusivo (com ImageOff de fallback),
+// o banner não pode.
+async function getBannerExclusivos(req, res) {
   try {
     const result = await db.query(
       `SELECT ${SELECT_PRODUTO},
@@ -59,7 +81,7 @@ async function getExclusivosAssociados(req, res) {
     return res.json({ produtos: result.rows });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Erro ao buscar exclusivos para associados' });
+    return res.status(500).json({ error: 'Erro ao buscar exclusivos do banner' });
   }
 }
 
@@ -69,7 +91,7 @@ async function getNovidades(req, res) {
       `SELECT ${SELECT_PRODUTO}
        ${FROM_PRODUTO_ATIVO}
        ORDER BY pr.created_at DESC
-       LIMIT 8`
+       LIMIT 24`
     );
     return res.json({ produtos: result.rows });
   } catch (err) {
@@ -92,7 +114,7 @@ async function getMaisVendidos(req, res) {
          AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'
        GROUP BY pr.id, pa.nome, pa.slug
        ORDER BY cliques DESC, pr.created_at DESC
-       LIMIT 8`
+       LIMIT 24`
     );
     return res.json({ produtos: result.rows });
   } catch (err) {
@@ -258,6 +280,7 @@ async function getParceiros(req, res) {
 module.exports = {
   getOfertasSemana,
   getExclusivosAssociados,
+  getBannerExclusivos,
   getNovidades,
   getMaisVendidos,
   getCategorias,

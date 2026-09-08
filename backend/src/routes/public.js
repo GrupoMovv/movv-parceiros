@@ -105,6 +105,7 @@ router.get('/marketplace/stats', async (req, res) => {
 router.get('/marketplace/vitrine-rotativa', marketplaceHomeCtrl.getVitrineRotativa);
 router.get('/marketplace/ofertas-semana', marketplaceHomeCtrl.getOfertasSemana);
 router.get('/marketplace/exclusivos-associados', marketplaceHomeCtrl.getExclusivosAssociados);
+router.get('/marketplace/banner-exclusivos', marketplaceHomeCtrl.getBannerExclusivos);
 router.get('/marketplace/novidades', marketplaceHomeCtrl.getNovidades);
 router.get('/marketplace/mais-vendidos', marketplaceHomeCtrl.getMaisVendidos);
 router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);

@@ -12,7 +12,7 @@ const db = require('../config/database');
 const LIMITES = { gratis: 0, oficial: 3, premium: 8, master: 15, seed: 8 };
 const PARCEIROS_SEED = ['nossa-drogaria', 'azul-emprestimo'];
 
-const LIMITE_TOTAL = 50;
+const LIMITE_TOTAL = 24;
 
 function limiteDoParceiro(row) {
   if (PARCEIROS_SEED.includes(row.parceiro_slug)) return LIMITES.seed;
