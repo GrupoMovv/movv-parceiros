@@ -12,12 +12,15 @@ import SecaoProdutos from './components/SecaoProdutos';
 import CardPromocao from './components/CardPromocao';
 import VitrineRotativa from './components/VitrineRotativa';
 import VitrineParceirosDestaque from './components/VitrineParceirosDestaque';
+import VitrineFechaMes from './components/VitrineFechaMes';
+import FechaMesBanner from './components/FechaMesBanner';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useProdutosSecao, useParceirosCompactos } from './useSecaoData';
+import { useFechaMesProximo } from './useFechaMes';
 
 export default function Marketplace() {
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
@@ -33,6 +36,7 @@ export default function Marketplace() {
   const { produtos: novidades, carregando: carregandoNovidades } = useProdutosSecao('/public/marketplace/novidades');
   const { produtos: exclusivos, carregando: carregandoExclusivos } = useProdutosSecao('/public/marketplace/exclusivos-associados');
   const { parceiros: parceirosCompactos, carregando: carregandoParceiros } = useParceirosCompactos();
+  const { info: fechaMesInfo } = useFechaMesProximo();
 
   const buscaAtiva = searchQuery.trim().length > 0;
   const buscaNormalizada = normalizarCategoria(searchQuery.trim());
@@ -75,6 +79,8 @@ export default function Marketplace() {
         onSearchSubmit={handleSearchSubmit}
       />
 
+      <FechaMesBanner info={fechaMesInfo} />
+
       {/* categorias flutuam sobre o banner a partir do tablet (fundo branco
           garante legibilidade); no mobile ficam em fluxo normal, acima do
           banner, porque não sobra altura suficiente pra sobrepor sem
@@ -92,6 +98,10 @@ export default function Marketplace() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
+        <div id="fecha-mes" className="scroll-mt-16">
+          <VitrineFechaMes ativoHoje={fechaMesInfo?.ativo_hoje} />
+        </div>
+
         <VitrineParceirosDestaque />
 
         <SecaoProdutos

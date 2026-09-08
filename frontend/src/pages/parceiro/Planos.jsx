@@ -98,6 +98,13 @@ export default function ParceiroPlanos() {
       .catch(() => setVagasPioneiro(null));
   }, []);
 
+  const [proximoFechaMes, setProximoFechaMes] = useState(null);
+  useEffect(() => {
+    api.get('/public/fecha-mes/proximo')
+      .then(res => setProximoFechaMes(res.data))
+      .catch(() => setProximoFechaMes(null));
+  }, []);
+
   async function confirmarInteresse() {
     setEnviando(true);
     try {
@@ -143,6 +150,36 @@ export default function ParceiroPlanos() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, #7C2D12 0%, #DC2626 55%, ${DOURADO_ESCURO} 100%)` }}>
+        <div className="flex items-start gap-4 max-w-2xl mx-auto">
+          <Fire size={32} weight="fill" color={DOURADO} className="flex-shrink-0 mt-1" />
+          <div>
+            <h2 className="text-lg font-extrabold">🔥 Seu produto no Fecha Mês!</h2>
+            <p className="text-white/80 text-sm mt-2 leading-relaxed">
+              Todo último sexta do mês, o IUB MAIS realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros associados e picos de vendas de até 5x.
+            </p>
+            <p className="text-white/80 text-sm mt-2 font-semibold">Participar é exclusivo pra planos pagos:</p>
+            <ul className="space-y-1.5 mt-2">
+              {[
+                'Oficial: 3 produtos no Fecha Mês',
+                'Premium: 8 produtos',
+                'Master: 15 produtos + destaque VIP',
+              ].map(b => (
+                <li key={b} className="flex items-start gap-2 text-sm text-white/85">
+                  <Check size={14} weight="bold" className="flex-shrink-0 mt-0.5" style={{ color: DOURADO }} />
+                  {b}
+                </li>
+              ))}
+            </ul>
+            {proximoFechaMes && (
+              <p className="text-xs font-bold mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10">
+                📅 Próximo Fecha Mês: {new Date(`${proximoFechaMes.data_evento}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+              </p>
+            )}
           </div>
         </div>
       </div>
