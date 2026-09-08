@@ -313,7 +313,7 @@ export default function Carteirinha() {
               to="/meu"
               className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors pt-1"
             >
-              <Settings className="w-3.5 h-3.5" /> Configurar meus dados
+              <Settings className="w-3.5 h-3.5" /> Editar meus dados
             </Link>
           )}
         </div>
