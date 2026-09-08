@@ -82,9 +82,9 @@ export default function SlideProdutosDestaque({ produtos }) {
                 key={p.id}
                 type="button"
                 onClick={() => navigate(`/marketplace/produto/${p.id}`)}
-                className="snap-start flex-shrink-0 w-[132px] sm:w-[210px] lg:w-[270px] bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 text-left overflow-hidden"
+                className="snap-start flex-shrink-0 w-[112px] sm:w-[168px] lg:w-[236px] bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 text-left overflow-hidden"
               >
-                <div className="relative w-full h-[92px] sm:h-[140px] lg:h-[190px] bg-white flex items-center justify-center p-2 sm:p-3">
+                <div className="relative w-full h-[78px] sm:h-[118px] lg:h-[160px] bg-white flex items-center justify-center p-2 sm:p-3">
                   {foto ? (
                     <img src={foto} alt={p.nome} loading="lazy" className="w-full h-full object-contain" />
                   ) : (
@@ -105,7 +105,7 @@ export default function SlideProdutosDestaque({ produtos }) {
                     {p.nome}
                   </p>
                   <p className="text-slate-400 text-[9px] sm:text-xs line-through mt-1">{formatarPreco(p.preco)}</p>
-                  <p className="font-black leading-tight text-base sm:text-xl lg:text-2xl" style={{ color: DOURADO_ESCURO }}>
+                  <p className="font-black leading-tight text-sm sm:text-lg lg:text-xl" style={{ color: DOURADO_ESCURO }}>
                     {formatarPreco(p.preco_associado)}
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export default function SlideProdutosDestaque({ produtos }) {
                   <span className="inline-flex items-center gap-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wide text-white">
                     <Diamond size={9} weight="fill" style={{ color: DOURADO }} /> Exclusivo
                   </span>
-                  <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-bold text-white/85">
+                  <span className="hidden lg:inline-flex items-center gap-0.5 text-[10px] font-bold text-white/85">
                     Ver detalhes <ArrowRight size={11} weight="bold" />
                   </span>
                 </div>

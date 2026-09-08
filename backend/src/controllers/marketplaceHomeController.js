@@ -43,7 +43,7 @@ async function getOfertasSemana(req, res) {
 
 // Slide 2 do banner hero — prioriza quem dá mais desconto pro associado E
 // tem foto de verdade (Cloudinary), pra não cair card feio/quebrado no
-// carrossel maior. LIMIT 6 porque o slide mostra 3 por vez e rotaciona.
+// carrossel maior. LIMIT 8 porque o slide mostra 4 por vez e rotaciona.
 async function getExclusivosAssociados(req, res) {
   try {
     const result = await db.query(
@@ -54,7 +54,7 @@ async function getExclusivosAssociados(req, res) {
          AND pr.fotos IS NOT NULL AND jsonb_array_length(pr.fotos) > 0
          AND pr.fotos->0->>'url' ILIKE '%cloudinary%'
        ORDER BY desconto_pct DESC NULLS LAST, pr.destaque DESC, pr.created_at DESC
-       LIMIT 6`
+       LIMIT 8`
     );
     return res.json({ produtos: result.rows });
   } catch (err) {
