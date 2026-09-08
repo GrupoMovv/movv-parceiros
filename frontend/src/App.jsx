@@ -68,7 +68,9 @@ import ParceiroPlanos from './pages/parceiro/Planos';
 import ParceiroConfiguracoes from './pages/parceiro/Configuracoes';
 import ParceiroPromocoes from './pages/parceiro/Promocoes';
 import ParceiroPromocaoForm from './pages/parceiro/PromocaoForm';
-import ParceiroEmConstrucao from './pages/parceiro/EmConstrucao';
+import ParceiroEstatisticas from './pages/parceiro/Estatisticas';
+import ParceiroMateriais from './pages/parceiro/Materiais';
+import ParceiroLives from './pages/parceiro/Lives';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -209,7 +211,9 @@ export default function App() {
           <Route path="promocoes"     element={<ParceiroPromocoes />} />
           <Route path="promocoes/novo" element={<ParceiroPromocaoForm />} />
           <Route path="promocoes/:id" element={<ParceiroPromocaoForm />} />
-          <Route path="estatisticas" element={<ParceiroEmConstrucao titulo="Estatísticas" texto="Relatórios detalhados de visitas e cliques chegam em breve." />} />
+          <Route path="estatisticas" element={<ParceiroEstatisticas />} />
+          <Route path="materiais" element={<ParceiroMateriais />} />
+          <Route path="lives" element={<ParceiroLives />} />
           <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="configuracoes" element={<ParceiroConfiguracoes />} />
         </Route>

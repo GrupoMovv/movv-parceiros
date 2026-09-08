@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PRETO, ROXO } from '../theme';
 import IconePorCategoria from './IconePorCategoria';
+import SeloPlano from './SeloPlano';
 
 export default function CardParceiroCompacto({ parceiro }) {
   const categoria = parceiro.categoria_principal || parceiro.categorias?.[0];
@@ -24,7 +25,10 @@ export default function CardParceiroCompacto({ parceiro }) {
       )}
 
       <div className="flex-1 min-w-0">
-        <p className="font-bold text-sm truncate" style={{ color: PRETO }}>{parceiro.nome}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-bold text-sm truncate" style={{ color: PRETO }}>{parceiro.nome}</p>
+          <SeloPlano plano={parceiro.plano} size="sm" />
+        </div>
         {categoria && <p className="text-slate-400 text-xs truncate mt-0.5">{categoria}</p>}
       </div>
 

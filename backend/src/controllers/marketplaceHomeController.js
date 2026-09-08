@@ -316,6 +316,28 @@ async function getParceirosDestaques(req, res) {
   }
 }
 
+// A página pública do parceiro (ParceiroDetalhe.jsx) ainda é 100% dado
+// estático (parceirosData.js, "Fase 1" — TODO própria dela migrar pra
+// banco de verdade, fora do escopo do bloco de planos). Esse endpoint é só
+// o mínimo pra ligar o visual de plano (selo grande, banner do Master,
+// Instagram) num parceiro que exista de verdade no banco, sem precisar
+// migrar a página inteira agora — some graciosamente (parceiro: null)
+// pra qualquer slug que só exista no diretório estático.
+async function getParceiroPlanoPorSlug(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT slug, plano, banner_personalizado_url, instagram_username
+       FROM sindicato_parceiros WHERE slug = $1 AND status = 'ativo'`,
+      [req.params.slug]
+    );
+    if (!result.rows[0]) return res.json({ parceiro: null });
+    return res.json({ parceiro: { ...result.rows[0], plano: planoEfetivo(result.rows[0]) } });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar plano do parceiro' });
+  }
+}
+
 module.exports = {
   getOfertasSemana,
   getExclusivosAssociados,
@@ -327,4 +349,5 @@ module.exports = {
   getVitrineRotativa,
   getParceiros,
   getParceirosDestaques,
+  getParceiroPlanoPorSlug,
 };

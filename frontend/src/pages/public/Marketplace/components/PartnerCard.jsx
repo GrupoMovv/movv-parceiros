@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Star } from 'lucide-react';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from '../theme';
 import IconePorCategoria from './IconePorCategoria';
+import SeloPlano from './SeloPlano';
 
 export default function PartnerCard({ parceiro, favorito, onToggleFavorito }) {
   return (
@@ -43,9 +44,12 @@ export default function PartnerCard({ parceiro, favorito, onToggleFavorito }) {
         <h2 className="font-bold text-base leading-tight truncate" style={{ color: PRETO }}>{parceiro.nome}</h2>
         <p className="text-slate-500 text-sm mt-0.5 truncate">{parceiro.categorias[0]}</p>
 
-        <div className="flex items-center gap-1 mt-1.5">
-          <Star className="w-3.5 h-3.5" style={{ color: DOURADO }} fill={DOURADO} />
-          <span className="text-xs text-slate-500 font-medium">5.0</span>
+        <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex items-center gap-1">
+            <Star className="w-3.5 h-3.5" style={{ color: DOURADO }} fill={DOURADO} />
+            <span className="text-xs text-slate-500 font-medium">5.0</span>
+          </div>
+          <SeloPlano plano={parceiro.plano} size="sm" />
         </div>
       </div>
     </Link>

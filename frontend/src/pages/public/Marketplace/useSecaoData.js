@@ -47,3 +47,19 @@ export function useParceirosCompactos() {
 
   return { parceiros, carregando };
 }
+
+// Só Premium/Master (+ seed de demonstração) — vitrine "Parceiros em
+// Destaque" no topo da home, ver getParceirosDestaques no backend.
+export function useParceirosDestaques() {
+  const [parceiros, setParceiros] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    api.get('/public/marketplace/parceiros-destaques')
+      .then(res => setParceiros(res.data.parceiros))
+      .catch(() => setParceiros([]))
+      .finally(() => setCarregando(false));
+  }, []);
+
+  return { parceiros, carregando };
+}

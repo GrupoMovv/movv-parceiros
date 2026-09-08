@@ -3,6 +3,7 @@ const { nanoid } = require('nanoid');
 const db = require('../config/database');
 const { gerarTokenParceiro } = require('../middleware/parceiroAuth');
 const { enviarRecuperacaoSenhaParceiro } = require('../services/emailService');
+const { planoEfetivo } = require('../config/planos');
 
 const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 
@@ -11,8 +12,12 @@ const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 // Qualquer outro status (ex.: bloqueado pelo Sindicato) barra o login mesmo.
 const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
 
+// `plano` aqui já é o EFETIVO (aplica o seed de demonstração por cima do
+// plano real) — front nunca precisa saber da lista de seed, só lê
+// parceiro.plano e confia. Endpoints que enforçam limite continuam usando
+// planoEfetivo(req.parceiro) direto a partir do dado cru do banco.
 function parceiroPublico(p) {
-  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status, plano: p.plano, created_at: p.created_at };
+  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), created_at: p.created_at };
 }
 
 async function login(req, res) {
@@ -67,7 +72,7 @@ async function logout(req, res) {
 }
 
 async function me(req, res) {
-  return res.json({ parceiro: req.parceiro, usuario: req.parceiroUsuario });
+  return res.json({ parceiro: parceiroPublico(req.parceiro), usuario: req.parceiroUsuario });
 }
 
 async function esqueciSenha(req, res) {

@@ -1,23 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { ArrowLeft, MessageCircle, Instagram, MapPin, Tag, Star, Navigation } from 'lucide-react';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { buscarParceiroPorSlug } from './parceirosData';
+import api from '../../../services/api';
+import SeloPlano from './components/SeloPlano';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
+
+// Info de plano (selo/banner Master/Instagram) vem de um lookup à parte no
+// banco de verdade — a página em si ainda usa o diretório estático
+// (parceirosData.js, TODO Fase 2 já existente). Some graciosamente
+// (planoInfo fica null) pra qualquer parceiro que só exista no estático.
+function usePlanoDoParceiro(slug) {
+  const [planoInfo, setPlanoInfo] = useState(null);
+  useEffect(() => {
+    let ativo = true;
+    api.get(`/public/marketplace/parceiro-plano/${slug}`)
+      .then(res => { if (ativo) setPlanoInfo(res.data.parceiro); })
+      .catch(() => { if (ativo) setPlanoInfo(null); });
+    return () => { ativo = false; };
+  }, [slug]);
+  return planoInfo;
+}
 
 export default function ParceiroDetalhe() {
   const { slug } = useParams();
   const parceiro = buscarParceiroPorSlug(slug);
+  const planoInfo = usePlanoDoParceiro(slug);
 
   if (!parceiro) return <Navigate to="/marketplace" replace />;
 
   const mensagem = `Olá! Sou associado do SECI e gostaria de saber mais sobre os benefícios da ${parceiro.nome}.`;
   const linkWpp = parceiro.whatsapp ? linkWhatsappComTexto(parceiro.whatsapp, mensagem) : null;
 
-  // TODO Fase 2: instagram / googleMapsUrl / horario / produtos / promocoes /
-  // cupom vêm da tabela sindicato_parceiros — hoje nenhum parceiro tem esses
+  const ehMaster = planoInfo?.plano === 'master';
+  const instagramUrl = planoInfo?.instagram_username
+    ? `https://instagram.com/${planoInfo.instagram_username}`
+    : parceiro.instagram || null;
+
+  // TODO Fase 2: googleMapsUrl / horario / produtos / promocoes / cupom
+  // vêm da tabela sindicato_parceiros — hoje nenhum parceiro tem esses
   // dados, então essas seções só aparecem quando existirem.
-  const temInstagram = Boolean(parceiro.instagram);
+  const temInstagram = Boolean(instagramUrl);
   const temMaps = Boolean(parceiro.googleMapsUrl);
   const temProdutos = Array.isArray(parceiro.produtos) && parceiro.produtos.length > 0;
   const temPromocoes = Array.isArray(parceiro.promocoes) && parceiro.promocoes.length > 0;
@@ -33,11 +57,19 @@ export default function ParceiroDetalhe() {
   const [tab, setTab] = useState('ofertas');
 
   const corDegrade = `linear-gradient(150deg, ${ROXO_ESCURO} 0%, ${parceiro.corIcone || ROXO} 130%)`;
+  const temBannerMaster = ehMaster && Boolean(planoInfo?.banner_personalizado_url);
 
   return (
     <div className="min-h-screen w-full bg-white">
-      {/* Banner / cover */}
-      <div className="relative px-6 pt-8 pb-14 text-center overflow-hidden" style={{ background: corDegrade }}>
+      {/* Banner / cover — Master com banner_personalizado_url cadastrado usa a
+          imagem própria (com véu escuro por cima, pro texto continuar legível)
+          em vez do degradê padrão. */}
+      <div
+        className="relative px-6 pt-8 pb-14 text-center overflow-hidden bg-cover bg-center"
+        style={temBannerMaster
+          ? { backgroundImage: `linear-gradient(150deg, rgba(15,15,20,0.55) 0%, rgba(15,15,20,0.75) 100%), url(${planoInfo.banner_personalizado_url})` }
+          : { background: corDegrade }}
+      >
         <div
           className="absolute inset-0 pointer-events-none"
           style={{ opacity: 0.06, backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 14px)' }}
@@ -46,14 +78,17 @@ export default function ParceiroDetalhe() {
           <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao Marketplace
         </Link>
 
-        {parceiro.exclusivo && (
-          <span
-            className="relative inline-flex items-center gap-1 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wide mb-3 shadow-lg"
-            style={{ backgroundColor: DOURADO, color: ROXO_ESCURO }}
-          >
-            💎 Exclusivo associado
-          </span>
-        )}
+        <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
+          {parceiro.exclusivo && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wide shadow-lg"
+              style={{ backgroundColor: DOURADO, color: ROXO_ESCURO }}
+            >
+              💎 Exclusivo associado
+            </span>
+          )}
+          <SeloPlano plano={planoInfo?.plano} size="lg" />
+        </div>
 
         <div
           className="relative w-24 h-24 rounded-3xl flex items-center justify-center text-6xl mx-auto shadow-2xl"
@@ -89,7 +124,7 @@ export default function ParceiroDetalhe() {
             </span>
           )}
           {temInstagram && (
-            <a href={parceiro.instagram} target="_blank" rel="noreferrer"
+            <a href={instagramUrl} target="_blank" rel="noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl text-white bg-white/10 hover:bg-white/20 transition-colors">
               <Instagram className="w-3.5 h-3.5" /> Instagram
             </a>

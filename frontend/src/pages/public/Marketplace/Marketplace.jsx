@@ -11,6 +11,7 @@ import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
 import CardPromocao from './components/CardPromocao';
 import VitrineRotativa from './components/VitrineRotativa';
+import VitrineParceirosDestaque from './components/VitrineParceirosDestaque';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
@@ -91,6 +92,8 @@ export default function Marketplace() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
+        <VitrineParceirosDestaque />
+
         <SecaoProdutos
           id="ofertas" Icone={Lightning} titulo="Ofertas do Dia"
           produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
