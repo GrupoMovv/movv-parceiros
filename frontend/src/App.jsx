@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import IubSpinner from './pages/public/Marketplace/components/IubSpinner';
 import { CarrinhoProvider } from './pages/public/Marketplace/CarrinhoContext';
+import InstallPWABanner from './components/InstallPWABanner';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Statement from './pages/Statement';
@@ -152,6 +153,7 @@ function MarketplaceFallback({ children }) {
     }>
       <CarrinhoProvider>
         {children}
+        <InstallPWABanner />
       </CarrinhoProvider>
     </Suspense>
   );
