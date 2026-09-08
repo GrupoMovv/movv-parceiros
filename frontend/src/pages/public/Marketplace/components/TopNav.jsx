@@ -148,7 +148,7 @@ export default function TopNav({
                   </Link>
                 )}
                 <Link
-                  to="/meu-painel"
+                  to="/meu"
                   onClick={() => setMenuPerfilAberto(false)}
                   className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                 >

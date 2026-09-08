@@ -48,7 +48,7 @@ export default function MobileBottomNav({ favoritosAtivos, onToggleFavoritos, no
         </Link>
 
         {nomeAssociado ? (
-          <Link to="/meu-painel" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <Link to="/meu" className="flex-1 flex flex-col items-center justify-center gap-0.5">
             <UserCircle size={20} weight="fill" color={ROXO} />
             <span className="text-[10px] font-medium" style={{ color: ROXO }}>Perfil</span>
           </Link>

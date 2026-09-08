@@ -58,7 +58,9 @@ const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender')
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
+import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
+import MeuDados from './pages/public/Cadastro/MeuDados';
 import ParceiroLogin from './pages/parceiro/Login';
 import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
 import ParceiroPainelLayout from './pages/parceiro/PainelLayout';
@@ -201,7 +203,11 @@ export default function App() {
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/cadastrar-associado" element={<CadastrarAssociado />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
-        <Route path="/meu-painel"         element={<MeuPainel />} />
+        <Route path="/meu-painel"         element={<Navigate to="/meu" replace />} />
+        <Route path="/meu" element={<MeuPainelLayout />}>
+          <Route index element={<MeuPainel />} />
+          <Route path="dados" element={<MeuDados />} />
+        </Route>
 
         {/* Portal do Parceiro IUB MAIS */}
         <Route path="/parceiro/login"            element={<ParceiroLogin />} />

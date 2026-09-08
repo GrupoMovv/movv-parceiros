@@ -161,7 +161,7 @@ export default function CadastrarAssociado() {
             >
               Ir pro IUB MAIS
             </button>
-            <Link to="/meu-painel"
+            <Link to="/meu"
               className="w-full flex items-center justify-center gap-2 font-semibold text-sm py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
               <Users2 className="w-4 h-4" /> Adicionar dependentes
             </Link>

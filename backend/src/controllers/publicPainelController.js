@@ -34,10 +34,26 @@ async function getMe(req, res) {
 // Mesmos campos editáveis do /meu-cadastro/:edit_token, mais cidade/estado
 // (o painel novo pede tudo que a tela de "Editar dados" promete). Nunca
 // CPF, CNPJ da empresa ou data de nascimento do titular.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 async function updateMe(req, res) {
   try {
     const associado = req.painelAssociado;
-    const { whatsapp, email, cidade, estado, empresa, dependentes } = req.body;
+    const {
+      whatsapp, email, cidade, estado, empresa, cargo, cep, endereco, numero, bairro,
+      receber_whatsapp, receber_email, dependentes,
+    } = req.body;
+
+    if (email !== undefined && email?.trim() && !EMAIL_REGEX.test(email.trim())) {
+      return res.status(400).json({ error: 'E-mail inválido' });
+    }
+    if (whatsapp !== undefined && whatsapp.replace(/\D/g, '').length < 10) {
+      return res.status(400).json({ error: 'WhatsApp precisa ter pelo menos 10 dígitos (DDD + número)' });
+    }
+    if (cep !== undefined && cep && cep.replace(/\D/g, '').length !== 8) {
+      return res.status(400).json({ error: 'CEP precisa ter 8 dígitos' });
+    }
+
     const sets = [];
     const params = [];
 
@@ -45,6 +61,13 @@ async function updateMe(req, res) {
     if (email !== undefined) { params.push(email?.trim() || null); sets.push(`email = $${params.length}`); }
     if (cidade !== undefined && cidade.trim()) { params.push(cidade.trim()); sets.push(`cidade = $${params.length}`); }
     if (estado !== undefined && estado.trim()) { params.push(estado.trim().toUpperCase()); sets.push(`estado = $${params.length}`); }
+    if (cargo !== undefined) { params.push(cargo?.trim() || null); sets.push(`cargo = $${params.length}`); }
+    if (cep !== undefined) { params.push(cep ? cep.replace(/\D/g, '') : null); sets.push(`cep = $${params.length}`); }
+    if (endereco !== undefined) { params.push(endereco?.trim() || null); sets.push(`endereco = $${params.length}`); }
+    if (numero !== undefined) { params.push(numero?.trim() || null); sets.push(`numero = $${params.length}`); }
+    if (bairro !== undefined) { params.push(bairro?.trim() || null); sets.push(`bairro = $${params.length}`); }
+    if (receber_whatsapp !== undefined) { params.push(Boolean(receber_whatsapp)); sets.push(`receber_whatsapp = $${params.length}`); }
+    if (receber_email !== undefined) { params.push(Boolean(receber_email)); sets.push(`receber_email = $${params.length}`); }
     // Empresa é opcional e sempre em texto livre — se o Sindicato já linkou
     // o associado a um cadastro formal (empresa_id), esse campo fica "em
     // reserva" (montarViewAssociado prioriza o nome do cadastro formal),

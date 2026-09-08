@@ -20,6 +20,7 @@ router.use(authenticatePainelPublico);
 
 router.get('/me',    ctrl.getMe);
 router.put('/me',    ctrl.updateMe);
+router.put('/perfil', ctrl.updateMe);
 router.post('/reenviar-carteirinha', ctrl.reenviarCarteirinha);
 router.post('/foto', upload.single('foto'), ctrl.uploadFoto);
 router.post('/dependentes',              ctrl.updateDependentes);

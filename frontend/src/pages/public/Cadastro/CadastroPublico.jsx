@@ -192,7 +192,7 @@ export default function CadastroPublico() {
         data_nascimento: dataLoginISO,
       });
       setPainelToken(res.data.token);
-      navigate('/meu-painel');
+      navigate('/meu');
     } catch (err) {
       if (err.response?.status === 429) {
         setStep('login_bloqueado');
@@ -288,7 +288,7 @@ export default function CadastroPublico() {
 
     function irParaPainel() {
       setPainelToken(resultado.token);
-      navigate('/meu-painel');
+      navigate('/meu');
     }
 
     return (
