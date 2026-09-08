@@ -7,7 +7,7 @@ import {
   UserCircle2, LayoutDashboard, Pencil, LogIn,
 } from 'lucide-react';
 import api, { assetUrl } from '../../../services/api';
-import { setPainelToken } from '../../../services/apiPainel';
+import apiPainel, { setPainelToken } from '../../../services/apiPainel';
 import { montarMensagemCadastroPublico, linkWhatsappComTexto, publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
 import CapturaFoto from './CapturaFoto';
 import Confete from './Confete';
@@ -59,6 +59,34 @@ function validCPF(cpf) {
 
 const DEP_VAZIO = { nome: '', grau: '', data_nascimento: '' };
 function novaChave() { return `novo${Date.now()}${Math.random()}`; }
+
+// Trava de segurança pós-login: sessão pública é só um JWT (sem sessão no
+// servidor) — se por qualquer motivo o token guardado não corresponder ao
+// CPF que a pessoa acabou de autenticar (ex.: uma aba antiga, uma extensão
+// mexendo no localStorage, um bug futuro que ninguém pegou em review), essa
+// checagem barra ANTES de mostrar o painel de outra pessoa, em vez de
+// confiar cegamente que "o token que acabei de setar é o certo".
+function cpfParcialEsperado(cpfDigits) {
+  return `${cpfDigits.slice(0, 3)}.***.***-${cpfDigits.slice(9, 11)}`;
+}
+
+async function entrarNoPainelSeguro(token, cpfDigits) {
+  setPainelToken(token);
+  try {
+    const res = await apiPainel.get('/public/painel/me');
+    if (res.data.cpf_parcial !== cpfParcialEsperado(cpfDigits)) {
+      console.error('[seguranca] cpf_parcial do painel nao bate com o CPF autenticado — sessao abortada', {
+        esperado: cpfParcialEsperado(cpfDigits), recebido: res.data.cpf_parcial,
+      });
+      setPainelToken(null);
+      return false;
+    }
+    return true;
+  } catch {
+    setPainelToken(null);
+    return false;
+  }
+}
 const FORM_VAZIO = {
   nome_completo: '', cpf: '', data_nascimento: '', sexo: '', categoria_profissional: '',
   whatsapp: '', email: '', cidade: '', estado: '',
@@ -193,6 +221,11 @@ export default function CadastroPublico() {
     const digits = cpfInicial.replace(/\D/g, '');
     if (!validCPF(digits)) { toast.error('CPF inválido'); return; }
 
+    // Derruba qualquer sessão anterior (de outra pessoa, no mesmo
+    // navegador) assim que alguém começa a se identificar de novo — nunca
+    // deixa uma sessão velha "sobrar" enquanto essa tela decide o que fazer.
+    setPainelToken(null);
+
     setVerificandoCpf(true);
     try {
       const res = await api.post('/public/cadastro/verificar-cpf', { cpf: digits });
@@ -219,11 +252,13 @@ export default function CadastroPublico() {
     setFazendoLogin(true);
     setErroLogin(null);
     try {
+      const cpfDigits = cpfInicial.replace(/\D/g, '');
       const res = await api.post('/public/cadastro/login', {
-        cpf: cpfInicial.replace(/\D/g, ''),
+        cpf: cpfDigits,
         data_nascimento: dataLoginISO,
       });
-      setPainelToken(res.data.token);
+      const ok = await entrarNoPainelSeguro(res.data.token, cpfDigits);
+      if (!ok) { setErroLogin('Não deu pra confirmar sua sessão. Tente de novo.'); return; }
       navigate('/meu');
     } catch (err) {
       if (err.response?.status === 429) {
@@ -287,7 +322,7 @@ export default function CadastroPublico() {
       const res = await api.post('/public/cadastro/finalizar', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setResultado({ ...res.data, tipo: 'cadastro' });
+      setResultado({ ...res.data, tipo: 'cadastro', cpfAutenticado: form.cpf.replace(/\D/g, '') });
       setStep('final');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao enviar cadastro. Tente novamente.');
@@ -329,7 +364,7 @@ export default function CadastroPublico() {
       const res = await api.post('/public/cadastro/recadastrar', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setResultado({ ...res.data, tipo: 'cadastro' });
+      setResultado({ ...res.data, tipo: 'cadastro', cpfAutenticado: cpfInicial.replace(/\D/g, '') });
       setStep('final');
     } catch (err) {
       setErroRecadastro(err.response?.data?.error || 'Erro ao atualizar cadastro. Tente novamente.');
@@ -360,8 +395,9 @@ export default function CadastroPublico() {
     const mensagem = montarMensagemCadastroPublico(urlTitular, urlEntradaFutura);
     const linkWpp = resultado.whatsapp ? linkWhatsappComTexto(resultado.whatsapp, mensagem) : null;
 
-    function irParaPainel() {
-      setPainelToken(resultado.token);
+    async function irParaPainel() {
+      const ok = await entrarNoPainelSeguro(resultado.token, resultado.cpfAutenticado);
+      if (!ok) { toast.error('Não deu pra confirmar sua sessão. Tente de novo.'); return; }
       navigate('/meu');
     }
 

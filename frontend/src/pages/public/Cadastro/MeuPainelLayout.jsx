@@ -36,9 +36,14 @@ export default function MeuPainelLayout() {
 
   useEffect(() => { recarregar(); }, [recarregar]);
 
+  // Reload duro (não navigate()) de propósito: garante que NENHUM estado
+  // React em memória sobrevive ao logout — sem isso, um componente que
+  // ainda não desmontou (ex.: outra aba/instância) poderia continuar
+  // mostrando dados da sessão que acabou de sair.
   function handleSair() {
     setPainelToken(null);
-    navigate('/cadastrar');
+    try { sessionStorage.clear(); } catch { /* indisponível, ignora */ }
+    window.location.href = '/cadastrar';
   }
 
   if (loading || !dados) {
