@@ -37,7 +37,7 @@ async function getMe(req, res) {
 async function updateMe(req, res) {
   try {
     const associado = req.painelAssociado;
-    const { whatsapp, email, cidade, estado, dependentes } = req.body;
+    const { whatsapp, email, cidade, estado, empresa, dependentes } = req.body;
     const sets = [];
     const params = [];
 
@@ -45,6 +45,11 @@ async function updateMe(req, res) {
     if (email !== undefined) { params.push(email?.trim() || null); sets.push(`email = $${params.length}`); }
     if (cidade !== undefined && cidade.trim()) { params.push(cidade.trim()); sets.push(`cidade = $${params.length}`); }
     if (estado !== undefined && estado.trim()) { params.push(estado.trim().toUpperCase()); sets.push(`estado = $${params.length}`); }
+    // Empresa é opcional e sempre em texto livre — se o Sindicato já linkou
+    // o associado a um cadastro formal (empresa_id), esse campo fica "em
+    // reserva" (montarViewAssociado prioriza o nome do cadastro formal),
+    // então editar aqui nunca sobrescreve um vínculo que o admin fez.
+    if (empresa !== undefined) { params.push(empresa?.trim() || null); sets.push(`empresa_nome_livre = $${params.length}`); }
 
     if (sets.length) {
       params.push(associado.id);

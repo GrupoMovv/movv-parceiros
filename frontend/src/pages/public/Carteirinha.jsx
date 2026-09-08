@@ -221,22 +221,22 @@ export default function Carteirinha() {
 
         {/* Seção 2 — corpo */}
         <div className="px-6 py-6 space-y-5">
-          <div className={`grid gap-4 ${dependentesLabel ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            <div className={dependentesLabel ? '' : 'text-center'}>
-              <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Empresa</p>
-              {dados.empresa ? (
+          {(dados.empresa || dependentesLabel) && (
+          <div className={`grid gap-4 ${dados.empresa && dependentesLabel ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {dados.empresa && (
+              <div className={dependentesLabel ? '' : 'text-center'}>
+                <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Empresa</p>
                 <p className="text-slate-800 font-bold text-sm mt-0.5">{dados.empresa}</p>
-              ) : (
-                <p className="text-slate-400 italic text-sm mt-0.5 opacity-50">Empresa não vinculada</p>
-              )}
-            </div>
+              </div>
+            )}
             {dependentesLabel && (
-              <div>
+              <div className={dados.empresa ? '' : 'text-center'}>
                 <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Dependentes</p>
                 <p className="text-slate-800 font-bold text-sm mt-0.5">{dependentesLabel}</p>
               </div>
             )}
           </div>
+          )}
 
           <div className="text-center">
             <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">
