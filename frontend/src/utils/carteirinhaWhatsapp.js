@@ -47,46 +47,41 @@ export function ordenarDependentes(deps) {
   });
 }
 
+// Link do portal (marketplace + Meu Painel) — window.location.origin em vez
+// de hardcodar o domínio, pra funcionar igual em produção/staging/local.
+function linkPortalMeu() {
+  return `${window.location.origin}/meu`;
+}
+
 export function montarMensagemCarteirinha(nomeCurto, urlTitular, dependentesComCarteirinha) {
-  if (dependentesComCarteirinha.length === 0) {
-    return `Olá, ${nomeCurto}! 👋
-
-Aqui está sua carteirinha digital de associado ao SECI — Sindicato dos Empregados no Comércio de Itumbiara.
-
-🎫 Acesse pelo link:
-${urlTitular}
-
-Você pode salvar a carteirinha no celular e apresentá-la sempre que precisar usar seus benefícios com nossos parceiros.
-
-🎁 Conheça todos os benefícios exclusivos:
-${publicBeneficiosPdfUrl()}
-
-Qualquer dúvida, estou à disposição!
-
-Renan Araújo
-SECI — Sindicato do Comércio de Itumbiara`;
-  }
-
-  const listaDependentes = ordenarDependentes(dependentesComCarteirinha)
-    .map(d => `• ${GRAU_LABEL[d.grau] || 'Dependente'} — ${d.nome}: ${publicCarteirinhaUrl(d.carteirinha_hash)}`)
-    .join('\n');
+  const blocoDependentes = dependentesComCarteirinha.length > 0
+    ? `\n\n👨‍👩‍👧 Carteirinhas dos dependentes:\n${ordenarDependentes(dependentesComCarteirinha)
+        .map(d => `• ${GRAU_LABEL[d.grau] || 'Dependente'} — ${d.nome}: ${publicCarteirinhaUrl(d.carteirinha_hash)}`)
+        .join('\n')}`
+    : '';
 
   return `Olá, ${nomeCurto}! 👋
 
-Aqui estão as carteirinhas digitais SECI — Sindicato dos Empregados no Comércio de Itumbiara.
+Aqui está sua carteirinha digital de associado ao SECI — Sindicato dos Empregados no Comércio de Itumbiara.
 
 🎫 Sua carteirinha:
-${urlTitular}
+${urlTitular}${blocoDependentes}
 
-👨‍👩‍👧 Carteirinhas dos dependentes:
-${listaDependentes}
+Novidade! Agora você também tem acesso ao
+🛍️ IUB MAIS — Marketplace de Itumbiara
+com preços especiais só pra você!
 
-Você pode salvar as carteirinhas no celular e apresentá-las sempre que precisar usar seus benefícios com nossos parceiros. Compartilhe com sua família!
+Acesse marketplace + carteirinha em:
+👉 ${linkPortalMeu()}
+Login: CPF + Data de nascimento
 
-🎁 Conheça todos os benefícios exclusivos:
+📱 Instale como APP no celular!
+Chrome > Menu > "Adicionar à Tela Inicial"
+
+🎁 Todos os benefícios:
 ${publicBeneficiosPdfUrl()}
 
-Qualquer dúvida, estou à disposição!
+Dúvidas? Estou à disposição!
 
 Renan Araújo
 SECI — Sindicato do Comércio de Itumbiara`;
