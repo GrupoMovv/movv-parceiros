@@ -67,6 +67,11 @@ const PRESETS = {
   // próprio parceiro escolhe/enquadra, então cortar as bordas é esperado
   // (diferente de logo/produto, onde nunca se pode cortar o conteúdo).
   BANNER_PARCEIRO: { width: 1200, height: 300, crop: 'fill', gravity: 'auto' },
+  // Foto de rosto (associado/dependente) pra carteirinha digital — 'fill' +
+  // gravity 'face' enquadra automaticamente no rosto em vez do centro
+  // geométrico da foto, então uma selfie vertical não corta o queixo/topo
+  // da cabeça igual um crop de centro faria.
+  FOTO_ASSOCIADO: { width: 400, height: 400, crop: 'fill', gravity: 'face', background: 'white' },
 };
 
 function bufferParaStream(buffer) {

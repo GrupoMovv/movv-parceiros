@@ -1,11 +1,10 @@
-const fs = require('fs');
-const path = require('path');
 const db = require('../config/database');
 const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarCarteirinhaDependentes } = require('./publicCadastroController');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
 const { montarViewAssociado } = require('../services/associadoPublicoView');
 const emailService = require('../services/emailService');
+const fotoAssociadoService = require('../services/fotoAssociadoService');
 
 // Dispara "novo dependente" só pra quem realmente ganhou carteirinha nessa
 // chamada (gerarCarteirinhaDependentes já filtra isso) — no ar-e-fogo, não
@@ -22,11 +21,6 @@ function notificarNovosDependentes(associado, novos) {
     }).catch(err => console.error('[painel] falha ao enviar email de novo dependente:', err.message));
   }
 }
-
-const UPLOAD_DIR_ASSOCIADO = path.join(__dirname, '../../uploads/associados');
-const UPLOAD_DIR_DEPENDENTE = path.join(__dirname, '../../uploads/dependentes');
-fs.mkdirSync(UPLOAD_DIR_ASSOCIADO, { recursive: true });
-fs.mkdirSync(UPLOAD_DIR_DEPENDENTE, { recursive: true });
 
 async function getMe(req, res) {
   try {
@@ -109,16 +103,14 @@ async function uploadFoto(req, res) {
     const associado = req.painelAssociado;
     if (!req.file) return res.status(400).json({ error: 'Envie uma foto' });
 
-    const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
-    const filename = `associado_${associado.id}_${Date.now()}${ext}`;
-    fs.writeFileSync(path.join(UPLOAD_DIR_ASSOCIADO, filename), req.file.buffer);
-    const fotoUrl = `/uploads/associados/${filename}`;
+    const { url: fotoUrl, publicId } = await fotoAssociadoService.uploadFotoAssociado(req.file.buffer, associado.id);
 
-    await db.query('UPDATE sindicato_associados SET foto_url = $1, updated_at = NOW() WHERE id = $2', [fotoUrl, associado.id]);
+    await db.query('UPDATE sindicato_associados SET foto_url = $1, foto_public_id = $2, updated_at = NOW() WHERE id = $3', [fotoUrl, publicId, associado.id]);
     await db.query(
       `INSERT INTO sindicato_carteirinha_upload (associado_id, tipo_dono, url_arquivo) VALUES ($1, 'associado', $2)`,
       [associado.id, fotoUrl]
     );
+    if (associado.foto_public_id) await fotoAssociadoService.deletarFotoAntiga(associado.foto_public_id);
 
     return res.json({ foto_url: fotoUrl });
   } catch (err) {
@@ -151,21 +143,19 @@ async function uploadFotoDependente(req, res) {
     if (!req.file) return res.status(400).json({ error: 'Envie uma foto' });
 
     const dep = await db.query(
-      'SELECT id FROM sindicato_associados_dependentes WHERE id = $1 AND associado_id = $2',
+      'SELECT id, foto_public_id FROM sindicato_associados_dependentes WHERE id = $1 AND associado_id = $2',
       [req.params.dependente_id, associado.id]
     );
     if (!dep.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
 
-    const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
-    const filename = `dependente_${dep.rows[0].id}_${Date.now()}${ext}`;
-    fs.writeFileSync(path.join(UPLOAD_DIR_DEPENDENTE, filename), req.file.buffer);
-    const fotoUrl = `/uploads/dependentes/${filename}`;
+    const { url: fotoUrl, publicId } = await fotoAssociadoService.uploadFotoDependente(req.file.buffer, dep.rows[0].id);
 
-    await db.query('UPDATE sindicato_associados_dependentes SET foto_url = $1 WHERE id = $2', [fotoUrl, dep.rows[0].id]);
+    await db.query('UPDATE sindicato_associados_dependentes SET foto_url = $1, foto_public_id = $2 WHERE id = $3', [fotoUrl, publicId, dep.rows[0].id]);
     await db.query(
       `INSERT INTO sindicato_carteirinha_upload (dependente_id, tipo_dono, url_arquivo) VALUES ($1, 'dependente', $2)`,
       [dep.rows[0].id, fotoUrl]
     );
+    if (dep.rows[0].foto_public_id) await fotoAssociadoService.deletarFotoAntiga(dep.rows[0].foto_public_id);
 
     return res.json({ foto_url: fotoUrl });
   } catch (err) {

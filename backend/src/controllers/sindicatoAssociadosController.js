@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { onlyDigits } = require('../utils/validators');
+const fotoAssociadoService = require('../services/fotoAssociadoService');
 
 const CAMPOS_UPDATE = [
   'nome_completo', 'cpf', 'data_nascimento', 'sexo', 'categoria_profissional',
@@ -261,18 +262,19 @@ async function uploadFotoDependente(req, res) {
     const { id } = req.params;
     if (!req.file) return res.status(400).json({ error: 'Envie um arquivo de foto' });
 
-    const check = await db.query('SELECT id FROM sindicato_associados_dependentes WHERE id = $1', [id]);
+    const check = await db.query('SELECT id, foto_public_id FROM sindicato_associados_dependentes WHERE id = $1', [id]);
     if (!check.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
 
-    const urlArquivo = `/uploads/dependentes/${req.file.filename}`;
+    const { url: urlArquivo, publicId } = await fotoAssociadoService.uploadFotoDependente(req.file.buffer, id);
     const uploadedPorId = req.user?.type === 'internal' ? req.user.id : null;
 
-    await db.query('UPDATE sindicato_associados_dependentes SET foto_url = $1 WHERE id = $2', [urlArquivo, id]);
+    await db.query('UPDATE sindicato_associados_dependentes SET foto_url = $1, foto_public_id = $2 WHERE id = $3', [urlArquivo, publicId, id]);
     await db.query(
       `INSERT INTO sindicato_carteirinha_upload (dependente_id, tipo_dono, url_arquivo, uploaded_por_id)
        VALUES ($1, 'dependente', $2, $3)`,
       [id, urlArquivo, uploadedPorId]
     );
+    if (check.rows[0].foto_public_id) await fotoAssociadoService.deletarFotoAntiga(check.rows[0].foto_public_id);
 
     return res.json({ foto_url: urlArquivo });
   } catch (err) {

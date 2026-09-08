@@ -5,6 +5,7 @@ import { ShoppingCart } from '@phosphor-icons/react';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 import { useCarrinho } from '../CarrinhoContext';
+import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 
 const MENU_SECUNDARIO = [
   { label: 'Categorias', href: '#categorias' },
@@ -16,10 +17,6 @@ const MENU_SECUNDARIO = [
 function scrollPara(e, href) {
   e.preventDefault();
   document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function iniciais(nome) {
-  return String(nome || '').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 }
 
 // Header estilo marketplace grande (fundo roxo escuro) — logo + busca
@@ -129,12 +126,7 @@ export default function TopNav({
               {fotoUrl ? (
                 <img src={fotoUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white flex-shrink-0" />
               ) : (
-                <span
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white flex-shrink-0"
-                  style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
-                >
-                  {iniciais(nomeCompleto || nomeAssociado)}
-                </span>
+                <AvatarPlaceholder nome={nomeCompleto || nomeAssociado} size={32} className="border-2 border-white" />
               )}
               {nomeAssociado.split(' ')[0]}
               <ChevronDown className={`w-3.5 h-3.5 text-white/60 transition-transform ${menuPerfilAberto ? 'rotate-180' : ''}`} />

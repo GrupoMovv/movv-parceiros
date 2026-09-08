@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const { nanoid } = require('nanoid');
 const db = require('../config/database');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
@@ -8,9 +6,7 @@ const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarCarteirinhaDependentes } = require('./publicCadastroController');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const emailService = require('../services/emailService');
-
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/associados');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const fotoAssociadoService = require('../services/fotoAssociadoService');
 
 async function gerarEditTokenUnico() {
   for (let tentativa = 0; tentativa < 5; tentativa++) {
@@ -113,18 +109,15 @@ async function completarCadastro(req, res) {
     let associado = insertResult.rows[0];
     await substituirDependentes(associado.id, dependentesArr);
 
-    const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
-    const filename = `associado_${associado.id}_${Date.now()}${ext}`;
-    fs.writeFileSync(path.join(UPLOAD_DIR, filename), req.file.buffer);
-    const fotoUrl = `/uploads/associados/${filename}`;
+    const { url: fotoUrl, publicId: fotoPublicId } = await fotoAssociadoService.uploadFotoAssociado(req.file.buffer, associado.id);
 
     const hash = await gerarHashUnico('sindicato_associados');
     const validaAte = calcularValidoAte();
     const updResult = await db.query(
       `UPDATE sindicato_associados
-       SET foto_url = $1, carteirinha_hash = $2, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $3, updated_at = NOW()
-       WHERE id = $4 RETURNING *`,
-      [fotoUrl, hash, validaAte, associado.id]
+       SET foto_url = $1, foto_public_id = $2, carteirinha_hash = $3, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $4, updated_at = NOW()
+       WHERE id = $5 RETURNING *`,
+      [fotoUrl, fotoPublicId, hash, validaAte, associado.id]
     );
     associado = updResult.rows[0];
 

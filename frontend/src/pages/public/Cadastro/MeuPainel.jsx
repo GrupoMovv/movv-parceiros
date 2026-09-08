@@ -12,15 +12,12 @@ import {
 } from '../../../utils/carteirinhaWhatsapp';
 import CapturaFoto from './CapturaFoto';
 import InputDataBR from './InputDataBR';
+import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
 
 const NAVY = '#0B1F3A';
 const GOLD = '#D4AF37';
 const LIME = '#B8E62C';
 const GRAUS = [['conjuge', 'Cônjuge'], ['filho', 'Filho'], ['filha', 'Filha']];
-
-function iniciais(nome) {
-  return String(nome || '').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-}
 
 export default function MeuPainel() {
   const navigate = useNavigate();
@@ -122,9 +119,7 @@ function Home({ dados, onNavegar }) {
         {dados.foto_url ? (
           <img src={assetUrl(dados.foto_url)} alt="" className="w-20 h-20 rounded-full object-cover border-4 flex-shrink-0" style={{ borderColor: GOLD }} />
         ) : (
-          <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0" style={{ backgroundColor: NAVY }}>
-            {iniciais(dados.nome_completo)}
-          </div>
+          <AvatarPlaceholder nome={dados.nome_completo} size={80} className="border-4" style={{ borderColor: GOLD }} />
         )}
         <div className="min-w-0">
           <p className="font-bold text-slate-900 truncate">{dados.nome_completo}</p>
@@ -344,9 +339,7 @@ function Dependentes({ dados, onSalvo }) {
             {dep.foto_url ? (
               <img src={assetUrl(dep.foto_url)} alt="" className="w-12 h-12 rounded-full object-cover border-2 flex-shrink-0" style={{ borderColor: GOLD }} />
             ) : (
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ backgroundColor: NAVY }}>
-                {iniciais(dep.nome) || '?'}
-              </div>
+              <AvatarPlaceholder nome={dep.nome} size={48} />
             )}
             <div className="flex-1 min-w-0 space-y-1.5">
               <input type="text" placeholder="Nome" className="input text-sm py-1.5" value={dep.nome} onChange={e => update(idx, 'nome', e.target.value)} />

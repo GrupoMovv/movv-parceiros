@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Loader2, AlertCircle, Download, Share2, Users2, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { assetUrl, backendOrigin } from '../../services/api';
-import { iniciais, corAvatar } from '../../utils/avatar';
+import AvatarPlaceholder from '../../components/AvatarPlaceholder';
 
 const CATEGORIA_LABEL = {
   'Empregado': 'Empregado',
@@ -188,11 +188,8 @@ export default function Carteirinha() {
                 style={{ border: '4px solid #D4AF37' }}
               />
             ) : (
-              <div
-                className="w-[140px] h-[140px] rounded-full mx-auto flex items-center justify-center text-white font-bold shadow-xl text-6xl"
-                style={{ backgroundColor: corAvatar(dados.nome), border: '4px solid #D4AF37' }}
-              >
-                {iniciais(dados.nome)}
+              <div className="mx-auto shadow-xl rounded-full" style={{ width: 140, height: 140, border: '4px solid #D4AF37' }}>
+                <AvatarPlaceholder nome={dados.nome} size={132} style={{ margin: 2 }} />
               </div>
             )}
           </div>
@@ -286,9 +283,7 @@ export default function Carteirinha() {
                       {dep.foto_url ? (
                         <img src={assetUrl(dep.foto_url)} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                       ) : (
-                        <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: corAvatar(dep.nome) }}>
-                          {iniciais(dep.nome)}
-                        </span>
+                        <AvatarPlaceholder nome={dep.nome} size={32} />
                       )}
                       <span className="text-slate-700 text-sm font-medium truncate">{dep.nome}</span>
                     </Link>

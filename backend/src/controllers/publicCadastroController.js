@@ -1,18 +1,14 @@
-const fs = require('fs');
-const path = require('path');
 const { nanoid } = require('nanoid');
 const db = require('../config/database');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
 const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
+const fotoAssociadoService = require('../services/fotoAssociadoService');
 
 const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
 const BLOQUEIO_MS = 30 * 60 * 1000;
 const MAX_TENTATIVAS = 3;
-
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/associados');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const SEXOS_VALIDOS = ['F', 'M', 'P'];
 const CATEGORIAS_VALIDAS = ['Empregado', 'Empregador patronal', 'Profissional liberal'];
@@ -323,18 +319,15 @@ async function finalizarCadastro(req, res) {
     let associado = result.rows[0];
     await substituirDependentes(associado.id, dependentesArr);
 
-    const ext = (req.file.mimetype === 'image/png') ? '.png' : '.jpg';
-    const filename = `associado_${associado.id}_${Date.now()}${ext}`;
-    fs.writeFileSync(path.join(UPLOAD_DIR, filename), req.file.buffer);
-    const fotoUrl = `/uploads/associados/${filename}`;
+    const { url: fotoUrl, publicId: fotoPublicId } = await fotoAssociadoService.uploadFotoAssociado(req.file.buffer, associado.id);
 
     const hash = await gerarHashUnico('sindicato_associados');
     const validaAte = calcularValidoAte();
     const upd = await db.query(
       `UPDATE sindicato_associados
-       SET foto_url = $1, carteirinha_hash = $2, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $3, updated_at = NOW()
-       WHERE id = $4 RETURNING *`,
-      [fotoUrl, hash, validaAte, associado.id]
+       SET foto_url = $1, foto_public_id = $2, carteirinha_hash = $3, carteirinha_gerada_em = NOW(), carteirinha_valida_ate = $4, updated_at = NOW()
+       WHERE id = $5 RETURNING *`,
+      [fotoUrl, fotoPublicId, hash, validaAte, associado.id]
     );
     associado = upd.rows[0];
 

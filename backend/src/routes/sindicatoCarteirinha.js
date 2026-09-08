@@ -1,19 +1,10 @@
 const router = require('express').Router();
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 const { authenticate } = require('../middleware/auth');
 const ctrl = require('../controllers/sindicatoCarteirinhaController');
 
-const UPLOAD_DIR = path.join(__dirname, '../../uploads/associados');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => cb(null, `associado_${req.params.id}_${Date.now()}${path.extname(file.originalname)}`),
-});
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
