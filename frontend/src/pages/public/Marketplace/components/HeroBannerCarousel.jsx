@@ -35,7 +35,7 @@ export default function HeroBannerCarousel({ associado }) {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    api.get('/public/marketplace/exclusivos-associados').then(res => setProdutosDestaque(res.data.produtos || [])).catch(() => {});
+    api.get('/public/marketplace/banner-exclusivos').then(res => setProdutosDestaque(res.data.produtos || [])).catch(() => {});
     api.get('/public/marketplace/empresas-parceiras').then(res => setEmpresasParceiras(res.data.empresas || [])).catch(() => {});
     api.get('/public/marketplace/stats').then(res => setTotalParceiros(res.data.parceiros)).catch(() => {});
   }, []);
