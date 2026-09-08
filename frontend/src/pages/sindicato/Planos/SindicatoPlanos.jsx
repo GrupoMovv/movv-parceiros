@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Crown, Search, History, Video, FileText, Settings, X, Upload, Trash2, Pencil, Plus } from 'lucide-react';
+import { Crown, Search, History, Video, FileText, Settings, X, Upload, Trash2, Pencil, Plus, Flame, ToggleLeft, ToggleRight, Ban, RotateCcw } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
 
@@ -28,6 +28,7 @@ function fmtData(iso) {
 const ABAS = [
   { id: 'parceiros', label: 'Parceiros', Icone: Crown },
   { id: 'historico', label: 'Histórico', Icone: History },
+  { id: 'fecha-mes', label: 'Fecha Mês', Icone: Flame },
   { id: 'lives', label: 'Lives', Icone: Video },
   { id: 'materiais', label: 'Materiais', Icone: FileText },
   { id: 'config', label: 'Configurações', Icone: Settings },
@@ -60,6 +61,7 @@ export default function SindicatoPlanos() {
 
       {aba === 'parceiros' && <AbaParceiros />}
       {aba === 'historico' && <AbaHistorico />}
+      {aba === 'fecha-mes' && <AbaFechaMes />}
       {aba === 'lives' && <AbaLives />}
       {aba === 'materiais' && <AbaMateriais />}
       {aba === 'config' && <AbaConfig />}
@@ -572,6 +574,160 @@ function AbaConfig() {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ Fecha Mês
+
+function fmtDataLonga(iso) {
+  if (!iso) return '—';
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function AbaFechaMes() {
+  const [evento, setEvento] = useState(null);
+  const [historico, setHistorico] = useState(null);
+  const [novaData, setNovaData] = useState('');
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(() => {
+    api.get('/sindicato-fecha-mes/proximo').then(res => { setEvento(res.data); setNovaData(res.data.data_evento); }).catch(() => toast.error('Erro ao carregar Fecha Mês'));
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => {
+    api.get('/sindicato-fecha-mes/historico').then(res => setHistorico(res.data.historico)).catch(() => setHistorico([]));
+  }, []);
+
+  async function toggleHabilitadoGlobal() {
+    try {
+      await api.patch('/sindicato-fecha-mes/config', { habilitado: !evento.habilitado_globalmente });
+      toast.success(evento.habilitado_globalmente ? 'Fecha Mês desativado globalmente' : 'Fecha Mês ativado globalmente');
+      carregar();
+    } catch {
+      toast.error('Erro ao atualizar configuração');
+    }
+  }
+
+  async function toggleAtivoEvento() {
+    setSalvando(true);
+    try {
+      await api.patch(`/sindicato-fecha-mes/${evento.id}`, { ativo: !evento.ativo });
+      toast.success(evento.ativo ? 'Edição cancelada' : 'Edição reativada');
+      carregar();
+    } catch {
+      toast.error('Erro ao atualizar edição');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function adiarEvento() {
+    if (novaData === evento.data_evento) return;
+    setSalvando(true);
+    try {
+      await api.patch(`/sindicato-fecha-mes/${evento.id}`, { data_evento: novaData });
+      toast.success('Data do Fecha Mês atualizada');
+      carregar();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao adiar edição');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (!evento) return <p className="text-slate-400 text-sm py-8 text-center">Carregando...</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Próxima edição</p>
+            <p className="text-xl font-bold text-slate-800 mt-1">{fmtDataLonga(evento.data_evento)}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {evento.ativo_hoje && <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">ATIVO HOJE</span>}
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${evento.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+              {evento.ativo ? 'Confirmada' : 'Cancelada'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="rounded-lg bg-slate-50 p-3 text-center">
+            <p className="text-xl font-black text-purple-700">{evento.dias_restantes}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">dias restantes</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-3 text-center">
+            <p className="text-xl font-black text-purple-700">{evento.parceiros_confirmados}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">parceiros confirmados</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-3 text-center">
+            <p className="text-xl font-black text-purple-700">{evento.produtos_confirmados}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">produtos confirmados</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2 mt-4 pt-4 border-t border-slate-100">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Adiar pra outra data</label>
+            <input type="date" value={novaData} onChange={e => setNovaData(e.target.value)} className="block mt-1 px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+          </div>
+          <button type="button" onClick={adiarEvento} disabled={salvando || novaData === evento.data_evento} className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
+            Salvar nova data
+          </button>
+          <button
+            type="button" onClick={toggleAtivoEvento} disabled={salvando}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${evento.ativo ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}
+          >
+            {evento.ativo ? <><Ban className="w-3.5 h-3.5" /> Cancelar edição</> : <><RotateCcw className="w-3.5 h-3.5" /> Reativar edição</>}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-slate-800">Fecha Mês habilitado globalmente</p>
+          <p className="text-xs text-slate-400 mt-0.5">Desligar aqui esconde a feature inteira (banner, vitrine, participação) até religar.</p>
+        </div>
+        <button type="button" onClick={toggleHabilitadoGlobal}>
+          {evento.habilitado_globalmente
+            ? <ToggleRight className="w-9 h-9 text-purple-600" />
+            : <ToggleLeft className="w-9 h-9 text-slate-300" />}
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-400 px-5 pt-4 pb-2">Últimas edições</p>
+        {!historico ? (
+          <p className="text-slate-400 text-xs px-5 pb-4">Carregando...</p>
+        ) : historico.length === 0 ? (
+          <p className="text-slate-400 text-xs px-5 pb-4">Nenhuma edição encerrada ainda.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th className="text-left px-5 py-2">Data</th>
+                <th className="text-left px-5 py-2">Parceiros</th>
+                <th className="text-left px-5 py-2">Produtos</th>
+                <th className="text-left px-5 py-2">Cliques no dia</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {historico.map(h => (
+                <tr key={h.data_evento}>
+                  <td className="px-5 py-2.5">{fmtDataLonga(h.data_evento)}</td>
+                  <td className="px-5 py-2.5">{h.parceiros_participantes}</td>
+                  <td className="px-5 py-2.5">{h.produtos_participantes}</td>
+                  <td className="px-5 py-2.5 font-bold text-purple-700">{h.cliques_no_dia}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
