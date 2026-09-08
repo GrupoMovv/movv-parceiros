@@ -1,22 +1,16 @@
 const db = require('../config/database');
+const { beneficios, planoEfetivo } = require('../config/planos');
 
 // Regra oficial (Fase 1): Grátis NÃO entra na rotativa — só planos pagos
 // disputam a vitrine. Números batem com o que é vendido em
-// /parceiro/painel/planos ("X produtos em destaque").
-//
-// Exceção temporária: como ninguém pagou plano ainda (fase 100% grátis),
-// PARCEIROS_SEED lista quem aparece como demonstração da vitrine mesmo
-// estando no Grátis — tratados como se fossem `seed` (mesmo limite do
-// Premium). Quando os planos pagos forem ativados de verdade, é só
-// esvaziar essa lista.
-const LIMITES = { gratis: 0, oficial: 3, premium: 8, master: 15, seed: 8 };
-const PARCEIROS_SEED = ['nossa-drogaria', 'azul-emprestimo'];
-
+// /parceiro/painel/planos ("X produtos em destaque"). Limite por plano e
+// lista de seed de demonstração vêm de config/planos.js — fonte única de
+// verdade compartilhada com o resto do sistema de planos.
 const LIMITE_TOTAL = 24;
 
 function limiteDoParceiro(row) {
-  if (PARCEIROS_SEED.includes(row.parceiro_slug)) return LIMITES.seed;
-  return LIMITES[row.plano] ?? LIMITES.gratis;
+  const plano = planoEfetivo({ slug: row.parceiro_slug, plano: row.plano });
+  return beneficios(plano).max_produtos_rotativa;
 }
 
 // Regenera tudo a cada 4h (produtos elegíveis + nova ordem de round-robin);

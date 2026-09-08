@@ -2,10 +2,16 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
+const { limiteProdutos, planoEfetivo } = require('../config/planos');
 
-const LIMITE_PRODUTOS = 30;
 const LIMITE_FOTOS_PRODUTO = 3;
 const LIMITE_DESTAQUES = 3;
+
+// Limite de produtos por plano (Master = ilimitado) — config/planos.js é a
+// fonte única de verdade; aqui só resolve pro parceiro autenticado.
+function limiteProdutosDoParceiro(parceiro) {
+  return limiteProdutos(planoEfetivo(parceiro));
+}
 
 function pastaProduto(parceiroId, produtoId) {
   return `iubmais/parceiros/${parceiroId}/produtos/${produtoId}`;
@@ -45,7 +51,8 @@ async function list(req, res) {
       `SELECT * FROM sindicato_parceiro_produtos WHERE ${condicoes.join(' AND ')} ORDER BY created_at DESC`,
       params
     );
-    return res.json({ produtos: result.rows, total: result.rows.length, limite: LIMITE_PRODUTOS });
+    const limite = limiteProdutosDoParceiro(req.parceiro);
+    return res.json({ produtos: result.rows, total: result.rows.length, limite: Number.isFinite(limite) ? limite : null });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao listar produtos' });
@@ -95,9 +102,12 @@ function validarCampos(b) {
 
 async function create(req, res) {
   try {
-    const contagem = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1', [req.parceiro.id]);
-    if (contagem.rows[0].n >= LIMITE_PRODUTOS) {
-      return res.status(400).json({ error: `Limite de ${LIMITE_PRODUTOS} produtos atingido. Pause ou remova um produto pra cadastrar outro.` });
+    const limite = limiteProdutosDoParceiro(req.parceiro);
+    if (Number.isFinite(limite)) {
+      const contagem = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1', [req.parceiro.id]);
+      if (contagem.rows[0].n >= limite) {
+        return res.status(400).json({ error: `Limite de ${limite} produtos atingido. Faça upgrade pra plano Master pra produtos ilimitados, ou pause/remova um produto pra cadastrar outro.` });
+      }
     }
 
     const { erro, valores } = validarCampos(req.body);
@@ -246,4 +256,4 @@ async function deleteFoto(req, res) {
   }
 }
 
-module.exports = { list, getOne, create, update, remover, toggleStatus, uploadFotos, deleteFoto, LIMITE_PRODUTOS };
+module.exports = { list, getOne, create, update, remover, toggleStatus, uploadFotos, deleteFoto };

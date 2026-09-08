@@ -1,5 +1,19 @@
 const db = require('../config/database');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
+const { PLANOS, PARCEIROS_SEED_DEMONSTRACAO, PLANO_SEED_DEMONSTRACAO, planoEfetivo } = require('../config/planos');
+
+const PLANOS_COM_DESTAQUE = Object.entries(PLANOS).filter(([, cfg]) => cfg.aparece_destaques_parceiros).map(([plano]) => plano);
+
+// CASE SQL que aplica o boost_busca de cada plano (config/planos.js) — os
+// slugs do seed de demonstração vêm de uma constante do nosso próprio
+// código (não de input do usuário), por isso entram como literal na query
+// em vez de bind param. Calculado uma vez só no boot, não por request.
+function sqlBoostBusca(aliasPlano = 'pa.plano', aliasSlug = 'pa.slug') {
+  const casos = Object.entries(PLANOS).map(([plano, cfg]) => `WHEN ${aliasPlano} = '${plano}' THEN ${cfg.boost_busca}`).join(' ');
+  const seedArray = PARCEIROS_SEED_DEMONSTRACAO.map(s => `'${s}'`).join(',') || `''`;
+  const seedBoost = PLANOS[PLANO_SEED_DEMONSTRACAO].boost_busca;
+  return `(CASE WHEN ${aliasSlug} IN (${seedArray}) THEN ${seedBoost} ${casos} ELSE 0 END)`;
+}
 
 // Colunas comuns de produto pra qualquer vitrine da home — sempre junto do
 // parceiro (nome/slug), porque todo CardProduto mostra "vendido por X".
@@ -159,8 +173,11 @@ async function getCategorias(req, res) {
   }
 }
 
+// "relevancia" prioriza plano (boost_busca: Master > Premium > Oficial >
+// Grátis) antes de destaque/data — os outros critérios são escolha
+// explícita do usuário, não fazem sentido misturados com boost de plano.
 const ORDENACOES = {
-  relevancia: 'pr.destaque DESC, pr.created_at DESC',
+  relevancia: `${sqlBoostBusca()} DESC, pr.destaque DESC, pr.created_at DESC`,
   menor_preco: 'COALESCE(pr.preco_associado, pr.preco) ASC',
   maior_preco: 'COALESCE(pr.preco_associado, pr.preco) DESC',
   recente: 'pr.created_at DESC',
@@ -267,13 +284,35 @@ async function getVitrineRotativa(req, res) {
 async function getParceiros(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano
        FROM sindicato_parceiros WHERE status = 'ativo' ORDER BY nome ASC`
     );
-    return res.json({ parceiros: result.rows });
+    return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar parceiros' });
+  }
+}
+
+// Vitrine "Parceiros em Destaque" no topo da home (logo após categorias) —
+// só quem tem aparece_destaques_parceiros:true no plano (Premium/Master,
+// ver config/planos.js) + o seed de demonstração, que entra como se fosse
+// Premium.
+async function getParceirosDestaques(req, res) {
+  try {
+    const planosLiteral = PLANOS_COM_DESTAQUE.map(p => `'${p}'`).join(',') || `''`;
+    const seedLiteral = PARCEIROS_SEED_DEMONSTRACAO.map(s => `'${s}'`).join(',') || `''`;
+    const result = await db.query(
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano
+       FROM sindicato_parceiros
+       WHERE status = 'ativo' AND (plano IN (${planosLiteral}) OR slug IN (${seedLiteral}))
+       ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC
+       LIMIT 12`
+    );
+    return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar parceiros em destaque' });
   }
 }
 
@@ -287,4 +326,5 @@ module.exports = {
   getProdutosPorCategoria,
   getVitrineRotativa,
   getParceiros,
+  getParceirosDestaques,
 };

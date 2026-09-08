@@ -111,6 +111,7 @@ router.get('/marketplace/mais-vendidos', marketplaceHomeCtrl.getMaisVendidos);
 router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);
 router.get('/marketplace/categoria/:slug/produtos', marketplaceHomeCtrl.getProdutosPorCategoria);
 router.get('/marketplace/parceiros', marketplaceHomeCtrl.getParceiros);
+router.get('/marketplace/parceiros-destaques', marketplaceHomeCtrl.getParceirosDestaques);
 
 // Nomes das empresas com lista de colaboradores aprovados (Bloco de
 // autocadastro por CPF+CNPJ) — só nome + contagem, nunca CPF/matrícula/

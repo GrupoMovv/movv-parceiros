@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const { PLANOS } = require('../config/planos');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Grupo Movv <noreply@grupomovv.com.br>';
@@ -319,6 +320,66 @@ async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
   return enviar({ to: email, subject: '🎉 Sua carteirinha SECI está ativa!', html });
 }
 
+// --- Templates do sistema de planos pagos (Bloco de planos) ---------------
+// Preparados, mas NÃO chamados em lugar nenhum ainda (só o admin dispara a
+// troca de plano hoje, e o controller não envia email sozinho — ver
+// sindicatoPlanosController). Ficam prontos pra quando ativarmos: troca
+// manual pelo admin passa a mandar upgrade/downgrade, e um cron futuro
+// cuidaria de "expirando"/"expirado".
+
+async function enviarUpgradePlano({ nome, nomeFantasia, email, planoNovo }) {
+  const cfg = PLANOS[planoNovo] || PLANOS.gratis;
+  const link = `${PORTAL_URL}/parceiro/painel`;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Parabéns pelo upgrade!</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A <strong>${nomeFantasia}</strong> agora é <strong>${cfg.nome}</strong> no IUB MAIS.</p>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;line-height:1.6;">
+        Seus novos benefícios já estão ativos: selo <strong>${cfg.selo_nome}</strong>${cfg.max_produtos_rotativa ? `, ${cfg.max_produtos_rotativa} produtos na vitrine rotativa da home` : ''}${cfg.analytics_avancado ? ', analytics avançado' : ''}${cfg.aparece_destaques_parceiros ? ' e presença em "Parceiros em Destaque"' : ''}.
+      </p>
+    </div>
+    ${botao('Ver Meu Painel', link)}
+  `);
+  return enviar({ to: email, subject: `🎉 IUB MAIS — Sua loja agora é ${cfg.nome}!`, html });
+}
+
+async function enviarDowngradePlano({ nome, nomeFantasia, email, planoAnterior, planoNovo }) {
+  const cfgAnterior = PLANOS[planoAnterior] || PLANOS.gratis;
+  const cfgNovo = PLANOS[planoNovo] || PLANOS.gratis;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Mudança de plano — IUB MAIS</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. O plano da <strong>${nomeFantasia}</strong> mudou de <strong>${cfgAnterior.nome}</strong> pra <strong>${cfgNovo.nome}</strong>.</p>
+    <p style="color:#555;line-height:1.6;">Alguns benefícios exclusivos do plano anterior deixam de valer a partir de agora. Se foi engano ou você quer voltar, é só chamar a gente.</p>
+    ${botao('Ver Planos Disponíveis', `${PORTAL_URL}/parceiro/painel/planos`)}
+  `);
+  return enviar({ to: email, subject: 'IUB MAIS — Seu plano foi alterado', html });
+}
+
+async function enviarPlanoExpirandoBreve({ nome, nomeFantasia, email, plano, dataExpiracao }) {
+  const cfg = PLANOS[plano] || PLANOS.gratis;
+  const dataFmt = new Date(dataExpiracao).toLocaleDateString('pt-BR');
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Seu plano expira em breve</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! O plano <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> expira em <strong>${dataFmt}</strong>.</p>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;">Depois dessa data, sua loja volta automaticamente pro plano Grátis e perde os benefícios de ${cfg.nome}.</p>
+    </div>
+    ${botao('Renovar Meu Plano', `${PORTAL_URL}/parceiro/painel/planos`)}
+  `);
+  return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfg.nome} expira em ${dataFmt}`, html });
+}
+
+async function enviarPlanoExpirado({ nome, nomeFantasia, email, planoAnterior }) {
+  const cfgAnterior = PLANOS[planoAnterior] || PLANOS.gratis;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Seu plano expirou</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. O plano <strong>${cfgAnterior.nome}</strong> da <strong>${nomeFantasia}</strong> expirou e sua loja voltou pro plano Grátis.</p>
+    <p style="color:#555;line-height:1.6;">Seus produtos continuam no ar normalmente — só os benefícios exclusivos do ${cfgAnterior.nome} (vitrine rotativa maior, selo, analytics avançado) que pararam.</p>
+    ${botao('Renovar Meu Plano', `${PORTAL_URL}/parceiro/painel/planos`)}
+  `);
+  return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfgAnterior.nome} expirou`, html });
+}
+
 module.exports = {
   enviarCredenciais,
   enviarCarteirinhaAtivada,
@@ -335,4 +396,8 @@ module.exports = {
   enviarRejeicaoParceiro,
   enviarConfirmacaoEmailParceiro,
   enviarConfirmacaoExclusaoParceiro,
+  enviarUpgradePlano,
+  enviarDowngradePlano,
+  enviarPlanoExpirandoBreve,
+  enviarPlanoExpirado,
 };
