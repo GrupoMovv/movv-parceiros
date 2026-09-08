@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, CheckCircle2, XCircle, AlertTriangle, Loader2,
   Plus, Trash2, PartyPopper, ExternalLink, MessageCircle, Building2, Bookmark,
-  UserCircle2, LayoutDashboard,
+  UserCircle2, LayoutDashboard, Pencil, LogIn,
 } from 'lucide-react';
 import api, { assetUrl } from '../../../services/api';
 import { setPainelToken } from '../../../services/apiPainel';
@@ -73,10 +73,24 @@ export default function CadastroPublico() {
   const [verificandoCpf, setVerificandoCpf] = useState(false);
   const [nomeCurtoExistente, setNomeCurtoExistente] = useState('');
 
+  // CPF já existe — 3 opções (ver carteirinha / login / recadastro)
+  const [carteirinhaHashExistente, setCarteirinhaHashExistente] = useState(null);
+  const [acaoExistente, setAcaoExistente] = useState(null); // null | 'login' | 'recadastro'
+
   // Login (CPF + data de nascimento) pra quem já tem cadastro
   const [dataLoginISO, setDataLoginISO] = useState(null);
   const [fazendoLogin, setFazendoLogin] = useState(false);
   const [erroLogin, setErroLogin] = useState(null);
+
+  // Recadastro — "atualizar dados e gerar nova carteirinha" sem precisar
+  // editar campo a campo no Meu Painel. Mesmo 2º fator do login (CPF +
+  // nascimento) autentica; o resto reaproveita os componentes do wizard.
+  const [dataRecadastroISO, setDataRecadastroISO] = useState(null);
+  const [formRecadastro, setFormRecadastro] = useState(FORM_VAZIO);
+  const [dependentesRecadastro, setDependentesRecadastro] = useState([]);
+  const [fotoRecadastro, setFotoRecadastro] = useState(null);
+  const [enviandoRecadastro, setEnviandoRecadastro] = useState(false);
+  const [erroRecadastro, setErroRecadastro] = useState(null);
 
   // Passo 1 — CNPJ
   const [cnpj, setCnpj] = useState('');
@@ -108,6 +122,22 @@ export default function CadastroPublico() {
   function setCampo(campo, valor) {
     setForm(f => ({ ...f, [campo]: valor }));
     setErrors(e => ({ ...e, [campo]: '' }));
+  }
+
+  function setCampoRecadastro(campo, valor) {
+    setFormRecadastro(f => ({ ...f, [campo]: valor }));
+    setErrors(e => ({ ...e, [campo]: '' }));
+  }
+
+  function addDependenteRecadastro() {
+    if (dependentesRecadastro.length >= 6) return;
+    setDependentesRecadastro(d => [...d, { ...DEP_VAZIO, _key: novaChave() }]);
+  }
+  function updateDependenteRecadastro(idx, campo, valor) {
+    setDependentesRecadastro(d => d.map((dep, i) => i === idx ? { ...dep, [campo]: valor } : dep));
+  }
+  function removeDependenteRecadastro(idx) {
+    setDependentesRecadastro(d => d.filter((_, i) => i !== idx));
   }
 
   // ── Passo 1: validação de CNPJ (debounce) ─────────────────────────────
@@ -168,6 +198,8 @@ export default function CadastroPublico() {
       const res = await api.post('/public/cadastro/verificar-cpf', { cpf: digits });
       if (res.data.existe) {
         setNomeCurtoExistente(res.data.nome_curto || '');
+        setCarteirinhaHashExistente(res.data.carteirinha_hash || null);
+        setAcaoExistente(null);
         setErroLogin(null);
         setStep('login_data');
       } else {
@@ -261,6 +293,48 @@ export default function CadastroPublico() {
       toast.error(err.response?.data?.error || 'Erro ao enviar cadastro. Tente novamente.');
     } finally {
       setEnviando(false);
+    }
+  }
+
+  // ── Recadastro: atualiza tudo de uma vez e gera carteirinha nova ───────
+  function validarRecadastro() {
+    const e = {};
+    if (!formRecadastro.nome_completo.trim()) e.nome_completo = 'Nome obrigatório';
+    if (!formRecadastro.data_nascimento) e.data_nascimento = 'Data de nascimento obrigatória';
+    if (formRecadastro.whatsapp.replace(/\D/g, '').length < 10) e.whatsapp = 'WhatsApp obrigatório';
+    if (!formRecadastro.cidade.trim()) e.cidade = 'Cidade obrigatória';
+    if (!formRecadastro.estado) e.estado = 'Estado obrigatório';
+    return e;
+  }
+
+  async function handleRecadastrar() {
+    const e = validarRecadastro();
+    if (Object.keys(e).length) { setErrors(e); toast.error('Preencha os campos obrigatórios'); return; }
+
+    setEnviandoRecadastro(true);
+    setErroRecadastro(null);
+    try {
+      const fd = new FormData();
+      fd.append('cpf', cpfInicial.replace(/\D/g, ''));
+      fd.append('data_nascimento_atual', dataRecadastroISO);
+      fd.append('nome_completo', formRecadastro.nome_completo.trim());
+      fd.append('data_nascimento', formRecadastro.data_nascimento);
+      fd.append('whatsapp', formRecadastro.whatsapp.replace(/\D/g, ''));
+      if (formRecadastro.email.trim()) fd.append('email', formRecadastro.email.trim());
+      fd.append('cidade', formRecadastro.cidade.trim());
+      fd.append('estado', formRecadastro.estado);
+      fd.append('dependentes', JSON.stringify(dependentesRecadastro.filter(d => d.nome.trim())));
+      if (fotoRecadastro) fd.append('foto', fotoRecadastro.blob, 'foto.jpg');
+
+      const res = await api.post('/public/cadastro/recadastrar', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setResultado({ ...res.data, tipo: 'cadastro' });
+      setStep('final');
+    } catch (err) {
+      setErroRecadastro(err.response?.data?.error || 'Erro ao atualizar cadastro. Tente novamente.');
+    } finally {
+      setEnviandoRecadastro(false);
     }
   }
 
@@ -373,7 +447,7 @@ export default function CadastroPublico() {
     );
   }
 
-  if (step === 'login_data') {
+  if (step === 'login_data' && acaoExistente === null) {
     return (
       <PageShell>
         <div className="w-full max-w-[420px]">
@@ -385,7 +459,65 @@ export default function CadastroPublico() {
             <div className="text-center">
               <CheckCircle2 className="w-10 h-10 mx-auto mb-2" style={{ color: LIME }} />
               <h1 className="text-slate-900 font-bold text-lg">Olá, {nomeCurtoExistente || 'associado'}!</h1>
-              <p className="text-slate-500 text-sm mt-1">Encontramos seu cadastro. Pra continuar, confirme sua data de nascimento:</p>
+              <p className="text-slate-500 text-sm mt-1">Encontramos seu cadastro. O que você quer fazer?</p>
+            </div>
+
+            {carteirinhaHashExistente && (
+              <a
+                href={publicCarteirinhaUrl(carteirinhaHashExistente)} target="_blank" rel="noreferrer"
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                <ExternalLink className="w-5 h-5 flex-shrink-0" style={{ color: NAVY }} />
+                <span className="text-left">
+                  <span className="block font-semibold text-sm text-slate-800">Ver minha carteirinha atual</span>
+                  <span className="block text-xs text-slate-400">Abre direto, sem precisar confirmar nada</span>
+                </span>
+              </a>
+            )}
+            <button
+              onClick={() => { setAcaoExistente('login'); setErroLogin(null); }}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-left"
+            >
+              <LogIn className="w-5 h-5 flex-shrink-0" style={{ color: NAVY }} />
+              <span>
+                <span className="block font-semibold text-sm text-slate-800">Fazer login pra editar</span>
+                <span className="block text-xs text-slate-400">Painel completo: dados, dependentes, carteirinhas</span>
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setAcaoExistente('recadastro');
+                setErroRecadastro(null);
+                setDataRecadastroISO(null);
+                setFormRecadastro({ ...FORM_VAZIO, nome_completo: nomeCurtoExistente ? '' : '' });
+              }}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-left"
+            >
+              <Pencil className="w-5 h-5 flex-shrink-0" style={{ color: NAVY }} />
+              <span>
+                <span className="block font-semibold text-sm text-slate-800">Atualizar dados e gerar nova carteirinha</span>
+                <span className="block text-xs text-slate-400">Reescreve tudo de novo e troca o link da carteirinha</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (step === 'login_data' && acaoExistente === 'login') {
+    return (
+      <PageShell>
+        <div className="w-full max-w-[420px]">
+          <div className="text-center mb-6">
+            <p className="text-white font-black text-2xl tracking-wide">SECI</p>
+          </div>
+          <div className="bg-white rounded-[2rem] p-7 shadow-2xl space-y-4">
+            <BotaoVoltar onClick={() => setAcaoExistente(null)} />
+            <div className="text-center">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-2" style={{ color: LIME }} />
+              <h1 className="text-slate-900 font-bold text-lg">Olá, {nomeCurtoExistente || 'associado'}!</h1>
+              <p className="text-slate-500 text-sm mt-1">Pra continuar, confirme sua data de nascimento:</p>
             </div>
             <InputDataBR valueISO={dataLoginISO} onChangeISO={setDataLoginISO} autoFocus />
             {erroLogin && <p className="text-red-500 text-xs text-center">{erroLogin}</p>}
@@ -396,6 +528,106 @@ export default function CadastroPublico() {
             >
               {fazendoLogin ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} Confirmar
             </button>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (step === 'login_data' && acaoExistente === 'recadastro') {
+    return (
+      <PageShell>
+        <div className="w-full max-w-[440px]">
+          <div className="text-center mb-6">
+            <p className="text-white font-black text-2xl tracking-wide">SECI</p>
+            <p className="text-white/60 text-sm mt-1">Atualizar cadastro</p>
+          </div>
+          <div className="bg-white rounded-[2rem] p-6 sm:p-7 shadow-2xl space-y-4">
+            <BotaoVoltar onClick={() => setAcaoExistente(null)} />
+
+            {!dataRecadastroISO ? (
+              <>
+                <div className="text-center">
+                  <h1 className="text-slate-900 font-bold text-lg">Confirme sua data de nascimento atual</h1>
+                  <p className="text-slate-500 text-sm mt-1">É assim que confirmamos que é você antes de gerar uma carteirinha nova.</p>
+                </div>
+                <InputDataBRConfirmacao onConfirmar={setDataRecadastroISO} />
+              </>
+            ) : (
+              <>
+                <Titulo numero={1} texto="Seus dados atualizados" />
+                <Campo label="Nome completo *" erro={errors.nome_completo}>
+                  <input type="text" className="input" value={formRecadastro.nome_completo} onChange={e => setCampoRecadastro('nome_completo', e.target.value)} />
+                </Campo>
+                <Campo label="Data de nascimento *" erro={errors.data_nascimento}>
+                  <InputDataBR valueISO={formRecadastro.data_nascimento} onChangeISO={iso => setCampoRecadastro('data_nascimento', iso || '')} idadeMinima={14} idadeMaxima={100} />
+                </Campo>
+                <Campo label="WhatsApp *" erro={errors.whatsapp}>
+                  <input type="text" inputMode="numeric" className="input" value={formRecadastro.whatsapp} onChange={e => setCampoRecadastro('whatsapp', maskPhone(e.target.value))} />
+                </Campo>
+                <Campo label="E-mail (opcional)">
+                  <input type="email" className="input" value={formRecadastro.email} onChange={e => setCampoRecadastro('email', e.target.value)} />
+                </Campo>
+                <div className="grid grid-cols-2 gap-3">
+                  <Campo label="Cidade *" erro={errors.cidade}>
+                    <input type="text" className="input" value={formRecadastro.cidade} onChange={e => setCampoRecadastro('cidade', e.target.value)} />
+                  </Campo>
+                  <Campo label="Estado *" erro={errors.estado}>
+                    <select className="input" value={formRecadastro.estado} onChange={e => setCampoRecadastro('estado', e.target.value)}>
+                      <option value="">UF</option>
+                      {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                    </select>
+                  </Campo>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Dependentes (opcional — deixe em branco pra manter os atuais sem mudança)</p>
+                  {dependentesRecadastro.map((dep, idx) => (
+                    <div key={dep._key} className="border border-slate-200 rounded-xl p-3 space-y-2 relative mb-2">
+                      <button onClick={() => removeDependenteRecadastro(idx)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <Campo label="Nome">
+                        <input type="text" className="input" value={dep.nome} onChange={e => updateDependenteRecadastro(idx, 'nome', e.target.value)} />
+                      </Campo>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Campo label="Grau">
+                          <select className="input" value={dep.grau} onChange={e => updateDependenteRecadastro(idx, 'grau', e.target.value)}>
+                            <option value="">Selecione</option>
+                            {GRAUS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          </select>
+                        </Campo>
+                        <Campo label="Nascimento">
+                          <InputDataBR valueISO={dep.data_nascimento} onChangeISO={iso => updateDependenteRecadastro(idx, 'data_nascimento', iso || '')} />
+                        </Campo>
+                      </div>
+                    </div>
+                  ))}
+                  {dependentesRecadastro.length < 6 && (
+                    <button onClick={addDependenteRecadastro} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm hover:border-movv-900/40 transition-colors">
+                      <Plus className="w-4 h-4" /> Adicionar dependente
+                    </button>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Foto (opcional — deixe em branco pra manter a foto atual)</p>
+                  <CapturaFoto onCapturar={setFotoRecadastro} fotoAtual={fotoRecadastro} />
+                </div>
+
+                {erroRecadastro && <p className="text-red-500 text-xs text-center">{erroRecadastro}</p>}
+
+                <button
+                  onClick={handleRecadastrar}
+                  disabled={enviandoRecadastro}
+                  className="w-full py-4 rounded-xl font-black text-sm uppercase tracking-wide disabled:opacity-50 transition-transform hover:scale-[1.01] flex items-center justify-center gap-2"
+                  style={{ backgroundColor: LIME, color: NAVY }}
+                >
+                  {enviandoRecadastro ? <Loader2 className="w-5 h-5 animate-spin" /> : <PartyPopper className="w-5 h-5" />}
+                  Salvar e gerar nova carteirinha
+                </button>
+              </>
+            )}
           </div>
         </div>
       </PageShell>
@@ -767,5 +999,24 @@ function BotaoVoltar({ onClick }) {
     <button onClick={onClick} className="flex items-center gap-1.5 text-slate-400 hover:text-slate-600 text-xs font-medium transition-colors">
       <ArrowLeft className="w-3.5 h-3.5" /> Voltar
     </button>
+  );
+}
+
+// Campo de data com botão "Confirmar" próprio — usado só no recadastro,
+// onde a data de nascimento é o 2º fator de autenticação (precisa de um
+// clique explícito antes de revelar o resto do form, não só digitar).
+function InputDataBRConfirmacao({ onConfirmar }) {
+  const [iso, setIso] = useState(null);
+  return (
+    <div className="space-y-3">
+      <InputDataBR valueISO={iso} onChangeISO={setIso} autoFocus />
+      <button
+        onClick={() => iso && onConfirmar(iso)}
+        disabled={!iso}
+        className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+      >
+        <ArrowRight className="w-4 h-4" /> Confirmar
+      </button>
+    </div>
   );
 }

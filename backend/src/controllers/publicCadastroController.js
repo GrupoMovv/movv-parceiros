@@ -5,6 +5,7 @@ const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaCon
 const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const fotoAssociadoService = require('../services/fotoAssociadoService');
+const emailService = require('../services/emailService');
 
 const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
 const BLOQUEIO_MS = 30 * 60 * 1000;
@@ -75,7 +76,10 @@ async function verificarCpf(req, res) {
     if (!result.rows[0]) return res.json({ existe: false, nome_curto: null });
 
     const a = result.rows[0];
-    return res.json({ existe: true, tem_carteirinha: !!a.carteirinha_hash, nome: a.nome_completo, nome_curto: primeiroNome(a.nome_completo) });
+    return res.json({
+      existe: true, tem_carteirinha: !!a.carteirinha_hash, carteirinha_hash: a.carteirinha_hash || null,
+      nome: a.nome_completo, nome_curto: primeiroNome(a.nome_completo),
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao verificar CPF' });
@@ -363,8 +367,91 @@ async function finalizarCadastro(req, res) {
   }
 }
 
+// "Atualizar dados e gerar nova carteirinha" — opção pra quem já tem
+// cadastro mas perdeu o link antigo (ou só quer reescrever tudo de uma
+// vez) em vez de editar campo a campo no Meu Painel. Autenticação por
+// CPF + data de nascimento (mesmo segundo fator do login público) — sem
+// isso, bastaria saber o CPF de alguém pra invalidar a carteirinha da
+// pessoa gerando uma nova por conta própria.
+async function recadastrar(req, res) {
+  try {
+    const {
+      cpf, data_nascimento_atual, nome_completo, data_nascimento,
+      whatsapp, email, cidade, estado, dependentes,
+    } = req.body;
+
+    const cpfDigits = onlyDigits(cpf);
+    if (!isValidCPF(cpfDigits)) return res.status(400).json({ error: 'CPF inválido' });
+    if (!data_nascimento_atual) return res.status(400).json({ error: 'Confirme a data de nascimento do cadastro atual' });
+    if (!nome_completo || !whatsapp || !cidade || !estado) {
+      return res.status(400).json({ error: 'Preencha todos os campos obrigatórios' });
+    }
+
+    const existente = await db.query('SELECT * FROM sindicato_associados WHERE cpf = $1', [cpfDigits]);
+    if (!existente.rows[0]) return res.status(404).json({ error: 'CPF não encontrado' });
+    let associado = existente.rows[0];
+
+    const dataBanco = associado.data_nascimento ? new Date(associado.data_nascimento).toISOString().slice(0, 10) : null;
+    if (dataBanco !== data_nascimento_atual) {
+      return res.status(401).json({ error: 'Data de nascimento não confere com o cadastro atual' });
+    }
+
+    let dependentesArr = null;
+    if (dependentes) {
+      try { dependentesArr = JSON.parse(dependentes); } catch { dependentesArr = null; }
+    }
+    if (Array.isArray(dependentesArr)) await substituirDependentes(associado.id, dependentesArr);
+
+    let fotoUrl = associado.foto_url;
+    let fotoPublicId = associado.foto_public_id;
+    if (req.file) {
+      const up = await fotoAssociadoService.uploadFotoAssociado(req.file.buffer, associado.id);
+      fotoUrl = up.url;
+      fotoPublicId = up.publicId;
+      if (associado.foto_public_id) await fotoAssociadoService.deletarFotoAntiga(associado.foto_public_id);
+    }
+
+    const hash = await gerarHashUnico('sindicato_associados');
+    const validaAte = calcularValidoAte();
+    const upd = await db.query(
+      `UPDATE sindicato_associados
+       SET nome_completo = $1, data_nascimento = $2, whatsapp = $3, email = $4, cidade = $5, estado = $6,
+           foto_url = $7, foto_public_id = $8, carteirinha_hash = $9, carteirinha_gerada_em = NOW(),
+           carteirinha_valida_ate = $10, updated_at = NOW()
+       WHERE id = $11 RETURNING *`,
+      [
+        nome_completo.trim(), data_nascimento || associado.data_nascimento, onlyDigits(whatsapp),
+        email?.trim() || null, cidade.trim(), estado.trim().toUpperCase(),
+        fotoUrl, fotoPublicId, hash, validaAte, associado.id,
+      ]
+    );
+    associado = upd.rows[0];
+
+    await gerarCarteirinhaDependentes(associado.id);
+
+    if (associado.email) {
+      emailService.enviarCarteirinhaAtivada({
+        nome: associado.nome_completo, email: associado.email, carteirinhaHash: associado.carteirinha_hash,
+      }).catch(err => console.error('[recadastro] falha ao enviar email:', err.message));
+    }
+
+    return res.json({
+      nome_completo: associado.nome_completo,
+      whatsapp: associado.whatsapp,
+      foto_url: associado.foto_url,
+      carteirinha_hash: associado.carteirinha_hash,
+      carteirinha_valida_ate: associado.carteirinha_valida_ate,
+      token: gerarTokenPainel(associado.id),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao atualizar cadastro' });
+  }
+}
+
 module.exports = {
   validarCnpj, solicitarEmpresa, verificarCpf, login, loginPorHash, reenviarCarteirinha, finalizarCadastro,
+  recadastrar,
   // exportados pro publicMeuCadastroController reaproveitar (gera
   // carteirinha de dependente novo adicionado na tela de edição).
   gerarCarteirinhaDependentes,

@@ -29,6 +29,7 @@ router.post('/login',                loginRateLimit, ctrl.login);
 router.post('/login-hash',           loginRateLimit, ctrl.loginPorHash);
 router.post('/reenviar-carteirinha', ctrl.reenviarCarteirinha);
 router.post('/finalizar', upload.single('foto'), ctrl.finalizarCadastro);
+router.post('/recadastrar', loginRateLimit, upload.single('foto'), ctrl.recadastrar);
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {
