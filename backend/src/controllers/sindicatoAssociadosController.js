@@ -8,7 +8,7 @@ const CAMPOS_UPDATE = [
   'dependentes_gerar_carteirinha',
 ];
 
-const GRAUS_VALIDOS = ['conjuge', 'filho', 'filha'];
+const GRAUS_VALIDOS = ['conjuge', 'filho', 'filha', 'pai', 'mae', 'irmao', 'irma', 'enteado', 'enteada', 'outro'];
 
 // Aceita tanto string simples (nome) quanto objeto { nome, grau, data_nascimento }
 // pra manter compatibilidade com o formato antigo (Portal de Associados, fase A).
@@ -294,4 +294,5 @@ module.exports = {
   // exposto pro autocadastro público (publicCadastroController) reaproveitar
   // a mesma lógica de upsert-por-ordem dos dependentes.
   substituirDependentes,
+  GRAUS_VALIDOS,
 };

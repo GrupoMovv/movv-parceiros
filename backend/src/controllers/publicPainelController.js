@@ -1,10 +1,13 @@
 const db = require('../config/database');
-const { substituirDependentes } = require('./sindicatoAssociadosController');
+const { substituirDependentes, GRAUS_VALIDOS } = require('./sindicatoAssociadosController');
 const { gerarCarteirinhaDependentes } = require('./publicCadastroController');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
 const { montarViewAssociado } = require('../services/associadoPublicoView');
 const emailService = require('../services/emailService');
 const fotoAssociadoService = require('../services/fotoAssociadoService');
+const { onlyDigits, isValidCPF } = require('../utils/validators');
+
+const MAX_DEPENDENTES_ATIVOS = 5;
 
 // Dispara "novo dependente" só pra quem realmente ganhou carteirinha nessa
 // chamada (gerarCarteirinhaDependentes já filtra isso) — no ar-e-fogo, não
@@ -165,13 +168,162 @@ async function updateDependentes(req, res) {
   }
 }
 
+// Acha a menor ordem (1-6) sem dependente ATIVO — se uma linha inativa
+// (removida) já ocupa esse slot, reaproveita (upsert) em vez de inserir,
+// respeitando a constraint UNIQUE(associado_id, ordem). Zera os campos de
+// carteirinha/foto da linha reaproveitada: senão o dependente novo herdaria
+// o hash/foto de quem ocupava o slot antes.
+async function inserirOuReativarDependente(associadoId, { nome, cpf, data_nascimento, grau }) {
+  const ocupadas = await db.query(
+    'SELECT ordem FROM sindicato_associados_dependentes WHERE associado_id = $1 AND ativo = true',
+    [associadoId]
+  );
+  const usadas = new Set(ocupadas.rows.map(r => r.ordem));
+  let ordemLivre = null;
+  for (let o = 1; o <= 6; o++) { if (!usadas.has(o)) { ordemLivre = o; break; } }
+  if (!ordemLivre) throw Object.assign(new Error('Sem espaço disponível'), { status: 400 });
+
+  const existente = await db.query(
+    'SELECT id, foto_public_id FROM sindicato_associados_dependentes WHERE associado_id = $1 AND ordem = $2',
+    [associadoId, ordemLivre]
+  );
+
+  if (existente.rows[0]) {
+    if (existente.rows[0].foto_public_id) await fotoAssociadoService.deletarFotoAntiga(existente.rows[0].foto_public_id);
+    const upd = await db.query(
+      `UPDATE sindicato_associados_dependentes
+       SET nome = $1, cpf = $2, data_nascimento = $3, grau = $4, ativo = true, removido_em = NULL,
+           carteirinha_hash = NULL, carteirinha_gerada_em = NULL, carteirinha_valida_ate = NULL,
+           foto_url = NULL, foto_public_id = NULL
+       WHERE id = $5 RETURNING id`,
+      [nome, cpf, data_nascimento, grau, existente.rows[0].id]
+    );
+    return upd.rows[0].id;
+  }
+
+  const ins = await db.query(
+    `INSERT INTO sindicato_associados_dependentes (associado_id, nome, ordem, cpf, data_nascimento, grau)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [associadoId, nome, ordemLivre, cpf, data_nascimento, grau]
+  );
+  return ins.rows[0].id;
+}
+
+async function verificarCpfDuplicado(cpfDigits, excluirDependenteId) {
+  const params = excluirDependenteId ? [cpfDigits, excluirDependenteId] : [cpfDigits];
+  const dup = await db.query(
+    `SELECT 1 FROM sindicato_associados_dependentes WHERE cpf = $1 AND ativo = true ${excluirDependenteId ? 'AND id != $2' : ''}
+     UNION SELECT 1 FROM sindicato_associados WHERE cpf = $1`,
+    params
+  );
+  return Boolean(dup.rows[0]);
+}
+
+async function adicionarDependente(req, res) {
+  try {
+    const associado = req.painelAssociado;
+    const { nome, cpf, data_nascimento, grau } = req.body;
+
+    const nomeTrim = String(nome || '').trim();
+    if (!nomeTrim) return res.status(400).json({ error: 'Nome é obrigatório' });
+    if (grau && !GRAUS_VALIDOS.includes(grau)) return res.status(400).json({ error: 'Parentesco inválido' });
+
+    const cpfDigits = cpf ? onlyDigits(cpf) : null;
+    if (cpfDigits && !isValidCPF(cpfDigits)) return res.status(400).json({ error: 'CPF inválido' });
+    if (cpfDigits && await verificarCpfDuplicado(cpfDigits)) {
+      return res.status(409).json({ error: 'Esse CPF já está cadastrado no sistema' });
+    }
+
+    const ativosResult = await db.query(
+      'SELECT COUNT(*)::int c FROM sindicato_associados_dependentes WHERE associado_id = $1 AND ativo = true',
+      [associado.id]
+    );
+    if (ativosResult.rows[0].c >= MAX_DEPENDENTES_ATIVOS) {
+      return res.status(400).json({ error: `Limite de ${MAX_DEPENDENTES_ATIVOS} dependentes atingido` });
+    }
+
+    const depId = await inserirOuReativarDependente(associado.id, {
+      nome: nomeTrim, cpf: cpfDigits, data_nascimento: data_nascimento || null, grau: grau || null,
+    });
+
+    const novos = await gerarCarteirinhaDependentes(associado.id);
+    notificarNovosDependentes(associado, novos);
+
+    const view = await montarViewAssociado(associado);
+    return res.status(201).json(view.dependentes.find(d => d.id === depId) || null);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao adicionar dependente' });
+  }
+}
+
+async function editarDependente(req, res) {
+  try {
+    const associado = req.painelAssociado;
+    const depId = Number(req.params.id);
+    const { nome, cpf, data_nascimento, grau } = req.body;
+
+    const check = await db.query(
+      'SELECT id FROM sindicato_associados_dependentes WHERE id = $1 AND associado_id = $2 AND ativo = true',
+      [depId, associado.id]
+    );
+    if (!check.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
+    if (grau !== undefined && grau && !GRAUS_VALIDOS.includes(grau)) return res.status(400).json({ error: 'Parentesco inválido' });
+
+    const cpfDigits = cpf !== undefined ? (cpf ? onlyDigits(cpf) : null) : undefined;
+    if (cpfDigits && !isValidCPF(cpfDigits)) return res.status(400).json({ error: 'CPF inválido' });
+    if (cpfDigits && await verificarCpfDuplicado(cpfDigits, depId)) {
+      return res.status(409).json({ error: 'Esse CPF já está cadastrado no sistema' });
+    }
+
+    const sets = [];
+    const params = [];
+    if (nome !== undefined) {
+      const nomeTrim = String(nome).trim();
+      if (!nomeTrim) return res.status(400).json({ error: 'Nome não pode ficar vazio' });
+      params.push(nomeTrim); sets.push(`nome = $${params.length}`);
+    }
+    if (cpfDigits !== undefined) { params.push(cpfDigits); sets.push(`cpf = $${params.length}`); }
+    if (data_nascimento !== undefined) { params.push(data_nascimento || null); sets.push(`data_nascimento = $${params.length}`); }
+    if (grau !== undefined) { params.push(grau || null); sets.push(`grau = $${params.length}`); }
+
+    if (sets.length) {
+      params.push(depId);
+      await db.query(`UPDATE sindicato_associados_dependentes SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
+    }
+
+    const view = await montarViewAssociado(associado);
+    return res.json(view.dependentes.find(d => d.id === depId) || null);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao editar dependente' });
+  }
+}
+
+async function removerDependente(req, res) {
+  try {
+    const associado = req.painelAssociado;
+    const result = await db.query(
+      `UPDATE sindicato_associados_dependentes SET ativo = false, removido_em = NOW()
+       WHERE id = $1 AND associado_id = $2 AND ativo = true RETURNING id`,
+      [req.params.id, associado.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao remover dependente' });
+  }
+}
+
 async function uploadFotoDependente(req, res) {
   try {
     const associado = req.painelAssociado;
     if (!req.file) return res.status(400).json({ error: 'Envie uma foto' });
 
     const dep = await db.query(
-      'SELECT id, foto_public_id FROM sindicato_associados_dependentes WHERE id = $1 AND associado_id = $2',
+      'SELECT id, foto_public_id FROM sindicato_associados_dependentes WHERE id = $1 AND associado_id = $2 AND ativo = true',
       [req.params.dependente_id, associado.id]
     );
     if (!dep.rows[0]) return res.status(404).json({ error: 'Dependente não encontrado' });
@@ -192,4 +344,7 @@ async function uploadFotoDependente(req, res) {
   }
 }
 
-module.exports = { getMe, updateMe, reenviarCarteirinha, uploadFoto, updateDependentes, uploadFotoDependente };
+module.exports = {
+  getMe, updateMe, reenviarCarteirinha, uploadFoto, updateDependentes, uploadFotoDependente,
+  adicionarDependente, editarDependente, removerDependente,
+};

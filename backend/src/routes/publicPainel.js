@@ -24,6 +24,9 @@ router.put('/perfil', ctrl.updateMe);
 router.post('/reenviar-carteirinha', ctrl.reenviarCarteirinha);
 router.post('/foto', upload.single('foto'), ctrl.uploadFoto);
 router.post('/dependentes',              ctrl.updateDependentes);
+router.post('/dependentes/adicionar',    ctrl.adicionarDependente);
+router.put('/dependentes/:id',           ctrl.editarDependente);
+router.delete('/dependentes/:id',        ctrl.removerDependente);
 router.post('/dependentes/:dependente_id/foto', upload.single('foto'), ctrl.uploadFotoDependente);
 
 // eslint-disable-next-line no-unused-vars

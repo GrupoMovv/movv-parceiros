@@ -22,8 +22,8 @@ async function montarViewAssociado(associado) {
     : associado.empresa_nome_livre;
 
   const depResult = await db.query(
-    `SELECT id, nome, grau, data_nascimento, foto_url, carteirinha_hash
-     FROM sindicato_associados_dependentes WHERE associado_id = $1 ORDER BY ordem ASC`,
+    `SELECT id, nome, cpf, grau, data_nascimento, foto_url, carteirinha_hash
+     FROM sindicato_associados_dependentes WHERE associado_id = $1 AND ativo = true ORDER BY ordem ASC`,
     [associado.id]
   );
 
