@@ -53,6 +53,7 @@ app.use('/api/sindicato-contribuintes', require('./routes/sindicatoContribuintes
 app.use('/api/sindicato-solicitacoes', require('./routes/sindicatoSolicitacoes'));
 app.use('/api/sindicato-parceiros-solicitacoes', require('./routes/parceiroSolicitacoes'));
 app.use('/api/sindicato-parceiro-interessados', require('./routes/sindicatoParceiroInteressados'));
+app.use('/api/sindicato-planos',              require('./routes/sindicatoPlanos'));
 app.use('/api/sindicato-lista-aprovada', require('./routes/sindicatoListaAprovada'));
 app.use('/api/public/vender',          require('./routes/vender'));
 app.use('/api/public/cadastrar-associado', require('./routes/cadastrarAssociado'));

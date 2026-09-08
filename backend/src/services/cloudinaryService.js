@@ -62,6 +62,11 @@ const PRESETS = {
   // fachada/ambiente do que fundo fixo.
   ESTABELECIMENTO: { width: 1200, height: 800, crop: 'pad', background: 'auto' },
   PRODUTO: { width: 1200, height: 1200, crop: 'pad', background: 'white' },
+  // Banner personalizado do plano Master (topo da página do parceiro) —
+  // 'fill' aqui de propósito: é uma imagem de capa panorâmica que o
+  // próprio parceiro escolhe/enquadra, então cortar as bordas é esperado
+  // (diferente de logo/produto, onde nunca se pode cortar o conteúdo).
+  BANNER_PARCEIRO: { width: 1200, height: 300, crop: 'fill', gravity: 'auto' },
 };
 
 function bufferParaStream(buffer) {

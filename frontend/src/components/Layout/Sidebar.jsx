@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
-  Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck,
+  Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck, Crown,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -99,6 +99,7 @@ const MASTER_MENU = [
       { label: 'Solicitações de Empresas', icon: Inbox, to: '/sindicato/solicitacoes',    roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'solicitacoes' },
       { label: 'Solicitações de Parceiros IUB MAIS', icon: Store, to: '/sindicato/parceiros-solicitacoes', roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'parceirosSolicitacoes' },
       { label: 'Interessados em Planos', icon: Bell, to: '/sindicato/parceiro-interessados', roles: ['sindicato_aprendiz', 'admin'] },
+      { label: 'Planos IUB MAIS', icon: Crown, to: '/sindicato/planos', roles: ['sindicato_aprendiz', 'admin'] },
     ],
   },
   {

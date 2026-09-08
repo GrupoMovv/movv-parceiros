@@ -45,6 +45,7 @@ import SindicatoListaAprovadosImportar from './pages/sindicato/ListaAprovados/Im
 import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolicitacoes';
 import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitacoes/SindicatoParceirosSolicitacoes';
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
+import SindicatoPlanos from './pages/sindicato/Planos/SindicatoPlanos';
 import Carteirinha from './pages/public/Carteirinha';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
 const MarketplaceCategoria = lazy(() => import('./pages/public/Marketplace/MarketplaceCategoria'));
@@ -264,6 +265,7 @@ export default function App() {
           <Route path="sindicato/solicitacoes" element={<RequireSindicatoEmpresas><SindicatoSolicitacoes /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/parceiros-solicitacoes" element={<RequireSindicatoEmpresas><SindicatoParceirosSolicitacoes /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/parceiro-interessados" element={<RequireSindicatoEmpresas><SindicatoParceiroInteressados /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/planos" element={<RequireSindicatoEmpresas><SindicatoPlanos /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
