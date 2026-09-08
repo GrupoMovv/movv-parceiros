@@ -4,6 +4,19 @@ const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 
 const VALOR_PADRAO = 10.70;
 
+// Quando a coluna de CPF/CNPJ na planilha do RH vem formatada como NÚMERO
+// (em vez de texto), o Excel já apaga o zero à esquerda antes do arquivo
+// chegar aqui — "03.044.201/0001-89" vira o número 3044201000189 (13
+// dígitos). sheet_to_json com raw:true devolve esse número puro, então
+// onlyDigits() sozinho nunca recupera o zero perdido: length fica 13/10 em
+// vez de 14/11 e TUDO cai como "inválido", mesmo o CPF/CNPJ estando certo
+// na planilha original. Como CPF/CNPJ têm largura fixa e dígito
+// verificador, é seguro repor o zero à esquerda antes de validar — se o
+// checksum não bater, isValidCPF/isValidCNPJ ainda rejeita normalmente.
+function digitosComZeroAEsquerda(valor, tamanho) {
+  return onlyDigits(valor).padStart(tamanho, '0');
+}
+
 // ─── Empresas (agrupado por razão social — uma empresa como a Reis pode
 // espalhar seus colaboradores por várias filiais/CNPJs diferentes; quem
 // importa a lista digita o nome uma vez só, então é essa string que
@@ -210,8 +223,8 @@ async function importarCommit(req, res) {
 
     for (const [i, linha] of rows.entries()) {
       const nome = String(linha[idxNome] ?? '').trim();
-      const cpf = onlyDigits(linha[idxCpf]);
-      const cnpj = onlyDigits(linha[idxCnpj]);
+      const cpf = digitosComZeroAEsquerda(linha[idxCpf], 11);
+      const cnpj = digitosComZeroAEsquerda(linha[idxCnpj], 14);
       const matricula = idxMatricula != null ? String(linha[idxMatricula] ?? '').trim() || null : null;
       const valorBruto = idxValor != null ? String(linha[idxValor] ?? '').replace(',', '.').trim() : '';
       const valor = valorBruto && !Number.isNaN(parseFloat(valorBruto)) ? parseFloat(valorBruto) : valorDefault;
