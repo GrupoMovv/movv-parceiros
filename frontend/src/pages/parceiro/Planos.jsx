@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle } from '@phosphor-icons/react';
+import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle, ArrowRight, Storefront, TrendUp } from '@phosphor-icons/react';
 import api from '../../services/api';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Marketplace/theme';
+
+// Mesma foto do slide institucional da home do marketplace (comércio local,
+// clima parecido) — mantém a identidade visual consistente entre as duas
+// telas em vez de escolher uma imagem nova.
+const FOTO_FECHA_MES = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=60';
 
 // Metadados de exibição por plano — o PREÇO de verdade (sindicalizada ou
 // não) vem sempre do endpoint GET /public/planos/precos (config/planos.js
@@ -186,35 +191,7 @@ export default function ParceiroPlanos() {
         </div>
       </div>
 
-      <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, #7C2D12 0%, #DC2626 55%, ${DOURADO_ESCURO} 100%)` }}>
-        <div className="flex items-start gap-4 max-w-2xl mx-auto">
-          <Fire size={32} weight="fill" color={DOURADO} className="flex-shrink-0 mt-1" />
-          <div>
-            <h2 className="text-lg font-extrabold">🔥 Seu produto no Fecha Mês!</h2>
-            <p className="text-white/80 text-sm mt-2 leading-relaxed">
-              Todo último sexta do mês, o IUB MAIS realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros associados e picos de vendas de até 5x.
-            </p>
-            <p className="text-white/80 text-sm mt-2 font-semibold">Participar é exclusivo pra planos pagos:</p>
-            <ul className="space-y-1.5 mt-2">
-              {[
-                'Oficial: 4 produtos no Fecha Mês',
-                'Premium: 9 produtos',
-                'Master: 15 produtos + destaque VIP',
-              ].map(b => (
-                <li key={b} className="flex items-start gap-2 text-sm text-white/85">
-                  <Check size={14} weight="bold" className="flex-shrink-0 mt-0.5" style={{ color: DOURADO }} />
-                  {b}
-                </li>
-              ))}
-            </ul>
-            {proximoFechaMes && (
-              <p className="text-xs font-bold mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10">
-                📅 Próximo Fecha Mês: {new Date(`${proximoFechaMes.data_evento}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      <BannerFechaMes proximoFechaMes={proximoFechaMes} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {ORDEM_PLANOS.map(planoKey => (
@@ -324,6 +301,73 @@ function BannerSindicalizacao({ eSindicalizada, razaoSocial }) {
         <p className="font-bold text-sm text-amber-800">⚠️ {razaoSocial ? `${razaoSocial} não está` : 'Sua empresa não está'} contribuindo com o SECI.</p>
         <p className="text-amber-700 text-xs mt-1">Sindicalize-se e economize até R$ 35/mês nos planos pagos do IUB MAIS. Fale com a gente pelo WhatsApp pra saber como.</p>
       </div>
+    </div>
+  );
+}
+
+// Gradient roxo/dourado com foto de fundo desfocada — troca o vermelho
+// "alerta" antigo por algo premium, alinhado com a identidade IUB MAIS.
+function BannerFechaMes({ proximoFechaMes }) {
+  return (
+    <div className="relative rounded-3xl overflow-hidden text-white">
+      <div
+        className="absolute inset-0"
+        style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 55%, ${DOURADO_ESCURO} 130%)` }}
+      />
+      <img
+        src={FOTO_FECHA_MES} alt="" loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover opacity-25 scale-110"
+        style={{ filter: 'blur(2px)' }}
+        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+      />
+      <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO}E6 0%, ${ROXO}CC 60%, ${DOURADO_ESCURO}B3 100%)` }} />
+
+      <Storefront size={110} weight="fill" className="hidden sm:block absolute -bottom-4 -right-4 opacity-[0.08]" />
+      <Sparkle size={28} weight="fill" color={DOURADO} className="absolute top-6 right-10 opacity-70 animate-hero-float-planos" style={{ animationDelay: '0.4s' }} />
+      <TrendUp size={26} weight="fill" color="#fff" className="hidden sm:block absolute bottom-10 right-32 opacity-60 animate-hero-float-planos" style={{ animationDelay: '1s' }} />
+
+      <div className="relative z-10 p-8">
+        <div className="flex items-start gap-4 max-w-2xl mx-auto">
+          <span className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center mt-1" style={{ backgroundColor: `${DOURADO}26` }}>
+            <Fire size={26} weight="fill" color={DOURADO} />
+          </span>
+          <div className="flex-1">
+            <h2 className="text-xl font-black tracking-tight">🔥 Seu produto no Fecha Mês</h2>
+            <p className="text-white/80 text-sm mt-2 leading-relaxed">
+              Toda última sexta do mês, o IUB MAIS realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros associados e picos de vendas de <strong className="text-white">até 5x</strong> em 24h.
+            </p>
+
+            <div className="grid grid-cols-3 gap-3 mt-5 max-w-md">
+              {[['Oficial', 4], ['Premium', 9], ['Master', 15]].map(([nome, n]) => (
+                <div key={nome} className="rounded-xl bg-white/10 border border-white/15 px-3 py-2.5 text-center backdrop-blur-sm">
+                  <p className="text-xl font-black" style={{ color: DOURADO }}>{n}</p>
+                  <p className="text-[11px] text-white/70 mt-0.5">{nome}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 mt-5">
+              {proximoFechaMes && (
+                <span className="text-xs font-bold inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10">
+                  📅 Próximo: {new Date(`${proximoFechaMes.data_evento}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+                </span>
+              )}
+              <Link
+                to="/parceiro/painel/fecha-mes"
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-transform hover:scale-[1.03]"
+                style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+              >
+                Saiba mais <ArrowRight size={14} weight="bold" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes hero-float-planos { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        .animate-hero-float-planos { animation: hero-float-planos 3.5s ease-in-out infinite; }
+      `}</style>
     </div>
   );
 }
@@ -439,7 +483,7 @@ function ModalNotificar({ plano, enviando, onConfirmar, onCancelar }) {
             <Diamond size={14} weight="duotone" /> Bônus Pioneiro
           </p>
           <p className="text-sm mt-1.5" style={{ color: '#7A5E00' }}>
-            Como Pioneiro, você ganha <strong>3 meses grátis</strong> do plano quando lançarmos!
+            Como Pioneiro, você ganha <strong>50% OFF nos 3 primeiros meses</strong>, selo vitalício e mais benefícios exclusivos!
           </p>
         </div>
 

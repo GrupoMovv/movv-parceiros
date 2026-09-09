@@ -1,6 +1,7 @@
 -- Pagina "Planos" (modo Em Breve) do Portal do Parceiro: registra quem
 -- clicou em "Notificar-me" pra cada plano pago, pra campanha de lancamento
--- futura e pro bonus de "Pioneiro" (3 meses gratis do plano).
+-- futura e pro bonus de "Pioneiro" (50% OFF nos 3 primeiros meses + selo
+-- vitalicio, ver Planos.jsx).
 -- Execute: node migrations/run.js
 
 CREATE TABLE IF NOT EXISTS sindicato_parceiro_interessados (
