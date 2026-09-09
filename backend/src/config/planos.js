@@ -24,6 +24,10 @@ const PLANOS = {
     preco_nao_sindicalizada: 0,
     max_produtos: 30,
     max_produtos_rotativa: 0, // não aparece na rotativa
+    // Fecha Mês: Grátis agora participa, mas só com os produtos bônus
+    // (exclusivos daquela edição) — zero vaga de catálogo normal.
+    participa_fecha_mes: true,
+    max_produtos_bonus_fecha_mes: 3,
     tem_selo: false,
     selo_nome: 'Parceiro IUB',
     selo_cor: 'cinza',
@@ -42,6 +46,8 @@ const PLANOS = {
     preco_nao_sindicalizada: 69.90,
     max_produtos: 30,
     max_produtos_rotativa: 4,
+    participa_fecha_mes: true,
+    max_produtos_bonus_fecha_mes: 3,
     tem_selo: true,
     selo_nome: 'Parceiro Oficial',
     selo_cor: 'dourado',
@@ -60,6 +66,8 @@ const PLANOS = {
     preco_nao_sindicalizada: 79.90,
     max_produtos: 30,
     max_produtos_rotativa: 9,
+    participa_fecha_mes: true,
+    max_produtos_bonus_fecha_mes: 3,
     tem_selo: true,
     selo_nome: 'Parceiro Premium',
     selo_cor: 'dourado_estrela',
@@ -80,6 +88,8 @@ const PLANOS = {
     preco_nao_sindicalizada: 127.90,
     max_produtos: null, // ilimitado
     max_produtos_rotativa: 15,
+    participa_fecha_mes: true,
+    max_produtos_bonus_fecha_mes: 3,
     tem_selo: true,
     selo_nome: 'Parceiro VIP Master',
     selo_cor: 'vip_dourado_brilho',

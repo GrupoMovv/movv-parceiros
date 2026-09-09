@@ -5,19 +5,31 @@
 // (America/Sao_Paulo) — o servidor roda em UTC (Render), calcular "hoje"/
 // "sexta" sem isso erraria o dia perto da meia-noite.
 const TIMEZONE = 'America/Sao_Paulo';
+const { beneficios, planoValido } = require('./planos');
 
-// Produtos por plano no Fecha Mês — número igual ao da vitrine rotativa
-// hoje (config/planos.js), mas é um limite conceitualmente independente:
-// fica em constante própria de propósito, pra um não arrastar o outro se
-// mudar no futuro.
-const LIMITE_PRODUTOS_POR_PLANO = { gratis: 0, oficial: 3, premium: 8, master: 15 };
-
-function limiteProdutosFechaMes(plano) {
-  return LIMITE_PRODUTOS_POR_PLANO[plano] ?? 0;
+// Limite de catálogo no Fecha Mês = mesmo número da vitrine rotativa
+// (config/planos.js `max_produtos_rotativa`) — de propósito acoplado
+// agora (antes era uma constante própria e ficou desatualizada). Bônus é
+// um limite À PARTE (produtos exclusivos daquela edição, não do
+// catálogo) — mesmo valor pra todo plano, inclusive Grátis.
+function limiteProdutosCatalogo(plano) {
+  return beneficios(plano).max_produtos_rotativa ?? 0;
 }
 
+function limiteProdutosBonus(plano) {
+  return podeParticipar(plano) ? (beneficios(plano).max_produtos_bonus_fecha_mes ?? 0) : 0;
+}
+
+// Total só pra exibição/compat — os dois limites NÃO são intercambiáveis
+// (não dá pra usar as 3 vagas de bônus como catálogo nem vice-versa).
+function limiteProdutosFechaMes(plano) {
+  return limiteProdutosCatalogo(plano) + limiteProdutosBonus(plano);
+}
+
+// Grátis agora participa (só com bônus, ver config/planos.js) — qualquer
+// plano válido participa de algum jeito.
 function podeParticipar(plano) {
-  return plano !== 'gratis' && plano in LIMITE_PRODUTOS_POR_PLANO;
+  return planoValido(plano) && beneficios(plano).participa_fecha_mes === true;
 }
 
 function pad2(n) {
@@ -96,6 +108,21 @@ function passouDaDeadline(dataEventoISO) {
   return agoraISOBrasil() > deadlineConfirmacaoISO(dataEventoISO);
 }
 
+// Prazo pra editar/remover/adicionar produto na edição (Feature 1): até 3
+// dias ANTES do evento, 23:59:59 — depois disso a seleção trava (logística
+// já em andamento). Substitui deadlineConfirmacaoISO/passouDaDeadline (que
+// só valiam pra "confirmar participação" na véspera) como o prazo único
+// pra qualquer mudança na lista de produtos.
+function prazoEdicaoISO(dataEventoISO) {
+  const d = new Date(`${dataEventoISO}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 3);
+  return `${dataISO({ ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate() })}T23:59:59`;
+}
+
+function passouPrazoEdicao(dataEventoISO) {
+  return agoraISOBrasil() > prazoEdicaoISO(dataEventoISO);
+}
+
 // ISO com offset explícito de Brasília — o front só precisa de
 // `new Date(terminaEm)` pra ter o instante certo, sem se preocupar com fuso.
 function terminaEmISO(dataEventoISO) {
@@ -112,7 +139,8 @@ function diasAte(dataEventoISO, refISO = hojeISOBrasil()) {
 }
 
 module.exports = {
-  LIMITE_PRODUTOS_POR_PLANO,
+  limiteProdutosCatalogo,
+  limiteProdutosBonus,
   limiteProdutosFechaMes,
   podeParticipar,
   hojeISOBrasil,
@@ -122,6 +150,8 @@ module.exports = {
   ehHojeODiaDoEvento,
   deadlineConfirmacaoISO,
   passouDaDeadline,
+  prazoEdicaoISO,
+  passouPrazoEdicao,
   terminaEmISO,
   comecaEmISO,
   diasAte,

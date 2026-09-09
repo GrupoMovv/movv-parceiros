@@ -46,15 +46,26 @@ async function getProdutos(req, res) {
     const { evento, ativoHoje } = await resolverEstado();
     if (!ativoHoje) return res.json({ produtos: [], ativo: false });
 
+    // Bônus (e_produto_bonus) não tem linha em sindicato_parceiro_produtos
+    // — usa direto os campos bonus_* da própria confirmação (LEFT JOIN +
+    // COALESCE). Item de catálogo continua exigindo pr.ativo = true (se o
+    // parceiro desativou o produto depois de confirmar, ele some daqui).
     const result = await db.query(
-      `SELECT fmp.produto_id AS id, fmp.preco_original, fmp.preco_fecha_mes,
+      `SELECT fmp.id AS fecha_mes_produto_id,
+              fmp.produto_id AS id,
+              fmp.produto_id, fmp.e_produto_bonus, fmp.estoque_disponivel,
+              fmp.preco_original, fmp.preco_fecha_mes,
               ROUND(((fmp.preco_original - fmp.preco_fecha_mes) / NULLIF(fmp.preco_original, 0)) * 100) AS desconto_pct,
-              pr.nome, pr.fotos,
+              COALESCE(pr.nome, fmp.bonus_nome) AS nome,
+              CASE WHEN fmp.e_produto_bonus
+                THEN jsonb_build_array(jsonb_build_object('url', fmp.bonus_foto_url))
+                ELSE pr.fotos END AS fotos,
               pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.plano
        FROM sindicato_fecha_mes_produtos fmp
-       JOIN sindicato_parceiro_produtos pr ON pr.id = fmp.produto_id
+       LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = fmp.produto_id
        JOIN sindicato_parceiros pa ON pa.id = fmp.parceiro_id
-       WHERE fmp.fecha_mes_id = $1 AND pr.ativo = true AND pa.status = 'ativo'
+       WHERE fmp.fecha_mes_id = $1 AND fmp.status = 'confirmado'
+         AND (fmp.e_produto_bonus = true OR pr.ativo = true) AND pa.status = 'ativo'
        ORDER BY pa.plano = 'master' DESC, desconto_pct DESC`,
       [evento.id]
     );

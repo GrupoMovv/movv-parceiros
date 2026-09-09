@@ -9,7 +9,7 @@ async function getProximo(req, res) {
 
     const resumo = await db.query(
       `SELECT COUNT(DISTINCT parceiro_id)::int AS parceiros_confirmados, COUNT(*)::int AS produtos_confirmados
-       FROM sindicato_fecha_mes_produtos WHERE fecha_mes_id = $1`,
+       FROM sindicato_fecha_mes_produtos WHERE fecha_mes_id = $1 AND status = 'confirmado'`,
       [evento.id]
     );
 
@@ -89,7 +89,7 @@ async function getHistorico(req, res) {
       const [resumo, cliques] = await Promise.all([
         db.query(
           `SELECT COUNT(DISTINCT parceiro_id)::int AS parceiros, COUNT(*)::int AS produtos
-           FROM sindicato_fecha_mes_produtos WHERE fecha_mes_id = $1`,
+           FROM sindicato_fecha_mes_produtos WHERE fecha_mes_id = $1 AND status = 'confirmado'`,
           [evento.id]
         ),
         db.query(
