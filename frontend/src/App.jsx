@@ -211,6 +211,15 @@ export default function App() {
           <Route path="dados" element={<MeuDados />} />
           <Route path="dependentes" element={<MeuDependentes />} />
           <Route path="carteirinhas" element={<MinhasCarteirinhas />} />
+          {/* Qualquer sub-rota não mapeada aqui (ex.: /meu/login, que
+              nunca existiu mas as pessoas tentam por analogia com
+              /parceiro/login) cai no catch-all global (path="*" lá
+              embaixo) e vai parar no login do Portal Movv — bug real
+              relatado em produção. Isso intercepta ANTES disso: qualquer
+              /meu/* sem match volta pro /meu "puro", que o próprio
+              MeuPainelLayout já sabe resolver certo (painel se logado,
+              /cadastrar se não). */}
+          <Route path="*" element={<Navigate to="/meu" replace />} />
         </Route>
 
         {/* Portal do Parceiro IUB MAIS */}
