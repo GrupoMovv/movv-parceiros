@@ -25,6 +25,23 @@ function fmtData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR');
 }
 
+function fmtBRL(v) {
+  if (v === null || v === undefined) return null;
+  return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// Badge do tipo de preço cobrado na última troca de plano (snapshot — não
+// recalcula sozinho se a empresa mudar de status depois, ver
+// sindicatoPlanosController.alterarPlano).
+function SeloSindicalizacao({ eraSindicalizada }) {
+  if (eraSindicalizada === null || eraSindicalizada === undefined) return null;
+  return (
+    <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${eraSindicalizada ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+      {eraSindicalizada ? 'sind.' : 'não-sind.'}
+    </span>
+  );
+}
+
 const ABAS = [
   { id: 'parceiros', label: 'Parceiros', Icone: Crown },
   { id: 'historico', label: 'Histórico', Icone: History },
@@ -124,6 +141,7 @@ function AbaParceiros() {
             <tr>
               <th className="text-left px-4 py-2.5">Parceiro</th>
               <th className="text-left px-4 py-2.5">Plano</th>
+              <th className="text-left px-4 py-2.5">Preço cobrado</th>
               <th className="text-left px-4 py-2.5">Status</th>
               <th className="text-left px-4 py-2.5">Expira em</th>
               <th className="text-right px-4 py-2.5">Ações</th>
@@ -131,9 +149,9 @@ function AbaParceiros() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-8 text-slate-400">Carregando...</td></tr>
+              <tr><td colSpan={6} className="text-center py-8 text-slate-400">Carregando...</td></tr>
             ) : parceiros.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-8 text-slate-400">Nenhum parceiro encontrado.</td></tr>
+              <tr><td colSpan={6} className="text-center py-8 text-slate-400">Nenhum parceiro encontrado.</td></tr>
             ) : parceiros.map(p => (
               <tr key={p.id}>
                 <td className="px-4 py-2.5">
@@ -141,6 +159,10 @@ function AbaParceiros() {
                   <p className="text-xs text-slate-400">{p.slug}</p>
                 </td>
                 <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PLANO_CLS[p.plano]}`}>{PLANO_LABEL[p.plano]}</span></td>
+                <td className="px-4 py-2.5 text-slate-600">
+                  {fmtBRL(p.plano_preco_cobrado) ?? '—'}
+                  <SeloSindicalizacao eraSindicalizada={p.plano_era_sindicalizada} />
+                </td>
                 <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_CLS[p.plano_status]}`}>{p.plano_status}</span></td>
                 <td className="px-4 py-2.5 text-slate-500">{fmtData(p.plano_expira_em)}</td>
                 <td className="px-4 py-2.5 text-right">
@@ -340,6 +362,7 @@ function AbaHistorico() {
           <tr>
             <th className="text-left px-4 py-2.5">Parceiro</th>
             <th className="text-left px-4 py-2.5">Mudança</th>
+            <th className="text-left px-4 py-2.5">Preço cobrado</th>
             <th className="text-left px-4 py-2.5">Motivo</th>
             <th className="text-left px-4 py-2.5">Quem</th>
             <th className="text-left px-4 py-2.5">Quando</th>
@@ -353,6 +376,10 @@ function AbaHistorico() {
                 <span className={`px-1.5 py-0.5 rounded text-xs ${PLANO_CLS[h.plano_anterior] || 'bg-slate-100'}`}>{PLANO_LABEL[h.plano_anterior] || h.plano_anterior}</span>
                 {' → '}
                 <span className={`px-1.5 py-0.5 rounded text-xs ${PLANO_CLS[h.plano_novo] || 'bg-slate-100'}`}>{PLANO_LABEL[h.plano_novo] || h.plano_novo}</span>
+              </td>
+              <td className="px-4 py-2.5 text-slate-600">
+                {fmtBRL(h.preco_cobrado) ?? '—'}
+                <SeloSindicalizacao eraSindicalizada={h.era_sindicalizada} />
               </td>
               <td className="px-4 py-2.5 text-slate-500">{MOTIVO_LABEL[h.motivo] || h.motivo}</td>
               <td className="px-4 py-2.5 text-slate-500">{h.alterado_por}</td>
@@ -538,13 +565,15 @@ function AbaConfig() {
 
   if (!planos) return <p className="text-slate-400 text-sm py-8 text-center">Carregando...</p>;
 
-  const campos = ['preco', 'max_produtos', 'max_produtos_rotativa', 'boost_busca', 'selo_nome', 'analytics_avancado', 'aparece_destaques_parceiros', 'push_notification', 'instagram_integrado', 'banner_personalizado', 'materiais_educativos', 'grupo_vip'];
+  const campos = ['preco_sindicalizada', 'preco_nao_sindicalizada', 'max_produtos', 'max_produtos_rotativa', 'boost_busca', 'selo_nome', 'analytics_avancado', 'aparece_destaques_parceiros', 'push_notification', 'instagram_integrado', 'banner_personalizado', 'materiais_educativos', 'grupo_vip'];
   const CAMPO_LABEL = {
-    preco: 'Preço/mês', max_produtos: 'Máx. produtos', max_produtos_rotativa: 'Produtos na vitrine rotativa', boost_busca: 'Boost na busca',
+    preco_sindicalizada: 'Preço/mês (sindicalizada)', preco_nao_sindicalizada: 'Preço/mês (não-sindicalizada)',
+    max_produtos: 'Máx. produtos', max_produtos_rotativa: 'Produtos na vitrine rotativa', boost_busca: 'Boost na busca',
     selo_nome: 'Nome do selo', analytics_avancado: 'Analytics avançado', aparece_destaques_parceiros: 'Aparece em Destaques',
     push_notification: 'Push notification', instagram_integrado: 'Instagram integrado', banner_personalizado: 'Banner personalizado',
     materiais_educativos: 'Materiais exclusivos', grupo_vip: 'Grupo VIP / Lives',
   };
+  const CAMPOS_PRECO = ['preco_sindicalizada', 'preco_nao_sindicalizada'];
 
   return (
     <div className="space-y-4">
@@ -567,7 +596,9 @@ function AbaConfig() {
                   <td key={p} className="px-4 py-2.5 text-slate-700">
                     {typeof planos[p][campo] === 'boolean'
                       ? (planos[p][campo] ? '✅' : <X className="w-3.5 h-3.5 text-slate-300" />)
-                      : (planos[p][campo] ?? (campo === 'max_produtos' ? '∞' : '—'))}
+                      : CAMPOS_PRECO.includes(campo) && typeof planos[p][campo] === 'number'
+                        ? planos[p][campo].toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        : (planos[p][campo] ?? (campo === 'max_produtos' ? '∞' : '—'))}
                   </td>
                 ))}
               </tr>
