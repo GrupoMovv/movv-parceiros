@@ -16,7 +16,20 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const url = err.config?.url || '';
+    // Rotas /public/* nunca usam movv_token pra autorizar (associado usa
+    // apiPainel/seci_painel_token, parceiro IUB MAIS usa
+    // apiParceiro/iub_mais_parceiro_token — ver comentários nesses
+    // arquivos) — um 401 vindo de lá é SEMPRE erro de negócio (CPF/data
+    // de nascimento errada, CNPJ indisponível etc.), nunca "sessão do
+    // Portal Movv expirou". Sem esse filtro, qualquer 401 de negócio no
+    // cadastro público de associado (ex.: data de nascimento não confere)
+    // deslogava o Portal Movv e chutava a pessoa pra /login (a tela de
+    // email+senha do Portal) no meio do fluxo público — bug relatado em
+    // produção, reproduzido em /cadastrar no celular.
+    const rotaPublica = url.startsWith('/public/') || url.startsWith('public/');
+    if (err.response?.status === 401 && !rotaPublica) {
+      console.warn(`[api] 401 em "${url}" — sessão do Portal Movv expirada, redirecionando pra /login.`);
       localStorage.removeItem('movv_token');
       delete api.defaults.headers.common['Authorization'];
       window.location.href = '/login';
