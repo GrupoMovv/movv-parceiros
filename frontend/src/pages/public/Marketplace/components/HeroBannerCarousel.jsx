@@ -7,6 +7,7 @@ import SlideProdutosDestaque from './heroSlides/SlideProdutosDestaque';
 import SlideComerciantes from './heroSlides/SlideComerciantes';
 import SlideAssociados from './heroSlides/SlideAssociados';
 import SlideColaboradores from './heroSlides/SlideColaboradores';
+import SlideFechaMes from './heroSlides/SlideFechaMes';
 import { DOURADO } from '../theme';
 
 const INTERVALO_MS = 6500;
@@ -25,7 +26,7 @@ const INTERVALO_MS = 6500;
 // `associado` vem por prop (não chama useAssociadoSessao aqui) pra não
 // disparar o fluxo de login por ?associado=hash em duplicidade com quem
 // já usa o hook (Marketplace.jsx).
-export default function HeroBannerCarousel({ associado }) {
+export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
   const [indice, setIndice] = useState(0);
   const [pausado, setPausado] = useState(false);
   const [modalLoginAberto, setModalLoginAberto] = useState(false);
@@ -40,13 +41,29 @@ export default function HeroBannerCarousel({ associado }) {
     api.get('/public/marketplace/stats').then(res => setTotalParceiros(res.data.parceiros)).catch(() => {});
   }, []);
 
-  const slides = useMemo(() => [
-    { id: 'institucional', Componente: SlideInstitucional, props: {} },
-    produtosDestaque.length > 0 && { id: 'produtos', Componente: SlideProdutosDestaque, props: { produtos: produtosDestaque } },
-    { id: 'comerciantes', Componente: SlideComerciantes, props: { totalParceiros } },
-    !associado && { id: 'associados', Componente: SlideAssociados, props: { onAbrirLogin: () => setModalLoginAberto(true) } },
-    empresasParceiras.length > 0 && { id: 'colaboradores', Componente: SlideColaboradores, props: { empresas: empresasParceiras } },
-  ].filter(Boolean), [produtosDestaque, empresasParceiras, totalParceiros, associado]);
+  // Fecha Mês entra no carrossel só faltando <= 15 dias (nunca no dia em
+  // si — aí quem assume é o banner full-width do topo, ver
+  // FechaMesBanner/Marketplace.jsx). Nos últimos 3 dias vira o slide
+  // principal (posição 1); antes disso fica na posição 2, logo depois do
+  // institucional.
+  const diasRestantes = fechaMesInfo?.dias_restantes;
+  const mostrarFechaMes = fechaMesInfo?.habilitado_globalmente && !fechaMesInfo?.ativo_hoje
+    && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 15;
+  const fechaMesEhPrincipal = mostrarFechaMes && diasRestantes <= 3;
+  const slideFechaMes = mostrarFechaMes && { id: 'fecha-mes', Componente: SlideFechaMes, props: { info: fechaMesInfo } };
+
+  const slides = useMemo(() => {
+    const base = [
+      { id: 'institucional', Componente: SlideInstitucional, props: {} },
+      !fechaMesEhPrincipal && slideFechaMes,
+      produtosDestaque.length > 0 && { id: 'produtos', Componente: SlideProdutosDestaque, props: { produtos: produtosDestaque } },
+      { id: 'comerciantes', Componente: SlideComerciantes, props: { totalParceiros } },
+      !associado && { id: 'associados', Componente: SlideAssociados, props: { onAbrirLogin: () => setModalLoginAberto(true) } },
+      empresasParceiras.length > 0 && { id: 'colaboradores', Componente: SlideColaboradores, props: { empresas: empresasParceiras } },
+    ].filter(Boolean);
+    return fechaMesEhPrincipal ? [slideFechaMes, ...base] : base;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [produtosDestaque, empresasParceiras, totalParceiros, associado, fechaMesEhPrincipal, mostrarFechaMes, diasRestantes]);
 
   const total = slides.length;
 

@@ -111,7 +111,7 @@ export default function Marketplace() {
           </div>
         </div>
 
-        <HeroBannerCarousel associado={associado} />
+        <HeroBannerCarousel associado={associado} fechaMesInfo={fechaMesInfo} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
