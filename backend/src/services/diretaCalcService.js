@@ -22,13 +22,14 @@ function round2(n) {
 //
 // custo_certificado continua fixo em R$19,90 e não entra mais na base da
 // comissão — só no lucro final da Movv.
-function calcularComissaoVenda({ tipoVenda, valorVenda, comissaoContabilidadeValor, comissaoPct }) {
+//
+// Mesma fórmula serve pro Token (migration 043) — só troca o "custo" (fixo
+// pro certificado, variável pro token, informado por Fernando em cada
+// venda) e o rótulo. Ver calcularVenda, que aplica isso duas vezes (cert
+// sempre, token quando incluído) com o MESMO percentual de comissão do mês.
+function calcularBaseEComissao(valorVenda, comissaoContabilidadeValor, tipoVenda, comissaoPct) {
   const preco = parseFloat(valorVenda);
   const pct   = parseFloat(comissaoPct);
-
-  if (isNaN(preco) || preco < CUSTO_CERTIFICADO) {
-    throw new Error(`Valor de venda (R$ ${preco}) não pode ser menor que o custo do certificado (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).`);
-  }
 
   let comissaoContab = 0;
   if (tipoVenda === 'contabilidade') {
@@ -41,13 +42,65 @@ function calcularComissaoVenda({ tipoVenda, valorVenda, comissaoContabilidadeVal
     }
   }
 
-  const base           = round2(preco - comissaoContab);
+  const base            = round2(preco - comissaoContab);
   const comissaoVendedor = round2(base * (pct / 100));
-  const lucroMovv        = round2(preco - CUSTO_CERTIFICADO - comissaoContab - comissaoVendedor);
 
-  console.log(`[FERNANDO] Venda ${tipoVenda} — valor: R$ ${preco.toFixed(2)}, comissão contab: R$ ${comissaoContab.toFixed(2)}, base: R$ ${base.toFixed(2)}, comissão (${pct}%): R$ ${comissaoVendedor.toFixed(2)}, lucro Movv: R$ ${lucroMovv.toFixed(2)}`);
+  return { base, comissaoContab, comissaoVendedor };
+}
+
+// Só o certificado (mantido pra quem ainda chama assim — ver updateSale).
+function calcularComissaoVenda({ tipoVenda, valorVenda, comissaoContabilidadeValor, comissaoPct }) {
+  const preco = parseFloat(valorVenda);
+  if (isNaN(preco) || preco < CUSTO_CERTIFICADO) {
+    throw new Error(`Valor de venda (R$ ${preco}) não pode ser menor que o custo do certificado (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).`);
+  }
+
+  const { base, comissaoContab, comissaoVendedor } = calcularBaseEComissao(preco, comissaoContabilidadeValor, tipoVenda, comissaoPct);
+  const lucroMovv = round2(preco - CUSTO_CERTIFICADO - comissaoContab - comissaoVendedor);
+
+  console.log(`[FERNANDO] Venda ${tipoVenda} — valor: R$ ${preco.toFixed(2)}, comissão contab: R$ ${comissaoContab.toFixed(2)}, base: R$ ${base.toFixed(2)}, comissão (${comissaoPct}%): R$ ${comissaoVendedor.toFixed(2)}, lucro Movv: R$ ${lucroMovv.toFixed(2)}`);
 
   return { base, comissaoContab, comissaoVendedor, lucroMovv };
+}
+
+// Venda completa: certificado (sempre) + token (opcional, migration 043).
+// Mesmo % de comissão do mês aplica nos dois produtos, separadamente —
+// cada um com sua própria base (valor - comissão da contabilidade daquele
+// produto, quando for venda via contabilidade) e seu próprio "custo"
+// (fixo R$19,90 pro certificado; o que Fernando pagou pelo token, variável).
+function calcularVenda({
+  tipoVenda, comissaoPct,
+  valorVendaCertificado, comissaoContabCertificado,
+  incluiuToken, valorCompraToken, valorVendaToken, comissaoContabToken,
+}) {
+  const precoCert = parseFloat(valorVendaCertificado);
+  if (isNaN(precoCert) || precoCert < CUSTO_CERTIFICADO) {
+    throw new Error(`Valor de venda do certificado (R$ ${precoCert}) não pode ser menor que o custo (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).`);
+  }
+  const cert = calcularBaseEComissao(precoCert, comissaoContabCertificado, tipoVenda, comissaoPct);
+  const lucroCert = round2(precoCert - CUSTO_CERTIFICADO - cert.comissaoContab - cert.comissaoVendedor);
+
+  let token = { valorVenda: 0, valorCompra: 0, base: 0, comissaoContab: 0, comissaoVendedor: 0, lucro: 0 };
+  if (incluiuToken) {
+    const precoToken  = parseFloat(valorVendaToken);
+    const compraToken = parseFloat(valorCompraToken);
+    if (isNaN(compraToken) || compraToken < 0) throw new Error('Valor de compra do token é obrigatório.');
+    if (isNaN(precoToken) || precoToken <= compraToken) throw new Error('Valor de venda do token deve ser maior que o valor de compra.');
+
+    const t = calcularBaseEComissao(precoToken, comissaoContabToken, tipoVenda, comissaoPct);
+    const lucroToken = round2(precoToken - compraToken - t.comissaoContab - t.comissaoVendedor);
+    token = { valorVenda: precoToken, valorCompra: compraToken, base: t.base, comissaoContab: t.comissaoContab, comissaoVendedor: t.comissaoVendedor, lucro: lucroToken };
+  }
+
+  const totalVenda    = round2(precoCert + token.valorVenda);
+  const totalComissao = round2(cert.comissaoVendedor + token.comissaoVendedor);
+  const totalLucro     = round2(lucroCert + token.lucro);
+
+  return {
+    certificado: { valorVenda: precoCert, base: cert.base, comissaoContab: cert.comissaoContab, comissaoVendedor: cert.comissaoVendedor, lucro: lucroCert },
+    token,
+    totalVenda, totalComissao, totalLucro,
+  };
 }
 
 // Duas travas de segurança de preço: bloqueia abaixo do custo, avisa abaixo de R$30.
@@ -135,16 +188,21 @@ async function getOrCreateGoalDoMes(collaboratorId, referenceMonth, db) {
 }
 
 // Fecha a folha do mês: soma as vendas confirmadas e aplica a regra do salário fixo.
+// Soma as colunas total_* (certificado + token, migration 043) — não
+// lucro/comissao_valor direto, que são só do certificado — pra folha
+// contar o token também. Vendas de antes da migration 043 têm total_*
+// espelhando o valor de certificado (backfill), então soma igual pra
+// venda antiga ou nova sem tratamento especial.
 async function calcularFolhaMensal(collaboratorId, referenceMonth, db) {
   const result = await db.query(
     `SELECT
        COUNT(*)::int                                              AS certificates_count,
        COUNT(*) FILTER (WHERE tipo_venda = 'contabilidade')::int   AS via_accounting_count,
        COUNT(*) FILTER (WHERE tipo_venda = 'direta')::int          AS via_direct_count,
-       COALESCE(SUM(lucro), 0)          AS lucro_total,
-       COALESCE(SUM(comissao_valor), 0) AS comissao_total,
-       COALESCE(SUM(comissao_valor) FILTER (WHERE tipo_venda = 'contabilidade'), 0) AS comissao_via_accounting,
-       COALESCE(SUM(comissao_valor) FILTER (WHERE tipo_venda = 'direta'), 0)        AS comissao_via_direct
+       COALESCE(SUM(total_lucro_movv), 0)          AS lucro_total,
+       COALESCE(SUM(total_comissao_vendedor), 0) AS comissao_total,
+       COALESCE(SUM(total_comissao_vendedor) FILTER (WHERE tipo_venda = 'contabilidade'), 0) AS comissao_via_accounting,
+       COALESCE(SUM(total_comissao_vendedor) FILTER (WHERE tipo_venda = 'direta'), 0)        AS comissao_via_direct
      FROM direta_sales
      WHERE collaborator_id = $1 AND reference_month = $2 AND status = 'confirmada'`,
     [collaboratorId, referenceMonth]
@@ -176,6 +234,7 @@ module.exports = {
   LIMIAR_SEM_SALARIO,
   TIERS_COMISSAO,
   calcularComissaoVenda,
+  calcularVenda,
   validarPreco,
   getOrCreateGoalDoMes,
   calcularFolhaMensal,

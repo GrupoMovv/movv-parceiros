@@ -13,6 +13,24 @@ function quemAlterou(req) {
   return req.user?.name || req.user?.email || 'usuário';
 }
 
+// Colunas do certificado ganham alias com nome claro na API (ver migration
+// 043 — não renomeamos a coluna física de propósito, pra não quebrar o
+// deploy em andamento). Token e totais já nascem com nome final.
+const SALE_COLUMNS = `
+  ds.id, ds.collaborator_id, ds.data_venda, ds.tipo_venda, ds.contabilidade_id,
+  ds.cliente_nome, ds.cliente_cpf_cnpj, ds.cliente_whatsapp,
+  ds.custo AS custo_certificado,
+  ds.preco_venda AS valor_venda_certificado,
+  ds.comissao_contabilidade_valor AS comissao_contab_certificado,
+  ds.comissao_valor AS comissao_vendedor_certificado,
+  ds.lucro AS lucro_movv_certificado,
+  ds.incluiu_token, ds.valor_compra_token, ds.valor_venda_token,
+  ds.comissao_contab_token, ds.comissao_vendedor_token, ds.lucro_movv_token,
+  ds.total_venda, ds.total_comissao_vendedor, ds.total_lucro_movv,
+  ds.comissao_pct, ds.status, ds.observacoes, ds.reference_month,
+  ds.created_at, ds.updated_at
+`;
+
 // Log de auditoria — não deixa uma falha aqui derrubar a operação principal
 // (a venda já foi salva/alterada; perder só o log não pode reverter isso).
 async function registrarHistorico(client, { vendaId, acao, motivo, dadosAntes, dadosDepois, alteradoPor }) {
@@ -52,7 +70,7 @@ async function listSales(req, res) {
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
     const result = await db.query(
-      `SELECT ds.*, p.name AS contabilidade_name, p.code AS contabilidade_code
+      `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code
        FROM direta_sales ds
        LEFT JOIN partners p ON p.id = ds.contabilidade_id
        ${where}
@@ -72,7 +90,7 @@ async function getSale(req, res) {
     const isAdmin = !!req.user?.is_admin;
 
     const result = await db.query(
-      `SELECT ds.*, p.name AS contabilidade_name, p.code AS contabilidade_code
+      `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code
        FROM direta_sales ds
        LEFT JOIN partners p ON p.id = ds.contabilidade_id
        WHERE ds.id = $1`,
@@ -93,13 +111,17 @@ async function getSale(req, res) {
 // ─── Registrar nova venda (Fernando) ────────────────────────────────────────
 // Regra nova (migration 042): contabilidade não trava mais o valor — o
 // valor da venda é sempre digitado por Fernando, e a comissão da
-// contabilidade (só quando tipo_venda='contabilidade') também. Ver
-// diretaCalcService.calcularComissaoVenda pra base do cálculo.
+// contabilidade (só quando tipo_venda='contabilidade') também.
+// Migration 043: Token é um segundo produto opcional na mesma venda, com
+// seu próprio valor de compra/venda/comissão de contabilidade — mesmo %
+// de comissão do mês, aplicado separado. Ver diretaCalcService.calcularVenda.
 async function createSale(req, res) {
   const {
     data_venda, tipo_venda, contabilidade_id,
     cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
-    preco_venda, comissao_contabilidade_valor, observacoes, motivo_preco_reduzido,
+    valor_venda_certificado, comissao_contab_certificado,
+    incluiu_token, valor_compra_token, valor_venda_token, comissao_contab_token,
+    observacoes, motivo_preco_reduzido,
   } = req.body;
 
   if (!tipo_venda || !['contabilidade', 'direta'].includes(tipo_venda)) {
@@ -112,6 +134,7 @@ async function createSale(req, res) {
   const collaboratorId  = req.user.id;
   const dataVenda       = data_venda || new Date().toISOString().slice(0, 10);
   const referenceMonth  = monthFromDate(dataVenda);
+  const incluiToken     = incluiu_token === true || incluiu_token === 'true';
 
   const client = await db.pool.connect();
   try {
@@ -123,9 +146,13 @@ async function createSale(req, res) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'contabilidade_id é obrigatório para venda via contabilidade' });
       }
-      if (comissao_contabilidade_valor === undefined || comissao_contabilidade_valor === null || comissao_contabilidade_valor === '') {
+      if (comissao_contab_certificado === undefined || comissao_contab_certificado === null || comissao_contab_certificado === '') {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Comissão da contabilidade é obrigatória para venda via contabilidade' });
+      }
+      if (incluiToken && (comissao_contab_token === undefined || comissao_contab_token === null || comissao_contab_token === '')) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Comissão da contabilidade sobre o token é obrigatória para venda via contabilidade' });
       }
       const contabRow = await client.query(
         `SELECT 1 FROM contabilidades_precos WHERE partner_id = $1 AND ativo = true`,
@@ -137,13 +164,12 @@ async function createSale(req, res) {
       }
     }
 
-    const { bloqueado, aviso } = diretaCalc.validarPreco(preco_venda);
+    // Aviso de preço reduzido olha só o certificado (mesma trava de sempre).
+    const { bloqueado, aviso } = diretaCalc.validarPreco(valor_venda_certificado);
     if (bloqueado) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: aviso });
     }
-
-    // Preço abaixo de R$ 30 (mas acima do custo): exige justificativa do vendedor.
     if (aviso && !motivo_preco_reduzido?.trim()) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Motivo do preço reduzido é obrigatório para vendas abaixo de R$ 30,00.' });
@@ -157,11 +183,15 @@ async function createSale(req, res) {
 
     let calc;
     try {
-      calc = diretaCalc.calcularComissaoVenda({
+      calc = diretaCalc.calcularVenda({
         tipoVenda: tipo_venda,
-        valorVenda: preco_venda,
-        comissaoContabilidadeValor: tipo_venda === 'contabilidade' ? comissao_contabilidade_valor : null,
         comissaoPct: goal.comissao_pct,
+        valorVendaCertificado: valor_venda_certificado,
+        comissaoContabCertificado: tipo_venda === 'contabilidade' ? comissao_contab_certificado : null,
+        incluiuToken: incluiToken,
+        valorCompraToken: incluiToken ? valor_compra_token : null,
+        valorVendaToken: incluiToken ? valor_venda_token : null,
+        comissaoContabToken: (incluiToken && tipo_venda === 'contabilidade') ? comissao_contab_token : null,
       });
     } catch (calcErr) {
       await client.query('ROLLBACK');
@@ -173,14 +203,22 @@ async function createSale(req, res) {
          (collaborator_id, data_venda, tipo_venda, contabilidade_id,
           cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
           preco_venda, custo, comissao_contabilidade_valor, lucro, comissao_pct, comissao_valor,
+          incluiu_token, valor_compra_token, valor_venda_token, comissao_contab_token,
+          comissao_vendedor_token, lucro_movv_token,
+          total_venda, total_comissao_vendedor, total_lucro_movv,
           status, observacoes, reference_month)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'confirmada',$14,$15)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'confirmada',$23,$24)
        RETURNING *`,
       [
         collaboratorId, dataVenda, tipo_venda, contabilidade_id || null,
         cliente_nome.trim(), cliente_cpf_cnpj || null, cliente_whatsapp || null,
-        preco_venda, diretaCalc.CUSTO_CERTIFICADO, tipo_venda === 'contabilidade' ? calc.comissaoContab : null,
-        calc.lucroMovv, goal.comissao_pct, calc.comissaoVendedor,
+        calc.certificado.valorVenda, diretaCalc.CUSTO_CERTIFICADO,
+        tipo_venda === 'contabilidade' ? calc.certificado.comissaoContab : null,
+        calc.certificado.lucro, goal.comissao_pct, calc.certificado.comissaoVendedor,
+        incluiToken, incluiToken ? calc.token.valorCompra : null, incluiToken ? calc.token.valorVenda : null,
+        incluiToken && tipo_venda === 'contabilidade' ? calc.token.comissaoContab : null,
+        calc.token.comissaoVendedor, calc.token.lucro,
+        calc.totalVenda, calc.totalComissao, calc.totalLucro,
         observacoesFinal, referenceMonth,
       ]
     );
@@ -210,7 +248,9 @@ async function updateSale(req, res) {
   const isAdmin = !!req.user?.is_admin;
   const {
     cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
-    preco_venda, comissao_contabilidade_valor, observacoes, motivo,
+    valor_venda_certificado, comissao_contab_certificado,
+    incluiu_token, valor_compra_token, valor_venda_token, comissao_contab_token,
+    observacoes, motivo,
   } = req.body;
 
   const client = await db.pool.connect();
@@ -233,9 +273,18 @@ async function updateSale(req, res) {
       return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
     }
 
-    const precoFinal = preco_venda !== undefined ? preco_venda : venda.preco_venda;
-    const comissaoContabFinal = venda.tipo_venda === 'contabilidade'
-      ? (comissao_contabilidade_valor !== undefined ? comissao_contabilidade_valor : venda.comissao_contabilidade_valor)
+    const precoCertFinal = valor_venda_certificado !== undefined ? valor_venda_certificado : venda.preco_venda;
+    const comissaoContabCertFinal = venda.tipo_venda === 'contabilidade'
+      ? (comissao_contab_certificado !== undefined ? comissao_contab_certificado : venda.comissao_contabilidade_valor)
+      : null;
+    // incluiu_token não pode ser ligado por edição se a venda nasceu sem
+    // token (evita reabrir um cálculo que nunca existiu) — só ajusta
+    // valores de um token que já foi incluído na criação, ou desliga.
+    const incluiToken = venda.incluiu_token && incluiu_token !== false;
+    const compraTokenFinal = incluiToken ? (valor_compra_token !== undefined ? valor_compra_token : venda.valor_compra_token) : null;
+    const vendaTokenFinal  = incluiToken ? (valor_venda_token !== undefined ? valor_venda_token : venda.valor_venda_token) : null;
+    const comissaoContabTokenFinal = (incluiToken && venda.tipo_venda === 'contabilidade')
+      ? (comissao_contab_token !== undefined ? comissao_contab_token : venda.comissao_contab_token)
       : null;
 
     let calc;
@@ -243,11 +292,15 @@ async function updateSale(req, res) {
       // Preserva o comissao_pct já gravado na venda (o tier do mês em que
       // ela foi feita) — editar valores não deve mudar em qual degrau de
       // comissão a venda foi contabilizada.
-      calc = diretaCalc.calcularComissaoVenda({
+      calc = diretaCalc.calcularVenda({
         tipoVenda: venda.tipo_venda,
-        valorVenda: precoFinal,
-        comissaoContabilidadeValor: comissaoContabFinal,
         comissaoPct: venda.comissao_pct,
+        valorVendaCertificado: precoCertFinal,
+        comissaoContabCertificado: comissaoContabCertFinal,
+        incluiuToken: incluiToken,
+        valorCompraToken: compraTokenFinal,
+        valorVendaToken: vendaTokenFinal,
+        comissaoContabToken: comissaoContabTokenFinal,
       });
     } catch (calcErr) {
       await client.query('ROLLBACK');
@@ -257,16 +310,21 @@ async function updateSale(req, res) {
     const updated = await client.query(
       `UPDATE direta_sales SET
          cliente_nome = $1, cliente_cpf_cnpj = $2, cliente_whatsapp = $3,
-         preco_venda = $4, comissao_contabilidade_valor = $5,
-         lucro = $6, comissao_valor = $7,
-         observacoes = $8, updated_at = NOW()
-       WHERE id = $9
+         preco_venda = $4, comissao_contabilidade_valor = $5, lucro = $6, comissao_valor = $7,
+         incluiu_token = $8, valor_compra_token = $9, valor_venda_token = $10, comissao_contab_token = $11,
+         comissao_vendedor_token = $12, lucro_movv_token = $13,
+         total_venda = $14, total_comissao_vendedor = $15, total_lucro_movv = $16,
+         observacoes = $17, updated_at = NOW()
+       WHERE id = $18
        RETURNING *`,
       [
         cliente_nome !== undefined ? cliente_nome.trim() : venda.cliente_nome,
         cliente_cpf_cnpj !== undefined ? (cliente_cpf_cnpj || null) : venda.cliente_cpf_cnpj,
         cliente_whatsapp !== undefined ? (cliente_whatsapp || null) : venda.cliente_whatsapp,
-        precoFinal, comissaoContabFinal, calc.lucroMovv, calc.comissaoVendedor,
+        precoCertFinal, comissaoContabCertFinal, calc.certificado.lucro, calc.certificado.comissaoVendedor,
+        incluiToken, compraTokenFinal, vendaTokenFinal, comissaoContabTokenFinal,
+        calc.token.comissaoVendedor, calc.token.lucro,
+        calc.totalVenda, calc.totalComissao, calc.totalLucro,
         observacoes !== undefined ? (observacoes || null) : venda.observacoes,
         id,
       ]
