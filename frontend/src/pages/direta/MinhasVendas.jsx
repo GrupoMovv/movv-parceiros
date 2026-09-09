@@ -2,18 +2,23 @@ import { useCallback, useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ModalNovaVenda from '../../components/direta/ModalNovaVenda';
-import { FileText, Plus, Loader2, XCircle } from 'lucide-react';
+import ModalEditarVenda from '../../components/direta/ModalEditarVenda';
+import { FileText, Plus, Loader2, XCircle, Pencil, Trash2 } from 'lucide-react';
 
 const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const currentMonth = new Date().toISOString().slice(0, 7);
+const STATUS_LABEL = { confirmada: 'Confirmada', cancelada: 'Cancelada', excluida: 'Excluída' };
 
 export default function MinhasVendas() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ reference_month: currentMonth, tipo_venda: '', status: '' });
   const [modalVenda, setModalVenda] = useState(false);
+  const [modalEditar, setModalEditar] = useState(null);
   const [modalCancel, setModalCancel] = useState(null);
   const [canceling, setCanceling] = useState(false);
+  const [modalExcluir, setModalExcluir] = useState(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,6 +46,19 @@ export default function MinhasVendas() {
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao cancelar');
     } finally { setCanceling(false); }
+  }
+
+  async function handleExcluir() {
+    if (!modalExcluir) return;
+    setExcluindo(true);
+    try {
+      await api.delete(`/direta/sales/${modalExcluir.id}`);
+      toast.success('Venda excluída.');
+      setModalExcluir(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao excluir');
+    } finally { setExcluindo(false); }
   }
 
   return (
@@ -76,9 +94,10 @@ export default function MinhasVendas() {
           <div>
             <label className="label">Status</label>
             <select className="input" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
-              <option value="">Todos</option>
+              <option value="">Todos (exceto excluídas)</option>
               <option value="confirmada">Confirmada</option>
               <option value="cancelada">Cancelada</option>
+              <option value="excluida">Excluída</option>
             </select>
           </div>
         </div>
@@ -100,7 +119,7 @@ export default function MinhasVendas() {
               ) : sales.length === 0 ? (
                 <tr><td colSpan={9} className="text-center py-10 text-slate-400">Nenhuma venda encontrada</td></tr>
               ) : sales.map(s => (
-                <tr key={s.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${s.status === 'cancelada' ? 'opacity-50' : ''}`}>
+                <tr key={s.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${s.status !== 'confirmada' ? 'opacity-50' : ''}`}>
                   <td className="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">{s.data_venda?.slice(0, 10)}</td>
                   <td className="py-3 px-4 text-slate-900 font-medium">{s.cliente_nome}</td>
                   <td className="py-3 px-4 text-slate-600 text-xs capitalize">{s.tipo_venda}</td>
@@ -110,15 +129,27 @@ export default function MinhasVendas() {
                   <td className="py-3 px-4 font-semibold text-[#0C2D48]">{fmt(s.comissao_valor)}</td>
                   <td className="py-3 px-4">
                     <span className={s.status === 'confirmada' ? 'badge-approved' : 'badge-expired'}>
-                      {s.status === 'confirmada' ? 'Confirmada' : 'Cancelada'}
+                      {STATUS_LABEL[s.status] || s.status}
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {s.status === 'confirmada' && (
-                      <button onClick={() => setModalCancel(s)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Cancelar venda">
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {s.status === 'confirmada' && (
+                        <>
+                          <button onClick={() => setModalEditar(s)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar venda">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => setModalCancel(s)} className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors" title="Cancelar venda">
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      {s.status !== 'excluida' && (
+                        <button onClick={() => setModalExcluir(s)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Excluir venda">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -128,6 +159,34 @@ export default function MinhasVendas() {
       </div>
 
       <ModalNovaVenda open={modalVenda} onClose={() => setModalVenda(false)} onSaved={() => { setModalVenda(false); load(); }} />
+
+      {modalEditar && (
+        <ModalEditarVenda venda={modalEditar} onClose={() => setModalEditar(null)} onSaved={() => { setModalEditar(null); load(); }} />
+      )}
+
+      {modalExcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-5">
+              <h2 className="font-bold text-slate-900 text-lg">Excluir Venda</h2>
+              <p className="text-slate-600 text-sm mt-2">
+                Excluir a venda de <strong>{modalExcluir.cliente_nome}</strong>? Use isso quando a venda foi cadastrada por engano — ela some da lista, mas fica registrada no histórico.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+              <button onClick={() => setModalExcluir(null)} disabled={excluindo} className="btn-secondary">Voltar</button>
+              <button
+                onClick={handleExcluir}
+                disabled={excluindo}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {excluindo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Sim, excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

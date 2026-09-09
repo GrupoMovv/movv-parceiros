@@ -11,13 +11,15 @@ const PRECO_AVISO_MINIMO = 30.00;
 function validarPreco(preco) {
   const p = parseFloat(preco);
   if (isNaN(p) || p < CUSTO_CERTIFICADO) {
-    return { bloqueado: true, aviso: `Preço não pode ser menor que o custo do certificado (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).` };
+    return { bloqueado: true, aviso: `Valor não pode ser menor que o custo do certificado (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).` };
   }
   if (p < PRECO_AVISO_MINIMO) {
-    return { bloqueado: false, aviso: `Preço abaixo de R$ ${PRECO_AVISO_MINIMO.toFixed(2)} — lucro reduzido nesta venda.` };
+    return { bloqueado: false, aviso: `Valor abaixo de R$ ${PRECO_AVISO_MINIMO.toFixed(2)} — lucro reduzido nesta venda.` };
   }
   return { bloqueado: false, aviso: null };
 }
+
+const fmt = v => (isFinite(v) ? v : 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const EMPTY = {
   data_venda: new Date().toISOString().slice(0, 10),
@@ -27,12 +29,14 @@ const EMPTY = {
   cliente_cpf_cnpj: '',
   cliente_whatsapp: '',
   preco_venda: 0,
+  comissao_contabilidade_valor: 0,
   observacoes: '',
 };
 
 export default function ModalNovaVenda({ open, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY);
   const [contabilidades, setContabilidades] = useState([]);
+  const [comissaoPct, setComissaoPct] = useState(20);
   const [confirmado, setConfirmado] = useState(false);
   const [motivoReduzido, setMotivoReduzido] = useState('');
   const [saving, setSaving] = useState(false);
@@ -44,22 +48,29 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
     setConfirmado(false);
     setMotivoReduzido('');
     api.get('/contabilidades-precos')
-      .then(res => setContabilidades(res.data.filter(c => c.id && c.ativo)))
+      .then(res => setContabilidades(res.data.filter(c => c.partner_id && c.ativo)))
       .catch(() => toast.error('Erro ao carregar contabilidades'));
+    api.get('/direta/goal')
+      .then(res => setComissaoPct(parseFloat(res.data.goal.comissao_pct)))
+      .catch(() => setComissaoPct(20));
   }, [open]);
 
-  const contabSelecionada = contabilidades.find(c => String(c.partner_id) === String(form.contabilidade_id));
-  const precoEfetivo = form.tipo_venda === 'contabilidade'
-    ? parseFloat(contabSelecionada?.preco_certificado || 0)
-    : parseFloat(form.preco_venda || 0);
+  const precoVenda = parseFloat(form.preco_venda || 0);
+  const comissaoContab = form.tipo_venda === 'contabilidade' ? parseFloat(form.comissao_contabilidade_valor || 0) : 0;
 
-  const { bloqueado, aviso } = form.tipo_venda === 'contabilidade' && !contabSelecionada
-    ? { bloqueado: false, aviso: null }
-    : validarPreco(precoEfetivo);
+  const { bloqueado, aviso } = validarPreco(precoVenda);
+  const comissaoContabInvalida = form.tipo_venda === 'contabilidade' && comissaoContab > precoVenda;
+
+  // Espelha diretaCalcService.calcularComissaoVenda — só pra preview em
+  // tempo real, o cálculo de verdade é sempre refeito no backend.
+  const base            = Math.max(0, precoVenda - comissaoContab);
+  const comissaoVendedor = base * (comissaoPct / 100);
+  const lucroMovv        = precoVenda - CUSTO_CERTIFICADO - comissaoContab - comissaoVendedor;
 
   const podeSubmeter = form.cliente_nome.trim()
-    && (form.tipo_venda === 'direta' ? precoEfetivo > 0 : !!form.contabilidade_id)
-    && !bloqueado
+    && precoVenda > 0
+    && (form.tipo_venda === 'direta' || (!!form.contabilidade_id && form.comissao_contabilidade_valor !== ''))
+    && !bloqueado && !comissaoContabInvalida
     && (!aviso || (confirmado && motivoReduzido.trim()));
 
   async function handleSave() {
@@ -72,7 +83,8 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
         cliente_nome:      form.cliente_nome,
         cliente_cpf_cnpj:  form.cliente_cpf_cnpj || null,
         cliente_whatsapp:  form.cliente_whatsapp || null,
-        preco_venda:       form.tipo_venda === 'direta' ? form.preco_venda : undefined,
+        preco_venda:       form.preco_venda,
+        comissao_contabilidade_valor: form.tipo_venda === 'contabilidade' ? form.comissao_contabilidade_valor : undefined,
         observacoes:       form.observacoes || null,
         motivo_preco_reduzido: aviso ? motivoReduzido.trim() : undefined,
       });
@@ -114,25 +126,42 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
           </div>
         </div>
 
-        {form.tipo_venda === 'contabilidade' ? (
+        {form.tipo_venda === 'contabilidade' && (
           <div>
             <label className="label">Contabilidade</label>
-            <select className="input" value={form.contabilidade_id} onChange={e => { set('contabilidade_id', e.target.value); setConfirmado(false); setMotivoReduzido(''); }}>
+            <select className="input" value={form.contabilidade_id} onChange={e => set('contabilidade_id', e.target.value)}>
               <option value="">Selecione...</option>
               {contabilidades.map(c => (
-                <option key={c.partner_id} value={c.partner_id}>
-                  {c.name} ({c.code}) — R$ {parseFloat(c.preco_certificado).toFixed(2)}
-                </option>
+                <option key={c.partner_id} value={c.partner_id}>{c.name}</option>
               ))}
             </select>
             {contabilidades.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">Nenhuma contabilidade com preço ativo cadastrado.</p>
+              <p className="text-xs text-amber-600 mt-1">Nenhuma contabilidade ativa cadastrada.</p>
             )}
           </div>
-        ) : (
+        )}
+
+        <div className={form.tipo_venda === 'contabilidade' ? 'grid grid-cols-2 gap-3' : ''}>
           <div>
-            <label className="label">Preço de venda</label>
+            <label className="label">Valor total da venda</label>
             <CurrencyInput value={form.preco_venda} onChange={v => { set('preco_venda', v); setConfirmado(false); setMotivoReduzido(''); }} placeholder="Ex: 170,00" />
+          </div>
+          {form.tipo_venda === 'contabilidade' && (
+            <div>
+              <label className="label">Comissão da contabilidade</label>
+              <CurrencyInput value={form.comissao_contabilidade_valor} onChange={v => set('comissao_contabilidade_valor', v)} placeholder="Ex: 75,00" />
+              {comissaoContabInvalida && <p className="text-xs text-red-600 mt-1">Não pode ser maior que o valor da venda.</p>}
+            </div>
+          )}
+        </div>
+
+        {precoVenda > 0 && !bloqueado && !comissaoContabInvalida && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-1">
+            {form.tipo_venda === 'contabilidade' && (
+              <p className="text-xs text-slate-500">Base pra sua comissão: <strong className="text-slate-700">{fmt(base)}</strong></p>
+            )}
+            <p className="text-sm text-slate-700">Sua comissão ({comissaoPct}%): <strong className="text-[#0C2D48]">{fmt(comissaoVendedor)}</strong></p>
+            <p className="text-sm text-slate-700">Lucro Movv: <strong className="text-emerald-700">{fmt(lucroMovv)}</strong></p>
           </div>
         )}
 
@@ -148,7 +177,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
                     Confirmo que quero registrar esta venda mesmo assim.
                   </label>
                   <div className="mt-2">
-                    <label className="text-xs font-medium text-amber-800">Motivo do preço reduzido</label>
+                    <label className="text-xs font-medium text-amber-800">Motivo do valor reduzido</label>
                     <textarea
                       className="input min-h-[50px] resize-none mt-1"
                       value={motivoReduzido}
