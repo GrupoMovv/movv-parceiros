@@ -15,10 +15,15 @@ function formatarPreco(v) {
 // já vem com o preço promocional calculado pelo backend, não recalcula
 // nada aqui). `produto` aqui é a forma que vem de /fecha-mes/produtos:
 // preco_original/preco_fecha_mes, não preco/preco_associado.
+//
+// Produto BÔNUS (e_produto_bonus) não tem linha em sindicato_parceiro_produtos
+// — não existe página de detalhe nem carrinho pra ele (o `id` vem null do
+// backend de propósito). Card linka pra loja do parceiro em vez do
+// produto, e não tem botão de carrinho.
 export default function CardProdutoFechaMes({ produto }) {
   const foto = produto.fotos?.[0]?.url;
   const { adicionar, remover, estaNoCarrinho } = useCarrinho();
-  const noCarrinho = estaNoCarrinho(produto.id);
+  const noCarrinho = !produto.e_produto_bonus && estaNoCarrinho(produto.id);
 
   function handleCarrinho(e) {
     e.preventDefault();
@@ -29,7 +34,7 @@ export default function CardProdutoFechaMes({ produto }) {
 
   return (
     <Link
-      to={`/marketplace/produto/${produto.id}`}
+      to={produto.e_produto_bonus ? `/marketplace/parceiro/${produto.parceiro_slug}` : `/marketplace/produto/${produto.id}`}
       className="group flex flex-col bg-white rounded-lg p-3 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-200 ease-out"
       style={{ border: `2px solid ${DOURADO}` }}
     >
@@ -46,7 +51,7 @@ export default function CardProdutoFechaMes({ produto }) {
           className="absolute top-1.5 left-1.5 inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide text-white"
           style={{ background: `linear-gradient(135deg, ${VERMELHO} 0%, ${DOURADO_ESCURO} 100%)` }}
         >
-          <Fire size={9} weight="fill" /> Fecha Mês
+          <Fire size={9} weight="fill" /> {produto.e_produto_bonus ? 'Bônus' : 'Fecha Mês'}
         </span>
         {produto.desconto_pct > 0 && (
           <span
@@ -69,16 +74,22 @@ export default function CardProdutoFechaMes({ produto }) {
           <p className="font-black text-lg leading-tight" style={{ color: VERMELHO }}>{formatarPreco(produto.preco_fecha_mes)}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleCarrinho}
-          className={`mt-2 flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
-            noCarrinho ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'hover:bg-amber-50'
-          }`}
-          style={noCarrinho ? {} : { borderColor: DOURADO_ESCURO, color: DOURADO_ESCURO }}
-        >
-          {noCarrinho ? <><Check size={12} weight="bold" /> No carrinho</> : <><ShoppingCart size={12} weight="bold" /> Adicionar</>}
-        </button>
+        {produto.e_produto_bonus ? (
+          <span className="mt-2 flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-md border" style={{ borderColor: DOURADO_ESCURO, color: DOURADO_ESCURO }}>
+            Ver na loja
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleCarrinho}
+            className={`mt-2 flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-md border transition-colors ${
+              noCarrinho ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'hover:bg-amber-50'
+            }`}
+            style={noCarrinho ? {} : { borderColor: DOURADO_ESCURO, color: DOURADO_ESCURO }}
+          >
+            {noCarrinho ? <><Check size={12} weight="bold" /> No carrinho</> : <><ShoppingCart size={12} weight="bold" /> Adicionar</>}
+          </button>
+        )}
       </div>
     </Link>
   );
