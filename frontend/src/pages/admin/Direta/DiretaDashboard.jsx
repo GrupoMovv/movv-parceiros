@@ -59,8 +59,8 @@ export default function DiretaDashboard() {
     <div className="flex justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-[#0C2D48]" /></div>
   );
 
-  const lucroTotal    = sales.reduce((s, v) => s + parseFloat(v.lucro), 0);
-  const comissaoTotal = sales.reduce((s, v) => s + parseFloat(v.comissao_valor), 0);
+  const lucroTotal    = sales.reduce((s, v) => s + parseFloat(v.total_lucro_movv), 0);
+  const comissaoTotal = sales.reduce((s, v) => s + parseFloat(v.total_comissao_vendedor), 0);
   const viaAccounting = sales.filter(v => v.tipo_venda === 'contabilidade').length;
   const viaDirect     = sales.filter(v => v.tipo_venda === 'direta').length;
   const jaFechado     = payrollStatus === 'paid';

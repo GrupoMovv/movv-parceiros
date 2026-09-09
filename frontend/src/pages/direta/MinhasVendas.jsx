@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import ModalNovaVenda from '../../components/direta/ModalNovaVenda';
 import ModalEditarVenda from '../../components/direta/ModalEditarVenda';
-import { FileText, Plus, Loader2, XCircle, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Plus, Loader2, XCircle, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 
 const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const currentMonth = new Date().toISOString().slice(0, 7);
@@ -108,25 +108,26 @@ export default function MinhasVendas() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                {['Data','Cliente','Tipo','Contabilidade','Preço','Lucro','Comissão','Status','Ações'].map(h => (
+                {['Data','Cliente','Tipo','Contabilidade','Cert','Token','Total Venda','Sua Comissão','Status','Ações'].map(h => (
                   <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-10 text-slate-400">Carregando...</td></tr>
+                <tr><td colSpan={10} className="text-center py-10 text-slate-400">Carregando...</td></tr>
               ) : sales.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-10 text-slate-400">Nenhuma venda encontrada</td></tr>
+                <tr><td colSpan={10} className="text-center py-10 text-slate-400">Nenhuma venda encontrada</td></tr>
               ) : sales.map(s => (
                 <tr key={s.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${s.status !== 'confirmada' ? 'opacity-50' : ''}`}>
                   <td className="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">{s.data_venda?.slice(0, 10)}</td>
                   <td className="py-3 px-4 text-slate-900 font-medium">{s.cliente_nome}</td>
                   <td className="py-3 px-4 text-slate-600 text-xs capitalize">{s.tipo_venda}</td>
                   <td className="py-3 px-4 text-slate-500 text-xs">{s.contabilidade_name || '—'}</td>
-                  <td className="py-3 px-4 text-slate-700">{fmt(s.preco_venda)}</td>
-                  <td className="py-3 px-4 text-slate-700">{fmt(s.lucro)}</td>
-                  <td className="py-3 px-4 font-semibold text-[#0C2D48]">{fmt(s.comissao_valor)}</td>
+                  <td className="py-3 px-4"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></td>
+                  <td className="py-3 px-4">{s.incluiu_token ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <span className="text-slate-300 text-xs">—</span>}</td>
+                  <td className="py-3 px-4 text-slate-700">{fmt(s.total_venda)}</td>
+                  <td className="py-3 px-4 font-semibold text-[#0C2D48]">{fmt(s.total_comissao_vendedor)}</td>
                   <td className="py-3 px-4">
                     <span className={s.status === 'confirmada' ? 'badge-approved' : 'badge-expired'}>
                       {STATUS_LABEL[s.status] || s.status}

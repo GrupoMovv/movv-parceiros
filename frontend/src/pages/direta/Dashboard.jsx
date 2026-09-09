@@ -92,10 +92,12 @@ export default function DiretaFernandoDashboard() {
                 <div key={s.id} className="px-5 py-3 flex items-center justify-between text-sm">
                   <div>
                     <p className="font-medium text-slate-800">{s.cliente_nome}</p>
-                    <p className="text-slate-400 text-xs">{fmt(s.preco_venda)} · {s.data_venda?.slice(0, 10)}</p>
+                    <p className="text-slate-400 text-xs">
+                      {fmt(s.total_venda)}{s.incluiu_token ? ' · com token' : ''} · {s.data_venda?.slice(0, 10)}
+                    </p>
                   </div>
                   <span className={s.status === 'confirmada' ? 'badge-approved' : 'badge-expired'}>
-                    {s.status === 'confirmada' ? 'OK' : 'Cancelada'}
+                    {s.status === 'confirmada' ? 'OK' : s.status === 'excluida' ? 'Excluída' : 'Cancelada'}
                   </span>
                 </div>
               ))}
