@@ -10,10 +10,18 @@
 // parceiroProdutosController). Os campos "trabalho manual" (push_notification,
 // instagram_integrado, live_mensal, prioridade_melhorias...) são só o
 // contrato do que aquele plano promete — não disparam nada sozinhos.
+//
+// Preço diferenciado por sindicalização: empresa com CNPJ em dia em
+// sindicato_empresas_contribuintes (status 'adimplente', ver
+// sindicalizacaoService) paga `preco_sindicalizada` — o SECI subsidia a
+// diferença pra incentivar a sindicalização. Quem não está em dia (ou nem
+// consta) paga `preco_nao_sindicalizada`. Ver publicPlanosController pro
+// endpoint que expõe essa conta pro front.
 const PLANOS = {
   gratis: {
     nome: 'IUB Grátis',
-    preco: 0,
+    preco_sindicalizada: 0,
+    preco_nao_sindicalizada: 0,
     max_produtos: 30,
     max_produtos_rotativa: 0, // não aparece na rotativa
     tem_selo: false,
@@ -30,9 +38,10 @@ const PLANOS = {
   },
   oficial: {
     nome: 'IUB Oficial',
-    preco: 37.90,
+    preco_sindicalizada: 34.90,
+    preco_nao_sindicalizada: 69.90,
     max_produtos: 30,
-    max_produtos_rotativa: 3,
+    max_produtos_rotativa: 4,
     tem_selo: true,
     selo_nome: 'Parceiro Oficial',
     selo_cor: 'dourado',
@@ -47,9 +56,10 @@ const PLANOS = {
   },
   premium: {
     nome: 'IUB Premium',
-    preco: 49.90,
+    preco_sindicalizada: 49.90,
+    preco_nao_sindicalizada: 79.90,
     max_produtos: 30,
-    max_produtos_rotativa: 8,
+    max_produtos_rotativa: 9,
     tem_selo: true,
     selo_nome: 'Parceiro Premium',
     selo_cor: 'dourado_estrela',
@@ -66,7 +76,8 @@ const PLANOS = {
   },
   master: {
     nome: 'IUB Master',
-    preco: 89.90,
+    preco_sindicalizada: 97.90,
+    preco_nao_sindicalizada: 127.90,
     max_produtos: null, // ilimitado
     max_produtos_rotativa: 15,
     tem_selo: true,
@@ -124,6 +135,13 @@ function limiteProdutos(plano) {
   return max === null || max === undefined ? Infinity : max;
 }
 
+// Preço de verdade a cobrar de um plano, dado se o CNPJ do parceiro está
+// sindicalizado ou não (ver sindicalizacaoService.verificarSindicalizacao).
+function precoPlano(plano, sindicalizada) {
+  const cfg = beneficios(plano);
+  return sindicalizada ? cfg.preco_sindicalizada : cfg.preco_nao_sindicalizada;
+}
+
 module.exports = {
   PLANOS,
   PARCEIROS_SEED_DEMONSTRACAO,
@@ -133,4 +151,5 @@ module.exports = {
   planoEfetivo,
   beneficios,
   limiteProdutos,
+  precoPlano,
 };

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const emailService = require('../services/emailService');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
+const { verificarSindicalizacao } = require('../services/sindicalizacaoService');
 
 const MAX_SOLICITACOES_POR_IP_24H = 3;
 
@@ -279,8 +280,9 @@ async function aprovarSolicitacao(req, res) {
       throw txErr;
     }
 
+    const { sindicalizada } = await verificarSindicalizacao(sol.cnpj).catch(() => ({ sindicalizada: null }));
     emailService.enviarAprovacaoParceiro({
-      nome: sol.responsavel_nome, nomeFantasia: sol.nome_fantasia, email: sol.email, senha,
+      nome: sol.responsavel_nome, nomeFantasia: sol.nome_fantasia, email: sol.email, senha, sindicalizada,
     }).catch(err => console.error('[EMAIL]', err.message));
 
     const mensagemWhatsapp = `🎉 Olá ${sol.responsavel_nome.split(' ')[0]}! Sua loja foi APROVADA no IUB MAIS!\n\n`

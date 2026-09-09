@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
-const { PLANOS, planoValido, PIONEIRO_VAGAS_TOTAL } = require('../config/planos');
+const { PLANOS, planoValido, PIONEIRO_VAGAS_TOTAL, precoPlano } = require('../config/planos');
+const { verificarSindicalizacao } = require('../services/sindicalizacaoService');
 
 function quemAlterou(req) {
   return req.user?.email || req.user?.name || 'admin';
@@ -25,7 +26,8 @@ async function listarParceiros(req, res) {
     params.push(limiteNum, (paginaNum - 1) * limiteNum);
     const dataResult = await db.query(
       `SELECT id, slug, nome, plano, plano_ativo_desde, plano_expira_em, plano_status, e_pioneiro,
-              banner_personalizado_url, instagram_username, observacoes_plano, status
+              banner_personalizado_url, instagram_username, observacoes_plano, status,
+              plano_preco_cobrado, plano_era_sindicalizada
        FROM sindicato_parceiros ${where}
        ORDER BY nome ASC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
@@ -49,7 +51,7 @@ async function alterarPlano(req, res) {
       return res.status(400).json({ error: 'Motivo inválido' });
     }
 
-    const atual = await db.query('SELECT plano, e_pioneiro FROM sindicato_parceiros WHERE id = $1', [id]);
+    const atual = await db.query('SELECT plano, e_pioneiro, cnpj FROM sindicato_parceiros WHERE id = $1', [id]);
     if (!atual.rows[0]) return res.status(404).json({ error: 'Parceiro não encontrado' });
     const planoAnterior = atual.rows[0].plano;
 
@@ -62,20 +64,32 @@ async function alterarPlano(req, res) {
       virouPioneiro = contagem.rows[0].n < PIONEIRO_VAGAS_TOTAL;
     }
 
+    // Snapshot do preço/sindicalização no momento da troca — se a empresa
+    // mudar de status depois, o preço já cobrado não muda sozinho (só numa
+    // próxima troca de plano registra de novo).
+    let precoCobrado = null;
+    let eraSindicalizada = null;
+    if (plano_novo !== 'gratis') {
+      const { sindicalizada } = await verificarSindicalizacao(atual.rows[0].cnpj);
+      eraSindicalizada = sindicalizada;
+      precoCobrado = precoPlano(plano_novo, sindicalizada);
+    }
+
     await db.query('BEGIN');
     try {
       await db.query(
         `UPDATE sindicato_parceiros
          SET plano = $1, plano_ativo_desde = NOW(), plano_expira_em = $2,
              observacoes_plano = COALESCE($3, observacoes_plano),
-             e_pioneiro = e_pioneiro OR $4
-         WHERE id = $5`,
-        [plano_novo, plano_expira_em || null, observacoes?.trim() || null, virouPioneiro, id]
+             e_pioneiro = e_pioneiro OR $4,
+             plano_preco_cobrado = $5, plano_era_sindicalizada = $6
+         WHERE id = $7`,
+        [plano_novo, plano_expira_em || null, observacoes?.trim() || null, virouPioneiro, precoCobrado, eraSindicalizada, id]
       );
       await db.query(
-        `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [id, planoAnterior, plano_novo, motivo, observacoes?.trim() || null, quemAlterou(req)]
+        `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por, preco_cobrado, era_sindicalizada)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [id, planoAnterior, plano_novo, motivo, observacoes?.trim() || null, quemAlterou(req), precoCobrado, eraSindicalizada]
       );
       await db.query('COMMIT');
     } catch (txErr) {
@@ -86,7 +100,7 @@ async function alterarPlano(req, res) {
     // Preparado, não disparado ainda (ver emailService) — troca manual de
     // plano não manda email sozinha até decidirmos ativar de verdade.
 
-    return res.json({ ok: true, plano_anterior: planoAnterior, plano_novo, virou_pioneiro: virouPioneiro });
+    return res.json({ ok: true, plano_anterior: planoAnterior, plano_novo, virou_pioneiro: virouPioneiro, preco_cobrado: precoCobrado, era_sindicalizada: eraSindicalizada });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao alterar plano' });
