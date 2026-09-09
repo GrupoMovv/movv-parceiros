@@ -117,6 +117,7 @@ export default function Vender() {
   const [enviando, setEnviando] = useState(false);
   const [faqAberta, setFaqAberta] = useState(null);
   const [statusCnpj, setStatusCnpj] = useState(null); // null | 'checando' | 'ok' | { erro }
+  const [sindicalizacao, setSindicalizacao] = useState(null); // null | { e_sindicalizada }
   const [qtdAssociados, setQtdAssociados] = useState(null);
   const [vagasPioneiro, setVagasPioneiro] = useState(null);
   const [pioneiros, setPioneiros] = useState([]);
@@ -138,6 +139,19 @@ export default function Vender() {
       api.post('/public/vender/verificar-cnpj', { cnpj: cnpjDigits })
         .then(res => setStatusCnpj(res.data.disponivel ? 'ok' : { erro: res.data.motivo }))
         .catch(() => setStatusCnpj(null));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [cnpjDigits]);
+
+  // Checagem de sindicalização (SECI) — só informativa aqui: avisa a
+  // empresa que ela já ganha desconto nos planos pagos assim que forem
+  // lançados (ou como conseguir o desconto), sem travar o cadastro.
+  useEffect(() => {
+    if (cnpjDigits.length !== 14 || !isValidCNPJ(cnpjDigits)) { setSindicalizacao(null); return; }
+    const timer = setTimeout(() => {
+      api.get('/public/planos/precos', { params: { cnpj: cnpjDigits } })
+        .then(res => setSindicalizacao({ eSindicalizada: res.data.e_sindicalizada }))
+        .catch(() => setSindicalizacao(null));
     }, 500);
     return () => clearTimeout(timer);
   }, [cnpjDigits]);
@@ -208,7 +222,7 @@ export default function Vender() {
   return (
     <TelaFormulario
       segmento={segmento} etapa={etapa} form={form} setCampo={setCampo}
-      statusCnpj={statusCnpj} enviando={enviando}
+      statusCnpj={statusCnpj} sindicalizacao={sindicalizacao} enviando={enviando}
       onVoltarEtapa={() => (etapa === 1 ? setTela('segmento') : setEtapa(e => e - 1))}
       onAvancar={avancar} onEnviar={enviarCadastro}
     />
@@ -414,7 +428,7 @@ function TelaSegmento({ onVoltar, onEscolher }) {
 
 // ─── Tela 3: Formulário (wizard) ────────────────────────────────────────────
 
-function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, enviando, onVoltarEtapa, onAvancar, onEnviar }) {
+function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar }) {
   const seg = SEGMENTOS.find(s => s.valor === segmento);
 
   return (
@@ -444,6 +458,7 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, enviando,
               <Campo label="CNPJ" obrigatorio>
                 <input className={campoCls} inputMode="numeric" value={form.cnpj} onChange={e => setCampo('cnpj', maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
                 <StatusCnpj status={statusCnpj} />
+                <AvisoSindicalizacao sindicalizacao={sindicalizacao} />
               </Campo>
               <Campo label="Segmento">
                 <div className={`${campoCls} flex items-center gap-2 bg-slate-50 text-slate-500`}>
@@ -563,6 +578,25 @@ function StatusCnpj({ status }) {
   if (status === 'checando') return <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Verificando...</p>;
   if (status === 'ok') return <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: '#166534' }}><CheckCircle2 className="w-3 h-3" /> CNPJ disponível</p>;
   return <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><XCircle className="w-3 h-3" /> {status.erro}</p>;
+}
+
+// Só informativo — não trava o cadastro (que continua 100% grátis
+// enquanto os planos pagos não são lançados). Avisa desde já quem já tem
+// desconto garantido, ou como consegui-lo.
+function AvisoSindicalizacao({ sindicalizacao }) {
+  if (!sindicalizacao) return null;
+  if (sindicalizacao.eSindicalizada) {
+    return (
+      <p className="text-[11px] mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#ECFDF5', color: '#166534' }}>
+        🎉 Sua empresa é <strong>SINDICALIZADA ao SECI</strong> — você terá desconto exclusivo quando os planos pagos do IUB MAIS forem lançados!
+      </p>
+    );
+  }
+  return (
+    <p className="text-[11px] mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#FFFBEB', color: '#92700C' }}>
+      💡 Sua empresa ainda não está contribuindo com o SECI — sindicalize-se e ganhe desconto nos planos pagos do IUB MAIS. Saiba como pelo WhatsApp.
+    </p>
+  );
 }
 
 // ─── Tela 4: Confirmação ────────────────────────────────────────────────────

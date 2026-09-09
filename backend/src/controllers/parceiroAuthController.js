@@ -17,7 +17,7 @@ const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
 // parceiro.plano e confia. Endpoints que enforçam limite continuam usando
 // planoEfetivo(req.parceiro) direto a partir do dado cru do banco.
 function parceiroPublico(p) {
-  return { id: p.id, nome: p.nome, slug: p.slug, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at };
+  return { id: p.id, nome: p.nome, slug: p.slug, cnpj: p.cnpj, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at };
 }
 
 async function login(req, res) {
