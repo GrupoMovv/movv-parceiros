@@ -6,7 +6,6 @@ import SlideInstitucional from './heroSlides/SlideInstitucional';
 import SlideProdutosDestaque from './heroSlides/SlideProdutosDestaque';
 import SlideComerciantes from './heroSlides/SlideComerciantes';
 import SlideAssociados from './heroSlides/SlideAssociados';
-import SlideColaboradores from './heroSlides/SlideColaboradores';
 import SlideFechaMes from './heroSlides/SlideFechaMes';
 import { DOURADO } from '../theme';
 
@@ -21,8 +20,14 @@ const INTERVALO_MS = 6500;
 // Banner hero full-width — orquestra só a mecânica do carrossel (autoplay,
 // setas, dots, play/pause, contador); cada slide é um componente próprio em
 // ./heroSlides, alguns com dado real buscado aqui uma vez só (produtos
-// exclusivos, empresas da lista aprovada, total de parceiros) e passado
-// por prop, pra não competir com o timer do carrossel nem duplicar fetch.
+// exclusivos, total de parceiros) e passado por prop, pra não competir com
+// o timer do carrossel nem duplicar fetch.
+//
+// SlideColaboradores ("Colaborador de empresa parceira? ... Supermercado
+// Reis") foi tirado do carrossel principal de propósito — pouco chamativo
+// pro público geral do marketplace. O componente continua existindo (ver
+// ./heroSlides/SlideColaboradores.jsx) pra virar um banner específico no
+// futuro, só não é mais montado aqui.
 // `associado` vem por prop (não chama useAssociadoSessao aqui) pra não
 // disparar o fluxo de login por ?associado=hash em duplicidade com quem
 // já usa o hook (Marketplace.jsx).
@@ -31,24 +36,22 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
   const [pausado, setPausado] = useState(false);
   const [modalLoginAberto, setModalLoginAberto] = useState(false);
   const [produtosDestaque, setProdutosDestaque] = useState([]);
-  const [empresasParceiras, setEmpresasParceiras] = useState([]);
   const [totalParceiros, setTotalParceiros] = useState(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
     api.get('/public/marketplace/banner-exclusivos').then(res => setProdutosDestaque(res.data.produtos || [])).catch(() => {});
-    api.get('/public/marketplace/empresas-parceiras').then(res => setEmpresasParceiras(res.data.empresas || [])).catch(() => {});
     api.get('/public/marketplace/stats').then(res => setTotalParceiros(res.data.parceiros)).catch(() => {});
   }, []);
 
-  // Fecha Mês entra no carrossel só faltando <= 15 dias (nunca no dia em
+  // Fecha Mês entra no carrossel só faltando <= 20 dias (nunca no dia em
   // si — aí quem assume é o banner full-width do topo, ver
   // FechaMesBanner/Marketplace.jsx). Nos últimos 3 dias vira o slide
   // principal (posição 1); antes disso fica na posição 2, logo depois do
   // institucional.
   const diasRestantes = fechaMesInfo?.dias_restantes;
   const mostrarFechaMes = fechaMesInfo?.habilitado_globalmente && !fechaMesInfo?.ativo_hoje
-    && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 15;
+    && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 20;
   const fechaMesEhPrincipal = mostrarFechaMes && diasRestantes <= 3;
   const slideFechaMes = mostrarFechaMes && { id: 'fecha-mes', Componente: SlideFechaMes, props: { info: fechaMesInfo } };
 
@@ -59,11 +62,10 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
       produtosDestaque.length > 0 && { id: 'produtos', Componente: SlideProdutosDestaque, props: { produtos: produtosDestaque } },
       { id: 'comerciantes', Componente: SlideComerciantes, props: { totalParceiros } },
       !associado && { id: 'associados', Componente: SlideAssociados, props: { onAbrirLogin: () => setModalLoginAberto(true) } },
-      empresasParceiras.length > 0 && { id: 'colaboradores', Componente: SlideColaboradores, props: { empresas: empresasParceiras } },
     ].filter(Boolean);
     return fechaMesEhPrincipal ? [slideFechaMes, ...base] : base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [produtosDestaque, empresasParceiras, totalParceiros, associado, fechaMesEhPrincipal, mostrarFechaMes, diasRestantes]);
+  }, [produtosDestaque, totalParceiros, associado, fechaMesEhPrincipal, mostrarFechaMes, diasRestantes]);
 
   const total = slides.length;
 
