@@ -9,6 +9,24 @@ function monthFromDate(dateStr) {
   return (dateStr ? new Date(dateStr) : new Date()).toISOString().slice(0, 7);
 }
 
+function quemAlterou(req) {
+  return req.user?.name || req.user?.email || 'usuário';
+}
+
+// Log de auditoria — não deixa uma falha aqui derrubar a operação principal
+// (a venda já foi salva/alterada; perder só o log não pode reverter isso).
+async function registrarHistorico(client, { vendaId, acao, motivo, dadosAntes, dadosDepois, alteradoPor }) {
+  try {
+    await client.query(
+      `INSERT INTO direta_sales_historico (venda_id, acao, motivo, dados_antes, dados_depois, alterado_por)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [vendaId, acao, motivo || null, dadosAntes ? JSON.stringify(dadosAntes) : null, dadosDepois ? JSON.stringify(dadosDepois) : null, alteradoPor]
+    );
+  } catch (err) {
+    console.error('[FERNANDO] Falha ao registrar histórico da venda', vendaId, err.message);
+  }
+}
+
 // ─── Listar vendas (admin: todas + filtros; Fernando: apenas as próprias) ───
 async function listSales(req, res) {
   try {
@@ -27,6 +45,9 @@ async function listSales(req, res) {
     if (reference_month) { params.push(reference_month); conditions.push(`ds.reference_month = $${params.length}`); }
     if (tipo_venda)       { params.push(tipo_venda);       conditions.push(`ds.tipo_venda = $${params.length}`); }
     if (status)           { params.push(status);           conditions.push(`ds.status = $${params.length}`); }
+    // Sem filtro de status explícito, "excluída" (venda cadastrada errada)
+    // some da listagem por padrão — só aparece se alguém pedir explicitamente.
+    else                  { conditions.push(`ds.status != 'excluida'`); }
 
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
@@ -70,17 +91,21 @@ async function getSale(req, res) {
 }
 
 // ─── Registrar nova venda (Fernando) ────────────────────────────────────────
+// Regra nova (migration 042): contabilidade não trava mais o valor — o
+// valor da venda é sempre digitado por Fernando, e a comissão da
+// contabilidade (só quando tipo_venda='contabilidade') também. Ver
+// diretaCalcService.calcularComissaoVenda pra base do cálculo.
 async function createSale(req, res) {
   const {
     data_venda, tipo_venda, contabilidade_id,
     cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
-    preco_venda, observacoes, motivo_preco_reduzido,
+    preco_venda, comissao_contabilidade_valor, observacoes, motivo_preco_reduzido,
   } = req.body;
 
   if (!tipo_venda || !['contabilidade', 'direta'].includes(tipo_venda)) {
     return res.status(400).json({ error: 'tipo_venda deve ser "contabilidade" ou "direta"' });
   }
-  if (!cliente_nome) {
+  if (!cliente_nome?.trim()) {
     return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
   }
 
@@ -93,25 +118,26 @@ async function createSale(req, res) {
     await client.query('BEGIN');
     const txDb = { query: (text, params) => client.query(text, params) };
 
-    let precoFinal = preco_venda;
-
     if (tipo_venda === 'contabilidade') {
       if (!contabilidade_id) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'contabilidade_id é obrigatório para venda via contabilidade' });
       }
-      const precoRow = await client.query(
-        `SELECT preco_certificado FROM contabilidades_precos WHERE partner_id = $1 AND ativo = true`,
+      if (comissao_contabilidade_valor === undefined || comissao_contabilidade_valor === null || comissao_contabilidade_valor === '') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Comissão da contabilidade é obrigatória para venda via contabilidade' });
+      }
+      const contabRow = await client.query(
+        `SELECT 1 FROM contabilidades_precos WHERE partner_id = $1 AND ativo = true`,
         [contabilidade_id]
       );
-      if (!precoRow.rows[0]) {
+      if (!contabRow.rows[0]) {
         await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Esta contabilidade não tem preço de certificado cadastrado/ativo' });
+        return res.status(400).json({ error: 'Contabilidade não encontrada ou inativa' });
       }
-      precoFinal = precoRow.rows[0].preco_certificado;
     }
 
-    const { bloqueado, aviso } = diretaCalc.validarPreco(precoFinal);
+    const { bloqueado, aviso } = diretaCalc.validarPreco(preco_venda);
     if (bloqueado) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: aviso });
@@ -128,26 +154,44 @@ async function createSale(req, res) {
       : (observacoes || null);
 
     const goal = await diretaCalc.getOrCreateGoalDoMes(collaboratorId, referenceMonth, txDb);
-    const { lucro, comissaoValor } = diretaCalc.calcularComissaoVenda(precoFinal, goal.comissao_pct);
+
+    let calc;
+    try {
+      calc = diretaCalc.calcularComissaoVenda({
+        tipoVenda: tipo_venda,
+        valorVenda: preco_venda,
+        comissaoContabilidadeValor: tipo_venda === 'contabilidade' ? comissao_contabilidade_valor : null,
+        comissaoPct: goal.comissao_pct,
+      });
+    } catch (calcErr) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: calcErr.message });
+    }
 
     const inserted = await client.query(
       `INSERT INTO direta_sales
          (collaborator_id, data_venda, tipo_venda, contabilidade_id,
           cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
-          preco_venda, custo, lucro, comissao_pct, comissao_valor,
+          preco_venda, custo, comissao_contabilidade_valor, lucro, comissao_pct, comissao_valor,
           status, observacoes, reference_month)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'confirmada',$13,$14)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'confirmada',$14,$15)
        RETURNING *`,
       [
         collaboratorId, dataVenda, tipo_venda, contabilidade_id || null,
-        cliente_nome, cliente_cpf_cnpj || null, cliente_whatsapp || null,
-        precoFinal, diretaCalc.CUSTO_CERTIFICADO, lucro, goal.comissao_pct, comissaoValor,
+        cliente_nome.trim(), cliente_cpf_cnpj || null, cliente_whatsapp || null,
+        preco_venda, diretaCalc.CUSTO_CERTIFICADO, tipo_venda === 'contabilidade' ? calc.comissaoContab : null,
+        calc.lucroMovv, goal.comissao_pct, calc.comissaoVendedor,
         observacoesFinal, referenceMonth,
       ]
     );
+    const venda = inserted.rows[0];
+
+    await registrarHistorico(client, {
+      vendaId: venda.id, acao: 'criada', dadosDepois: venda, alteradoPor: quemAlterou(req),
+    });
 
     await client.query('COMMIT');
-    return res.status(201).json({ ...inserted.rows[0], aviso: aviso || undefined });
+    return res.status(201).json({ ...venda, aviso: aviso || undefined });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
@@ -157,30 +201,195 @@ async function createSale(req, res) {
   }
 }
 
+// ─── Editar venda existente (corrigir dados/valores, mesmo mês/tipo/comissao_pct) ─
+// Não deixa trocar tipo_venda/contabilidade_id/data_venda por edição — isso
+// muda a base do cálculo e o mês de referência (mexeria na meta batida do
+// mês); se Fernando errou o tipo, o caminho é excluir e recadastrar.
+async function updateSale(req, res) {
+  const { id } = req.params;
+  const isAdmin = !!req.user?.is_admin;
+  const {
+    cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
+    preco_venda, comissao_contabilidade_valor, observacoes, motivo,
+  } = req.body;
+
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const check = await client.query('SELECT * FROM direta_sales WHERE id = $1 FOR UPDATE', [id]);
+    const venda = check.rows[0];
+    if (!venda) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Venda não encontrada' }); }
+    if (!isAdmin && venda.collaborator_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Acesso negado a esta venda' });
+    }
+    if (venda.status !== 'confirmada') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Só é possível editar vendas confirmadas' });
+    }
+    if (cliente_nome !== undefined && !cliente_nome.trim()) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
+    }
+
+    const precoFinal = preco_venda !== undefined ? preco_venda : venda.preco_venda;
+    const comissaoContabFinal = venda.tipo_venda === 'contabilidade'
+      ? (comissao_contabilidade_valor !== undefined ? comissao_contabilidade_valor : venda.comissao_contabilidade_valor)
+      : null;
+
+    let calc;
+    try {
+      // Preserva o comissao_pct já gravado na venda (o tier do mês em que
+      // ela foi feita) — editar valores não deve mudar em qual degrau de
+      // comissão a venda foi contabilizada.
+      calc = diretaCalc.calcularComissaoVenda({
+        tipoVenda: venda.tipo_venda,
+        valorVenda: precoFinal,
+        comissaoContabilidadeValor: comissaoContabFinal,
+        comissaoPct: venda.comissao_pct,
+      });
+    } catch (calcErr) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: calcErr.message });
+    }
+
+    const updated = await client.query(
+      `UPDATE direta_sales SET
+         cliente_nome = $1, cliente_cpf_cnpj = $2, cliente_whatsapp = $3,
+         preco_venda = $4, comissao_contabilidade_valor = $5,
+         lucro = $6, comissao_valor = $7,
+         observacoes = $8, updated_at = NOW()
+       WHERE id = $9
+       RETURNING *`,
+      [
+        cliente_nome !== undefined ? cliente_nome.trim() : venda.cliente_nome,
+        cliente_cpf_cnpj !== undefined ? (cliente_cpf_cnpj || null) : venda.cliente_cpf_cnpj,
+        cliente_whatsapp !== undefined ? (cliente_whatsapp || null) : venda.cliente_whatsapp,
+        precoFinal, comissaoContabFinal, calc.lucroMovv, calc.comissaoVendedor,
+        observacoes !== undefined ? (observacoes || null) : venda.observacoes,
+        id,
+      ]
+    );
+
+    await registrarHistorico(client, {
+      vendaId: id, acao: 'editada', motivo: motivo?.trim() || null,
+      dadosAntes: venda, dadosDepois: updated.rows[0], alteradoPor: quemAlterou(req),
+    });
+
+    await client.query('COMMIT');
+    return res.json(updated.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    return res.status(500).json({ error: err.message || 'Erro ao editar venda' });
+  } finally {
+    client.release();
+  }
+}
+
+// ─── Excluir venda (soft delete — "cadastrei errado", some da listagem) ────
+async function deleteSale(req, res) {
+  const { id } = req.params;
+  const isAdmin = !!req.user?.is_admin;
+  const { motivo } = req.body;
+
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const check = await client.query('SELECT * FROM direta_sales WHERE id = $1 FOR UPDATE', [id]);
+    const venda = check.rows[0];
+    if (!venda) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Venda não encontrada' }); }
+    if (!isAdmin && venda.collaborator_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Acesso negado a esta venda' });
+    }
+    if (venda.status === 'excluida') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Venda já está excluída' });
+    }
+
+    const updated = await client.query(
+      `UPDATE direta_sales SET status = 'excluida', updated_at = NOW() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    await registrarHistorico(client, {
+      vendaId: id, acao: 'excluida', motivo: motivo?.trim() || null,
+      dadosAntes: venda, alteradoPor: quemAlterou(req),
+    });
+
+    await client.query('COMMIT');
+    console.log(`[FERNANDO] Venda excluída — ID ${id}, cliente: ${venda.cliente_nome}`);
+    return res.json(updated.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao excluir venda' });
+  } finally {
+    client.release();
+  }
+}
+
 // ─── Cancelar venda (sem recalcular % de outras vendas do mês) ──────────────
 async function cancelSale(req, res) {
+  const client = await db.pool.connect();
   try {
     const { id } = req.params;
     const isAdmin = !!req.user?.is_admin;
 
-    const check = await db.query('SELECT * FROM direta_sales WHERE id = $1', [id]);
-    if (!check.rows[0]) return res.status(404).json({ error: 'Venda não encontrada' });
+    await client.query('BEGIN');
+    const check = await client.query('SELECT * FROM direta_sales WHERE id = $1 FOR UPDATE', [id]);
+    if (!check.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Venda não encontrada' }); }
     if (!isAdmin && check.rows[0].collaborator_id !== req.user.id) {
+      await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Acesso negado a esta venda' });
     }
     if (check.rows[0].status === 'cancelada') {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Venda já está cancelada' });
     }
 
-    const result = await db.query(
+    const result = await client.query(
       `UPDATE direta_sales SET status = 'cancelada', updated_at = NOW() WHERE id = $1 RETURNING *`,
       [id]
     );
+    await registrarHistorico(client, {
+      vendaId: id, acao: 'cancelada', dadosAntes: check.rows[0], dadosDepois: result.rows[0], alteradoPor: quemAlterou(req),
+    });
+    await client.query('COMMIT');
     console.log(`[FERNANDO] Venda cancelada — ID ${id}, cliente: ${check.rows[0].cliente_nome}`);
     return res.json(result.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     return res.status(500).json({ error: 'Erro ao cancelar venda' });
+  } finally {
+    client.release();
+  }
+}
+
+// ─── Histórico de auditoria de uma venda ────────────────────────────────────
+async function getSaleHistorico(req, res) {
+  try {
+    const { id } = req.params;
+    const isAdmin = !!req.user?.is_admin;
+
+    const venda = await db.query('SELECT collaborator_id FROM direta_sales WHERE id = $1', [id]);
+    if (!venda.rows[0]) return res.status(404).json({ error: 'Venda não encontrada' });
+    if (!isAdmin && venda.rows[0].collaborator_id !== req.user.id) {
+      return res.status(403).json({ error: 'Acesso negado a esta venda' });
+    }
+
+    const result = await db.query(
+      'SELECT * FROM direta_sales_historico WHERE venda_id = $1 ORDER BY alterado_em DESC',
+      [id]
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao carregar histórico' });
   }
 }
 
@@ -325,7 +534,10 @@ module.exports = {
   listSales,
   getSale,
   createSale,
+  updateSale,
+  deleteSale,
   cancelSale,
+  getSaleHistorico,
   getMyDashboard,
   getGoalCurrentMonth,
   closePayroll,

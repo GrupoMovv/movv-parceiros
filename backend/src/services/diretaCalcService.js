@@ -11,24 +11,48 @@ function round2(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-// Calcula lucro e comissão de uma venda individual de certificado.
-function calcularComissaoVenda(precoVenda, comissaoPct) {
-  const preco = parseFloat(precoVenda);
+// Regra nova (a partir da migration 042): contabilidade não tem mais preço
+// fixo — Fernando negocia o valor da venda (e, se for via contabilidade, a
+// comissão da contabilidade) caso a caso. Isso muda a BASE sobre a qual o
+// escalonamento de comissão (20/22,5/25%, ver getOrCreateGoalDoMes) incide:
+//   - venda direta:        base = valor_venda
+//   - venda via contab.:   base = valor_venda - comissao_contabilidade
+// Antes (vendas anteriores a esta migration, não recalculadas) a base era
+// sempre (valor_venda - custo_certificado), igual pros dois tipos.
+//
+// custo_certificado continua fixo em R$19,90 e não entra mais na base da
+// comissão — só no lucro final da Movv.
+function calcularComissaoVenda({ tipoVenda, valorVenda, comissaoContabilidadeValor, comissaoPct }) {
+  const preco = parseFloat(valorVenda);
   const pct   = parseFloat(comissaoPct);
 
   if (isNaN(preco) || preco < CUSTO_CERTIFICADO) {
-    throw new Error(`Preço de venda (R$ ${preco}) não pode ser menor que o custo do certificado (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).`);
+    throw new Error(`Valor de venda (R$ ${preco}) não pode ser menor que o custo do certificado (R$ ${CUSTO_CERTIFICADO.toFixed(2)}).`);
   }
 
-  const lucro         = round2(preco - CUSTO_CERTIFICADO);
-  const comissaoValor = round2(lucro * (pct / 100));
+  let comissaoContab = 0;
+  if (tipoVenda === 'contabilidade') {
+    comissaoContab = parseFloat(comissaoContabilidadeValor);
+    if (isNaN(comissaoContab) || comissaoContab < 0) {
+      throw new Error('Comissão da contabilidade inválida.');
+    }
+    if (comissaoContab > preco) {
+      throw new Error('Comissão da contabilidade não pode ser maior que o valor da venda.');
+    }
+  }
 
-  console.log(`[FERNANDO] Nova venda registrada — preço: R$ ${preco.toFixed(2)}, custo: R$ ${CUSTO_CERTIFICADO.toFixed(2)}, lucro: R$ ${lucro.toFixed(2)}, comissão: ${pct}% = R$ ${comissaoValor.toFixed(2)}`);
+  const base           = round2(preco - comissaoContab);
+  const comissaoVendedor = round2(base * (pct / 100));
+  const lucroMovv        = round2(preco - CUSTO_CERTIFICADO - comissaoContab - comissaoVendedor);
 
-  return { lucro, comissaoValor };
+  console.log(`[FERNANDO] Venda ${tipoVenda} — valor: R$ ${preco.toFixed(2)}, comissão contab: R$ ${comissaoContab.toFixed(2)}, base: R$ ${base.toFixed(2)}, comissão (${pct}%): R$ ${comissaoVendedor.toFixed(2)}, lucro Movv: R$ ${lucroMovv.toFixed(2)}`);
+
+  return { base, comissaoContab, comissaoVendedor, lucroMovv };
 }
 
 // Duas travas de segurança de preço: bloqueia abaixo do custo, avisa abaixo de R$30.
+// (Continua olhando só o valor_venda cheio, independente do tipo — a comissão
+// da contabilidade é validada à parte em calcularComissaoVenda.)
 function validarPreco(precoVenda) {
   const preco = parseFloat(precoVenda);
 

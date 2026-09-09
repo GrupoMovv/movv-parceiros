@@ -20,7 +20,10 @@ const requireAdminOrComercialFull = (req, res, next) => {
 // ─── Vendas ──────────────────────────────────────────────────────────────────
 router.get('/sales',              authenticate, requireAdminOrComercialFull, salesCtrl.listSales);
 router.get('/sales/:id',          authenticate, requireAdminOrComercialFull, salesCtrl.getSale);
+router.get('/sales/:id/historico', authenticate, requireAdminOrComercialFull, salesCtrl.getSaleHistorico);
 router.post('/sales',             authenticate, requireComercialFull,        salesCtrl.createSale);
+router.put('/sales/:id',          authenticate, requireAdminOrComercialFull, salesCtrl.updateSale);
+router.delete('/sales/:id',       authenticate, requireAdminOrComercialFull, salesCtrl.deleteSale);
 router.patch('/sales/:id/cancel', authenticate, requireAdminOrComercialFull, salesCtrl.cancelSale);
 
 // ─── Dashboard / metas / folha ───────────────────────────────────────────────
