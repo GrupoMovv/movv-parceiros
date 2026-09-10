@@ -4,6 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Identidade oficial IUB MAIS+ (mascote 3D + slides promocionais) —
+        // convive com o namespace `movv` (Portal Movv, área interna) e
+        // `gold`; `iub` é usado nas telas públicas do marketplace/associado.
+        iub: {
+          roxo: '#7C3AED',
+          'roxo-escuro': '#4C1D95',
+          'roxo-neon': '#A855F7',
+          'roxo-medio': '#9333EA',
+          dourado: '#FFB800',
+          'dourado-claro': '#FBBF24',
+          'dourado-escuro': '#D97706',
+          preto: '#1F2937',
+          cinza: '#6B7280',
+        },
         movv: {
           950:  '#061C2E',   // azul escuro profundo
           900:  '#0C2D48',   // brand primary — sidebar, header, buttons
@@ -28,6 +42,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Poppins', 'sans-serif'],
       },
       backgroundImage: {
         'movv-gradient': 'linear-gradient(135deg, #061C2E 0%, #0C2D48 60%, #1A4D7A 100%)',
@@ -39,6 +54,17 @@ export default {
         'gold-lg': '0 0 40px rgba(201,168,76,0.35)',
         'blue':    '0 4px 24px rgba(12,45,72,0.18)',
         'card':    '0 1px 4px rgba(0,0,0,0.07)',
+      },
+      animation: {
+        'bounce-slow': 'bounce 3s infinite',
+        'float': 'float 4s ease-in-out infinite',
+        'pulse-slow': 'pulse 3s infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
       },
     },
   },
