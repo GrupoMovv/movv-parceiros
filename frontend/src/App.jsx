@@ -81,6 +81,7 @@ import ParceiroEstatisticas from './pages/parceiro/Estatisticas';
 import ParceiroMateriais from './pages/parceiro/Materiais';
 import ParceiroLives from './pages/parceiro/Lives';
 import ParceiroFechaMes from './pages/parceiro/FechaMes';
+import ParceiroJogos from './pages/parceiro/Jogos';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -243,6 +244,7 @@ export default function App() {
           <Route path="materiais" element={<ParceiroMateriais />} />
           <Route path="lives" element={<ParceiroLives />} />
           <Route path="fecha-mes" element={<ParceiroFechaMes />} />
+          <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="configuracoes" element={<ParceiroConfiguracoes />} />
         </Route>

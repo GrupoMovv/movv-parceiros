@@ -14,6 +14,7 @@ const ABAS = [
   { label: '🌟 Materiais', to: '/parceiro/painel/materiais' },
   { label: '🎥 Lives', to: '/parceiro/painel/lives' },
   { label: '🔥 Fecha Mês', to: '/parceiro/painel/fecha-mes' },
+  { label: '🎰 Roleta da Sorte', to: '/parceiro/painel/jogos' },
   { label: 'Planos', to: '/parceiro/painel/planos' },
   { label: 'Configurações', to: '/parceiro/painel/configuracoes' },
 ];
