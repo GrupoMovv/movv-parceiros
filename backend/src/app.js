@@ -63,6 +63,7 @@ app.use('/api/public/meu-cadastro',    require('./routes/publicMeuCadastro'));
 app.use('/api/public/painel',          require('./routes/publicPainel'));
 app.use('/api/public/carrinho',        require('./routes/publicCarrinho'));
 app.use('/api/public/planos',          require('./routes/publicPlanos'));
+app.use('/api/public/roleta',          require('./routes/roleta'));
 app.use('/api/parceiro/auth',          require('./routes/parceiroAuth'));
 app.use('/api/parceiro/dashboard',     require('./routes/parceiroDashboard'));
 app.use('/api/parceiro/perfil',        require('./routes/parceiroPerfil'));
