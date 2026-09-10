@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X } from 'lucide-react';
+import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X, Gift } from 'lucide-react';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
 import MascoteIubMais from '../../../components/MascoteIubMais';
@@ -14,6 +14,7 @@ const LINKS = [
   { to: '/meu/dados', label: 'Meus Dados', icon: User },
   { to: '/meu/dependentes', label: 'Dependentes', icon: Users2 },
   { to: '/meu/carteirinhas', label: 'Carteirinhas', icon: CreditCard },
+  { to: '/meu/cupons', label: '🎁 Meus Cupons', icon: Gift },
 ];
 
 export default function MeuPainelLayout() {

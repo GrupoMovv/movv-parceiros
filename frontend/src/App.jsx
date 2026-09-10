@@ -60,6 +60,7 @@ import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
 import NotFound from './pages/public/NotFound';
 import Roleta from './pages/public/Jogos/Roleta';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
+import MeuCupons from './pages/public/Cadastro/MeuCupons';
 import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
 import MeuDados from './pages/public/Cadastro/MeuDados';
@@ -214,6 +215,7 @@ export default function App() {
           <Route path="dados" element={<MeuDados />} />
           <Route path="dependentes" element={<MeuDependentes />} />
           <Route path="carteirinhas" element={<MinhasCarteirinhas />} />
+          <Route path="cupons" element={<MeuCupons />} />
           {/* Qualquer sub-rota não mapeada aqui (ex.: /meu/login, que
               nunca existiu mas as pessoas tentam por analogia com
               /parceiro/login) cai no catch-all global (path="*" lá
