@@ -50,6 +50,17 @@
   .badge-expired   { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200; }
   .badge-paid      { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200; }
   .badge-approved  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-movv-900 border border-blue-200; }
+
+  /* Botões da identidade IUB MAIS+ (telas públicas do marketplace/associado) */
+  .btn-iub-primary {
+    @apply bg-gradient-to-r from-iub-roxo to-iub-roxo-escuro text-white font-bold px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105;
+  }
+  .btn-iub-dourado {
+    @apply bg-iub-dourado hover:bg-iub-dourado-escuro text-black font-bold px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105;
+  }
+  .btn-iub-outline {
+    @apply border-2 border-iub-roxo text-iub-roxo font-bold px-6 py-3 rounded-full hover:bg-iub-roxo hover:text-white transition-all;
+  }
 }
 
 @layer utilities {
