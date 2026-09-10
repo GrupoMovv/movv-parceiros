@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X, Loader2 } from 'lucide-react';
+import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X } from 'lucide-react';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
+import MascoteIubMais from '../../../components/MascoteIubMais';
 import { assetUrl } from '../../../services/api';
 
 const NAVY = '#0B1F3A';
@@ -48,8 +49,9 @@ export default function MeuPainelLayout() {
 
   if (loading || !dados) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center" style={{ backgroundColor: '#F8F7F4' }}>
-        <Loader2 className="w-7 h-7 animate-spin" style={{ color: NAVY }} />
+      <div className="min-h-screen w-full flex flex-col items-center justify-center py-16" style={{ backgroundColor: '#F8F7F4' }}>
+        <MascoteIubMais tamanho="medium" animacao="pulse" />
+        <p className="text-iub-cinza mt-4">Carregando...</p>
       </div>
     );
   }

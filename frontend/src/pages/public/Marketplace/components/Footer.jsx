@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PRETO } from '../theme';
 import { CATEGORIAS_HOME_FOOTER } from '../parceirosData';
+import MascoteIubMais from '../../../../components/MascoteIubMais';
 
 export default function Footer() {
   return (
@@ -37,8 +38,11 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-4 text-center">
-        <p className="text-white/30 text-xs">IUB MAIS {new Date().getFullYear()} — Marketplace de Itumbiara</p>
+      <div className="border-t border-white/10 py-4 flex flex-col items-center justify-center gap-2">
+        <MascoteIubMais tamanho="small" />
+        <p className="text-white/30 text-xs">
+          IUB MAIS {new Date().getFullYear()} — Feito com carinho em Itumbiara/GO
+        </p>
       </div>
     </footer>
   );

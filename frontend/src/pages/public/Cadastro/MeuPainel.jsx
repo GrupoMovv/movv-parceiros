@@ -10,6 +10,7 @@ import {
   publicCarteirinhaUrl, publicBeneficiosPdfUrl, montarMensagemCadastroPublico, linkWhatsappComTexto,
 } from '../../../utils/carteirinhaWhatsapp';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
+import MascoteIubMais from '../../../components/MascoteIubMais';
 
 const GOLD = '#D4AF37';
 
@@ -45,8 +46,20 @@ export default function MeuPainel() {
     }
   }
 
+  const primeiroNome = dados.nome_completo?.trim().split(/\s+/)[0] || '';
+
   return (
     <div className="space-y-5">
+      <div className="hero-associado bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro rounded-3xl p-6 text-white">
+        <div className="flex items-center gap-4">
+          <MascoteIubMais tamanho="medium" className="flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black truncate">Olá, {primeiroNome}!</h1>
+            <p className="text-white/80 mt-1 text-sm">Bem-vindo ao seu painel IUB MAIS+</p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center gap-4">
         {dados.foto_url ? (
           <img src={assetUrl(dados.foto_url)} alt="" className="w-20 h-20 rounded-full object-cover border-4 flex-shrink-0" style={{ borderColor: GOLD }} />

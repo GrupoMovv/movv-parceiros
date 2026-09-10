@@ -57,6 +57,7 @@ const MarketplaceCarrinho = lazy(() => import('./pages/public/Marketplace/Carrin
 const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender'));
 import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
+import NotFound from './pages/public/NotFound';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
@@ -302,7 +303,7 @@ export default function App() {
           <Route path="indicador/meus-pagamentos"    element={<RequireIndicator><IndicadorMeusPagamentos /></RequireIndicator>} />
           <Route path="indicador/perfil"             element={<RequireIndicator><IndicadorPerfil /></RequireIndicator>} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>
   );

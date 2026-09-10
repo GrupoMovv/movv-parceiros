@@ -18,6 +18,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import OnboardingTour from './components/OnboardingTour';
+import MascoteIubMais from '../../../components/MascoteIubMais';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useProdutosSecao, useParceirosCompactos } from './useSecaoData';
@@ -204,7 +205,11 @@ function SecaoParceiros({ titulo, parceiros, ehFavorito, onToggleFavorito, vazio
         📍 {titulo}
       </h2>
       {parceiros.length === 0 ? (
-        <p className="text-center text-slate-400 text-sm py-8">{vazio}</p>
+        <div className="text-center py-16">
+          <MascoteIubMais tamanho="large" animacao="float" className="mx-auto" />
+          <p className="text-iub-roxo font-bold text-lg mt-4">{vazio}</p>
+          <p className="text-iub-cinza mt-2">Mas continua procurando, tem muita coisa boa aqui!</p>
+        </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {parceiros.map((p, i) => (
