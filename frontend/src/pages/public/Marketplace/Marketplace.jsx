@@ -99,20 +99,19 @@ export default function Marketplace() {
 
       <FechaMesBanner info={fechaMesInfo} />
 
-      {/* categorias flutuam sobre o banner a partir do tablet (fundo branco
-          garante legibilidade); no mobile ficam em fluxo normal, acima do
-          banner, porque não sobra altura suficiente pra sobrepor sem
-          esconder o conteúdo do slide. */}
-      <div className="relative">
-        <div id="categorias" className="scroll-mt-16 sm:absolute sm:top-0 sm:inset-x-0 sm:z-10">
-          <div className="border-b border-slate-100 sm:border-0 sm:max-w-7xl sm:mx-auto sm:px-8 lg:px-16 sm:pt-5 lg:pt-6">
-            <div className="bg-white sm:rounded-2xl sm:shadow-lg sm:p-3 lg:p-4">
-              <CategoriaFaixa categoriaAtiva={categoriaAtiva} onSelecionar={handleSelecionarCategoriaLocal} />
-            </div>
-          </div>
-        </div>
+      {/* Carrossel primeiro (destaque total, estilo Mercado Livre/Amazon),
+          categorias como esteira horizontal logo abaixo — antes ficavam
+          flutuando por cima do carrossel (sm+) ou acima dele (mobile),
+          competindo pelo topo da página com o herói. */}
+      <HeroBannerCarousel associado={associado} fechaMesInfo={fechaMesInfo} />
 
-        <HeroBannerCarousel associado={associado} fechaMesInfo={fechaMesInfo} />
+      <div id="categorias" className="scroll-mt-16 border-b border-slate-100 bg-white">
+        {/* padding mobile fica por conta do CategoriaFaixa (px-4 py-4 nele
+            mesmo) — aqui só entra padding a partir do sm, senão dobra no
+            mobile (ver comentário do próprio CategoriaFaixa.jsx). */}
+        <div className="max-w-7xl mx-auto sm:px-8 lg:px-16 sm:py-4">
+          <CategoriaFaixa categoriaAtiva={categoriaAtiva} onSelecionar={handleSelecionarCategoriaLocal} />
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full space-y-8 sm:space-y-10 mt-6">
