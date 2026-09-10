@@ -72,6 +72,7 @@ app.use('/api/parceiro/promocoes',     require('./routes/parceiroPromocoes'));
 app.use('/api/parceiro/interessados',  require('./routes/parceiroInteressados'));
 app.use('/api/parceiro/conteudo-master', require('./routes/parceiroConteudoMaster'));
 app.use('/api/parceiro/fecha-mes',      require('./routes/parceiroFechaMes'));
+app.use('/api/parceiro/jogos',          require('./routes/parceiroJogos'));
 app.use('/api/parceiro',               require('./routes/parceiroConta'));
 app.use('/api/public/parceiro',        require('./routes/publicParceiroConta'));
 app.use('/api/public',                 require('./routes/public'));

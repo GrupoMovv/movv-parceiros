@@ -9,13 +9,6 @@ const gerarSufixo = customAlphabet('23456789ABCDEFGHJKLMNPQRSTUVWXYZ', 6);
 // horário de Brasília, mesma convenção de config/fechaMes.js.
 const TIMEZONE = 'America/Sao_Paulo';
 
-// Peso de sorteio atribuído a um parceiro quando ele ativa a roleta,
-// derivado do plano no momento da ativação (ver parceiroJogosController).
-// Grátis não pode ativar (bloqueado antes de chegar aqui). Master também
-// deveria ter garantia de aparecer ~1x/dia — não implementado nesta fase
-// (Fase 1/MVP), só o peso maior; ver TODO em sortearParceiro.
-const PESO_POR_PLANO = { gratis: 0, oficial: 1, premium: 3, master: 5 };
-
 // Probabilidades sugeridas pelo produto (somam 100) — ajustar aqui se
 // mudar de ideia, é a única fonte de verdade do sorteio de prêmio.
 // 100 = prêmio "DIAMANTE" (produto grátis), não é desconto real cobrado
@@ -55,6 +48,9 @@ function sortearParceiro(parceirosElegiveis) {
   return sortearPonderado(parceirosElegiveis, p => p.peso_sorteio);
 }
 
+// Exclui parceiro que já bateu o teto de cupons_dia dele hoje (senão o
+// campo fica só decorativo — parceiro pequeno configurou 3 cupons/dia
+// justamente pra não ser inundado, tem que ser respeitado no sorteio).
 async function buscarParceirosElegiveis(jogoTipo) {
   const result = await db.query(
     `SELECT jp.parceiro_id, jp.desconto_percentual, jp.validade_dias, jp.peso_sorteio,
@@ -62,7 +58,11 @@ async function buscarParceirosElegiveis(jogoTipo) {
      FROM sindicato_jogos_parceiros jp
      JOIN sindicato_parceiros p ON p.id = jp.parceiro_id
      WHERE jp.jogo_tipo = $1 AND jp.ativo = true AND jp.peso_sorteio > 0
-       AND p.status = 'ativo'`,
+       AND p.status = 'ativo'
+       AND (
+         SELECT COUNT(*) FROM sindicato_cupons_roleta c
+         WHERE c.parceiro_id = jp.parceiro_id AND c.jogo_tipo = jp.jogo_tipo AND c.jogado_em::date = NOW()::date
+       ) < jp.cupons_dia`,
     [jogoTipo]
   );
   return result.rows;
@@ -165,7 +165,6 @@ async function girarRoleta(associadoId, jogoTipo = 'roleta') {
 }
 
 module.exports = {
-  PESO_POR_PLANO,
   PREMIOS,
   TIMEZONE,
   sortearPremio,

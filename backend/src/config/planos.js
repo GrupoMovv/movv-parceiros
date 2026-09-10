@@ -39,6 +39,10 @@ const PLANOS = {
     materiais_educativos: false,
     grupo_vip: false,
     boost_busca: 0,
+    // IUB MAIS+ Joguinhos (Roleta da Sorte, fase 1): Grátis não participa
+    // (peso 0 = nunca sorteado, max_jogos 0 = nem consegue ativar).
+    max_jogos: 0,
+    peso_roleta: 0,
   },
   oficial: {
     nome: 'IUB Oficial',
@@ -59,6 +63,8 @@ const PLANOS = {
     materiais_educativos: false,
     grupo_vip: false,
     boost_busca: 1,
+    max_jogos: 1, // só a Roleta existe na fase 1, mas já prevê Tigrinho/Raspadinha
+    peso_roleta: 1,
   },
   premium: {
     nome: 'IUB Premium',
@@ -81,6 +87,8 @@ const PLANOS = {
     grupo_vip: false,
     boost_busca: 2,
     boost_fim_semana: true,
+    max_jogos: 2,
+    peso_roleta: 3,
   },
   master: {
     nome: 'IUB Master',
@@ -106,6 +114,8 @@ const PLANOS = {
     prioridade_melhorias: true,
     boost_busca: 3,
     boost_fim_semana: true,
+    max_jogos: null, // ilimitado
+    peso_roleta: 5,
   },
 };
 
@@ -145,6 +155,11 @@ function limiteProdutos(plano) {
   return max === null || max === undefined ? Infinity : max;
 }
 
+function limiteJogos(plano) {
+  const max = beneficios(plano).max_jogos;
+  return max === null || max === undefined ? Infinity : max;
+}
+
 // Preço de verdade a cobrar de um plano, dado se o CNPJ do parceiro está
 // sindicalizado ou não (ver sindicalizacaoService.verificarSindicalizacao).
 function precoPlano(plano, sindicalizada) {
@@ -161,5 +176,6 @@ module.exports = {
   planoEfetivo,
   beneficios,
   limiteProdutos,
+  limiteJogos,
   precoPlano,
 };
