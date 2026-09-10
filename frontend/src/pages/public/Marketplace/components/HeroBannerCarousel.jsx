@@ -7,6 +7,7 @@ import SlideProdutosDestaque from './heroSlides/SlideProdutosDestaque';
 import SlideComerciantes from './heroSlides/SlideComerciantes';
 import SlideAssociados from './heroSlides/SlideAssociados';
 import SlideFechaMes from './heroSlides/SlideFechaMes';
+import SlideRoleta from './heroSlides/SlideRoleta';
 import { DOURADO } from '../theme';
 
 const INTERVALO_MS = 6500;
@@ -61,6 +62,7 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
       !fechaMesEhPrincipal && slideFechaMes,
       produtosDestaque.length > 0 && { id: 'produtos', Componente: SlideProdutosDestaque, props: { produtos: produtosDestaque } },
       { id: 'comerciantes', Componente: SlideComerciantes, props: { totalParceiros } },
+      associado && { id: 'roleta', Componente: SlideRoleta, props: {} },
       !associado && { id: 'associados', Componente: SlideAssociados, props: { onAbrirLogin: () => setModalLoginAberto(true) } },
     ].filter(Boolean);
     return fechaMesEhPrincipal ? [slideFechaMes, ...base] : base;
