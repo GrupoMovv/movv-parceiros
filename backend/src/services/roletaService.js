@@ -134,7 +134,15 @@ async function girarRoleta(associadoId, jogoTipo = 'roleta') {
   }
 
   const parceiroSorteado = sortearParceiro(parceiros);
-  const descontoPercentual = sortearPremio();
+  const descontoSorteado = sortearPremio();
+  // O parceiro escolhe (na tela de configuração) até quanto de desconto
+  // topa dar — o setor da roleta é só o "quão generoso" o sorteio tenta
+  // ser; nunca obriga o parceiro a dar mais do que ele configurou (ex.:
+  // roleta caiu em DIAMANTE/100% mas o parceiro só autorizou até 50% ->
+  // cupom sai de 50%, não de 100%). `capeado` avisa o front pra mostrar
+  // "seu parceiro está dando o desconto máximo dele!" em vez do prêmio
+  // literal, quando isso acontecer.
+  const descontoFinal = Math.min(descontoSorteado, parceiroSorteado.desconto_percentual);
   const codigoCupom = await gerarCodigoCupomUnico();
 
   const insertResult = await db.query(
@@ -142,7 +150,7 @@ async function girarRoleta(associadoId, jogoTipo = 'roleta') {
        (associado_id, parceiro_id, codigo_cupom, desconto_percentual, jogo_tipo, valido_ate)
      VALUES ($1, $2, $3, $4, $5, NOW() + ($6 || ' days')::interval)
      RETURNING *`,
-    [associadoId, parceiroSorteado.parceiro_id, codigoCupom, descontoPercentual, jogoTipo, parceiroSorteado.validade_dias]
+    [associadoId, parceiroSorteado.parceiro_id, codigoCupom, descontoFinal, jogoTipo, parceiroSorteado.validade_dias]
   );
 
   const diasSeguidos = await atualizarStreak(associadoId);
@@ -151,6 +159,8 @@ async function girarRoleta(associadoId, jogoTipo = 'roleta') {
     cupom: insertResult.rows[0],
     parceiro: { id: parceiroSorteado.parceiro_id, nome: parceiroSorteado.nome, logo_url: parceiroSorteado.logo_url, slug: parceiroSorteado.slug },
     dias_seguidos: diasSeguidos,
+    premio_sorteado_percentual: descontoSorteado,
+    capeado: descontoFinal < descontoSorteado,
   };
 }
 
