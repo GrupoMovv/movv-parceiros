@@ -13,9 +13,17 @@ async function getStatus(req, res) {
       [associadoId]
     );
 
+    // "X pessoas jogaram hoje" na tela /jogar — pessoas, não cupons (por
+    // isso COUNT DISTINCT associado_id, não COUNT(*)).
+    const jogaramHojeResult = await db.query(
+      `SELECT COUNT(DISTINCT associado_id)::int AS total FROM sindicato_cupons_roleta
+       WHERE jogo_tipo = 'roleta' AND jogado_em::date = NOW()::date`
+    );
+
     return res.json({
       pode_jogar: !jaJogou,
       dias_seguidos: streakResult.rows[0]?.dias_seguidos || 0,
+      jogaram_hoje: jogaramHojeResult.rows[0].total,
     });
   } catch (err) {
     console.error(err);
