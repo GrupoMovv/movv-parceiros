@@ -38,17 +38,18 @@ export default function Roleta() {
   const timeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/cadastrar', { replace: true }); return; }
+    if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
     apiPainel.get('/roleta/status')
       .then(res => { setPodeJogar(res.data.pode_jogar); setDiasSeguidos(res.data.dias_seguidos); })
       .catch(err => {
         // Sessão realmente expirada/inválida — não dá pra jogar mesmo,
-        // manda de volta pro cadastro/login (o interceptor de apiPainel já
-        // limpou o token velho). Qualquer outro erro (rede, 500) fica
-        // silencioso: o botão continua liberado por padrão e o clique real
-        // vai revalidar tudo de novo no backend.
+        // manda pro login rápido de /jogar (não /cadastrar — quem já
+        // clicou em jogar não quer ver a tela de 3 opções). O interceptor
+        // de apiPainel já limpou o token velho. Qualquer outro erro (rede,
+        // 500) fica silencioso: o botão continua liberado por padrão e o
+        // clique real vai revalidar tudo de novo no backend.
         if (err.response?.status === 401) {
-          navigate('/cadastrar', { replace: true });
+          navigate('/jogar/login', { replace: true });
         } else {
           console.error('Erro ao carregar status da roleta:', err);
         }

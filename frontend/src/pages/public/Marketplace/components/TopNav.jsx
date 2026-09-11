@@ -6,6 +6,7 @@ import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
+import { getPainelToken } from '../../../../services/apiPainel';
 
 const MENU_SECUNDARIO = [
   { label: 'Categorias', href: '#categorias' },
@@ -115,7 +116,7 @@ export default function TopNav({
         </Link>
 
         <Link
-          to="/jogar"
+          to={getPainelToken() ? '/jogar' : '/jogar/login'}
           aria-label="Joguinhos IUB MAIS+"
           className="flex items-center gap-1.5 flex-shrink-0 text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-2 rounded-full text-black whitespace-nowrap animate-jogar-blink"
           style={{ backgroundColor: DOURADO }}

@@ -60,6 +60,7 @@ import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
 import NotFound from './pages/public/NotFound';
 import Roleta from './pages/public/Jogos/Roleta';
 import JogosHub from './pages/public/Jogos/JogosHub';
+import RoletaLogin from './pages/public/Jogos/RoletaLogin';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuCupons from './pages/public/Cadastro/MeuCupons';
 import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
@@ -207,6 +208,7 @@ export default function App() {
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
         <Route path="/marketplace/carrinho"       element={<MarketplaceFallback><MarketplaceCarrinho /></MarketplaceFallback>} />
         <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
+        <Route path="/jogar/login"        element={<RoletaLogin />} />
         <Route path="/jogar"              element={<JogosHub />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />

@@ -15,11 +15,11 @@ export default function JogosHub() {
   const [jogaramHoje, setJogaramHoje] = useState(0);
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/cadastrar', { replace: true }); return; }
+    if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
     apiPainel.get('/roleta/status')
       .then(res => { setPodeJogar(res.data.pode_jogar); setJogaramHoje(res.data.jogaram_hoje); })
       .catch(err => {
-        if (err.response?.status === 401) navigate('/cadastrar', { replace: true });
+        if (err.response?.status === 401) navigate('/jogar/login', { replace: true });
         else console.error('Erro ao carregar status dos joguinhos:', err);
       })
       .finally(() => setCarregando(false));
