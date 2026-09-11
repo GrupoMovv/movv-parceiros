@@ -25,7 +25,7 @@ export default function MeuPainel() {
 
   useEffect(() => {
     api.get('/public/marketplace/stats').then(res => setQtdParceiros(res.data.parceiros)).catch(() => {});
-    apiPainel.get('/roleta/status').then(res => setPodeJogarRoleta(res.data.pode_jogar)).catch(() => {});
+    apiPainel.get('/public/roleta/status').then(res => setPodeJogarRoleta(res.data.pode_jogar)).catch(() => {});
   }, []);
 
   async function handleReenviar() {

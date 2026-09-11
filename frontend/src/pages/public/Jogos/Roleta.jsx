@@ -39,7 +39,7 @@ export default function Roleta() {
 
   useEffect(() => {
     if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
-    apiPainel.get('/roleta/status')
+    apiPainel.get('/public/roleta/status')
       .then(res => { setPodeJogar(res.data.pode_jogar); setDiasSeguidos(res.data.dias_seguidos); })
       .catch(err => {
         // Sessão realmente expirada/inválida — não dá pra jogar mesmo,
@@ -62,7 +62,7 @@ export default function Roleta() {
     if (girando || !podeJogar) return;
     setGirando(true);
     try {
-      const res = await apiPainel.post('/roleta/girar');
+      const res = await apiPainel.post('/public/roleta/girar');
       const alvo = calcularRotacaoAlvo(rotacao, res.data.premio_sorteado_percentual);
       setRotacao(alvo);
       timeoutRef.current = setTimeout(() => {

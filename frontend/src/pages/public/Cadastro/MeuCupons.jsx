@@ -24,7 +24,7 @@ export default function MeuCupons() {
 
   useEffect(() => {
     setCarregando(true);
-    apiPainel.get('/roleta/meus-cupons', { params: { status: aba } })
+    apiPainel.get('/public/roleta/meus-cupons', { params: { status: aba } })
       .then(res => setCupons(res.data.cupons))
       .catch(err => {
         // MeuPainelLayout (pai desta rota) já validou a sessão antes de
@@ -40,7 +40,7 @@ export default function MeuCupons() {
   async function usarCupom(id) {
     setUsandoId(id);
     try {
-      await apiPainel.post(`/roleta/cupons/${id}/usar`);
+      await apiPainel.post(`/public/roleta/cupons/${id}/usar`);
       toast.success('Cupom marcado como usado!');
       setCupons(atual => atual.filter(c => c.id !== id));
     } catch (err) {
