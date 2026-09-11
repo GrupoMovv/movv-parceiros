@@ -7,8 +7,23 @@ import App from './App';
 import './index.css';
 
 // registerType: 'autoUpdate' (vite.config.js) já recarrega sozinho quando
-// sobe versão nova — não precisa de prompt "atualizar?" pro usuário.
-registerSW({ immediate: true });
+// sobe versão nova — não precisa de prompt "atualizar?" pro usuário. Mas o
+// browser só checa "tem versão nova?" de vez em quando sozinho, e no
+// celular o app fica horas em background sem essa checagem rodar — dá pra
+// ficar preso numa build antiga achando que é bug de código quando na
+// verdade é só cache (aconteceu de verdade num teste da Roleta: o fix já
+// estava publicado, o celular só não tinha buscado a versão nova ainda).
+// registration.update() força o browser a checar o sw.js de novo no
+// servidor sempre que o app volta pra primeiro plano.
+registerSW({
+  immediate: true,
+  onRegisteredSW(swUrl, registration) {
+    if (!registration) return;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') registration.update();
+    });
+  },
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

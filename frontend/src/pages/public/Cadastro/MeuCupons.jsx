@@ -26,7 +26,14 @@ export default function MeuCupons() {
     setCarregando(true);
     apiPainel.get('/roleta/meus-cupons', { params: { status: aba } })
       .then(res => setCupons(res.data.cupons))
-      .catch(() => toast.error('Erro ao carregar seus cupons'))
+      .catch(err => {
+        // MeuPainelLayout (pai desta rota) já validou a sessão antes de
+        // montar essa tela — um erro aqui é raro (rede, 401 bem no timing
+        // errado). Sem toast vermelho: deixa a lista vazia, que já cai no
+        // estado "nenhum cupom" existente logo abaixo, só loga pra debug.
+        console.error('Erro ao carregar cupons:', err);
+        setCupons([]);
+      })
       .finally(() => setCarregando(false));
   }, [aba]);
 
