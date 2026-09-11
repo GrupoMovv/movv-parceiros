@@ -114,6 +114,15 @@ export default function TopNav({
           )}
         </Link>
 
+        <Link
+          to="/jogar"
+          aria-label="Joguinhos IUB MAIS+"
+          className="flex items-center gap-1.5 flex-shrink-0 text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-2 rounded-full text-black whitespace-nowrap animate-jogar-blink"
+          style={{ backgroundColor: DOURADO }}
+        >
+          🎡 <span className="hidden sm:inline">JOGAR</span>
+        </Link>
+
         {carregandoAssociado ? (
           <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
         ) : nomeAssociado ? (
@@ -256,6 +265,11 @@ export default function TopNav({
       <style>{`
         @keyframes carrinho-pulso { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.25); } }
         .animate-carrinho-pulso { animation: carrinho-pulso 0.7s ease-in-out; }
+        @keyframes jogar-blink {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,184,0,0.7); transform: scale(1); }
+          50% { box-shadow: 0 0 0 6px rgba(255,184,0,0); transform: scale(1.06); }
+        }
+        .animate-jogar-blink { animation: jogar-blink 1.8s ease-in-out infinite; }
       `}</style>
     </header>
   );

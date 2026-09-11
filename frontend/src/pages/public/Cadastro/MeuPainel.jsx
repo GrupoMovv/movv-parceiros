@@ -21,9 +21,11 @@ export default function MeuPainel() {
   const { dados } = useOutletContext();
   const [reenviando, setReenviando] = useState(false);
   const [qtdParceiros, setQtdParceiros] = useState(null);
+  const [podeJogarRoleta, setPodeJogarRoleta] = useState(false);
 
   useEffect(() => {
     api.get('/public/marketplace/stats').then(res => setQtdParceiros(res.data.parceiros)).catch(() => {});
+    apiPainel.get('/roleta/status').then(res => setPodeJogarRoleta(res.data.pode_jogar)).catch(() => {});
   }, []);
 
   async function handleReenviar() {
@@ -59,6 +61,24 @@ export default function MeuPainel() {
           </div>
         </div>
       </div>
+
+      {podeJogarRoleta && (
+        <Link
+          to="/jogar/roleta"
+          className="block rounded-2xl p-4 text-white relative overflow-hidden bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro"
+        >
+          <div className="relative flex items-center gap-3">
+            <span className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-xl">🎁</span>
+            <div className="min-w-0">
+              <p className="font-black text-sm">🎁 SEU PRESENTE DO DIA!</p>
+              <p className="text-white/85 text-xs mt-0.5">Gire a roleta e ganhe um cupom exclusivo</p>
+            </div>
+          </div>
+          <span className="btn-iub-dourado relative block mt-3 w-full text-center text-sm py-2.5">
+            Jogar agora
+          </span>
+        </Link>
+      )}
 
       <div className="flex items-center gap-4">
         {dados.foto_url ? (
