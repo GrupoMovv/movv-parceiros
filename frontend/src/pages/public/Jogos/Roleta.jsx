@@ -25,7 +25,12 @@ function dispararConfete() {
 export default function Roleta() {
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(true);
-  const [podeJogar, setPodeJogar] = useState(false);
+  // Otimista de propósito: se GET /status falhar (rede instável no
+  // celular, sessão expirando bem na hora, etc.) o botão não pode ficar
+  // preso desabilitado pra sempre — quem decide de verdade se pode girar
+  // é o POST /girar (fonte da verdade, sempre consultado de novo no
+  // clique). Aqui é só o "chute inicial" de exibição.
+  const [podeJogar, setPodeJogar] = useState(true);
   const [diasSeguidos, setDiasSeguidos] = useState(0);
   const [girando, setGirando] = useState(false);
   const [rotacao, setRotacao] = useState(0);
@@ -36,7 +41,18 @@ export default function Roleta() {
     if (!getPainelToken()) { navigate('/cadastrar', { replace: true }); return; }
     apiPainel.get('/roleta/status')
       .then(res => { setPodeJogar(res.data.pode_jogar); setDiasSeguidos(res.data.dias_seguidos); })
-      .catch(() => toast.error('Erro ao carregar a roleta'))
+      .catch(err => {
+        // Sessão realmente expirada/inválida — não dá pra jogar mesmo,
+        // manda de volta pro cadastro/login (o interceptor de apiPainel já
+        // limpou o token velho). Qualquer outro erro (rede, 500) fica
+        // silencioso: o botão continua liberado por padrão e o clique real
+        // vai revalidar tudo de novo no backend.
+        if (err.response?.status === 401) {
+          navigate('/cadastrar', { replace: true });
+        } else {
+          console.error('Erro ao carregar status da roleta:', err);
+        }
+      })
       .finally(() => setCarregando(false));
     return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
   }, [navigate]);
@@ -58,8 +74,10 @@ export default function Roleta() {
     } catch (err) {
       setGirando(false);
       if (err.response?.status === 409) {
+        // Só aqui é fonte da verdade de verdade (o backend revalidou) —
+        // agora sim o botão pode ficar desabilitado com segurança.
         setPodeJogar(false);
-        toast.error(err.response.data.error);
+        toast('Você já girou hoje! Volte amanhã 🎁', { icon: '🎡' });
       } else if (err.response?.status === 503) {
         toast.error(err.response.data.error);
       } else {
@@ -100,7 +118,7 @@ export default function Roleta() {
           type="button"
           onClick={girar}
           disabled={!podeJogar || girando}
-          className="btn-iub-dourado text-lg sm:text-xl px-10 py-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className={`btn-iub-dourado text-lg sm:text-xl px-10 py-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${podeJogar && !girando ? 'animate-pulse-slow' : ''}`}
         >
           {girando ? 'Girando...' : '🎡 GIRAR AGORA'}
         </button>

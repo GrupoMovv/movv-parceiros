@@ -37,4 +37,19 @@ apiPainel.interceptors.request.use(config => {
   return config;
 });
 
+// Sessão expirada/inválida (token velho, associado removido etc.) — limpa
+// direto aqui, na instância, pra toda tela que usa apiPainel se comportar
+// igual sem precisar repetir esse catch em cada uma (algumas, como
+// Roleta.jsx, não faziam isso e ficavam com um 401 silencioso travando a
+// tela). Mesma ideia já usada em apiParceiro.js.
+apiPainel.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 401) {
+      setPainelToken(null);
+    }
+    return Promise.reject(err);
+  }
+);
+
 export default apiPainel;
