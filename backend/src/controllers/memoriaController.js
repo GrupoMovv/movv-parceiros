@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { anonimizarNome } = require('../utils/anonimizarNome');
 
 // Filtros de periodo pro ranking — chave vem de req.query.periodo, sempre
 // validada contra este whitelist antes de entrar na query (nunca
@@ -69,6 +70,7 @@ async function getMeuRecorde(req, res) {
 // no período, não com cada partida individual.
 async function getRanking(req, res) {
   try {
+    const associadoId = req.painelAssociado.id;
     const periodo = FILTROS_PERIODO[req.query.periodo] ? req.query.periodo : 'dia';
     const filtro = FILTROS_PERIODO[periodo];
 
@@ -92,12 +94,22 @@ async function getRanking(req, res) {
          GROUP BY a.id
        )
        SELECT posicao, melhor_tempo_segundos FROM ranking WHERE associado_id = $1`,
-      [req.painelAssociado.id]
+      [associadoId]
     );
+
+    // LGPD: nunca devolve nome_completo de outro associado — só o dono da
+    // sessão vê o próprio nome de verdade (eu:true pro front destacar
+    // "Você"), todo mundo mais sai anonimizado (ver anonimizarNome).
+    const top10 = topResult.rows.map(row => ({
+      associado_id: row.associado_id,
+      nome: row.associado_id === associadoId ? row.nome_completo : anonimizarNome(row.nome_completo),
+      eu: row.associado_id === associadoId,
+      melhor_tempo_segundos: row.melhor_tempo_segundos,
+    }));
 
     return res.json({
       periodo,
-      top10: topResult.rows,
+      top10,
       minha_posicao: posicaoResult.rows[0] || null,
     });
   } catch (err) {

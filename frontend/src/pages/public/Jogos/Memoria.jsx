@@ -367,9 +367,12 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStat
             <>
               <ol className="mt-3 space-y-1 max-h-40 overflow-y-auto">
                 {dados.top10.map((item, i) => (
-                  <li key={item.associado_id} className="flex items-center justify-between text-xs bg-slate-50 rounded-lg px-2.5 py-1.5">
+                  <li
+                    key={item.associado_id}
+                    className={`flex items-center justify-between text-xs rounded-lg px-2.5 py-1.5 ${item.eu ? 'bg-iub-dourado/20 ring-1 ring-iub-dourado' : 'bg-slate-50'}`}
+                  >
                     <span className="font-semibold text-iub-roxo-escuro truncate mr-2">
-                      {i + 1}º {item.nome_completo}
+                      {i + 1}º {item.nome}{item.eu && ' (Você)'}
                     </span>
                     <span className="font-mono font-bold text-iub-cinza shrink-0">{formatarTempo(item.melhor_tempo_segundos)}</span>
                   </li>
