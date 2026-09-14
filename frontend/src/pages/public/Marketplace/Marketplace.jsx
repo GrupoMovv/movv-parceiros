@@ -103,7 +103,7 @@ export default function Marketplace() {
           categorias como esteira horizontal logo abaixo — antes ficavam
           flutuando por cima do carrossel (sm+) ou acima dele (mobile),
           competindo pelo topo da página com o herói. */}
-      <HeroBannerCarousel associado={associado} fechaMesInfo={fechaMesInfo} />
+      <HeroBannerCarousel fechaMesInfo={fechaMesInfo} />
 
       <div id="categorias" className="scroll-mt-16 border-b border-slate-100 bg-white">
         {/* padding mobile fica por conta do CategoriaFaixa (px-4 py-4 nele

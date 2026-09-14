@@ -1,15 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CaretLeft, CaretRight, Play, Pause } from '@phosphor-icons/react';
 import api from '../../../../services/api';
-import ModalEntrar from './ModalEntrar';
-import SlideInstitucional from './heroSlides/SlideInstitucional';
-import SlideProdutosDestaque from './heroSlides/SlideProdutosDestaque';
-import SlideComerciantes from './heroSlides/SlideComerciantes';
-import SlideAssociados from './heroSlides/SlideAssociados';
+import SlideHero from './heroSlides/SlideHero';
+import SlideJogos from './heroSlides/SlideJogos';
+import SlideCategoriaBeleza from './heroSlides/SlideCategoriaBeleza';
+import SlideCategoriaSaude from './heroSlides/SlideCategoriaSaude';
+import SlideCategoriaFitness from './heroSlides/SlideCategoriaFitness';
 import SlideFechaMes from './heroSlides/SlideFechaMes';
+import SlideCupons from './heroSlides/SlideCupons';
 import { DOURADO } from '../theme';
 
-const INTERVALO_MS = 6500;
+const INTERVALO_MS = 5000;
+const LIMIAR_SWIPE_PX = 40;
+
+// Altura do carrossel varia por slide: Fecha Mês mantém exatamente a
+// mesma altura de sempre (620px desktop) porque o frame dele (ver
+// SlideFechaMes.jsx) é calibrado em cima desse número — encolher a
+// section pra caber a "altura consistente" pedida pros slides novos
+// faria a arte do Fecha Mês cortar em monitores comuns (1280-1440px),
+// sem precisar tocar no arquivo dele. Os 6 slides novos usam a altura
+// nova (280-300 mobile / 400-450 desktop pedida no redesign).
+const ALTURA_PADRAO = 'h-[290px] sm:h-[380px] lg:h-[440px]';
+const ALTURA_FECHA_MES = 'h-[250px] sm:h-[480px] lg:h-[620px]';
 
 // TODO (painel admin futuro, não implementado ainda):
 //  - editor de slides do banner (texto, imagem, botão, ordem)
@@ -18,60 +30,54 @@ const INTERVALO_MS = 6500;
 //  - configurar intervalo do autoplay
 
 // Banner hero full-width — orquestra só a mecânica do carrossel (autoplay,
-// setas, dots, play/pause, contador); cada slide é um componente próprio em
-// ./heroSlides, alguns com dado real buscado aqui uma vez só (produtos
-// exclusivos, total de parceiros) e passado por prop, pra não competir com
-// o timer do carrossel nem duplicar fetch.
-//
-// SlideColaboradores ("Colaborador de empresa parceira? ... Supermercado
-// Reis") foi tirado do carrossel principal de propósito — pouco chamativo
-// pro público geral do marketplace. O componente continua existindo (ver
-// ./heroSlides/SlideColaboradores.jsx) pra virar um banner específico no
-// futuro, só não é mais montado aqui.
-// `associado` vem por prop (não chama useAssociadoSessao aqui) pra não
-// disparar o fluxo de login por ?associado=hash em duplicidade com quem
-// já usa o hook (Marketplace.jsx).
-export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
+// setas, dots, play/pause, swipe, contador); cada slide é um componente
+// próprio em ./heroSlides. Redesign (7 slides: Hero, Jogos, 3x Lojas
+// Oficiais por categoria, Fecha Mês, Cupons) — slides de categoria e o de
+// cupons só entram se tiverem dado de verdade pra mostrar (ver `slides`).
+export default function HeroBannerCarousel({ fechaMesInfo }) {
   const [indice, setIndice] = useState(0);
   const [pausado, setPausado] = useState(false);
-  const [modalLoginAberto, setModalLoginAberto] = useState(false);
-  const [produtosDestaque, setProdutosDestaque] = useState([]);
-  const [totalParceiros, setTotalParceiros] = useState(null);
+  const [masterPorCategoria, setMasterPorCategoria] = useState({ beleza: [], saude: [], fitness: [] });
+  const [cuponsDisponiveis, setCuponsDisponiveis] = useState({ total: 0, amostra: [] });
   const timerRef = useRef(null);
+  const touchStartXRef = useRef(null);
 
   useEffect(() => {
-    api.get('/public/marketplace/banner-exclusivos').then(res => setProdutosDestaque(res.data.produtos || [])).catch(() => {});
-    api.get('/public/marketplace/stats').then(res => setTotalParceiros(res.data.parceiros)).catch(() => {});
+    api.get('/public/parceiros/master-por-categoria').then(res => setMasterPorCategoria(res.data)).catch(() => {});
+    api.get('/public/cupons/disponiveis').then(res => setCuponsDisponiveis(res.data)).catch(() => {});
   }, []);
 
   // Fecha Mês entra no carrossel só faltando <= 20 dias (nunca no dia em
   // si — aí quem assume é o banner full-width do topo, ver
   // FechaMesBanner/Marketplace.jsx). Nos últimos 3 dias vira o slide
-  // principal (posição 1); antes disso fica na posição 2, logo depois do
-  // institucional.
+  // principal (posição 1); antes disso fica na posição 6 (antes de Cupons).
   const diasRestantes = fechaMesInfo?.dias_restantes;
   const mostrarFechaMes = fechaMesInfo?.habilitado_globalmente && !fechaMesInfo?.ativo_hoje
     && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 20;
   const fechaMesEhPrincipal = mostrarFechaMes && diasRestantes <= 3;
-  const slideFechaMes = mostrarFechaMes && { id: 'fecha-mes', Componente: SlideFechaMes, props: { info: fechaMesInfo } };
+  const slideFechaMes = mostrarFechaMes && {
+    id: 'fecha-mes', Componente: SlideFechaMes, props: { info: fechaMesInfo }, cor: DOURADO, alturaClassica: true,
+  };
 
   const slides = useMemo(() => {
     const base = [
-      { id: 'institucional', Componente: SlideInstitucional, props: {} },
+      { id: 'hero', Componente: SlideHero, props: {}, cor: DOURADO },
+      { id: 'jogos', Componente: SlideJogos, props: {}, cor: '#FFB800' },
+      masterPorCategoria.beleza.length > 0 && { id: 'categoria-beleza', Componente: SlideCategoriaBeleza, props: { lojas: masterPorCategoria.beleza }, cor: '#EC4899' },
+      masterPorCategoria.saude.length > 0 && { id: 'categoria-saude', Componente: SlideCategoriaSaude, props: { lojas: masterPorCategoria.saude }, cor: '#10B981' },
+      masterPorCategoria.fitness.length > 0 && { id: 'categoria-fitness', Componente: SlideCategoriaFitness, props: { lojas: masterPorCategoria.fitness }, cor: '#F97316' },
       !fechaMesEhPrincipal && slideFechaMes,
-      produtosDestaque.length > 0 && { id: 'produtos', Componente: SlideProdutosDestaque, props: { produtos: produtosDestaque } },
-      { id: 'comerciantes', Componente: SlideComerciantes, props: { totalParceiros } },
-      !associado && { id: 'associados', Componente: SlideAssociados, props: { onAbrirLogin: () => setModalLoginAberto(true) } },
+      cuponsDisponiveis.total > 0 && { id: 'cupons', Componente: SlideCupons, props: cuponsDisponiveis, cor: DOURADO },
     ].filter(Boolean);
     return fechaMesEhPrincipal ? [slideFechaMes, ...base] : base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [produtosDestaque, totalParceiros, associado, fechaMesEhPrincipal, mostrarFechaMes, diasRestantes]);
+  }, [masterPorCategoria, cuponsDisponiveis, fechaMesEhPrincipal, mostrarFechaMes, diasRestantes]);
 
   const total = slides.length;
 
-  // slides que só entram depois que o próprio fetch resolve (produtos,
-  // colaboradores) ou saem quando a sessão de associado carrega podem
-  // deixar o índice atual apontando pra fora da lista — corrige na hora.
+  // slides que só entram depois que o próprio fetch resolve (categoria,
+  // cupons) podem deixar o índice atual apontando pra fora da lista —
+  // corrige na hora.
   useEffect(() => { if (indice >= total) setIndice(0); }, [total, indice]);
 
   const pararAutoplay = useCallback(() => {
@@ -93,13 +99,29 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
     setIndice(((i % total) + total) % total);
   }
 
+  function handleTouchStart(e) {
+    touchStartXRef.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartXRef.current == null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (deltaX > LIMIAR_SWIPE_PX) irPara(indice - 1);
+    else if (deltaX < -LIMIAR_SWIPE_PX) irPara(indice + 1);
+  }
+
   if (total === 0) return null;
+
+  const alturaAtual = slides[indice]?.alturaClassica ? ALTURA_FECHA_MES : ALTURA_PADRAO;
 
   return (
     <section
-      className="relative w-full h-[250px] sm:h-[480px] lg:h-[620px] overflow-hidden"
+      className={`relative w-full ${alturaAtual} overflow-hidden transition-[height] duration-500`}
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <div
         className="flex h-full transition-transform duration-500 ease-in-out"
@@ -116,13 +138,13 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
         <>
           <button
             type="button" onClick={() => irPara(indice - 1)} aria-label="Slide anterior"
-            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+            className="hidden sm:flex absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm items-center justify-center text-white transition-colors"
           >
             <CaretLeft size={20} weight="bold" />
           </button>
           <button
             type="button" onClick={() => irPara(indice + 1)} aria-label="Próximo slide"
-            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+            className="hidden sm:flex absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/25 hover:bg-white/40 backdrop-blur-sm items-center justify-center text-white transition-colors"
           >
             <CaretRight size={20} weight="bold" />
           </button>
@@ -154,7 +176,7 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
                     key={indice}
                     className="absolute inset-y-0 left-0 rounded-full"
                     style={{
-                      backgroundColor: DOURADO,
+                      backgroundColor: slide.cor || DOURADO,
                       animation: `preencherHero ${INTERVALO_MS}ms linear forwards`,
                       animationPlayState: pausado ? 'paused' : 'running',
                     }}
@@ -165,8 +187,6 @@ export default function HeroBannerCarousel({ associado, fechaMesInfo }) {
           </div>
         </>
       )}
-
-      {modalLoginAberto && <ModalEntrar onClose={() => setModalLoginAberto(false)} />}
 
       <style>{`@keyframes preencherHero { from { width: 0%; } to { width: 100%; } }`}</style>
     </section>
