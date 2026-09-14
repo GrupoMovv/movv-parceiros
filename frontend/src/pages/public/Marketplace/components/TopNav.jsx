@@ -12,6 +12,7 @@ import { getPainelToken } from '../../../../services/apiPainel';
 // âncora pra rolar até a seção na própria home (scrollPara).
 const MENU_SECUNDARIO = [
   { label: 'Categorias', href: '#categorias' },
+  { label: '🎯 Serviços', rota: '/marketplace/servicos' },
   { label: '💡 Curiosidades', rota: '/curiosidades' },
   { label: 'Ofertas', href: '#ofertas' },
   { label: 'Novidades', href: '#novidades' },
