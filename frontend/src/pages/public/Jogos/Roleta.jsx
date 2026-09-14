@@ -32,6 +32,9 @@ export default function Roleta() {
   // clique). Aqui é só o "chute inicial" de exibição.
   const [podeJogar, setPodeJogar] = useState(true);
   const [diasSeguidos, setDiasSeguidos] = useState(0);
+  // Otimista igual aos outros dois — se sem parceiro elegível hoje, mostra
+  // a tela "sem cupons novos" + link pra Memória em vez do botão Girar.
+  const [temParceiros, setTemParceiros] = useState(true);
   const [girando, setGirando] = useState(false);
   const [rotacao, setRotacao] = useState(0);
   const [resultado, setResultado] = useState(null);
@@ -40,7 +43,11 @@ export default function Roleta() {
   useEffect(() => {
     if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
     apiPainel.get('/public/roleta/status')
-      .then(res => { setPodeJogar(res.data.pode_jogar); setDiasSeguidos(res.data.dias_seguidos); })
+      .then(res => {
+        setPodeJogar(res.data.pode_jogar);
+        setDiasSeguidos(res.data.dias_seguidos);
+        setTemParceiros(res.data.tem_parceiros_disponiveis);
+      })
       .catch(err => {
         // Sessão realmente expirada/inválida — não dá pra jogar mesmo,
         // manda pro login rápido de /jogar (não /cadastrar — quem já
@@ -80,6 +87,11 @@ export default function Roleta() {
         setPodeJogar(false);
         toast('Você já girou hoje! Volte amanhã 🎁', { icon: '🎡' });
       } else if (err.response?.status === 503) {
+        // Corrida rara: passou no /status mas os parceiros esgotaram entre
+        // a checagem e o clique — troca pra tela "sem cupons" em vez de só
+        // um toast que some, senão o botão Girar fica ali convidando a
+        // tentar de novo e vai bater 503 de novo.
+        setTemParceiros(false);
         toast.error(err.response.data.error);
       } else {
         toast.error('Erro ao girar a roleta, tenta de novo');
@@ -107,34 +119,65 @@ export default function Roleta() {
       </header>
 
       <div className="flex justify-center mt-4">
-        <MascoteIubMais tamanho="large" animacao={girando ? 'bounce' : 'float'} />
+        <MascoteIubMais tamanho="large" animacao={girando ? 'bounce' : podeJogar && !temParceiros ? 'pulse' : 'float'} />
       </div>
 
-      <div className="mt-4">
-        <RoletaWheel rotacao={rotacao} girando={girando} />
-      </div>
+      {podeJogar && !temParceiros ? (
+        <div className="text-center mt-6 px-4">
+          <p className="text-white font-black text-xl">Hoje sem cupons novos 😔</p>
+          <p className="text-white/80 text-sm mt-2 max-w-sm mx-auto">
+            Os parceiros bateram o limite de cupons de hoje. Volta amanhã pra girar de novo!
+          </p>
+          <Link
+            to="/jogar/memoria"
+            className="btn-iub-dourado inline-block text-lg px-10 py-4 mt-6 animate-pulse-slow"
+          >
+            🧠 Que tal um joguinho?
+          </Link>
+          <p className="text-white/60 text-xs mt-3">Jogo da Memória — sem limite, joga quanto quiser!</p>
 
-      <div className="text-center mt-8 px-4">
-        <button
-          type="button"
-          onClick={girar}
-          disabled={!podeJogar || girando}
-          className={`btn-iub-dourado text-lg sm:text-xl px-10 py-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${podeJogar && !girando ? 'animate-pulse-slow' : ''}`}
-        >
-          {girando ? 'Girando...' : '🎡 GIRAR AGORA'}
-        </button>
+          <Link to="/meu/cupons" className="inline-block text-white/70 hover:text-white text-sm underline mt-6">
+            Ver meus cupons
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4">
+            <RoletaWheel rotacao={rotacao} girando={girando} />
+          </div>
 
-        <p className="text-white/80 text-sm mt-4">
-          {podeJogar ? 'Você tem 1 giro hoje' : 'Você já jogou hoje — volta amanhã pra girar de novo!'}
-        </p>
-        {diasSeguidos > 1 && (
-          <p className="text-iub-dourado font-bold text-sm mt-1">🔥 {diasSeguidos} dias seguidos jogando!</p>
-        )}
+          <div className="text-center mt-8 px-4">
+            <button
+              type="button"
+              onClick={girar}
+              disabled={!podeJogar || girando}
+              className={`btn-iub-dourado text-lg sm:text-xl px-10 py-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${podeJogar && !girando ? 'animate-pulse-slow' : ''}`}
+            >
+              {girando ? 'Girando...' : '🎡 GIRAR AGORA'}
+            </button>
 
-        <Link to="/meu/cupons" className="inline-block text-white/70 hover:text-white text-sm underline mt-6">
-          Ver meus cupons
-        </Link>
-      </div>
+            <p className="text-white/80 text-sm mt-4">
+              {podeJogar ? 'Você tem 1 giro hoje' : 'Você já jogou hoje — volta amanhã pra girar de novo!'}
+            </p>
+            {diasSeguidos > 1 && (
+              <p className="text-iub-dourado font-bold text-sm mt-1">🔥 {diasSeguidos} dias seguidos jogando!</p>
+            )}
+
+            {!podeJogar && (
+              <Link
+                to="/jogar/memoria"
+                className="inline-block btn-iub-outline border-white text-white hover:bg-white/10 text-sm px-6 py-2.5 mt-4"
+              >
+                🧠 Jogar Memória enquanto isso
+              </Link>
+            )}
+
+            <Link to="/meu/cupons" className="inline-block text-white/70 hover:text-white text-sm underline mt-6">
+              Ver meus cupons
+            </Link>
+          </div>
+        </>
+      )}
 
       {resultado && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setResultado(null)}>

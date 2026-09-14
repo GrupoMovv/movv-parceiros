@@ -1,8 +1,9 @@
 const db = require('../config/database');
-const { girarRoleta, jaJogouHoje } = require('../services/roletaService');
+const { girarRoleta, jaJogouHoje, buscarParceirosElegiveis } = require('../services/roletaService');
 
-// Tela 1 da roleta: já jogou hoje? tem streak? — pra desenhar o estado
-// inicial (botão "girar" vs. "volta amanhã") sem precisar tentar girar.
+// Tela 1 da roleta: já jogou hoje? tem streak? tem parceiro elegível pra
+// sortear? — pra desenhar o estado inicial (botão "girar" vs. "volta
+// amanhã" vs. "sem cupons hoje, joga Memória") sem precisar tentar girar.
 async function getStatus(req, res) {
   try {
     const associadoId = req.painelAssociado.id;
@@ -20,10 +21,17 @@ async function getStatus(req, res) {
        WHERE jogo_tipo = 'roleta' AND jogado_em::date = NOW()::date`
     );
 
+    // Mesma checagem que girarRoleta() faz na hora de sortear — se nenhum
+    // parceiro tem cupom sobrando hoje (todos bateram cupons_dia), o botão
+    // não pode nem aparecer habilitado: manda pra Memória em vez de deixar
+    // o associado clicar Girar e tomar 503.
+    const parceirosElegiveis = await buscarParceirosElegiveis('roleta');
+
     return res.json({
       pode_jogar: !jaJogou,
       dias_seguidos: streakResult.rows[0]?.dias_seguidos || 0,
       jogaram_hoje: jogaramHojeResult.rows[0].total,
+      tem_parceiros_disponiveis: parceirosElegiveis.length > 0,
     });
   } catch (err) {
     console.error(err);
