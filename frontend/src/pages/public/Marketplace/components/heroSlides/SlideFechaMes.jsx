@@ -120,16 +120,19 @@ export default function SlideFechaMes({ info }) {
       </div>
 
       {/* Botão ancorado no container FIXO (não no frame da imagem).
-          <640px: o frame quadrado (250px) fica centralizado num container
-          mais largo (~320-414px) — o botão (bottom-4 left-4) cai na barra
-          roxo-escura vazia do lado esquerdo, sem tocar a arte, mas também
-          sem ficar "colado" nela; é o trade-off de manter o botão sem
-          mexer nele. >=640px: comportamento de sempre — na maioria das
-          larguras (até ~1850px de container) sobra barra embaixo e o
-          botão cai limpo ali; só em monitor bem largo (≳1920px) o frame
-          preenche 100% da altura e o botão passa a ficar por cima do
-          canto inferior esquerdo (mascote + sacolas "COMPRE LOCAL"). Se
-          incomodar em algum desses casos, é só mover pra outro canto. */}
+          <640px: o frame quadrado agora preenche quase 100% do slide
+          (largura = tela, altura quase igual ao slide de 380px) — o
+          botão (bottom-4 left-4) cai por cima do canto inferior esquerdo
+          da arte (onde a peça mobile tem os ícones "Produtos/Serviços/
+          Ofertas/Empresas"). Fundo sólido dourado, continua legível e
+          clicável em cima de qualquer coisa, só fica visualmente mais
+          "em cima" da arte do que antes. >=640px: comportamento de
+          sempre — na maioria das larguras (até ~1850px de container)
+          sobra barra embaixo e o botão cai limpo ali; só em monitor bem
+          largo (≳1920px) o frame preenche 100% da altura e o botão passa
+          a ficar por cima do canto inferior esquerdo (mascote + sacolas
+          "COMPRE LOCAL"). Se incomodar em algum desses casos, é só mover
+          pra outro canto. */}
       <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8">
         <button
           type="button"
@@ -141,18 +144,19 @@ export default function SlideFechaMes({ info }) {
       </div>
 
       <style>{`
-        /* <640px: peça quadrada (1:1) — dimensiona pela ALTURA (preenche
-           o espaço vertical inteiro do slide). Container (~375px de
-           largura) é mais largo que o frame resultante (250px, = altura
-           do slide no mobile), então o quadrado cabe inteiro sem cortar
-           nada — sobra barra roxa só dos lados, não corta a arte (por
-           isso não precisa mais do zoom/crop de 110% usado antes pra
-           peça horizontal). */
-        .fecha-mes-frame { aspect-ratio: ${ASPECT_RATIO_MOBILE}; height: 100%; width: auto; }
+        /* width:100%/height:auto vale pros dois breakpoints — só o
+           aspect-ratio muda. <640px: peça quadrada (1:1) dimensiona pela
+           LARGURA da tela (não mais pela altura — isso deixava sobrar
+           barra roxa grande dos lados com o slide ainda em 250px de
+           altura). Agora o slide no mobile tem 380px (ver
+           HeroBannerCarousel/ALTURA_FECHA_MES) — largura ~320-414px vira
+           frame de ~320-414px de altura, preenchendo 84-100% do slide
+           (só corta ~17px de cada lado em 414px, cortado pelo
+           overflow-hidden do container — imperceptível). >=640px: peça
+           horizontal, comportamento idêntico ao de sempre. */
+        .fecha-mes-frame { width: 100%; height: auto; aspect-ratio: ${ASPECT_RATIO_MOBILE}; }
         @media (min-width: 640px) {
-          /* >=640px: peça horizontal, comportamento idêntico ao de
-             sempre — dimensiona pela LARGURA, sem corte nenhum. */
-          .fecha-mes-frame { aspect-ratio: ${ASPECT_RATIO_DESKTOP}; height: auto; width: 100%; }
+          .fecha-mes-frame { aspect-ratio: ${ASPECT_RATIO_DESKTOP}; }
         }
       `}</style>
     </div>

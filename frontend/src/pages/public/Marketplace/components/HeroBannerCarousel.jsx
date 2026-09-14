@@ -14,15 +14,21 @@ import { DOURADO } from '../theme';
 const INTERVALO_MS = 5000;
 const LIMIAR_SWIPE_PX = 40;
 
-// Altura do carrossel varia por slide: Fecha Mês mantém exatamente a
-// mesma altura de sempre (620px desktop) porque o frame dele (ver
-// SlideFechaMes.jsx) é calibrado em cima desse número — encolher a
-// section pra caber a "altura consistente" pedida pros slides novos
-// faria a arte do Fecha Mês cortar em monitores comuns (1280-1440px),
-// sem precisar tocar no arquivo dele. Os 6 slides novos usam a altura
-// nova (280-300 mobile / 400-450 desktop pedida no redesign).
+// Altura do carrossel varia por slide: Fecha Mês tem a própria altura,
+// diferente dos outros 7. Desktop (620px) intocado desde sempre — o
+// frame horizontal (ver SlideFechaMes.jsx) é calibrado em cima desse
+// número, encolher quebraria o corte em monitores comuns (1280-1440px).
+// Mobile foi ajustado de 250px pra 380px: a peça vertical dedicada
+// (1080x1080) dimensiona pela LARGURA da tela agora, então precisa de
+// slide mais alto pra caber sem sobrar barra roxa grande dos lados (250px
+// deixava a imagem pequena — era isso que tinha ficado errado antes). 380
+// foi escolhido calculando o preenchimento nos 3 tamanhos de teste
+// (320/375/414px): 84%/99%/100% (corta só ~17px de cada lado em 414px,
+// imperceptível) — o melhor equilíbrio dentro da faixa 380-420 pedida.
+// Os 6 slides novos usam a altura do redesign (280-300 mobile / 400-450
+// desktop), sem relação com o Fecha Mês.
 const ALTURA_PADRAO = 'h-[290px] sm:h-[380px] lg:h-[440px]';
-const ALTURA_FECHA_MES = 'h-[250px] sm:h-[480px] lg:h-[620px]';
+const ALTURA_FECHA_MES = 'h-[380px] sm:h-[480px] lg:h-[620px]';
 
 // TODO (painel admin futuro, não implementado ainda):
 //  - editor de slides do banner (texto, imagem, botão, ordem)
