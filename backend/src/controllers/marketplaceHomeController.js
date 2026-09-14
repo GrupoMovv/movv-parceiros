@@ -367,6 +367,74 @@ async function getParceiroPlanoPorSlug(req, res) {
   }
 }
 
+// Categorias do slide "Lojas Oficiais" do banner hero — só as 3 que têm
+// slide dedicado hoje (Beleza/Saúde/Fitness). `label` é o que compara
+// contra `categorias[]` do parceiro (mesmo critério de getCategorias:
+// normalizarCategoria, sem acento/maiúscula) — `slug` é só o que o front
+// usa pra rota /marketplace/categoria/:slug do botão "Ver todas".
+const CATEGORIAS_OFICIAIS = [
+  { slug: 'beleza', label: 'Beleza' },
+  { slug: 'saude', label: 'Saúde' },
+  { slug: 'fitness', label: 'Fitness' },
+];
+
+// Até 3 parceiros Master por categoria, pros slides 3/4/5 do banner hero
+// ("Lojas Oficiais") — cada slide só aparece no carrossel (ver front,
+// HeroBannerCarousel) se o array daquela categoria não vier vazio. Usa
+// planoEfetivo (não a coluna `plano` crua) pra ficar consistente com todo
+// resto desse arquivo — hoje nenhum parceiro é Master de verdade (fase
+// paga ainda desligada, ver config/planos.js), então as 3 listas vêm
+// vazias até existir um Master real ou o seed de demonstração passar a
+// mapear pra 'master' em vez de 'premium'.
+async function getMasterPorCategoria(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT id, slug, nome, logo_url, categorias, plano
+       FROM sindicato_parceiros WHERE status = 'ativo'`
+    );
+    const masters = result.rows.filter(p => planoEfetivo(p) === 'master');
+
+    const porCategoria = {};
+    for (const { slug, label } of CATEGORIAS_OFICIAIS) {
+      porCategoria[slug] = masters
+        .filter(p => (p.categorias || []).some(c => normalizarCategoria(c) === normalizarCategoria(label)))
+        .slice(0, 3)
+        .map(p => ({ id: p.id, nome: p.nome, logo_url: p.logo_url, slug: p.slug }));
+    }
+
+    return res.json(porCategoria);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar lojas oficiais por categoria' });
+  }
+}
+
+// Cupons ativos (ainda não usados, ainda não vencidos) da Roleta, pro
+// slide "Cupons Disponíveis" do banner hero — só flavor/prova social
+// (parceiro + %), nunca o código do cupom nem quem ganhou, então não tem
+// problema de privacidade em expor sem login (mesmo raciocínio de
+// anonimizarNome no ranking da Memória, aqui nem precisa porque não tem
+// nome nenhum no retorno).
+async function getCuponsDisponiveis(req, res) {
+  try {
+    const totalResult = await db.query(
+      `SELECT COUNT(*)::int AS total FROM sindicato_cupons_roleta WHERE status = 'ativo' AND valido_ate > NOW()`
+    );
+    const amostraResult = await db.query(
+      `SELECT p.nome AS parceiro_nome, p.logo_url AS parceiro_logo, c.desconto_percentual
+       FROM sindicato_cupons_roleta c
+       JOIN sindicato_parceiros p ON p.id = c.parceiro_id
+       WHERE c.status = 'ativo' AND c.valido_ate > NOW()
+       ORDER BY c.jogado_em DESC
+       LIMIT 15`
+    );
+    return res.json({ total: totalResult.rows[0].total, amostra: amostraResult.rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar cupons disponíveis' });
+  }
+}
+
 module.exports = {
   getOfertasSemana,
   getExclusivosAssociados,
@@ -381,4 +449,6 @@ module.exports = {
   getPioneiroVagas,
   getPioneiros,
   getParceiroPlanoPorSlug,
+  getMasterPorCategoria,
+  getCuponsDisponiveis,
 };

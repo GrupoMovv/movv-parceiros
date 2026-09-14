@@ -135,6 +135,8 @@ router.get('/marketplace/parceiros-destaques', marketplaceHomeCtrl.getParceirosD
 router.get('/marketplace/pioneiro-vagas', marketplaceHomeCtrl.getPioneiroVagas);
 router.get('/marketplace/pioneiros', marketplaceHomeCtrl.getPioneiros);
 router.get('/marketplace/parceiro-plano/:slug', marketplaceHomeCtrl.getParceiroPlanoPorSlug);
+router.get('/parceiros/master-por-categoria', marketplaceHomeCtrl.getMasterPorCategoria);
+router.get('/cupons/disponiveis', marketplaceHomeCtrl.getCuponsDisponiveis);
 
 router.get('/fecha-mes/proximo', fechaMesCtrl.getProximo);
 router.get('/fecha-mes/ativo', fechaMesCtrl.getAtivo);
