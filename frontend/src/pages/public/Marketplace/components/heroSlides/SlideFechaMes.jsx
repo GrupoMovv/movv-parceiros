@@ -9,32 +9,29 @@ const SLIDE_FECHA_MES_COM_TEXTO = 'https://res.cloudinary.com/emv2nb1j/image/upl
 // texto do lado direito, tem duas "pílulas" com ícone (calendário/relógio)
 // e espaço em branco reservado do lado do ícone pra entrar texto. Data e
 // contagem são calculadas de verdade a partir de `info` (nunca ficam
-// desatualizadas como a peça antiga ficava).
+// desatualizadas como a peça antiga ficava). Só entra no <picture> em
+// >=640px — ver SLIDE_FECHA_MES_MOBILE pro que aparece abaixo disso.
 const SLIDE_FECHA_MES_SEM_TEXTO = 'https://res.cloudinary.com/emv2nb1j/image/upload/v1789048827/ChatGPT_Image_10_de_set._de_2026_11_00_00.png';
 
-// Proporção da peça ativa no momento — trava o frame nessa proporção
-// (nunca distorce) e as posições em % do overlay batem exatamente com a
-// imagem em qualquer largura de tela, sem precisar medir nada via JS.
-// Peça antiga era 2172x724; a nova é 2170x725 (basicamente igual) — se
-// trocar de peça de novo, conferir e ajustar aqui.
-const ASPECT_RATIO = '2170 / 725';
+// Peça vertical dedicada pro mobile (14/09, 1080x1080 quadrada) — layout
+// TOTALMENTE diferente da horizontal, não é só um recorte dela: já vem
+// com um botão "VER PRODUTOS" desenhado (decorativo, não clicável — o
+// botão de verdade continua sendo o React logo abaixo) e a área de
+// calendário/relógio aqui não tem espaço reservado pra texto do jeito
+// que a horizontal tem (ícones colados, sem "slot" em branco do lado).
+// Por isso o overlay dinâmico (OVERLAY_DATA/OVERLAY_DIAS) só aparece em
+// >=640px — tentar reusar as mesmas coordenadas nessa peça ia colocar a
+// data em cima de algum elemento aleatório do desenho, sem calibrar de
+// verdade pra essa arte especificamente.
+const SLIDE_FECHA_MES_MOBILE = 'https://res.cloudinary.com/emv2nb1j/image/upload/v1789412016/ChatGPT_Image_14_de_set._de_2026_11_17_08.png';
 
-// No carrossel mobile (h-[250px], ver HeroBannerCarousel) o frame trava
-// pela LARGURA (100% do container) e a peça é bem panorâmica (~3:1) — a
-// altura calculada fica bem menor que os 250px disponíveis, sobra barra
-// roxa vazia em cima/embaixo e a arte parece pequena.
-//
-// Testei preencher a altura toda tipo object-cover puro (.fecha-mes-frame
-// com width 100%→auto e height auto→100%), mas o conteúdo da peça ocupa a
-// largura inteira de ponta a ponta (mascote "COMPRE LOCAL" na esquerda,
-// painel "DESCONTOS DE ATÉ 50%" na direita) — preencher a altura toda
-// exige cortar ~25-29% de cada lado no mobile, o que corta um desses dois
-// elementos fora. Por isso: só um zoom leve (110% de largura em vez de
-// 100%, ~4.5% cortado de cada lado — sempre fundo/céu da cidade, não
-// conteúdo) só em <640px. Ganho modesto de altura (~10%), sem perder
-// mascote nem o "50% OFF". >=640px mantém 100% (comportamento antigo,
-// já ficava bom).
-const CRESCIMENTO_MOBILE = '110%';
+// Proporção da peça ativa em CADA breakpoint — trava o frame nessa
+// proporção (nunca distorce). As posições em % do overlay (só ativo em
+// >=640px) batem exatamente com a peça horizontal nessa faixa. Peça
+// antiga (COM_TEXTO) era 2172x724; a SEM_TEXTO é 2170x725 (basicamente
+// igual) — se trocar de peça de novo, conferir e ajustar aqui.
+const ASPECT_RATIO_MOBILE = '1 / 1';
+const ASPECT_RATIO_DESKTOP = '2170 / 725';
 
 function formatarDataDestaque(iso) {
   const d = new Date(`${iso}T12:00:00`);
@@ -82,19 +79,24 @@ export default function SlideFechaMes({ info }) {
     <div className="slide-fecha-mes relative w-full h-full overflow-hidden bg-iub-roxo-escuro">
       <div
         className="fecha-mes-frame absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{ aspectRatio: ASPECT_RATIO, containerType: 'inline-size' }}
+        style={{ containerType: 'inline-size' }}
       >
-        <img
-          src={imagemSlide}
-          alt={`Fecha Mês IUB MAIS+ — ${formatarDataDestaque(info.data_evento)}, faltam ${textoDias}`}
-          loading="lazy"
-          className="w-full h-full object-cover"
-        />
+        <picture>
+          <source media="(max-width: 639px)" srcSet={SLIDE_FECHA_MES_MOBILE} />
+          <img
+            src={imagemSlide}
+            alt={`Fecha Mês IUB MAIS+ — ${formatarDataDestaque(info.data_evento)}, faltam ${textoDias}`}
+            loading="lazy"
+            className="w-full h-full object-cover"
+          />
+        </picture>
 
+        {/* Só em >=640px — ver comentário de SLIDE_FECHA_MES_MOBILE sobre
+            por que o overlay não é aplicado na peça quadrada. */}
         {usaOverlayDinamico && (
           <>
             <div
-              className="absolute flex items-center justify-start font-black text-white uppercase leading-none whitespace-nowrap"
+              className="hidden sm:flex absolute items-center justify-start font-black text-white uppercase leading-none whitespace-nowrap"
               style={{
                 left: OVERLAY_DATA.left, top: OVERLAY_DATA.top, width: OVERLAY_DATA.width, height: OVERLAY_DATA.height,
                 fontSize: `clamp(8px, ${OVERLAY_DATA.fontSizeCqw}cqw, 22px)`,
@@ -104,7 +106,7 @@ export default function SlideFechaMes({ info }) {
               {formatarDataCompacta(info.data_evento)}
             </div>
             <div
-              className="absolute flex items-center justify-start font-bold text-white leading-none whitespace-nowrap"
+              className="hidden sm:flex absolute items-center justify-start font-bold text-white leading-none whitespace-nowrap"
               style={{
                 left: OVERLAY_DIAS.left, top: OVERLAY_DIAS.top, width: OVERLAY_DIAS.width, height: OVERLAY_DIAS.height,
                 fontSize: `clamp(7px, ${OVERLAY_DIAS.fontSizeCqw}cqw, 18px)`,
@@ -117,15 +119,17 @@ export default function SlideFechaMes({ info }) {
         )}
       </div>
 
-      {/* Botão ancorado no container FIXO (não no frame da imagem) —
-          na maioria das larguras reais (mobile inteiro; desktop até ~1850px
-          de container) o frame não preenche a altura toda, sobra barra roxo-
-          escuro embaixo e o botão cai limpo ali, sem tocar a arte. Só em
-          monitor bem largo (≳1920px) o frame preenche 100% da altura e o
-          botão passa a ficar por cima do canto inferior esquerdo — que na
-          peça nova tem o mascote + sacolas "COMPRE LOCAL" (mais cheio que a
-          peça antiga). Conferir nesse caso específico; se incomodar, é só
-          mover pra outro canto. */}
+      {/* Botão ancorado no container FIXO (não no frame da imagem).
+          <640px: o frame quadrado (250px) fica centralizado num container
+          mais largo (~320-414px) — o botão (bottom-4 left-4) cai na barra
+          roxo-escura vazia do lado esquerdo, sem tocar a arte, mas também
+          sem ficar "colado" nela; é o trade-off de manter o botão sem
+          mexer nele. >=640px: comportamento de sempre — na maioria das
+          larguras (até ~1850px de container) sobra barra embaixo e o
+          botão cai limpo ali; só em monitor bem largo (≳1920px) o frame
+          preenche 100% da altura e o botão passa a ficar por cima do
+          canto inferior esquerdo (mascote + sacolas "COMPRE LOCAL"). Se
+          incomodar em algum desses casos, é só mover pra outro canto. */}
       <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8">
         <button
           type="button"
@@ -137,9 +141,18 @@ export default function SlideFechaMes({ info }) {
       </div>
 
       <style>{`
-        .fecha-mes-frame { width: ${CRESCIMENTO_MOBILE}; height: auto; }
+        /* <640px: peça quadrada (1:1) — dimensiona pela ALTURA (preenche
+           o espaço vertical inteiro do slide). Container (~375px de
+           largura) é mais largo que o frame resultante (250px, = altura
+           do slide no mobile), então o quadrado cabe inteiro sem cortar
+           nada — sobra barra roxa só dos lados, não corta a arte (por
+           isso não precisa mais do zoom/crop de 110% usado antes pra
+           peça horizontal). */
+        .fecha-mes-frame { aspect-ratio: ${ASPECT_RATIO_MOBILE}; height: 100%; width: auto; }
         @media (min-width: 640px) {
-          .fecha-mes-frame { width: 100%; }
+          /* >=640px: peça horizontal, comportamento idêntico ao de
+             sempre — dimensiona pela LARGURA, sem corte nenhum. */
+          .fecha-mes-frame { aspect-ratio: ${ASPECT_RATIO_DESKTOP}; height: auto; width: 100%; }
         }
       `}</style>
     </div>
