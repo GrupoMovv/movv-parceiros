@@ -435,6 +435,61 @@ async function getCuponsDisponiveis(req, res) {
   }
 }
 
+// Listagem de prestadores de serviço (tipo_negocio servico OU hibrido) —
+// híbrido aparece aqui E na listagem de produtos (fora do escopo desta
+// rodada), igual o pedido original descreve. Ordena por plano (Master
+// primeiro) com o mesmo boost_busca usado em getParceirosDestaques.
+async function getServicos(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+              preco_medio, duracao_media, modalidades
+       FROM sindicato_parceiros
+       WHERE status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')
+       ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC`
+    );
+    return res.json({ servicos: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar serviços' });
+  }
+}
+
+// Página individual de um serviço (/servicos/:slug no front) — 404 tanto
+// pra slug inexistente quanto pra parceiro que existe mas é só 'produto'
+// (não vaza a página de quem não presta serviço). "Serviços oferecidos"
+// reusa sindicato_parceiro_produtos (o catálogo já existente) em vez de
+// criar tabela nova — hoje a maioria dos prestadores não tem nenhum item
+// cadastrado ali, então a lista vem vazia até alguém cadastrar pelo
+// painel (nada quebra, só fica sem essa seção).
+async function getServicoPorSlug(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+              descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
+              preco_medio, duracao_media, modalidades, horario_atendimento, fotos_estabelecimento
+       FROM sindicato_parceiros
+       WHERE slug = $1 AND status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')`,
+      [req.params.slug]
+    );
+    const parceiro = result.rows[0];
+    if (!parceiro) return res.status(404).json({ error: 'Serviço não encontrado' });
+
+    const itensResult = await db.query(
+      `SELECT id, nome, preco, preco_associado
+       FROM sindicato_parceiro_produtos
+       WHERE parceiro_id = $1 AND ativo = true AND rascunho = false
+       ORDER BY destaque DESC, created_at DESC`,
+      [parceiro.id]
+    );
+
+    return res.json({ ...parceiro, plano: planoEfetivo(parceiro), servicos_oferecidos: itensResult.rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar serviço' });
+  }
+}
+
 module.exports = {
   getOfertasSemana,
   getExclusivosAssociados,
@@ -451,4 +506,6 @@ module.exports = {
   getParceiroPlanoPorSlug,
   getMasterPorCategoria,
   getCuponsDisponiveis,
+  getServicos,
+  getServicoPorSlug,
 };
