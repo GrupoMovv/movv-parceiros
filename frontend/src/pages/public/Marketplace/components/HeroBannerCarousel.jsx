@@ -3,6 +3,7 @@ import { CaretLeft, CaretRight, Play, Pause } from '@phosphor-icons/react';
 import api from '../../../../services/api';
 import SlideHero from './heroSlides/SlideHero';
 import SlideJogos from './heroSlides/SlideJogos';
+import SlideServicos from './heroSlides/SlideServicos';
 import SlideCategoriaBeleza from './heroSlides/SlideCategoriaBeleza';
 import SlideCategoriaSaude from './heroSlides/SlideCategoriaSaude';
 import SlideCategoriaFitness from './heroSlides/SlideCategoriaFitness';
@@ -31,9 +32,10 @@ const ALTURA_FECHA_MES = 'h-[250px] sm:h-[480px] lg:h-[620px]';
 
 // Banner hero full-width — orquestra só a mecânica do carrossel (autoplay,
 // setas, dots, play/pause, swipe, contador); cada slide é um componente
-// próprio em ./heroSlides. Redesign (7 slides: Hero, Jogos, 3x Lojas
+// próprio em ./heroSlides. Redesign (Hero, Jogos, Serviços, 3x Lojas
 // Oficiais por categoria, Fecha Mês, Cupons) — slides de categoria e o de
-// cupons só entram se tiverem dado de verdade pra mostrar (ver `slides`).
+// cupons só entram se tiverem dado de verdade pra mostrar (ver `slides`);
+// Serviços é fixo igual Hero/Jogos, não depende de nada do backend.
 export default function HeroBannerCarousel({ fechaMesInfo }) {
   const [indice, setIndice] = useState(0);
   const [pausado, setPausado] = useState(false);
@@ -63,6 +65,7 @@ export default function HeroBannerCarousel({ fechaMesInfo }) {
     const base = [
       { id: 'hero', Componente: SlideHero, props: {}, cor: DOURADO },
       { id: 'jogos', Componente: SlideJogos, props: {}, cor: '#FFB800' },
+      { id: 'servicos', Componente: SlideServicos, props: {}, cor: '#FFB800' },
       masterPorCategoria.beleza.length > 0 && { id: 'categoria-beleza', Componente: SlideCategoriaBeleza, props: { lojas: masterPorCategoria.beleza }, cor: '#EC4899' },
       masterPorCategoria.saude.length > 0 && { id: 'categoria-saude', Componente: SlideCategoriaSaude, props: { lojas: masterPorCategoria.saude }, cor: '#10B981' },
       masterPorCategoria.fitness.length > 0 && { id: 'categoria-fitness', Componente: SlideCategoriaFitness, props: { lojas: masterPorCategoria.fitness }, cor: '#F97316' },
