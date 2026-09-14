@@ -183,4 +183,32 @@ async function listImportacoes(req, res) {
   }
 }
 
-module.exports = { listContribuintes, stats, uploadPreview, confirmarImportacao, listImportacoes };
+// Alterna sempre_ativa (empresas do grupo que não pagam guia sindical mas
+// precisam ficar liberadas pro autocadastro mesmo sem aparecer no relatório
+// mensal — ex.: Open Gestão Empresarial). Blinda a empresa de
+// desativarAusentes() na próxima importação.
+async function setSempreAtiva(req, res) {
+  try {
+    const { id } = req.params;
+    const { sempre_ativa, observacoes_ativacao } = req.body;
+    if (typeof sempre_ativa !== 'boolean') {
+      return res.status(400).json({ error: 'sempre_ativa (boolean) é obrigatório' });
+    }
+
+    const result = await db.query(
+      `UPDATE sindicato_empresas_contribuintes
+       SET sempre_ativa = $1, observacoes_ativacao = $2, updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [sempre_ativa, observacoes_ativacao?.trim() || null, id]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Empresa não encontrada' });
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao atualizar sempre_ativa' });
+  }
+}
+
+module.exports = { listContribuintes, stats, uploadPreview, confirmarImportacao, listImportacoes, setSempreAtiva };

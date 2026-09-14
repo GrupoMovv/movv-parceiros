@@ -88,11 +88,14 @@ async function importarLista(empresas) {
 // recente (não pagou nenhum dos 3 meses do arquivo novo) — nunca apaga,
 // só marca inativa. Só desativa quem ainda não está inativo, pra não ficar
 // reescrevendo a mesma linha (e o mesmo motivo) toda importação.
+// sempre_ativa = true (empresas do próprio grupo, ex. Open Gestão
+// Empresarial, que não pagam guia mas precisam ficar liberadas) nunca
+// entra nessa desativação automática.
 async function desativarAusentes(cnpjsPresentes) {
   const result = await db.query(
     `UPDATE sindicato_empresas_contribuintes
      SET status = 'inativa', motivo_inativo = 'Sem pagamento nos últimos 3 meses', updated_at = NOW()
-     WHERE NOT (cnpj = ANY($1::text[])) AND status != 'inativa'
+     WHERE NOT (cnpj = ANY($1::text[])) AND status != 'inativa' AND sempre_ativa = false
      RETURNING id`,
     [cnpjsPresentes]
   );

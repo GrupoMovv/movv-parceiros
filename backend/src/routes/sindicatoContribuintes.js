@@ -23,6 +23,7 @@ router.get('/importacoes',    ctrl.listImportacoes);
 router.get('/',               ctrl.listContribuintes);
 router.post('/upload/preview',   upload.single('arquivo'), ctrl.uploadPreview);
 router.post('/upload/confirmar', ctrl.confirmarImportacao);
+router.patch('/:id/sempre-ativa', ctrl.setSempreAtiva);
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {
