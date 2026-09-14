@@ -99,6 +99,10 @@ export default function Memoria() {
   const [resultadoFinal, setResultadoFinal] = useState(null);
   const [ranking, setRanking] = useState({ dia: null, semana: null });
   const [abaRanking, setAbaRanking] = useState('dia');
+  // Status da Roleta só pra decidir o botão "voltar pra roleta" no modal
+  // de vitória — não bloqueia o carregamento da Memória (jogo funciona
+  // mesmo se essa chamada falhar, por isso catch silencioso).
+  const [roletaStatus, setRoletaStatus] = useState(null);
 
   useEffect(() => {
     if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
@@ -109,6 +113,7 @@ export default function Memoria() {
         else console.error('Erro ao carregar recorde da memória:', err);
       })
       .finally(() => setCarregando(false));
+    apiPainel.get('/public/roleta/status').then(res => setRoletaStatus(res.data)).catch(() => {});
   }, [navigate]);
 
   // Cronômetro — só roda depois da 1ª carta virada, para de rodar
@@ -293,6 +298,7 @@ export default function Memoria() {
           jogadas={jogadas}
           ranking={ranking}
           abaRanking={abaRanking}
+          roletaStatus={roletaStatus}
           onMudarAba={aba => { setAbaRanking(aba); if (aba === 'semana') carregarRankingSemana(); }}
           onJogarDeNovo={reiniciar}
         />
@@ -301,8 +307,18 @@ export default function Memoria() {
   );
 }
 
-function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, onMudarAba, onJogarDeNovo }) {
+function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStatus, onMudarAba, onJogarDeNovo }) {
   const dados = ranking[abaRanking];
+  // "Voltar pra roleta" só faz sentido em 2 casos: (a) já jogou hoje e tem
+  // cupom esperando — manda ver ele; (b) ainda não jogou e tem parceiro
+  // elegível — manda girar. Se não tem como jogar hoje (o motivo que
+  // provavelmente trouxe o associado pra Memória), não mostra o botão.
+  let botaoRoleta = null;
+  if (roletaStatus && !roletaStatus.pode_jogar) {
+    botaoRoleta = { to: '/meu/cupons', label: '🎟️ Ver meu cupom' };
+  } else if (roletaStatus && roletaStatus.pode_jogar && roletaStatus.tem_parceiros_disponiveis) {
+    botaoRoleta = { to: '/jogar/roleta', label: '🎡 Ir girar a roleta' };
+  }
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center relative overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -375,9 +391,11 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, onMudarAba
           <button type="button" onClick={onJogarDeNovo} className="btn-iub-dourado text-sm py-2.5">
             🔁 Jogar novamente
           </button>
-          <Link to="/jogar/roleta" className="btn-iub-outline text-sm py-2.5">
-            🎡 Voltar pra roleta
-          </Link>
+          {botaoRoleta && (
+            <Link to={botaoRoleta.to} className="btn-iub-outline text-sm py-2.5">
+              {botaoRoleta.label}
+            </Link>
+          )}
         </div>
       </div>
     </div>

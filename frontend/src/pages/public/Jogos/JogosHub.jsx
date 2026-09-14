@@ -43,11 +43,11 @@ export default function JogosHub() {
         </p>
       </header>
 
-      <div className="max-w-4xl mx-auto mt-8 px-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="max-w-4xl mx-auto mt-8 px-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
         <button
           type="button"
           onClick={() => navigate('/jogar/roleta')}
-          className="text-left bg-white rounded-3xl p-5 shadow-xl hover:scale-[1.02] transition-transform sm:col-span-1"
+          className="text-left bg-white rounded-3xl p-5 shadow-xl hover:scale-[1.02] transition-transform"
         >
           <div className="text-5xl text-center">🎡</div>
           <h2 className="font-black text-lg text-iub-roxo text-center mt-2">ROLETA DA SORTE</h2>
@@ -55,6 +55,18 @@ export default function JogosHub() {
             {podeJogar ? '1 giro disponível hoje!' : 'Você já jogou hoje — volta amanhã!'}
           </p>
           <p className="text-center text-xs text-iub-cinza mt-2">🔥 {jogaramHoje} {jogaramHoje === 1 ? 'pessoa jogou' : 'pessoas jogaram'} hoje</p>
+          <p className="btn-iub-dourado w-full text-center mt-4 py-2.5 text-sm">JOGAR AGORA</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/jogar/memoria')}
+          className="text-left bg-white rounded-3xl p-5 shadow-xl hover:scale-[1.02] transition-transform"
+        >
+          <div className="text-5xl text-center">🧠</div>
+          <h2 className="font-black text-lg text-iub-roxo text-center mt-2">JOGO DA MEMÓRIA</h2>
+          <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">Sem limite de partidas!</p>
+          <p className="text-center text-xs text-iub-cinza mt-2">🎯 Ache as 8 duplas no menor tempo</p>
           <p className="btn-iub-dourado w-full text-center mt-4 py-2.5 text-sm">JOGAR AGORA</p>
         </button>
 
