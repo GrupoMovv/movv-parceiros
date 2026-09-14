@@ -56,6 +56,12 @@ coverage/
 # Backups do banco de dados (NUNCA versionar)
 backend/backups/*.sql
 backend/backups/*.sql.gz
+backend/backups/*.sql.txt
+backend/backups/*.json
+
+# Backups soltos na raiz do repo (NUNCA versionar)
+/backup-*.sql.txt
+/backup-*.json
 
 # Planilhas de dados pessoais usadas em importações pontuais (NUNCA versionar)
 backend/scripts/data/
