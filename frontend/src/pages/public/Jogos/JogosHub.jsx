@@ -13,6 +13,7 @@ export default function JogosHub() {
   // verdade é o POST /roleta/girar na hora do clique.
   const [podeJogar, setPodeJogar] = useState(true);
   const [jogaramHoje, setJogaramHoje] = useState(0);
+  const [niveisCompletados, setNiveisCompletados] = useState(null);
 
   useEffect(() => {
     if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
@@ -23,6 +24,9 @@ export default function JogosHub() {
         else console.error('Erro ao carregar status dos joguinhos:', err);
       })
       .finally(() => setCarregando(false));
+    apiPainel.get('/public/memoria/niveis')
+      .then(res => setNiveisCompletados(res.data.niveis_completados))
+      .catch(() => {});
   }, [navigate]);
 
   if (carregando) {
@@ -65,8 +69,17 @@ export default function JogosHub() {
         >
           <div className="text-5xl text-center">🧠</div>
           <h2 className="font-black text-lg text-iub-roxo text-center mt-2">JOGO DA MEMÓRIA</h2>
-          <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">Sem limite de partidas!</p>
-          <p className="text-center text-xs text-iub-cinza mt-2">🎯 Ache as 8 duplas no menor tempo</p>
+          <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">5 níveis, sem limite de partidas!</p>
+          {niveisCompletados != null ? (
+            <>
+              <p className="text-center text-xs text-iub-cinza mt-2">🏅 {niveisCompletados} de 5 níveis completados</p>
+              <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden mt-1.5">
+                <div className="h-full bg-iub-dourado rounded-full" style={{ width: `${(niveisCompletados / 5) * 100}%` }} />
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-xs text-iub-cinza mt-2">🎯 Ache todas as duplas no menor tempo</p>
+          )}
           <p className="btn-iub-dourado w-full text-center mt-4 py-2.5 text-sm">JOGAR AGORA</p>
         </button>
 

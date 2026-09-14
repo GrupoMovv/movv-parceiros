@@ -1,28 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
-import MascoteIubMais from '../../../components/MascoteIubMais';
+import MascoteIubMais, { MASCOTE_URL } from '../../../components/MascoteIubMais';
 import MemoriaCarta from './components/MemoriaCarta';
-
-// Temas mistos do grid — 4 parceiros ativos, o mascote e 3 símbolos IUB
-// (❤️⭐🎁), igual RoletaWheel hardcoda seus 8 setores: são assets
-// promocionais fixos, não dado de negócio pra buscar do banco a cada
-// carregamento. Só 2 dos 10 parceiros da Roleta têm logo_url cadastrada
-// hoje (nossa-drogaria, imaginari-personalizados) — os outros 2 aqui
-// usam badge de sigla+cor em vez de logo quebrada (ver TODO.md: "várias
-// poses" do mascote também não existe ainda, só 1 imagem oficial).
-const PARES = [
-  { chave: 'nossa-drogaria', tipo: 'parceiro', nome: 'Drogaria Sindical', logo: 'https://res.cloudinary.com/emv2nb1j/image/upload/v1788459943/iubmais/parceiros/1/logo/ipgi7gljwt7woyo0lqp1.png' },
-  { chave: 'imaginari-personalizados', tipo: 'parceiro', nome: 'Imaginari Personalizados', logo: 'https://res.cloudinary.com/emv2nb1j/image/upload/v1789000890/iubmais/parceiros/14/logo/qqmbgroahvivdxgfe8ym.jpg' },
-  { chave: 'academia-atletica', tipo: 'parceiro', nome: 'Academia Atlética', sigla: 'AA', cor: '#EF4444' },
-  { chave: 'oticas-diniz', tipo: 'parceiro', nome: 'Óticas Diniz', sigla: 'OD', cor: '#0EA5E9' },
-  { chave: 'mascote', tipo: 'mascote', nome: 'Mascote IUB MAIS+' },
-  { chave: 'coracao', tipo: 'simbolo', emoji: '❤️', nome: 'Coração' },
-  { chave: 'estrela', tipo: 'simbolo', emoji: '⭐', nome: 'Estrela' },
-  { chave: 'presente', tipo: 'simbolo', emoji: '🎁', nome: 'Presente' },
-];
+import { getNivelConfig, POOL_PARES } from './memoriaConfig';
 
 function embaralhar(itens) {
   const copia = [...itens];
@@ -33,8 +16,12 @@ function embaralhar(itens) {
   return copia;
 }
 
-function criarBaralho() {
-  const cartas = PARES.flatMap((par, i) => [{ ...par, uid: `${i}-a` }, { ...par, uid: `${i}-b` }]);
+// Sorteia `qtd` temas do pool de 18 a cada partida (níveis menores não
+// usam o pool inteiro) — dá variedade entre partidas repetidas do mesmo
+// nível, já que o jogo é "sem limite, joga quanto quiser".
+function criarBaralho(qtd) {
+  const paresEscolhidos = embaralhar(POOL_PARES).slice(0, qtd);
+  const cartas = paresEscolhidos.flatMap((par, i) => [{ ...par, uid: `${i}-a` }, { ...par, uid: `${i}-b` }]);
   return embaralhar(cartas);
 }
 
@@ -42,6 +29,16 @@ function formatarTempo(segundos) {
   const m = Math.floor(segundos / 60).toString().padStart(2, '0');
   const s = Math.floor(segundos % 60).toString().padStart(2, '0');
   return `${m}:${s}`;
+}
+
+// Poses do mascote por nível, só com filtro CSS na mesma imagem (não
+// existe arte de pose diferente ainda) — 1-2 fácil/normal, 3 "pensativo"
+// (leve dessaturação + inclinação), 4-5 "determinado" (contraste/brilho
+// dourado mais forte).
+function estiloMascotePorNivel(nivel) {
+  if (nivel <= 2) return {};
+  if (nivel === 3) return { filter: 'grayscale(30%) contrast(1.05)', transform: 'rotate(-4deg)' };
+  return { filter: 'contrast(1.25) saturate(1.35) drop-shadow(0 0 12px rgba(255,184,0,0.55))' };
 }
 
 // Sintetiza um beep curto via Web Audio — sem depender de arquivo de som
@@ -80,12 +77,17 @@ function dispararConfeteVitoria() {
 
 export default function Memoria() {
   const navigate = useNavigate();
+  const { nivel: nivelParam } = useParams();
+  const nivel = Number(nivelParam);
+  const cfg = getNivelConfig(nivel);
+
   const [carregando, setCarregando] = useState(true);
+  const [desbloqueado, setDesbloqueado] = useState(true);
   const [somLigado, setSomLigado] = useState(() => {
     try { return localStorage.getItem('iub_memoria_som') !== 'off'; } catch { return true; }
   });
 
-  const [baralho, setBaralho] = useState(criarBaralho);
+  const [baralho, setBaralho] = useState(() => (cfg ? criarBaralho(cfg.pares) : []));
   const [viradas, setViradas] = useState([]);
   const [casadas, setCasadas] = useState(new Set());
   const [travado, setTravado] = useState(false);
@@ -104,17 +106,29 @@ export default function Memoria() {
   // mesmo se essa chamada falhar, por isso catch silencioso).
   const [roletaStatus, setRoletaStatus] = useState(null);
 
+  // Nível inválido na URL (não é 1-5) — manda pra seleção de nível.
+  useEffect(() => {
+    if (!cfg) navigate('/jogar/memoria', { replace: true });
+  }, [cfg, navigate]);
+
   useEffect(() => {
     if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
-    apiPainel.get('/public/memoria/meu-recorde')
-      .then(res => setMelhorTempoPessoal(res.data.melhor_tempo_segundos))
+    if (!cfg) return;
+    apiPainel.get('/public/memoria/niveis')
+      .then(res => {
+        const info = res.data.niveis.find(n => n.nivel === nivel);
+        setDesbloqueado(info?.desbloqueado ?? false);
+        setMelhorTempoPessoal(info?.melhor_tempo_segundos ?? null);
+        if (info && !info.desbloqueado) navigate('/jogar/memoria', { replace: true });
+      })
       .catch(err => {
         if (err.response?.status === 401) navigate('/jogar/login', { replace: true });
-        else console.error('Erro ao carregar recorde da memória:', err);
+        else console.error('Erro ao carregar nível da memória:', err);
       })
       .finally(() => setCarregando(false));
     apiPainel.get('/public/roleta/status').then(res => setRoletaStatus(res.data)).catch(() => {});
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, nivel]);
 
   // Cronômetro — só roda depois da 1ª carta virada, para de rodar
   // pausado ou vencido.
@@ -124,9 +138,9 @@ export default function Memoria() {
     return () => clearInterval(id);
   }, [iniciado, pausado, vencido]);
 
-  // Detecta vitória (8 duplas encontradas) e grava a partida.
+  // Detecta vitória (todas as duplas do nível encontradas) e grava a partida.
   useEffect(() => {
-    if (vencido || casadas.size < PARES.length) return;
+    if (!cfg || vencido || casadas.size < cfg.pares) return;
     setVencido(true);
     if (somLigado) {
       tocarSom(880, 0.18);
@@ -135,10 +149,11 @@ export default function Memoria() {
     }
     dispararConfeteVitoria();
 
-    apiPainel.post('/public/memoria/partida', { tempo_segundos: segundos, jogadas })
+    apiPainel.post('/public/memoria/partida', { tempo_segundos: segundos, jogadas, nivel })
       .then(res => {
         setResultadoFinal(res.data);
-        return apiPainel.get('/public/memoria/ranking', { params: { periodo: 'dia' } });
+        if (res.data.nivel_desbloqueado && somLigado) setTimeout(() => tocarSom(1568, 0.4), 500);
+        return apiPainel.get('/public/memoria/ranking', { params: { periodo: 'dia', nivel } });
       })
       .then(res => setRanking(r => ({ ...r, dia: res.data })))
       .catch(err => console.error('Erro ao registrar partida da memória:', err));
@@ -156,7 +171,7 @@ export default function Memoria() {
   async function carregarRankingSemana() {
     if (ranking.semana) return;
     try {
-      const res = await apiPainel.get('/public/memoria/ranking', { params: { periodo: 'semana' } });
+      const res = await apiPainel.get('/public/memoria/ranking', { params: { periodo: 'semana', nivel } });
       setRanking(r => ({ ...r, semana: res.data }));
     } catch (err) {
       console.error('Erro ao carregar ranking da semana:', err);
@@ -188,7 +203,8 @@ export default function Memoria() {
   }
 
   function reiniciar() {
-    setBaralho(criarBaralho());
+    if (!cfg) return;
+    setBaralho(criarBaralho(cfg.pares));
     setViradas([]);
     setCasadas(new Set());
     setTravado(false);
@@ -202,7 +218,16 @@ export default function Memoria() {
     setAbaRanking('dia');
   }
 
-  if (carregando) {
+  // Troca de nível (ex.: botão "Próximo Nível") reusa a mesma instância
+  // do componente — precisa resetar tudo pro novo `nivel`/`cfg`.
+  useEffect(() => {
+    if (cfg) reiniciar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nivel]);
+
+  if (!cfg) return null;
+
+  if (carregando || !desbloqueado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro">
         <MascoteIubMais tamanho="medium" animacao="pulse" />
@@ -214,9 +239,12 @@ export default function Memoria() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
       <header className="text-center pt-8 px-4">
-        <h1 className="text-3xl sm:text-4xl font-black text-white">🧠 JOGO DA MEMÓRIA</h1>
+        <Link to="/jogar/memoria" className="text-white/60 hover:text-white text-xs underline">← Todos os níveis</Link>
+        <h1 className="text-2xl sm:text-4xl font-black text-white mt-2">
+          {cfg.emoji} NÍVEL {cfg.nivel} — {cfg.nome}
+        </h1>
         <p className="text-iub-dourado font-black uppercase text-xs sm:text-sm mt-2 tracking-wide">
-          Sem limite — joga quantas vezes quiser!
+          {cfg.pares} pares · {cfg.dimensoes}
         </p>
       </header>
 
@@ -267,9 +295,26 @@ export default function Memoria() {
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="relative max-w-sm sm:max-w-md mx-auto mt-5 px-4">
-        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="flex justify-center mt-3">
+        <img
+          src={MASCOTE_URL}
+          alt=""
+          className="w-14 h-14 object-contain animate-float"
+          style={estiloMascotePorNivel(nivel)}
+        />
+      </div>
+
+      {/* Grid — cols dinâmico (4/5/6) não dá pra fazer só com classe
+          Tailwind estática (o purge do build não conhece `grid-cols-${n}`
+          gerado em runtime), por isso gridTemplateColumns via style. */}
+      <div className="relative max-w-sm sm:max-w-lg mx-auto mt-4 px-4">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${cfg.cols}, minmax(0, 1fr))`,
+            gap: cfg.cols >= 6 ? '6px' : cfg.cols === 5 ? '8px' : '10px',
+          }}
+        >
           {baralho.map(carta => (
             <MemoriaCarta
               key={carta.uid}
@@ -294,6 +339,7 @@ export default function Memoria() {
 
       {vencido && resultadoFinal && (
         <ModalVitoria
+          cfg={cfg}
           resultadoFinal={resultadoFinal}
           jogadas={jogadas}
           ranking={ranking}
@@ -301,14 +347,17 @@ export default function Memoria() {
           roletaStatus={roletaStatus}
           onMudarAba={aba => { setAbaRanking(aba); if (aba === 'semana') carregarRankingSemana(); }}
           onJogarDeNovo={reiniciar}
+          onProximoNivel={() => navigate(`/jogar/memoria/${nivel + 1}`)}
         />
       )}
     </div>
   );
 }
 
-function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStatus, onMudarAba, onJogarDeNovo }) {
+function ModalVitoria({ cfg, resultadoFinal, jogadas, ranking, abaRanking, roletaStatus, onMudarAba, onJogarDeNovo, onProximoNivel }) {
   const dados = ranking[abaRanking];
+  const proximoNivel = getNivelConfig(cfg.nivel + 1);
+
   // "Voltar pra roleta" só faz sentido em 2 casos: (a) já jogou hoje e tem
   // cupom esperando — manda ver ele; (b) ainda não jogou e tem parceiro
   // elegível — manda girar. Se não tem como jogar hoje (o motivo que
@@ -319,15 +368,22 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStat
   } else if (roletaStatus && roletaStatus.pode_jogar && roletaStatus.tem_parceiros_disponiveis) {
     botaoRoleta = { to: '/jogar/roleta', label: '🎡 Ir girar a roleta' };
   }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center relative overflow-hidden max-h-[90vh] overflow-y-auto">
         <MascoteIubMais tamanho="medium" animacao="bounce" className="mx-auto" />
         <h2 className="text-2xl font-black text-iub-roxo mt-2">🎉 VOCÊ CONSEGUIU!</h2>
+        <p className="text-iub-cinza text-xs mt-0.5">{cfg.emoji} Nível {cfg.nivel} — {cfg.nome}</p>
 
+        {resultadoFinal.nivel_desbloqueado && (
+          <p className="inline-block bg-emerald-500 text-white font-black text-xs uppercase tracking-wide px-3 py-1.5 rounded-full mt-3 animate-pulse-slow">
+            🎊 Você desbloqueou o Nível {resultadoFinal.nivel_desbloqueado}!
+          </p>
+        )}
         {resultadoFinal.novo_recorde && (
-          <p className="inline-block bg-iub-dourado text-black font-black text-xs uppercase tracking-wide px-3 py-1 rounded-full mt-2">
-            🏆 Novo recorde pessoal!
+          <p className="inline-block bg-iub-dourado text-black font-black text-xs uppercase tracking-wide px-3 py-1 rounded-full mt-2 ml-1">
+            🏆 Novo recorde!
           </p>
         )}
 
@@ -339,6 +395,10 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStat
           <div>
             <p className="text-xs text-iub-cinza">Jogadas</p>
             <p className="text-2xl font-black text-iub-roxo-escuro">{jogadas}</p>
+          </div>
+          <div>
+            <p className="text-xs text-iub-cinza">Seu recorde</p>
+            <p className="text-2xl font-black text-iub-dourado-escuro">{formatarTempo(resultadoFinal.melhor_tempo_pessoal)}</p>
           </div>
         </div>
 
@@ -378,7 +438,7 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStat
                   </li>
                 ))}
                 {dados.top10.length === 0 && (
-                  <li className="text-center text-xs text-iub-cinza py-2">Ninguém jogou ainda — seja o 1º!</li>
+                  <li className="text-center text-xs text-iub-cinza py-2">Ninguém jogou esse nível ainda — seja o 1º!</li>
                 )}
               </ol>
               {dados.minha_posicao && (
@@ -391,6 +451,11 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStat
         </div>
 
         <div className="flex flex-col gap-2 mt-5">
+          {proximoNivel && (
+            <button type="button" onClick={onProximoNivel} className="btn-iub-primary text-sm py-2.5">
+              {proximoNivel.emoji} Próximo nível: {proximoNivel.nome} →
+            </button>
+          )}
           <button type="button" onClick={onJogarDeNovo} className="btn-iub-dourado text-sm py-2.5">
             🔁 Jogar novamente
           </button>
@@ -399,6 +464,9 @@ function ModalVitoria({ resultadoFinal, jogadas, ranking, abaRanking, roletaStat
               {botaoRoleta.label}
             </Link>
           )}
+          <Link to="/jogar/memoria" className="text-iub-cinza text-xs py-1 underline">
+            Ver todos os níveis
+          </Link>
         </div>
       </div>
     </div>
