@@ -12,14 +12,29 @@ const SLIDE_FECHA_MES_COM_TEXTO = 'https://res.cloudinary.com/emv2nb1j/image/upl
 // desatualizadas como a peça antiga ficava).
 const SLIDE_FECHA_MES_SEM_TEXTO = 'https://res.cloudinary.com/emv2nb1j/image/upload/v1789048827/ChatGPT_Image_10_de_set._de_2026_11_00_00.png';
 
-// Proporção da peça ativa no momento — trava o frame nessa proporção e
-// centraliza dentro do slide: garante que (a) a arte nunca corta nas
-// laterais em telas estreitas (bug do object-cover puro: no mobile
-// chegava a cortar ~25% de cada lado) e (b) as posições em % do overlay
-// batem exatamente com a imagem em qualquer largura de tela, sem precisar
-// medir nada via JS. Peça antiga era 2172x724; a nova é 2170x725 (basicamente
-// igual) — se trocar de peça de novo, conferir e ajustar aqui.
+// Proporção da peça ativa no momento — trava o frame nessa proporção
+// (nunca distorce) e as posições em % do overlay batem exatamente com a
+// imagem em qualquer largura de tela, sem precisar medir nada via JS.
+// Peça antiga era 2172x724; a nova é 2170x725 (basicamente igual) — se
+// trocar de peça de novo, conferir e ajustar aqui.
 const ASPECT_RATIO = '2170 / 725';
+
+// No carrossel mobile (h-[250px], ver HeroBannerCarousel) o frame trava
+// pela LARGURA (100% do container) e a peça é bem panorâmica (~3:1) — a
+// altura calculada fica bem menor que os 250px disponíveis, sobra barra
+// roxa vazia em cima/embaixo e a arte parece pequena.
+//
+// Testei preencher a altura toda tipo object-cover puro (.fecha-mes-frame
+// com width 100%→auto e height auto→100%), mas o conteúdo da peça ocupa a
+// largura inteira de ponta a ponta (mascote "COMPRE LOCAL" na esquerda,
+// painel "DESCONTOS DE ATÉ 50%" na direita) — preencher a altura toda
+// exige cortar ~25-29% de cada lado no mobile, o que corta um desses dois
+// elementos fora. Por isso: só um zoom leve (110% de largura em vez de
+// 100%, ~4.5% cortado de cada lado — sempre fundo/céu da cidade, não
+// conteúdo) só em <640px. Ganho modesto de altura (~10%), sem perder
+// mascote nem o "50% OFF". >=640px mantém 100% (comportamento antigo,
+// já ficava bom).
+const CRESCIMENTO_MOBILE = '110%';
 
 function formatarDataDestaque(iso) {
   const d = new Date(`${iso}T12:00:00`);
@@ -64,9 +79,9 @@ export default function SlideFechaMes({ info }) {
   }
 
   return (
-    <div className="slide-fecha-mes relative w-full h-full overflow-hidden bg-iub-roxo-escuro flex items-center">
+    <div className="slide-fecha-mes relative w-full h-full overflow-hidden bg-iub-roxo-escuro">
       <div
-        className="relative w-full"
+        className="fecha-mes-frame absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{ aspectRatio: ASPECT_RATIO, containerType: 'inline-size' }}
       >
         <img
@@ -120,6 +135,13 @@ export default function SlideFechaMes({ info }) {
           VER PRODUTOS →
         </button>
       </div>
+
+      <style>{`
+        .fecha-mes-frame { width: ${CRESCIMENTO_MOBILE}; height: auto; }
+        @media (min-width: 640px) {
+          .fecha-mes-frame { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 }
