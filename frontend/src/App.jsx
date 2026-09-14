@@ -59,6 +59,7 @@ import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
 import NotFound from './pages/public/NotFound';
 import Roleta from './pages/public/Jogos/Roleta';
+import Memoria from './pages/public/Jogos/Memoria';
 import JogosHub from './pages/public/Jogos/JogosHub';
 import RoletaLogin from './pages/public/Jogos/RoletaLogin';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
@@ -211,6 +212,7 @@ export default function App() {
         <Route path="/jogar/login"        element={<RoletaLogin />} />
         <Route path="/jogar"              element={<JogosHub />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />
+        <Route path="/jogar/memoria"      element={<Memoria />} />
         <Route path="/cadastrar"          element={<CadastroPublico />} />
         <Route path="/cadastrar-associado" element={<CadastrarAssociado />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />

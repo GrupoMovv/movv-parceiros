@@ -1,4 +1,4 @@
-const MASCOTE_URL = 'https://res.cloudinary.com/emv2nb1j/image/upload/v1788983002/ChatGPT_Image_9_de_set._de_2026_16_26_36.png';
+export const MASCOTE_URL = 'https://res.cloudinary.com/emv2nb1j/image/upload/v1788983002/ChatGPT_Image_9_de_set._de_2026_16_26_36.png';
 
 const SIZES = {
   small: 'w-16 h-16',

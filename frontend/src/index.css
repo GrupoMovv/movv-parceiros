@@ -113,3 +113,28 @@
 .marquee-track:hover {
   animation-play-state: paused;
 }
+
+/* Flip 3D das cartas do Jogo da Memória — backface-visibility não tem
+   utility no Tailwind desse projeto, por isso CSS puro em vez de @apply. */
+.memoria-carta {
+  perspective: 1000px;
+}
+.memoria-carta-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.45s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.memoria-carta-virada .memoria-carta-inner {
+  transform: rotateY(180deg);
+}
+.memoria-carta-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.memoria-carta-frente {
+  transform: rotateY(180deg);
+}
