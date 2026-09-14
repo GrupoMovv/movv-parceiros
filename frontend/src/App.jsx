@@ -48,6 +48,7 @@ import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitac
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
 import SindicatoPlanos from './pages/sindicato/Planos/SindicatoPlanos';
 import Carteirinha from './pages/public/Carteirinha';
+import Curiosidades from './pages/public/Curiosidades';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
 const MarketplaceCategoria = lazy(() => import('./pages/public/Marketplace/MarketplaceCategoria'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
@@ -203,6 +204,7 @@ export default function App() {
         <Route path="/cadastro-indicador" element={<CadastroIndicador />} />
         <Route path="/termos-indicador"   element={<TermosIndicador />} />
         <Route path="/carteirinha/:hash"  element={<Carteirinha />} />
+        <Route path="/curiosidades"       element={<Curiosidades />} />
         <Route path="/marketplace"        element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
         <Route path="/marketplace/categoria/:slug" element={<MarketplaceFallback><MarketplaceCategoria /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />

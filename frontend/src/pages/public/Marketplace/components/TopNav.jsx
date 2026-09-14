@@ -8,8 +8,11 @@ import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 import { getPainelToken } from '../../../../services/apiPainel';
 
+// Itens com `rota` navegam de verdade (react-router); com `href` são
+// âncora pra rolar até a seção na própria home (scrollPara).
 const MENU_SECUNDARIO = [
   { label: 'Categorias', href: '#categorias' },
+  { label: '💡 Curiosidades', rota: '/curiosidades' },
   { label: 'Ofertas', href: '#ofertas' },
   { label: 'Novidades', href: '#novidades' },
   { label: 'Lojas', href: '#lojas' },
@@ -206,7 +209,15 @@ export default function TopNav({
       {/* menu secundário — claro, colado embaixo do roxo */}
       <div className="hidden sm:block bg-white border-b border-slate-100">
         <nav className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 flex items-center gap-1 h-10">
-          {MENU_SECUNDARIO.map(item => (
+          {MENU_SECUNDARIO.map(item => item.rota ? (
+            <Link
+              key={item.label}
+              to={item.rota}
+              className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
+            >
+              {item.label}
+            </Link>
+          ) : (
             <a
               key={item.label}
               href={item.href}
@@ -231,7 +242,11 @@ export default function TopNav({
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <MapPin className="w-3.5 h-3.5" style={{ color: ROXO }} /> Itumbiara, GO
           </div>
-          {MENU_SECUNDARIO.map(item => (
+          {MENU_SECUNDARIO.map(item => item.rota ? (
+            <Link key={item.label} to={item.rota} onClick={() => setMenuMobileAberto(false)} className="block text-sm font-medium text-slate-600 py-1">
+              {item.label}
+            </Link>
+          ) : (
             <a key={item.label} href={item.href} onClick={(e) => { scrollPara(e, item.href); setMenuMobileAberto(false); }} className="block text-sm font-medium text-slate-600 py-1">
               {item.label}
             </a>
