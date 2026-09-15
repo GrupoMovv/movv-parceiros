@@ -1,8 +1,8 @@
-const axios = require('axios');
+const OpenAI = require('openai');
 
 // Mesmo padrão de "config presente?" do cloudinaryService.js — loga no
 // boot (sem expor a chave) e recusa a chamada cedo, com mensagem clara,
-// em vez de deixar o axios estourar um erro genérico de auth lá na frente.
+// em vez de deixar o SDK estourar um erro genérico de auth lá na frente.
 const OPENAI_API_KEY = (process.env.OPENAI_API_KEY || '').trim();
 const CONFIGURADO = Boolean(OPENAI_API_KEY);
 const MODELO = 'gpt-4o';
@@ -15,6 +15,10 @@ console.log('[OPENAI INIT]', {
 if (!CONFIGURADO) {
   console.error('[openai] ATENÇÃO: OPENAI_API_KEY ausente — a análise de imagem por IA vai falhar até isso ser configurado.');
 }
+
+// Só instancia o client se a chave existir -- `new OpenAI({apiKey: ''})`
+// não lança na hora, mas não tem por quê criar o client sem chave nenhuma.
+const client = CONFIGURADO ? new OpenAI({ apiKey: OPENAI_API_KEY, timeout: TIMEOUT_MS }) : null;
 
 // ESPELHA frontend/src/pages/public/Marketplace/parceirosData.js
 // (CATEGORIAS_FILTRO, sem a opção "Todas") — é a mesma lista que alimenta
@@ -70,37 +74,30 @@ async function analisarProdutoPorImagem(buffer, mimetype) {
 
   let resp;
   try {
-    resp = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: MODELO,
-        response_format: { type: 'json_object' },
-        max_tokens: 700,
-        temperature: 0.4,
-        messages: [
-          { role: 'system', content: montarPromptSistema() },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Analise esta foto de produto e retorne o JSON pedido.' },
-              { type: 'image_url', image_url: { url: dataUri, detail: 'low' } },
-            ],
-          },
-        ],
-      },
-      {
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        timeout: TIMEOUT_MS,
-      }
-    );
+    resp = await client.chat.completions.create({
+      model: MODELO,
+      response_format: { type: 'json_object' },
+      max_tokens: 700,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: montarPromptSistema() },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analise esta foto de produto e retorne o JSON pedido.' },
+            { type: 'image_url', image_url: { url: dataUri, detail: 'low' } },
+          ],
+        },
+      ],
+    });
   } catch (err) {
-    console.error('[OPENAI ERROR]:', err?.response?.status, err?.response?.data || err?.message);
+    console.error('[OPENAI ERROR]:', err?.status, err?.error || err?.message);
     const erro = new Error('Não foi possível analisar a imagem agora.');
-    erro.codigo = err?.code === 'ECONNABORTED' ? 'TIMEOUT' : (err?.response?.status || 'DESCONHECIDO');
+    erro.codigo = err instanceof OpenAI.APIConnectionTimeoutError ? 'TIMEOUT' : (err?.status || 'DESCONHECIDO');
     throw erro;
   }
 
-  const bruto = resp.data?.choices?.[0]?.message?.content;
+  const bruto = resp.choices?.[0]?.message?.content;
   let dados;
   try {
     dados = JSON.parse(bruto);
