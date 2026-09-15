@@ -1,5 +1,38 @@
 # TODO
 
+## IA Assistente de cadastro de produtos — falta ativar e testar com fotos reais
+
+Em 2026-09-15, implementamos o cadastro de produto assistido por IA
+(parceiro sobe foto → GPT-4o Vision sugere nome/descrição/marca/
+categoria/tags) — ver `backend/src/services/openaiService.js`,
+`backend/src/controllers/parceiroIaController.js` e
+`frontend/src/components/IACadastroProduto.jsx`, integrado em
+`ProdutoForm.jsx`. Migration 050 (tabela `sindicato_ia_uso` + coluna
+`sindicato_parceiros.plano_iniciado_em`) já rodou no banco real.
+
+**Falta pra funcionar de verdade**: configurar `OPENAI_API_KEY` (ver
+comentário em `backend/.env.example` — platform.openai.com → API keys).
+Sem isso, o botão "Cadastrar com IA" sempre volta "IA temporariamente
+indisponível" (degrada bem, não quebra nada, só não faz a análise).
+Modelo usado é `gpt-4o` com imagem em `detail: "low"` (mais barato);
+confira o preço atual em openai.com/api/pricing antes de liberar em
+produção — é cobrado por uso, sem plano fixo.
+
+**Falta testar** (não deu pra fazer nesta rodada, sem a chave): rodar
+com fotos reais de categorias variadas (farmácia, ótica, beleza,
+fitness, personalizados) e conferir se a qualidade da descrição/nome/
+categoria sugeridos fica boa o suficiente — pode precisar ajustar o
+prompt em `openaiService.js` (`montarPromptSistema`) depois de ver
+resultados reais. Os fluxos de erro (sem chave, sem produto
+identificado, limite mensal atingido, rate limit) já foram testados ao
+vivo contra o banco real e funcionam.
+
+**Como monitorar uso/custo**: não existe dashboard admin pra isso
+ainda (deliberadamente fora do escopo desta rodada) — por enquanto dá
+pra consultar direto a tabela `sindicato_ia_uso` (tem `parceiro_id`,
+`mes_referencia`, `resposta_json`, `data_uso`) pra ver quem mais usa e
+quantas análises rodaram por mês.
+
 ## Auditar planos comerciais dos parceiros com Roleta ativa
 
 Em 2026-09-14, ativamos a Roleta em massa pra 9 parceiros (academia-atletica,
