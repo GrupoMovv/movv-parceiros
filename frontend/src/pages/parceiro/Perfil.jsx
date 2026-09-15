@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Camera, Upload, X, ArrowUp, ArrowDown, Loader2, MapPin, Clock } from 'lucide-react';
+import { Upload, X, ArrowUp, ArrowDown, Loader2, MapPin, Clock } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
+import ImageCropUpload from '../../components/ImageCropUpload';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DIAS = [
@@ -75,7 +76,6 @@ export default function ParceiroPerfil() {
   const [enviandoLogo, setEnviandoLogo] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
   const [arrastando, setArrastando] = useState(false);
-  const logoInputRef = useRef(null);
   const fotosInputRef = useRef(null);
 
   useEffect(() => {
@@ -147,10 +147,11 @@ export default function ParceiroPerfil() {
     }
   }
 
+  // `file` já chega recortado (quadrado) e comprimido pelo ImageCropUpload
+  // — validação de formato/tamanho original e aviso de dimensão pequena já
+  // rolam lá, antes do crop.
   async function handleLogo(file) {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error('A logo precisa ter até 5MB');
-    await avisarSeFotoPequena([file]);
     setEnviandoLogo(true);
     try {
       const fd = new FormData();
@@ -218,20 +219,13 @@ export default function ParceiroPerfil() {
           <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: `${perfil.cor_icone}22` }}>
             {perfil.logo_url ? <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-cover" /> : perfil.icone}
           </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => logoInputRef.current?.click()}
-              disabled={enviandoLogo}
-              className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-60"
-            >
-              {enviandoLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-              Trocar logo
-            </button>
-            <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
-              onChange={(e) => handleLogo(e.target.files[0])} />
-            <p className="text-slate-400 text-xs mt-1.5">JPG, PNG ou WEBP, até 5MB — ideal 400×400px</p>
-          </div>
+          <ImageCropUpload
+            aspectRatio={1}
+            label="Trocar logo"
+            hint="JPG, PNG, WEBP ou HEIC — ajuste o enquadramento quadrado na tela"
+            disabled={enviandoLogo}
+            onCropComplete={handleLogo}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
