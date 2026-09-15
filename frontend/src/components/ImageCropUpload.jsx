@@ -28,6 +28,16 @@ const QUALIDADE_INICIAL = 0.85;
 const QUALIDADE_MINIMA = 0.5;
 const TAMANHO_ALVO_SAIDA = 500 * 1024; // 500KB
 
+// Zoom começando no piso (1) deixava o slider sem folga pra diminuir —
+// pra fotos não-quadradas o lado maior já "estoura" o quadro no zoom
+// mínimo de antes, sem nenhum jeito de recuar (feedback real: "a lupa...
+// já começa no finalzinho, fica com pouco recurso pra diminuir"). Piso
+// menor que 1 dá essa folga de verdade; teto um pouco menor (3 em vez de
+// 4) porque o zoom de entrada (1) já fica mais perto do meio do range.
+const ZOOM_MINIMO = 0.5;
+const ZOOM_MAXIMO = 3;
+const ZOOM_INICIAL = 1;
+
 function lerDimensoes(url) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -113,7 +123,7 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
   const [arrastando, setArrastando] = useState(false);
   const [itemAtual, setItemAtual] = useState(null); // { src, nomeBase, restantes }
   const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(ZOOM_INICIAL);
   const [areaPixels, setAreaPixels] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -165,7 +175,7 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
         toast(`"${proximo.name}" tem um arquivo bem pequeno — confira a qualidade antes de confirmar.`, { icon: '⚠️', duration: 5000 });
       }
       setCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setZoom(ZOOM_INICIAL);
       setAreaPixels(null);
       setItemAtual({ src, nomeBase: proximo.name.replace(/\.[^.]+$/, '') || 'imagem', restantes: resto });
     } catch {
@@ -239,8 +249,8 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
               crop={crop}
               zoom={zoom}
               aspect={aspectRatio}
-              minZoom={1}
-              maxZoom={4}
+              minZoom={ZOOM_MINIMO}
+              maxZoom={ZOOM_MAXIMO}
               restrictPosition
               onCropChange={setCrop}
               onZoomChange={setZoom}
@@ -260,20 +270,20 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
           <div className="flex-shrink-0 bg-black px-4 pt-3 space-y-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
             <div className="flex items-center gap-3">
               <button
-                type="button" onClick={() => setZoom(z => Math.max(1, +(z - 0.2).toFixed(2)))}
+                type="button" onClick={() => setZoom(z => Math.max(ZOOM_MINIMO, +(z - 0.2).toFixed(2)))}
                 aria-label="Diminuir zoom"
                 className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white flex-shrink-0"
               >
                 <ZoomOut className="w-5 h-5" />
               </button>
               <input
-                type="range" min={1} max={4} step={0.01} value={zoom}
+                type="range" min={ZOOM_MINIMO} max={ZOOM_MAXIMO} step={0.01} value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))}
                 className="flex-1 accent-white"
                 aria-label="Zoom"
               />
               <button
-                type="button" onClick={() => setZoom(z => Math.min(4, +(z + 0.2).toFixed(2)))}
+                type="button" onClick={() => setZoom(z => Math.min(ZOOM_MAXIMO, +(z + 0.2).toFixed(2)))}
                 aria-label="Aumentar zoom"
                 className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white flex-shrink-0"
               >
