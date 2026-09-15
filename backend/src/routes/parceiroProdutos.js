@@ -2,6 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { authenticateParceiro } = require('../middleware/parceiroAuth');
 const ctrl = require('../controllers/parceiroProdutosController');
+const iaCtrl = require('../controllers/parceiroIaController');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -17,6 +18,10 @@ const upload = multer({
 router.use(authenticateParceiro);
 
 router.get('/',     ctrl.list);
+// Precisa vir antes de "/:id" -- senão o Express casa "ia-status" como
+// valor de :id e cai no handler errado.
+router.get('/ia-status',         iaCtrl.getStatus);
+router.post('/analisar-imagem',  upload.single('imagem'), iaCtrl.analisarImagem);
 router.get('/:id',  ctrl.getOne);
 router.post('/',    ctrl.create);
 router.put('/:id',  ctrl.update);

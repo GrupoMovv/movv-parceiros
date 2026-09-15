@@ -43,6 +43,9 @@ const PLANOS = {
     // (peso 0 = nunca sorteado, max_jogos 0 = nem consegue ativar).
     max_jogos: 0,
     peso_roleta: 0,
+    // IA Assistente de cadastro (analisa foto do produto, sugere nome/
+    // descrição/marca/categoria) — ver openaiService.js/parceiroIaController.js.
+    max_ia_mes: 10,
   },
   oficial: {
     nome: 'IUB Oficial',
@@ -65,6 +68,7 @@ const PLANOS = {
     boost_busca: 1,
     max_jogos: 1, // só a Roleta existe na fase 1, mas já prevê Tigrinho/Raspadinha
     peso_roleta: 1,
+    max_ia_mes: 50,
   },
   premium: {
     nome: 'IUB Premium',
@@ -89,6 +93,7 @@ const PLANOS = {
     boost_fim_semana: true,
     max_jogos: 2,
     peso_roleta: 3,
+    max_ia_mes: 150,
   },
   master: {
     nome: 'IUB Master',
@@ -116,6 +121,7 @@ const PLANOS = {
     boost_fim_semana: true,
     max_jogos: null, // ilimitado
     peso_roleta: 5,
+    max_ia_mes: 500,
   },
 };
 
@@ -160,6 +166,11 @@ function limiteJogos(plano) {
   return max === null || max === undefined ? Infinity : max;
 }
 
+function limiteIA(plano) {
+  const max = beneficios(plano).max_ia_mes;
+  return max === null || max === undefined ? Infinity : max;
+}
+
 // Preço de verdade a cobrar de um plano, dado se o CNPJ do parceiro está
 // sindicalizado ou não (ver sindicalizacaoService.verificarSindicalizacao).
 function precoPlano(plano, sindicalizada) {
@@ -177,5 +188,6 @@ module.exports = {
   beneficios,
   limiteProdutos,
   limiteJogos,
+  limiteIA,
   precoPlano,
 };
