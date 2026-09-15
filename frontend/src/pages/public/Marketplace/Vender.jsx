@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown, Search } from 'lucide-react';
 import api from '../../../services/api';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 
@@ -119,6 +119,7 @@ export default function Vender() {
   const [faqAberta, setFaqAberta] = useState(null);
   const [statusCnpj, setStatusCnpj] = useState(null); // null | 'checando' | 'ok' | { erro }
   const [consultaReceita, setConsultaReceita] = useState(null); // null | 'consultando' | { ok:true, situacaoInativa } | { ok:false, tipo }
+  const [camposAutoPreenchidos, setCamposAutoPreenchidos] = useState(new Set()); // nomes dos campos que vieram da última consulta com sucesso — só pra exibir o selo "auto-preenchido"
   const cnpjReceitaConsultadoRef = useRef(''); // último CNPJ já auto-consultado na BrasilAPI, pra não repetir a cada render
   const [sindicalizacao, setSindicalizacao] = useState(null); // null | { e_sindicalizada }
   const [qtdAssociados, setQtdAssociados] = useState(null);
@@ -156,6 +157,7 @@ export default function Vender() {
   useEffect(() => {
     if (cnpjDigits.length !== 14 || !isValidCNPJ(cnpjDigits)) {
       setConsultaReceita(null);
+      setCamposAutoPreenchidos(new Set());
       cnpjReceitaConsultadoRef.current = '';
       return;
     }
@@ -173,11 +175,15 @@ export default function Vender() {
     try {
       const resp = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, { timeout: 8000 });
       const d = resp.data || {};
+      const preenchidos = [];
       setForm(f => {
         const novo = { ...f };
         const preencher = (campo, valor) => {
           if (!valor) return;
-          if (forcarPreenchimento || !String(novo[campo] || '').trim()) novo[campo] = valor;
+          if (forcarPreenchimento || !String(novo[campo] || '').trim()) {
+            novo[campo] = valor;
+            preenchidos.push(campo);
+          }
         };
         preencher('razao_social', d.razao_social);
         if (d.nome_fantasia) preencher('nome_fantasia', d.nome_fantasia);
@@ -190,6 +196,7 @@ export default function Vender() {
         preencher('email', d.email);
         return novo;
       });
+      setCamposAutoPreenchidos(new Set(preenchidos));
       // `situacao_cadastral` na BrasilAPI é um código numérico (ex.: 2) — o
       // texto legível vem em `descricao_situacao_cadastral` ("ATIVA" etc.).
       const situacao = String(d.descricao_situacao_cadastral || '').trim();
@@ -224,9 +231,10 @@ export default function Vender() {
   }
 
   function validarEtapa1() {
-    if (!form.nome_fantasia.trim()) return 'Informe o nome fantasia';
     if (!isValidCNPJ(form.cnpj)) return 'CNPJ inválido';
     if (statusCnpj && statusCnpj.erro) return statusCnpj.erro;
+    if (!consultaReceita || consultaReceita === 'consultando') return 'Aguarde a consulta do CNPJ terminar';
+    if (!form.nome_fantasia.trim()) return 'Informe o nome fantasia';
     return null;
   }
 
@@ -278,7 +286,8 @@ export default function Vender() {
   return (
     <TelaFormulario
       segmento={segmento} etapa={etapa} form={form} setCampo={setCampo}
-      statusCnpj={statusCnpj} consultaReceita={consultaReceita} sindicalizacao={sindicalizacao} enviando={enviando}
+      statusCnpj={statusCnpj} consultaReceita={consultaReceita} camposAutoPreenchidos={camposAutoPreenchidos}
+      sindicalizacao={sindicalizacao} enviando={enviando}
       onVoltarEtapa={() => (etapa === 1 ? setTela('segmento') : setEtapa(e => e - 1))}
       onAvancar={avancar} onEnviar={enviarCadastro}
       onConsultarReceitaNovamente={() => consultarCnpjReceita(cnpjDigits, { forcarPreenchimento: true })}
@@ -485,8 +494,13 @@ function TelaSegmento({ onVoltar, onEscolher }) {
 
 // ─── Tela 3: Formulário (wizard) ────────────────────────────────────────────
 
-function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaReceita, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar, onConsultarReceitaNovamente }) {
+function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaReceita, camposAutoPreenchidos, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar, onConsultarReceitaNovamente }) {
   const seg = SEGMENTOS.find(s => s.valor === segmento);
+  // Enquanto o CNPJ não passou pela consulta na BrasilAPI (ainda digitando,
+  // inválido, ou consulta em andamento), os campos que ela preencheria
+  // ficam ocultos — evita o cliente digitar Nome fantasia/Razão social à
+  // mão só pra descobrir depois que o CNPJ preenchia tudo sozinho.
+  const dadosEmpresaVisiveis = isValidCNPJ(form.cnpj) && !!consultaReceita && consultaReceita !== 'consultando';
 
   return (
     <div className="min-h-screen w-full px-6 py-10" style={{ backgroundColor: '#FAFAFA' }}>
@@ -506,18 +520,40 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8">
           {etapa === 1 && (
             <Etapa titulo="Dados da empresa">
-              <Campo label="Nome fantasia" obrigatorio>
-                <input className={campoCls} value={form.nome_fantasia} onChange={e => setCampo('nome_fantasia', e.target.value)} placeholder="Ex: Loja da Maria" />
-              </Campo>
-              <Campo label="Razão social">
-                <input className={campoCls} value={form.razao_social} onChange={e => setCampo('razao_social', e.target.value)} />
-              </Campo>
-              <Campo label="CNPJ" obrigatorio>
-                <input className={campoCls} inputMode="numeric" value={form.cnpj} onChange={e => setCampo('cnpj', maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
+              <div>
+                <label className="block text-sm font-extrabold mb-1.5" style={{ color: PRETO }}>
+                  CNPJ<span className="text-red-500"> *</span>
+                </label>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    className={`${campoCls} pl-10 font-semibold`}
+                    inputMode="numeric"
+                    value={form.cnpj}
+                    onChange={e => setCampo('cnpj', maskCNPJ(e.target.value))}
+                    placeholder="Digite o CNPJ (nós preenchemos o resto)"
+                    autoFocus
+                  />
+                </div>
+                {!statusCnpj && !consultaReceita && (
+                  <p className="text-[11px] text-slate-400 mt-1.5">🔍 Vamos buscar os dados da sua empresa automaticamente</p>
+                )}
                 <StatusCnpj status={statusCnpj} />
                 <StatusConsultaReceita status={consultaReceita} onConsultarNovamente={onConsultarReceitaNovamente} />
                 <AvisoSindicalizacao sindicalizacao={sindicalizacao} />
-              </Campo>
+              </div>
+
+              {dadosEmpresaVisiveis && (
+                <>
+                  <Campo label="Nome fantasia" obrigatorio badge={camposAutoPreenchidos.has('nome_fantasia')}>
+                    <input className={campoCls} value={form.nome_fantasia} onChange={e => setCampo('nome_fantasia', e.target.value)} placeholder="Ex: Loja da Maria" />
+                  </Campo>
+                  <Campo label="Razão social" badge={camposAutoPreenchidos.has('razao_social')}>
+                    <input className={campoCls} value={form.razao_social} onChange={e => setCampo('razao_social', e.target.value)} />
+                  </Campo>
+                </>
+              )}
+
               <Campo label="Segmento">
                 <div className={`${campoCls} flex items-center gap-2 bg-slate-50 text-slate-500`}>
                   <span>{seg?.emoji}</span> {seg?.label}
@@ -537,17 +573,17 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
 
           {etapa === 2 && (
             <Etapa titulo="Localização e contato">
-              <Campo label="Endereço completo" obrigatorio>
+              <Campo label="Endereço completo" obrigatorio badge={camposAutoPreenchidos.has('endereco')}>
                 <input className={campoCls} value={form.endereco} onChange={e => setCampo('endereco', e.target.value)} placeholder="Rua, número" />
               </Campo>
-              <Campo label="Bairro" obrigatorio>
+              <Campo label="Bairro" obrigatorio badge={camposAutoPreenchidos.has('bairro')}>
                 <input className={campoCls} value={form.bairro} onChange={e => setCampo('bairro', e.target.value)} />
               </Campo>
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Cidade">
+                <Campo label="Cidade" badge={camposAutoPreenchidos.has('cidade')}>
                   <input className={campoCls} value={form.cidade} onChange={e => setCampo('cidade', e.target.value)} />
                 </Campo>
-                <Campo label="Estado">
+                <Campo label="Estado" badge={camposAutoPreenchidos.has('estado')}>
                   <select className={campoCls} value={form.estado} onChange={e => setCampo('estado', e.target.value)}>
                     {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
                   </select>
@@ -559,7 +595,7 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
               <Campo label="Instagram">
                 <input className={campoCls} value={form.instagram} onChange={e => setCampo('instagram', e.target.value)} placeholder="@sualoja" />
               </Campo>
-              <Campo label="E-mail" obrigatorio>
+              <Campo label="E-mail" obrigatorio badge={camposAutoPreenchidos.has('email')}>
                 <input className={campoCls} type="email" value={form.email} onChange={e => setCampo('email', e.target.value)} placeholder="voce@email.com" />
                 <p className="text-[11px] text-slate-400 mt-1">É pra este e-mail que enviamos o login, se aprovado.</p>
               </Campo>
@@ -620,11 +656,16 @@ function Etapa({ titulo, children }) {
   );
 }
 
-function Campo({ label, obrigatorio, children }) {
+function Campo({ label, obrigatorio, badge, children }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-500 mb-1.5">
-        {label}{obrigatorio && <span className="text-red-500"> *</span>}
+      <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-1.5">
+        <span>{label}{obrigatorio && <span className="text-red-500"> *</span>}</span>
+        {badge && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold normal-case" style={{ color: '#166534' }}>
+            <CheckCircle2 className="w-3 h-3" /> auto-preenchido
+          </span>
+        )}
       </label>
       {children}
     </div>
