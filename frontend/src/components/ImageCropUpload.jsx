@@ -17,6 +17,18 @@ import { ROXO } from '../pages/public/Marketplace/theme';
 // quem usa este componente não precisa mudar nada no upload em si: é só
 // trocar o `<input type="file">` por isso e continuar mandando o File pro
 // mesmo endpoint de sempre.
+//
+// No mobile, o <input> ganha `capture="environment"` (câmera traseira) —
+// feedback real: "às vezes a pessoa já tira foto do produto e a IA já faz
+// o trabalho dela", mas antes só abria a galeria. No desktop `capture` não
+// existe (não tem câmera de trás pra puxar), então o comportamento não
+// muda lá. Ressalva conhecida: em alguns navegadores mobile (principalmente
+// iOS Safari) `capture` faz o seletor abrir a câmera DIRETO, sem passar
+// pelo chooser com "Galeria" — quem quiser escolher uma foto já existente
+// no rolo ainda consegue (o botão nativo de trocar pra galeria costuma
+// continuar disponível dentro do próprio app de câmera do iOS), mas vale
+// conferir num aparelho real antes de assumir que ficou 100% igual a
+// antes pra quem prefere galeria.
 
 const FORMATOS_MIME_ACEITOS = ['image/jpeg', 'image/png', 'image/webp'];
 const EXT_HEIC = /\.(heic|heif)$/i;
@@ -37,6 +49,11 @@ const TAMANHO_ALVO_SAIDA = 500 * 1024; // 500KB
 const ZOOM_MINIMO = 0.5;
 const ZOOM_MAXIMO = 3;
 const ZOOM_INICIAL = 1;
+
+// Só decide se o <input> ganha `capture` — não tem nada a ver com layout
+// responsivo (esse componente já é touch-friendly em qualquer largura de
+// tela). Calculado uma vez no carregamento do módulo, não muda em runtime.
+const EH_MOBILE = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
 function lerDimensoes(url) {
   return new Promise((resolve) => {
@@ -237,6 +254,7 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
         className="hidden"
         multiple={multiple}
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+        capture={EH_MOBILE ? 'environment' : undefined}
         onChange={(e) => { aoEscolherArquivos(e.target.files); e.target.value = ''; }}
       />
       {hint && <p className="text-slate-400 text-xs mt-1.5">{hint}</p>}
