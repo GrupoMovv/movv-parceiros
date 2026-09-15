@@ -104,11 +104,13 @@ async function getRecorteComoBlob(imageSrc, pixelCrop) {
  * @param {string} label - texto do botão
  * @param {string} hint - texto de ajuda abaixo do botão
  * @param {boolean} disabled
+ * @param {string} tamanhoIcone - classes de tamanho do ícone (Camera/Loader2) do botão, ex. "w-12 h-12" pra áreas de upload grandes/destacadas. Default "w-4 h-4" (botão compacto de sempre).
  * @param {(file: File) => void|Promise<void>} onCropComplete - chamado com o File JPEG final a cada imagem confirmada
  */
-export default function ImageCropUpload({ aspectRatio = 1, multiple = false, label = 'Selecionar imagem', hint, disabled = false, onCropComplete, className = '', botaoClassName }) {
+export default function ImageCropUpload({ aspectRatio = 1, multiple = false, label = 'Selecionar imagem', hint, disabled = false, tamanhoIcone = 'w-4 h-4', onCropComplete, className = '', botaoClassName }) {
   const inputRef = useRef(null);
   const [carregandoSelecao, setCarregandoSelecao] = useState(false);
+  const [arrastando, setArrastando] = useState(false);
   const [itemAtual, setItemAtual] = useState(null); // { src, nomeBase, restantes }
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -118,6 +120,19 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
   function abrirSeletor() {
     if (disabled || carregandoSelecao || salvando) return;
     inputRef.current?.click();
+  }
+
+  function aoArrastarSobre(e) {
+    e.preventDefault();
+    if (disabled || carregandoSelecao) return;
+    setArrastando(true);
+  }
+  function aoSairArraste() { setArrastando(false); }
+  function aoSoltar(e) {
+    e.preventDefault();
+    setArrastando(false);
+    if (disabled || carregandoSelecao) return;
+    aoEscolherArquivos(e.dataTransfer.files);
   }
 
   async function aoEscolherArquivos(fileList) {
@@ -197,11 +212,14 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
       <button
         type="button"
         onClick={abrirSeletor}
+        onDragOver={aoArrastarSobre}
+        onDragLeave={aoSairArraste}
+        onDrop={aoSoltar}
         disabled={disabled || carregandoSelecao}
-        className={botaoClassName || 'flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-60'}
+        className={`${botaoClassName || 'flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-60'}${arrastando ? ' ring-2 ring-[#7C3AED] ring-offset-1' : ''}`}
       >
-        {carregandoSelecao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-        {label}
+        {carregandoSelecao ? <Loader2 className={`${tamanhoIcone} animate-spin`} /> : <Camera className={tamanhoIcone} />}
+        {arrastando ? 'Solte a foto aqui' : label}
       </button>
       <input
         ref={inputRef}
