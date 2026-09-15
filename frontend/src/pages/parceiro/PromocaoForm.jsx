@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Upload, Loader2, Send, TrendingDown } from 'lucide-react';
+import { Loader2, Send, TrendingDown } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
 import CampoPreco from '../../components/ui/CampoPreco';
+import ImageCropUpload from '../../components/ImageCropUpload';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DURACOES_RAPIDAS = [
@@ -147,10 +148,8 @@ export default function ParceiroPromocaoForm() {
     }
   }
 
-  function selecionarFoto(files) {
-    const file = files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error('A imagem precisa ter até 5MB');
+  // `file` já chega recortado (quadrado) e comprimido pelo ImageCropUpload.
+  function aoRecortarFoto(file) {
     setFotoPendente({ file, preview: URL.createObjectURL(file) });
   }
 
@@ -229,11 +228,12 @@ export default function ParceiroPromocaoForm() {
               <p className="text-slate-400 text-xs">Salve a promoção primeiro pra poder enviar uma foto própria.</p>
             ) : (
               <>
-                <label className="border-2 border-dashed rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:border-slate-300 transition-colors" style={{ borderColor: '#E2E8F0' }}>
-                  <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  <span className="text-xs text-slate-500">Clique pra escolher uma imagem (até 5MB)</span>
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { selecionarFoto(e.target.files); e.target.value = ''; }} />
-                </label>
+                <ImageCropUpload
+                  aspectRatio={1}
+                  label="Clique pra escolher uma imagem"
+                  onCropComplete={aoRecortarFoto}
+                  botaoClassName="w-full border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl p-4 flex items-center justify-center gap-3 text-xs text-slate-500 transition-colors"
+                />
                 {fotoPendente && (
                   <button type="button" onClick={confirmarEnvioFoto} disabled={enviandoFoto}
                     className="mt-2 flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg text-white disabled:opacity-60" style={{ backgroundColor: ROXO }}>
