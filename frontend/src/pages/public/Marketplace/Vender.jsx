@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown } from 'lucide-react';
 import api from '../../../services/api';
@@ -117,6 +118,8 @@ export default function Vender() {
   const [enviando, setEnviando] = useState(false);
   const [faqAberta, setFaqAberta] = useState(null);
   const [statusCnpj, setStatusCnpj] = useState(null); // null | 'checando' | 'ok' | { erro }
+  const [consultaReceita, setConsultaReceita] = useState(null); // null | 'consultando' | { ok:true, situacaoInativa } | { ok:false, tipo }
+  const cnpjReceitaConsultadoRef = useRef(''); // último CNPJ já auto-consultado na BrasilAPI, pra não repetir a cada render
   const [sindicalizacao, setSindicalizacao] = useState(null); // null | { e_sindicalizada }
   const [qtdAssociados, setQtdAssociados] = useState(null);
   const [vagasPioneiro, setVagasPioneiro] = useState(null);
@@ -142,6 +145,59 @@ export default function Vender() {
     }, 500);
     return () => clearTimeout(timer);
   }, [cnpjDigits]);
+
+  // Auto-preenchimento via BrasilAPI (consulta pública, sem autenticação) —
+  // reduz a fricção do cadastro buscando os dados cadastrais assim que o
+  // CNPJ digitado é válido. Não bloqueia o cadastro se falhar (item 4 do
+  // pedido): CNPJ não encontrado ou API fora do ar só avisam, e o parceiro
+  // preenche manualmente. Usa `axios` puro (não a instância `api`) porque
+  // `api` injeta o Bearer do Portal Movv em toda requisição via
+  // interceptor — não deve vazar pra um domínio de terceiro.
+  useEffect(() => {
+    if (cnpjDigits.length !== 14 || !isValidCNPJ(cnpjDigits)) {
+      setConsultaReceita(null);
+      cnpjReceitaConsultadoRef.current = '';
+      return;
+    }
+    if (cnpjReceitaConsultadoRef.current === cnpjDigits) return;
+    const timer = setTimeout(() => {
+      cnpjReceitaConsultadoRef.current = cnpjDigits;
+      consultarCnpjReceita(cnpjDigits);
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cnpjDigits]);
+
+  async function consultarCnpjReceita(digits, { forcarPreenchimento = false } = {}) {
+    setConsultaReceita('consultando');
+    try {
+      const resp = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, { timeout: 8000 });
+      const d = resp.data || {};
+      setForm(f => {
+        const novo = { ...f };
+        const preencher = (campo, valor) => {
+          if (!valor) return;
+          if (forcarPreenchimento || !String(novo[campo] || '').trim()) novo[campo] = valor;
+        };
+        preencher('razao_social', d.razao_social);
+        if (d.nome_fantasia) preencher('nome_fantasia', d.nome_fantasia);
+        const enderecoBase = [d.logradouro, d.numero].filter(Boolean).join(', ');
+        const enderecoCompleto = d.complemento ? [enderecoBase, d.complemento].filter(Boolean).join(' - ') : enderecoBase;
+        preencher('endereco', enderecoCompleto);
+        preencher('bairro', d.bairro);
+        preencher('cidade', d.municipio);
+        if (d.uf && ESTADOS.includes(d.uf)) preencher('estado', d.uf);
+        preencher('email', d.email);
+        return novo;
+      });
+      // `situacao_cadastral` na BrasilAPI é um código numérico (ex.: 2) — o
+      // texto legível vem em `descricao_situacao_cadastral` ("ATIVA" etc.).
+      const situacao = String(d.descricao_situacao_cadastral || '').trim();
+      setConsultaReceita({ ok: true, situacaoInativa: situacao && situacao.toUpperCase() !== 'ATIVA' ? situacao : null });
+    } catch (err) {
+      setConsultaReceita({ ok: false, tipo: err.response?.status === 404 ? 'nao_encontrado' : 'indisponivel' });
+    }
+  }
 
   // Checagem de sindicalização (SECI) — só informativa aqui: avisa a
   // empresa que ela já ganha desconto nos planos pagos assim que forem
@@ -222,9 +278,10 @@ export default function Vender() {
   return (
     <TelaFormulario
       segmento={segmento} etapa={etapa} form={form} setCampo={setCampo}
-      statusCnpj={statusCnpj} sindicalizacao={sindicalizacao} enviando={enviando}
+      statusCnpj={statusCnpj} consultaReceita={consultaReceita} sindicalizacao={sindicalizacao} enviando={enviando}
       onVoltarEtapa={() => (etapa === 1 ? setTela('segmento') : setEtapa(e => e - 1))}
       onAvancar={avancar} onEnviar={enviarCadastro}
+      onConsultarReceitaNovamente={() => consultarCnpjReceita(cnpjDigits, { forcarPreenchimento: true })}
     />
   );
 }
@@ -428,7 +485,7 @@ function TelaSegmento({ onVoltar, onEscolher }) {
 
 // ─── Tela 3: Formulário (wizard) ────────────────────────────────────────────
 
-function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar }) {
+function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaReceita, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar, onConsultarReceitaNovamente }) {
   const seg = SEGMENTOS.find(s => s.valor === segmento);
 
   return (
@@ -458,6 +515,7 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, sindicali
               <Campo label="CNPJ" obrigatorio>
                 <input className={campoCls} inputMode="numeric" value={form.cnpj} onChange={e => setCampo('cnpj', maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
                 <StatusCnpj status={statusCnpj} />
+                <StatusConsultaReceita status={consultaReceita} onConsultarNovamente={onConsultarReceitaNovamente} />
                 <AvisoSindicalizacao sindicalizacao={sindicalizacao} />
               </Campo>
               <Campo label="Segmento">
@@ -577,7 +635,51 @@ function StatusCnpj({ status }) {
   if (!status) return null;
   if (status === 'checando') return <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Verificando...</p>;
   if (status === 'ok') return <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: '#166534' }}><CheckCircle2 className="w-3 h-3" /> CNPJ disponível</p>;
-  return <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><XCircle className="w-3 h-3" /> {status.erro}</p>;
+  const jaCadastrado = status.erro === 'Este CNPJ já está cadastrado como parceiro';
+  return (
+    <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
+      <XCircle className="w-3 h-3" /> {status.erro}
+      {jaCadastrado && <Link to="/parceiro/login" className="underline font-semibold">Fazer login?</Link>}
+    </p>
+  );
+}
+
+// Auto-preenchimento via BrasilAPI — só informativo, nunca trava o
+// cadastro (CNPJ não encontrado ou API fora do ar apenas avisam).
+function StatusConsultaReceita({ status, onConsultarNovamente }) {
+  if (!status) return null;
+  if (status === 'consultando') {
+    return <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Consultando dados na Receita Federal...</p>;
+  }
+  if (status.ok) {
+    return (
+      <div className="mt-1.5 space-y-1.5">
+        <p className="text-[11px] flex items-center gap-1.5" style={{ color: '#166534' }}>
+          <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> Dados carregados! Confira e ajuste o que precisar.
+          <button type="button" onClick={onConsultarNovamente} className="underline text-slate-400 hover:text-slate-600 flex-shrink-0">Consultar novamente</button>
+        </p>
+        {status.situacaoInativa && (
+          <p className="text-[11px] rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#FEF2F2', color: '#B91C1C' }}>
+            ⚠️ Situação cadastral na Receita Federal: <strong>{status.situacaoInativa}</strong>
+          </p>
+        )}
+      </div>
+    );
+  }
+  if (status.tipo === 'nao_encontrado') {
+    return (
+      <p className="text-[11px] mt-1 flex items-center gap-1.5" style={{ color: '#92700C' }}>
+        ❌ CNPJ não encontrado na Receita Federal. Preencha manualmente.
+        <button type="button" onClick={onConsultarNovamente} className="underline text-slate-400 hover:text-slate-600">Consultar novamente</button>
+      </p>
+    );
+  }
+  return (
+    <p className="text-[11px] mt-1 flex items-center gap-1.5" style={{ color: '#92700C' }}>
+      ⚠️ Consulta indisponível no momento. Preencha manualmente.
+      <button type="button" onClick={onConsultarNovamente} className="underline text-slate-400 hover:text-slate-600">Consultar novamente</button>
+    </p>
+  );
 }
 
 // Só informativo — não trava o cadastro (que continua 100% grátis
