@@ -101,12 +101,18 @@ export default function IACadastroProduto({ onConfirmar }) {
                 <Sparkles className="w-8 h-8 mx-auto" style={{ color: DOURADO }} />
                 <h2 className="font-black text-lg mt-2" style={{ color: PRETO }}>Envie a foto do produto</h2>
                 <p className="text-slate-500 text-sm mt-1 mb-5">A IA reconhece o produto e preenche nome, descrição, marca e categoria pra você.</p>
+                {/* Área de upload precisa ser óbvia por si só -- feedback real
+                    de teste: "eu não achei [onde clicar]". A versão anterior
+                    tinha texto branco sem nenhum fundo/borda por baixo. */}
                 <ImageCropUpload
                   aspectRatio={1}
-                  label="Selecionar imagem"
+                  label="Clique para selecionar uma foto do produto"
+                  hint="JPG, PNG ou HEIC até 10MB"
+                  tamanhoIcone="w-12 h-12"
                   onCropComplete={analisar}
-                  botaoClassName="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl text-white"
+                  botaoClassName="w-full flex flex-col items-center gap-3 py-10 px-6 rounded-2xl border-2 border-dashed border-[#7C3AED] text-[#7C3AED] text-sm font-bold hover:bg-purple-50 transition-colors"
                 />
+                <p className="text-slate-400 text-[11px] mt-3">💡 Dica: use fotos com boa iluminação e o produto centralizado pra um resultado melhor da IA</p>
               </div>
             )}
 
