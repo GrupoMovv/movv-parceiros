@@ -7,6 +7,7 @@ import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
 import CampoPreco from '../../components/ui/CampoPreco';
 import ImageCropUpload from '../../components/ImageCropUpload';
+import IACadastroProduto from '../../components/IACadastroProduto';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DICAS = [
@@ -31,6 +32,9 @@ export default function ParceiroProdutoForm() {
   const [carregando, setCarregando] = useState(modoEdicao);
   const [salvando, setSalvando] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
+  const [fotoDaIA, setFotoDaIA] = useState(null); // File já recortado, aplicado ao criar o produto
+  const [mostrarBannerIA, setMostrarBannerIA] = useState(true);
+  const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados }
   const pendentesRef = useRef(pendentes);
   pendentesRef.current = pendentes;
 
@@ -39,6 +43,12 @@ export default function ParceiroProdutoForm() {
   // uso toda vez que o usuário adiciona/remove uma foto da seleção.
   useEffect(() => {
     return () => pendentesRef.current.forEach(p => URL.revokeObjectURL(p.preview));
+  }, []);
+
+  // Contador "IA: X/Y usos este mês" / banner de trial — só usado na tela
+  // de produto novo (banner de IA), não custa buscar sempre.
+  useEffect(() => {
+    apiParceiro.get('/parceiro/produtos/ia-status').then(res => setStatusIA(res.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -55,6 +65,22 @@ export default function ParceiroProdutoForm() {
   }, [id, modoEdicao]);
 
   function setCampo(campo, valor) { setForm(f => ({ ...f, [campo]: valor })); }
+
+  // Callback do IACadastroProduto — pré-preenche o formulário normal com o
+  // que a IA sugeriu (o parceiro ainda confere/edita tudo aqui) e guarda a
+  // foto já recortada pra entrar na fila de fotos assim que o produto for
+  // criado (handleSalvar), sem o parceiro precisar escolher a imagem de
+  // novo.
+  function aplicarSugestaoIA(dadosIA) {
+    setForm(f => ({
+      ...f,
+      nome: dadosIA.nome || f.nome,
+      descricao: dadosIA.descricao || f.descricao,
+      categoria: dadosIA.categoria || f.categoria,
+      marca: dadosIA.marca || f.marca,
+    }));
+    setFotoDaIA(dadosIA.foto || null);
+  }
 
   function validar() {
     if (form.nome.trim().length < 3) return 'Nome precisa ter pelo menos 3 caracteres';
@@ -89,6 +115,12 @@ export default function ParceiroProdutoForm() {
         const res = await apiParceiro.post('/parceiro/produtos', payload);
         setProdutoId(res.data.id);
         navigate(`/parceiro/painel/produtos/${res.data.id}`, { replace: true });
+        // Se veio do fluxo de IA, a foto já recortada entra direto na fila
+        // de pendentes — o parceiro só confirma o envio, sem escolher de novo.
+        if (fotoDaIA) {
+          aoRecortarFoto(fotoDaIA);
+          setFotoDaIA(null);
+        }
         toast.success(rascunho ? 'Rascunho salvo! Agora você já pode adicionar fotos.' : 'Produto publicado!');
       }
     } catch (err) {
@@ -155,6 +187,27 @@ export default function ParceiroProdutoForm() {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div className="space-y-6">
         <h1 className="text-xl font-bold" style={{ color: PRETO }}>{modoEdicao ? 'Editar produto' : 'Novo produto'}</h1>
+
+        {!produtoId && mostrarBannerIA && (
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #FFF7E0 0%, #FFFFFF 100%)', border: '1px solid #FDE9B8' }}>
+            <p className="font-black text-sm" style={{ color: PRETO }}>🎊 NOVO! Cadastro com IA</p>
+            <p className="text-slate-500 text-xs mt-1 mb-4">Nossa IA reconhece o produto na foto e preenche nome, descrição, marca e categoria pra você — de 3-5 minutos pra 30 segundos.</p>
+            {statusIA?.trial_ativo && (
+              <p className="text-center text-xs font-bold px-3 py-1.5 rounded-full mb-3" style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}>
+                🎉 Trial ativo! IA ilimitada por mais {statusIA.trial_dias_restantes} {statusIA.trial_dias_restantes === 1 ? 'dia' : 'dias'}
+              </p>
+            )}
+            <IACadastroProduto onConfirmar={aplicarSugestaoIA} />
+            {statusIA && !statusIA.trial_ativo && (
+              <p className="text-center text-[11px] text-slate-400 mt-2">
+                IA: {statusIA.usados}/{statusIA.limite ?? '∞'} usos este mês ({statusIA.plano})
+              </p>
+            )}
+            <button type="button" onClick={() => setMostrarBannerIA(false)} className="block mx-auto text-xs text-slate-400 underline mt-3">
+              Cadastrar manualmente
+            </button>
+          </div>
+        )}
 
         <Secao titulo="Informações">
           <Campo label={`Nome do produto (${form.nome.length}/100)`} value={form.nome} onChange={v => setCampo('nome', v.slice(0, 100))} />
