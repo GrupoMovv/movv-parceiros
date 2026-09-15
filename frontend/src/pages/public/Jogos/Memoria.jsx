@@ -238,30 +238,31 @@ export default function Memoria() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
-      <header className="text-center pt-8 px-4">
+      <header className="text-center pt-5 sm:pt-8 px-4">
         <Link to="/jogar/memoria" className="text-white/60 hover:text-white text-xs underline">← Todos os níveis</Link>
-        <h1 className="text-2xl sm:text-4xl font-black text-white mt-2">
+        <h1 className="text-xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">
           {cfg.emoji} NÍVEL {cfg.nivel} — {cfg.nome}
         </h1>
-        <p className="text-iub-dourado font-black uppercase text-xs sm:text-sm mt-2 tracking-wide">
+        <p className="text-iub-dourado font-black uppercase text-xs sm:text-sm mt-1 sm:mt-2 tracking-wide">
           {cfg.pares} pares · {cfg.dimensoes}
         </p>
       </header>
 
-      {/* HUD */}
-      <div className="max-w-md mx-auto mt-5 px-4">
-        <div className="bg-white/10 rounded-2xl px-4 py-3 flex items-center justify-between gap-2 text-white">
+      {/* HUD — mais compacto no mobile (item 8: sobra de espaço vertical
+          nos níveis com mais linhas); sm: preserva o tamanho original. */}
+      <div className="max-w-md mx-auto mt-3 sm:mt-5 px-4">
+        <div className="bg-white/10 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between gap-2 text-white">
           <div className="text-center">
             <p className="text-[10px] uppercase tracking-wider text-white/60">Tempo</p>
-            <p className="font-black font-mono text-lg">{formatarTempo(segundos)}</p>
+            <p className="font-black font-mono text-base sm:text-lg">{formatarTempo(segundos)}</p>
           </div>
           <div className="text-center">
             <p className="text-[10px] uppercase tracking-wider text-white/60">Jogadas</p>
-            <p className="font-black text-lg">{jogadas}</p>
+            <p className="font-black text-base sm:text-lg">{jogadas}</p>
           </div>
           <div className="text-center">
             <p className="text-[10px] uppercase tracking-wider text-white/60">Seu recorde</p>
-            <p className="font-black text-lg text-iub-dourado">
+            <p className="font-black text-base sm:text-lg text-iub-dourado">
               {melhorTempoPessoal != null ? formatarTempo(melhorTempoPessoal) : '--:--'}
             </p>
           </div>
@@ -270,7 +271,7 @@ export default function Memoria() {
               type="button"
               onClick={() => setPausado(p => !p)}
               disabled={!iniciado || vencido}
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center disabled:opacity-40"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center disabled:opacity-40"
               aria-label={pausado ? 'Continuar' : 'Pausar'}
             >
               {pausado ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -278,7 +279,7 @@ export default function Memoria() {
             <button
               type="button"
               onClick={reiniciar}
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center"
               aria-label="Reiniciar"
             >
               <RotateCcw className="w-4 h-4" />
@@ -286,7 +287,7 @@ export default function Memoria() {
             <button
               type="button"
               onClick={alternarSom}
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center"
               aria-label={somLigado ? 'Desligar som' : 'Ligar som'}
             >
               {somLigado ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -295,19 +296,25 @@ export default function Memoria() {
         </div>
       </div>
 
-      <div className="flex justify-center mt-3">
+      <div className="flex justify-center mt-2 sm:mt-3">
         <img
           src={MASCOTE_URL}
           alt=""
-          className="w-14 h-14 object-contain animate-float"
+          className="w-10 h-10 sm:w-14 sm:h-14 object-contain animate-float"
           style={estiloMascotePorNivel(nivel)}
         />
       </div>
 
       {/* Grid — cols dinâmico (4/5/6) não dá pra fazer só com classe
           Tailwind estática (o purge do build não conhece `grid-cols-${n}`
-          gerado em runtime), por isso gridTemplateColumns via style. */}
-      <div className="relative max-w-sm sm:max-w-lg mx-auto mt-4 px-4">
+          gerado em runtime), por isso gridTemplateColumns via style.
+          Nível 1 (4 cols) mantém o container max-w-sm original — já
+          ficava bem distribuído. Níveis 2-5 (5-6 cols) usam quase 100% da
+          largura no mobile: o max-w-sm (384px) capava o tamanho da carta
+          em qualquer tela ≥384px, então um iPhone Pro Max (428px) via as
+          mesmas cartas pequenas de um iPhone SE — sobrava tela vazia nas
+          bordas em vez de cartas maiores. */}
+      <div className={`relative mx-auto mt-3 sm:mt-4 sm:max-w-lg sm:px-4 ${cfg.cols > 4 ? 'px-3' : 'max-w-sm px-4'}`}>
         <div
           className="grid"
           style={{
