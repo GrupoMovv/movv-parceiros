@@ -32,17 +32,23 @@ export default function ParceiroProdutoForm() {
   const [carregando, setCarregando] = useState(modoEdicao);
   const [salvando, setSalvando] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
-  const [fotoDaIA, setFotoDaIA] = useState(null); // File já recortado, aplicado ao criar o produto
+  const [fotoDaIA, setFotoDaIA] = useState(null); // File já recortado, guardado em memória até o produto ser criado
+  const [fotoDaIAPreview, setFotoDaIAPreview] = useState(null);
   const [mostrarBannerIA, setMostrarBannerIA] = useState(true);
   const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados }
   const pendentesRef = useRef(pendentes);
   pendentesRef.current = pendentes;
+  const fotoDaIAPreviewRef = useRef(fotoDaIAPreview);
+  fotoDaIAPreviewRef.current = fotoDaIAPreview;
 
   // Libera a memória dos previews locais só ao desmontar a página — usa ref
   // (não `pendentes` direto na dependência) pra não revogar os URLs ainda em
   // uso toda vez que o usuário adiciona/remove uma foto da seleção.
   useEffect(() => {
-    return () => pendentesRef.current.forEach(p => URL.revokeObjectURL(p.preview));
+    return () => {
+      pendentesRef.current.forEach(p => URL.revokeObjectURL(p.preview));
+      if (fotoDaIAPreviewRef.current) URL.revokeObjectURL(fotoDaIAPreviewRef.current);
+    };
   }, []);
 
   // Contador "IA: X/Y usos este mês" / banner de trial — só usado na tela
@@ -68,9 +74,9 @@ export default function ParceiroProdutoForm() {
 
   // Callback do IACadastroProduto — pré-preenche o formulário normal com o
   // que a IA sugeriu (o parceiro ainda confere/edita tudo aqui) e guarda a
-  // foto já recortada pra entrar na fila de fotos assim que o produto for
-  // criado (handleSalvar), sem o parceiro precisar escolher a imagem de
-  // novo.
+  // foto já recortada EM MEMÓRIA (nunca sobe nada ainda: não existe
+  // produtoId nesse momento). A foto só é enviada de verdade dentro de
+  // handleSalvar, junto com a criação do produto — ver enviarFotoDaIA().
   function aplicarSugestaoIA(dadosIA) {
     setForm(f => ({
       ...f,
@@ -79,7 +85,16 @@ export default function ParceiroProdutoForm() {
       categoria: dadosIA.categoria || f.categoria,
       marca: dadosIA.marca || f.marca,
     }));
-    setFotoDaIA(dadosIA.foto || null);
+    if (dadosIA.foto) {
+      setFotoDaIA(dadosIA.foto);
+      setFotoDaIAPreview(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(dadosIA.foto); });
+    }
+  }
+
+  function removerFotoDaIA() {
+    if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
+    setFotoDaIA(null);
+    setFotoDaIAPreview(null);
   }
 
   function validar() {
@@ -113,20 +128,53 @@ export default function ParceiroProdutoForm() {
         toast.success('Produto atualizado!');
       } else {
         const res = await apiParceiro.post('/parceiro/produtos', payload);
-        setProdutoId(res.data.id);
-        navigate(`/parceiro/painel/produtos/${res.data.id}`, { replace: true });
-        // Se veio do fluxo de IA, a foto já recortada entra direto na fila
-        // de pendentes — o parceiro só confirma o envio, sem escolher de novo.
+        const novoId = res.data.id;
+        setProdutoId(novoId);
+        navigate(`/parceiro/painel/produtos/${novoId}`, { replace: true });
+
+        // Veio do fluxo de IA: a foto já recortada sobe automaticamente
+        // junto com a criação, num único clique em "Publicar"/"Salvar
+        // rascunho" — sem isso o parceiro precisaria confirmar o envio de
+        // novo depois, o que era exatamente o bug reportado (a seção
+        // "Fotos" ficava bloqueada dizendo "salve primeiro" mesmo já tendo
+        // uma foto escolhida via IA).
         if (fotoDaIA) {
-          aoRecortarFoto(fotoDaIA);
-          setFotoDaIA(null);
+          await enviarFotoDaIA(novoId, fotoDaIA);
+        } else {
+          toast.success(rascunho ? 'Rascunho salvo! Agora você já pode adicionar fotos.' : 'Produto publicado!');
         }
-        toast.success(rascunho ? 'Rascunho salvo! Agora você já pode adicionar fotos.' : 'Produto publicado!');
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao salvar produto');
     } finally {
       setSalvando(false);
+    }
+  }
+
+  // Sobe a foto que veio do fluxo de IA assim que o produto acaba de ser
+  // criado — reusa o mesmo endpoint do upload manual (POST .../fotos), só
+  // que disparado automaticamente em vez de esperar o parceiro clicar
+  // "Enviar foto". Falha aqui não desfaz a criação do produto (que já
+  // aconteceu) — só avisa que a foto precisa ser adicionada manualmente.
+  async function enviarFotoDaIA(produtoIdAlvo, file) {
+    try {
+      const fd = new FormData();
+      fd.append('fotos', file);
+      const res = await apiParceiro.post(`/parceiro/produtos/${produtoIdAlvo}/fotos`, fd);
+      setFotos(res.data.fotos);
+      toast.success('Produto criado com a foto da IA! 🎉');
+    } catch (err) {
+      const d = err.response?.data;
+      toast.error(
+        d?.detalhes
+          ? `Produto criado, mas o envio da foto falhou (${d.error} — ${d.detalhes}). Adicione manualmente ali embaixo.`
+          : 'Produto criado! A foto da IA não pôde ser enviada agora — adicione manualmente ali embaixo.',
+        { duration: 8000 }
+      );
+    } finally {
+      if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
+      setFotoDaIA(null);
+      setFotoDaIAPreview(null);
     }
   }
 
@@ -228,9 +276,22 @@ export default function ParceiroProdutoForm() {
         </Secao>
 
         <Secao titulo="Fotos">
-          {!produtoId ? (
-            <p className="text-slate-400 text-sm text-center py-6">Salve as informações do produto primeiro pra poder adicionar fotos.</p>
-          ) : (
+          {!produtoId && fotoDaIA && (
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 p-4">
+              <img src={fotoDaIAPreview} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-slate-100" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold" style={{ color: PRETO }}>✅ Foto da IA pronta</p>
+                <p className="text-xs text-slate-400">Vai junto automaticamente quando você salvar o produto</p>
+              </div>
+              <button type="button" onClick={removerFotoDaIA} aria-label="Remover foto" className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <X className="w-3.5 h-3.5 text-slate-500" />
+              </button>
+            </div>
+          )}
+          {!produtoId && !fotoDaIA && (
+            <p className="text-slate-400 text-sm text-center py-6">Salve as informações do produto primeiro pra poder adicionar fotos — ou use o "Cadastrar com IA" ali em cima, que já deixa a foto pronta pra ir junto.</p>
+          )}
+          {produtoId && (
             <>
               <ImageCropUpload
                 aspectRatio={1}
@@ -336,8 +397,8 @@ export default function ParceiroProdutoForm() {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Como vai aparecer no marketplace</p>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center">
-              {fotos[0]?.url || pendentes[0]?.preview ? (
-                <img src={fotos[0]?.url || pendentes[0]?.preview} alt="" className="w-full h-full object-cover" />
+              {fotos[0]?.url || pendentes[0]?.preview || fotoDaIAPreview ? (
+                <img src={fotos[0]?.url || pendentes[0]?.preview || fotoDaIAPreview} alt="" className="w-full h-full object-cover" />
               ) : <span className="text-slate-300 text-xs">Sem foto</span>}
               {form.destaque && (
                 <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
