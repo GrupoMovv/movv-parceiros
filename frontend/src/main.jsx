@@ -12,9 +12,27 @@ import './index.css';
 // celular o app fica horas em background sem essa checagem rodar — dá pra
 // ficar preso numa build antiga achando que é bug de código quando na
 // verdade é só cache (aconteceu de verdade num teste da Roleta: o fix já
-// estava publicado, o celular só não tinha buscado a versão nova ainda).
-// registration.update() força o browser a checar o sw.js de novo no
-// servidor sempre que o app volta pra primeiro plano.
+// estava publicado, o celular só não tinha buscado a versão nova ainda —
+// e de novo no bug dos "produtos favoritos" não aparecendo: o código do
+// fix tava certo, o app aberto só não tinha pego a build nova). Duas
+// pernas pra isso não se repetir:
+// 1) registration.update() força o browser a checar o sw.js de novo no
+//    servidor sempre que o app volta pra primeiro plano.
+// 2) controllerchange dispara quando um SW novo assume o controle da
+//    aba — sem isso, o SW novo já tá ativo mas a aba continua rodando o
+//    JS ANTIGO já carregado em memória até alguém fechar/reabrir; com o
+//    reload automático (uma vez só, guardado por `recarregando`, senão
+//    entra em loop se o navegador disparar o evento mais de uma vez) a
+//    aba pega a build nova sozinha, sem esperar o usuário perceber.
+if ('serviceWorker' in navigator) {
+  let recarregando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (recarregando) return;
+    recarregando = true;
+    window.location.reload();
+  });
+}
+
 registerSW({
   immediate: true,
   onRegisteredSW(swUrl, registration) {
