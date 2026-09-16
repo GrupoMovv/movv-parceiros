@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, XCircle, ArrowRight, Storefront, ShoppingBag } from '@phosphor-icons/react';
+import { CheckCircle, XCircle, ArrowRight, ArrowLeft, Storefront, ShoppingBag } from '@phosphor-icons/react';
 import MascoteIubMais from '../../components/MascoteIubMais';
 
 // Números validados (SBVC 2025 + IBGE 2024) — GMV per capita é a única
@@ -132,6 +132,17 @@ export default function Curiosidades() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Página standalone (sem TopNav completo — não faz sentido puxar
+          busca/carrinho/favoritos pra um artigo institucional, e TopNav
+          depende de CarrinhoProvider, que essa rota não tem). Sem isso o
+          único jeito de sair era rolar até o CTA lá embaixo — usuário
+          "ficava preso" (feedback real de teste). */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100 px-4 sm:px-6 h-12 flex items-center">
+        <Link to="/marketplace" className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+          <ArrowLeft size={16} weight="bold" /> Voltar ao Marketplace
+        </Link>
+      </div>
+
       {/* 1. HERO */}
       <section
         className="relative px-6 py-16 sm:py-24 text-center overflow-hidden"
