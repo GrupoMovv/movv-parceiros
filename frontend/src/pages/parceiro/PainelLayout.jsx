@@ -4,6 +4,7 @@ import { LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiParceiro, { getParceiroToken, setParceiroToken } from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
+import InstallPWABanner from '../../components/InstallPWABanner';
 
 const ABAS = [
   { label: 'Dashboard', to: '/parceiro/painel', end: true },
@@ -144,6 +145,8 @@ export default function ParceiroPainelLayout() {
       <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
         <Outlet context={{ parceiro, usuario }} />
       </main>
+
+      <InstallPWABanner variante="parceiro" />
     </div>
   );
 }

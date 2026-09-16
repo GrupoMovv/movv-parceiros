@@ -22,13 +22,27 @@ function foiDispensadoRecentemente() {
   return em && Date.now() - em < COOLDOWN_MS;
 }
 
-// Banner discreto de "instalar app" — só no marketplace público (ver
-// MarketplaceFallback em App.jsx), só em mobile, nunca se já instalado ou
-// dispensado nos últimos 7 dias. Android/Chrome usa o prompt nativo via
-// evento `beforeinstallprompt`; iOS Safari não expõe esse evento (Apple não
-// suporta), então mostra instrução manual (Compartilhar → Adicionar à Tela
-// de Início) em vez de botão de instalar.
-export default function InstallPWABanner() {
+const TEXTOS = {
+  marketplace: {
+    titulo: '📲 Instale o IUB MAIS no seu celular',
+    subtitulo: 'Acesso rápido a todos os produtos!',
+  },
+  parceiro: {
+    titulo: '📲 Instale o IUB MAIS+ no seu celular',
+    subtitulo: 'Cadastre produtos com IA e gerencie tudo sem abrir o navegador!',
+  },
+};
+
+// Banner discreto de "instalar app" — no marketplace público (ver
+// MarketplaceFallback em App.jsx) e no painel do parceiro (ver
+// ParceiroPainelLayout.jsx), só em mobile, nunca se já instalado ou
+// dispensado nos últimos 7 dias (estado de instalado/dispensado é
+// compartilhado entre os dois — é o mesmo PWA instalando). Android/Chrome
+// usa o prompt nativo via evento `beforeinstallprompt`; iOS Safari não
+// expõe esse evento (Apple não suporta), então mostra instrução manual
+// (Compartilhar → Adicionar à Tela de Início) em vez de botão de instalar.
+export default function InstallPWABanner({ variante = 'marketplace' }) {
+  const { titulo, subtitulo } = TEXTOS[variante] || TEXTOS.marketplace;
   const [promptEvento, setPromptEvento] = useState(null);
   const [mostrarIOS, setMostrarIOS] = useState(false);
   const [visivel, setVisivel] = useState(false);
@@ -98,8 +112,8 @@ export default function InstallPWABanner() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-sm">📲 Instale o IUB MAIS no seu celular</p>
-          <p className="text-white/70 text-xs mt-0.5">Acesso rápido a todos os produtos!</p>
+          <p className="text-white font-bold text-sm">{titulo}</p>
+          <p className="text-white/70 text-xs mt-0.5">{subtitulo}</p>
 
           {mostrarIOS ? (
             <p className="text-white/85 text-xs mt-2 flex items-center gap-1 flex-wrap">
