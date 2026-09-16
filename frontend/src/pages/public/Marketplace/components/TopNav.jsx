@@ -28,11 +28,6 @@ const MENU_SECUNDARIO = [
   { label: '🏪 Lojas', href: '#lojas' },
 ];
 
-function scrollPara(e, href) {
-  e.preventDefault();
-  document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 // Header estilo marketplace grande (fundo roxo escuro) — logo + busca
 // central + localização + perfil na linha principal, com um menu
 // secundário claro logo abaixo (categorias/ofertas/lojas/SECI/vender).
@@ -63,6 +58,22 @@ export default function TopNav({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       navigate('/marketplace');
+    }
+  }
+
+  // Âncoras do menu (Produtos/Ofertas/Novidades/Lojas) só existem na home
+  // — clicar nelas de outra rota (ex.: /marketplace/food) não fazia nada,
+  // porque document.querySelector(href) não acha o elemento fora da home.
+  // Se já está na home, rola direto; se não, navega pra home E manda o id
+  // alvo via router state — Marketplace.jsx lê isso e rola depois de
+  // montar (ver useEffect lá).
+  function irParaAncora(e, href) {
+    e.preventDefault();
+    const id = href.slice(1);
+    if (location.pathname === '/marketplace') {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      navigate('/marketplace', { state: { scrollTo: id } });
     }
   }
 
@@ -244,7 +255,7 @@ export default function TopNav({
             <a
               key={item.label}
               href={item.href}
-              onClick={(e) => scrollPara(e, item.href)}
+              onClick={(e) => irParaAncora(e, item.href)}
               className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
             >
               {item.label}
@@ -270,7 +281,7 @@ export default function TopNav({
               {item.label}
             </Link>
           ) : (
-            <a key={item.label} href={item.href} onClick={(e) => { scrollPara(e, item.href); setMenuMobileAberto(false); }} className="block text-sm font-medium text-slate-600 py-1">
+            <a key={item.label} href={item.href} onClick={(e) => { irParaAncora(e, item.href); setMenuMobileAberto(false); }} className="block text-sm font-medium text-slate-600 py-1">
               {item.label}
             </a>
           ))}

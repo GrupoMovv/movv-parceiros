@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { assetUrl } from '../../../services/api';
 import { PARCEIROS_INICIAIS, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
@@ -26,6 +27,8 @@ import { useProdutosSecao, useProdutosPorIds, useParceirosCompactos } from './us
 import { useFechaMesProximo } from './useFechaMes';
 
 export default function Marketplace() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
@@ -49,6 +52,23 @@ export default function Marketplace() {
     if (chaveTourVisto) { try { localStorage.setItem(chaveTourVisto, '1'); } catch { /* localStorage indisponível */ } }
     setTourFechado(true);
   }
+
+  // Chegou aqui vindo de outra rota (ex.: clicou "Ofertas" no menu do
+  // TopNav estando em /marketplace/food) — TopNav manda o id da âncora via
+  // router state porque o elemento só existe depois que ESSA página monta
+  // (não dá pra rolar pra um id que ainda não existe no DOM da rota
+  // anterior). Limpa o state depois (replace) pra não rolar de novo num
+  // back/forward ou reload.
+  useEffect(() => {
+    const alvo = location.state?.scrollTo;
+    if (!alvo) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(alvo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    navigate(location.pathname, { replace: true, state: null });
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana', 'promocoes');
   const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
