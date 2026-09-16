@@ -4,6 +4,7 @@ import { House, MagnifyingGlass, Heart, UserCircle, ShoppingCart } from '@phosph
 import { ROXO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 import { useCarrinho } from '../CarrinhoContext';
+import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
 
 function focarBusca() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -12,13 +13,20 @@ function focarBusca() {
 
 // Menu inferior fixo só no mobile — atalho de uma mão pras 4 ações mais
 // usadas, sem precisar rolar até o topo pra achar a navbar.
-export default function MobileBottomNav({ favoritosAtivos, onToggleFavoritos, nomeAssociado, onLoginSuccess }) {
+export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
   const [modalAberto, setModalAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const emCasa = location.pathname === '/marketplace';
   const noCarrinho = location.pathname === '/marketplace/carrinho';
+  const naFavoritos = location.pathname === '/favoritos';
   const { totalItens } = useCarrinho();
+  // Mesma lógica do TopNav — favorito calculado aqui, não via prop (ver
+  // comentário lá: contagem espalhada por prop em cada página é fácil de
+  // esquecer de atualizar).
+  const { favoritos: favoritosParceiros } = useFavoritos();
+  const { favoritos: favoritosProdutos } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
+  const qtdFavoritos = favoritosParceiros.length + favoritosProdutos.length;
 
   // Link puro pra "/marketplace" não faz nada quando já se está lá (mesma
   // rota, React Router não navega de novo) — usuário rolava a página e
@@ -44,10 +52,15 @@ export default function MobileBottomNav({ favoritosAtivos, onToggleFavoritos, no
           <span className="text-[10px] font-medium text-slate-400">Buscar</span>
         </button>
 
-        <button type="button" onClick={onToggleFavoritos} className="flex-1 flex flex-col items-center justify-center gap-0.5">
-          <Heart size={20} weight={favoritosAtivos ? 'fill' : 'regular'} color={favoritosAtivos ? '#EF4444' : '#94A3B8'} />
-          <span className="text-[10px] font-medium" style={{ color: favoritosAtivos ? '#EF4444' : '#94A3B8' }}>Favoritos</span>
-        </button>
+        <Link to="/favoritos" className="relative flex-1 flex flex-col items-center justify-center gap-0.5">
+          <Heart size={20} weight={naFavoritos ? 'fill' : 'regular'} color={naFavoritos ? '#EF4444' : '#94A3B8'} />
+          {qtdFavoritos > 0 && (
+            <span className="absolute top-1 right-[27%] min-w-[13px] h-[13px] px-0.5 rounded-full text-[8px] font-bold flex items-center justify-center text-white" style={{ backgroundColor: '#EF4444' }}>
+              {qtdFavoritos}
+            </span>
+          )}
+          <span className="text-[10px] font-medium" style={{ color: naFavoritos ? '#EF4444' : '#94A3B8' }}>Favoritos</span>
+        </Link>
 
         <Link to="/marketplace/carrinho" className="relative flex-1 flex flex-col items-center justify-center gap-0.5">
           <ShoppingCart size={20} weight={noCarrinho ? 'fill' : 'regular'} color={noCarrinho ? ROXO : '#94A3B8'} />

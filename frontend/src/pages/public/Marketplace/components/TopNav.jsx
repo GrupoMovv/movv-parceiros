@@ -8,6 +8,7 @@ import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 import InstallAppButton from '../../../../components/InstallAppButton';
 import { getPainelToken } from '../../../../services/apiPainel';
+import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
 
 // Itens com `rota` navegam de verdade (react-router); com `href` são
 // âncora pra rolar até a seção na própria home (scrollPara). Emoji em vez
@@ -32,7 +33,7 @@ const MENU_SECUNDARIO = [
 // central + localização + perfil na linha principal, com um menu
 // secundário claro logo abaixo (categorias/ofertas/lojas/SECI/vender).
 export default function TopNav({
-  nomeAssociado, nomeCompleto, fotoUrl, carteirinhaHash, carregandoAssociado, favoritosAtivos, onToggleFavoritos, qtdFavoritos,
+  nomeAssociado, nomeCompleto, fotoUrl, carteirinhaHash, carregandoAssociado,
   onSair, onLoginSuccess, searchQuery, onSearchChange, onSearchSubmit,
 }) {
   const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
@@ -41,6 +42,15 @@ export default function TopNav({
   const location = useLocation();
   const navigate = useNavigate();
   const { totalItens: itensCarrinho, pulsar: carrinhoPulsando } = useCarrinho();
+  // Contagem/estado de favoritos calculados aqui dentro (não via prop) —
+  // toda página que renderiza TopNav precisava lembrar de somar
+  // parceiros+produtos favoritos "na mão", e a maioria esquecia (só
+  // contava parceiros), deixando o badge errado em quase toda página
+  // menos a home. Única fonte de verdade agora.
+  const { favoritos: favoritosParceiros } = useFavoritos();
+  const { favoritos: favoritosProdutos } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
+  const qtdFavoritos = favoritosParceiros.length + favoritosProdutos.length;
+  const naFavoritos = location.pathname === '/favoritos';
   const menuPerfilRef = useRef(null);
 
   useEffect(() => {
@@ -111,20 +121,19 @@ export default function TopNav({
           <MapPin className="w-3.5 h-3.5" style={{ color: DOURADO }} /> Itumbiara, GO
         </span>
 
-        <button
-          type="button"
-          onClick={onToggleFavoritos}
-          aria-pressed={favoritosAtivos}
+        <Link
+          to="/favoritos"
+          aria-current={naFavoritos ? 'page' : undefined}
           aria-label="Meus favoritos"
-          className={`hidden sm:flex relative w-9 h-9 rounded-full flex-shrink-0 items-center justify-center transition-colors duration-200 ${favoritosAtivos ? 'bg-white/20' : 'hover:bg-white/10'}`}
+          className={`hidden sm:flex relative w-9 h-9 rounded-full flex-shrink-0 items-center justify-center transition-colors duration-200 ${naFavoritos ? 'bg-white/20' : 'hover:bg-white/10'}`}
         >
-          <Heart className="w-4 h-4" style={{ color: favoritosAtivos ? DOURADO : '#fff' }} fill={favoritosAtivos ? DOURADO : 'none'} />
+          <Heart className="w-4 h-4" style={{ color: naFavoritos ? DOURADO : '#fff' }} fill={naFavoritos ? DOURADO : 'none'} />
           {qtdFavoritos > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
               {qtdFavoritos}
             </span>
           )}
-        </button>
+        </Link>
 
         <Link
           to="/marketplace/carrinho"
@@ -201,14 +210,14 @@ export default function TopNav({
                 >
                   <Users2 className="w-4 h-4" style={{ color: ROXO }} /> Editar dados / dependentes
                 </Link>
-                <button
-                  type="button"
-                  disabled
-                  title="Em breve"
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-300 cursor-not-allowed"
+                <Link
+                  to="/favoritos"
+                  onClick={() => setMenuPerfilAberto(false)}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                 >
-                  <Heart className="w-4 h-4" /> Meus favoritos <span className="ml-auto text-[10px] font-bold uppercase text-slate-300">Em breve</span>
-                </button>
+                  <Heart className="w-4 h-4" style={{ color: ROXO }} /> Meus favoritos
+                  {qtdFavoritos > 0 && <span className="ml-auto text-[11px] font-bold text-slate-400">{qtdFavoritos}</span>}
+                </Link>
                 <button
                   type="button"
                   onClick={() => { setMenuPerfilAberto(false); onSair(); }}
@@ -289,13 +298,13 @@ export default function TopNav({
           <Link to="/vender" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-medium text-slate-600 py-1">Vender no IUB MAIS</Link>
           <InstallAppButton variant="full" className="w-full justify-center text-xs py-2.5 mt-1 bg-[#FFF8E1] shadow-sm" />
           <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => { onToggleFavoritos(); setMenuMobileAberto(false); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-lg border ${favoritosAtivos ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600'}`}
+            <Link
+              to="/favoritos"
+              onClick={() => setMenuMobileAberto(false)}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-lg border ${naFavoritos ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600'}`}
             >
-              <Heart className="w-3.5 h-3.5" fill={favoritosAtivos ? '#fff' : 'none'} /> Favoritos {qtdFavoritos > 0 && `(${qtdFavoritos})`}
-            </button>
+              <Heart className="w-3.5 h-3.5" fill={naFavoritos ? '#fff' : 'none'} /> Favoritos {qtdFavoritos > 0 && `(${qtdFavoritos})`}
+            </Link>
             {nomeAssociado ? (
               <button type="button" onClick={() => { onSair(); setMenuMobileAberto(false); }} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-lg border border-slate-200 text-slate-600">
                 <LogOut className="w-3.5 h-3.5" /> Sair
