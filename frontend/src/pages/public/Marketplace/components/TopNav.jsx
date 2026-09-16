@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, LogOut, Search, MapPin, List, X, CreditCard, Users2, ChevronDown } from 'lucide-react';
+import { Heart, LogOut, Search, MapPin, CreditCard, Users2, ChevronDown, User } from 'lucide-react';
 import { ShoppingCart } from '@phosphor-icons/react';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
+import MenuHorizontalMobile from './MenuHorizontalMobile';
 import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 import InstallAppButton from '../../../../components/InstallAppButton';
@@ -37,7 +38,6 @@ export default function TopNav({
   onSair, onLoginSuccess, searchQuery, onSearchChange, onSearchSubmit,
 }) {
   const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
-  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [menuPerfilAberto, setMenuPerfilAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -87,6 +87,18 @@ export default function TopNav({
     }
   }
 
+  // Menu horizontal mobile (ver MenuHorizontalMobile.jsx) reusa o mesmo
+  // MENU_SECUNDARIO do desktop pra não duplicar a lista em dois lugares,
+  // só acrescenta Jogar/SECI na ponta — no desktop esses dois já têm
+  // lugar próprio fora do MENU_SECUNDARIO (pill JOGAR e link "Sou SECI"),
+  // no mobile compacto os dois entram como mais uma pill rolável em vez
+  // de precisar de espaço fixo dedicado.
+  const itensMenuMobile = [
+    { label: '🎡 Jogar', rota: getPainelToken() ? '/jogar' : '/jogar/login' },
+    ...MENU_SECUNDARIO,
+    { label: '💎 SECI', rota: '/cadastrar-associado' },
+  ];
+
   return (
     <header className="sticky top-0 z-40 shadow-md w-full" style={{ backgroundColor: ROXO }}>
       <div className="h-[68px] flex items-center gap-3 sm:gap-5 max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full">
@@ -125,7 +137,7 @@ export default function TopNav({
           to="/favoritos"
           aria-current={naFavoritos ? 'page' : undefined}
           aria-label="Meus favoritos"
-          className={`hidden sm:flex relative w-9 h-9 rounded-full flex-shrink-0 items-center justify-center transition-colors duration-200 ${naFavoritos ? 'bg-white/20' : 'hover:bg-white/10'}`}
+          className={`flex relative w-9 h-9 rounded-full flex-shrink-0 items-center justify-center transition-colors duration-200 ${naFavoritos ? 'bg-white/20' : 'hover:bg-white/10'}`}
         >
           <Heart className="w-4 h-4" style={{ color: naFavoritos ? DOURADO : '#fff' }} fill={naFavoritos ? DOURADO : 'none'} />
           {qtdFavoritos > 0 && (
@@ -148,10 +160,13 @@ export default function TopNav({
           )}
         </Link>
 
+        {/* Só desktop — no mobile o atalho de Jogar mora na primeira pill
+            do menu horizontal rolável (ver itensMenuMobile), pra não
+            disputar espaço fixo na barra compacta. */}
         <Link
           to={getPainelToken() ? '/jogar' : '/jogar/login'}
           aria-label="Joguinhos IUB MAIS+"
-          className="flex items-center gap-1.5 flex-shrink-0 text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-2 rounded-full text-black whitespace-nowrap animate-jogar-blink"
+          className="hidden sm:flex items-center gap-1.5 flex-shrink-0 text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-2 rounded-full text-black whitespace-nowrap animate-jogar-blink"
           style={{ backgroundColor: DOURADO }}
         >
           🎡 <span className="hidden sm:inline">JOGAR</span>
@@ -170,8 +185,36 @@ export default function TopNav({
           <InstallAppButton variant="compact" tone="light" />
         </div>
 
+        {/* Perfil compacto — só mobile. Logado vai direto pra /meu (hub da
+            conta, já tem carteirinha/dados/sair lá dentro — ver
+            MeuPainelLayout.jsx); deslogado abre o mesmo ModalEntrar do
+            desktop. Sem dropdown aqui, não tem espaço pra isso numa barra
+            compacta. */}
+        <div className="sm:hidden flex-shrink-0">
+          {carregandoAssociado ? (
+            <div className="h-8 w-8 rounded-full bg-white/15 animate-pulse" />
+          ) : nomeAssociado ? (
+            <Link to="/meu" aria-label="Minha conta">
+              {fotoUrl ? (
+                <img src={fotoUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white" />
+              ) : (
+                <AvatarPlaceholder nome={nomeCompleto || nomeAssociado} size={32} className="border-2 border-white" />
+              )}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalEntrarAberto(true)}
+              aria-label="Entrar"
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <User className="w-4 h-4 text-white" />
+            </button>
+          )}
+        </div>
+
         {carregandoAssociado ? (
-          <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
+          <div className="hidden sm:block h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
         ) : nomeAssociado ? (
           <div className="hidden sm:block relative flex-shrink-0" ref={menuPerfilRef}>
             <button
@@ -238,18 +281,9 @@ export default function TopNav({
             Entrar
           </button>
         )}
-
-        <button
-          type="button"
-          onClick={() => setMenuMobileAberto(v => !v)}
-          aria-label="Menu"
-          className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-white hover:bg-white/10 transition-colors"
-        >
-          {menuMobileAberto ? <X className="w-5 h-5" /> : <List className="w-5 h-5" />}
-        </button>
       </div>
 
-      {/* menu secundário — claro, colado embaixo do roxo */}
+      {/* menu secundário desktop — claro, colado embaixo do roxo */}
       <div className="hidden sm:block bg-white border-b border-slate-100">
         <nav className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 flex items-center gap-1 h-10">
           {MENU_SECUNDARIO.map(item => item.rota ? (
@@ -279,44 +313,10 @@ export default function TopNav({
         </nav>
       </div>
 
-      {/* menu mobile expandido */}
-      {menuMobileAberto && (
-        <div className="sm:hidden bg-white border-b border-slate-100 px-4 py-3 space-y-2.5">
-          <div className="flex items-center gap-1 text-xs text-slate-500">
-            <MapPin className="w-3.5 h-3.5" style={{ color: ROXO }} /> Itumbiara, GO
-          </div>
-          {MENU_SECUNDARIO.map(item => item.rota ? (
-            <Link key={item.label} to={item.rota} onClick={() => setMenuMobileAberto(false)} className="block text-sm font-medium text-slate-600 py-1">
-              {item.label}
-            </Link>
-          ) : (
-            <a key={item.label} href={item.href} onClick={(e) => { irParaAncora(e, item.href); setMenuMobileAberto(false); }} className="block text-sm font-medium text-slate-600 py-1">
-              {item.label}
-            </a>
-          ))}
-          <Link to="/cadastrar-associado" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-bold py-1" style={{ color: ROXO }}>Sou SECI 💎</Link>
-          <Link to="/vender" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-medium text-slate-600 py-1">Vender no IUB MAIS</Link>
-          <InstallAppButton variant="full" className="w-full justify-center text-xs py-2.5 mt-1 bg-[#FFF8E1] shadow-sm" />
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-            <Link
-              to="/favoritos"
-              onClick={() => setMenuMobileAberto(false)}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-lg border ${naFavoritos ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600'}`}
-            >
-              <Heart className="w-3.5 h-3.5" fill={naFavoritos ? '#fff' : 'none'} /> Favoritos {qtdFavoritos > 0 && `(${qtdFavoritos})`}
-            </Link>
-            {nomeAssociado ? (
-              <button type="button" onClick={() => { onSair(); setMenuMobileAberto(false); }} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-lg border border-slate-200 text-slate-600">
-                <LogOut className="w-3.5 h-3.5" /> Sair
-              </button>
-            ) : (
-              <button type="button" onClick={() => { setModalEntrarAberto(true); setMenuMobileAberto(false); }} className="flex-1 text-xs font-semibold py-2.5 rounded-lg text-white" style={{ backgroundColor: ROXO }}>
-                Entrar
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* menu horizontal mobile — estilo iFood/Mercado Livre, sempre
+          visível (nada escondido atrás de hambúrguer). Substitui o menu
+          mobile expandido de antes por completo. */}
+      <MenuHorizontalMobile itens={itensMenuMobile} onAncoraClick={irParaAncora} />
 
       {modalEntrarAberto && (
         <ModalEntrar onClose={() => setModalEntrarAberto(false)} onLoginSuccess={onLoginSuccess} />
