@@ -47,6 +47,36 @@ export function useProdutosPorIds(ids) {
   return { produtos, carregando };
 }
 
+// Busca de verdade (produtos + parceiros/lojas/serviços/food que baterem
+// o termo, ver getBusca no backend) — antes a caixa de busca só filtrava
+// no cliente os ~11 parceiros estáticos de parceirosData.js, nunca o
+// catálogo real (bug real: "busca sempre mostra a mesma coisa"). Debounce
+// de 350ms pra não disparar uma request por tecla digitada.
+export function useBusca(termo) {
+  const [resultado, setResultado] = useState({ produtos: [], parceiros: [] });
+  const [carregando, setCarregando] = useState(false);
+  const termoLimpo = termo.trim();
+
+  useEffect(() => {
+    if (!termoLimpo) {
+      setResultado({ produtos: [], parceiros: [] });
+      setCarregando(false);
+      return;
+    }
+    let ativo = true;
+    setCarregando(true);
+    const timeout = setTimeout(() => {
+      api.get('/public/marketplace/busca', { params: { q: termoLimpo } })
+        .then(res => { if (ativo) setResultado(res.data); })
+        .catch(() => { if (ativo) setResultado({ produtos: [], parceiros: [] }); })
+        .finally(() => { if (ativo) setCarregando(false); });
+    }, 350);
+    return () => { ativo = false; clearTimeout(timeout); };
+  }, [termoLimpo]);
+
+  return { produtos: resultado.produtos, parceiros: resultado.parceiros, carregando };
+}
+
 export function useCategorias() {
   const [categorias, setCategorias] = useState([]);
   const [carregando, setCarregando] = useState(true);

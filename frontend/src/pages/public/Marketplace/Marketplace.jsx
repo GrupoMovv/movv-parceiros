@@ -10,6 +10,7 @@ import HeroBannerCarousel from './components/HeroBannerCarousel';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
 import SecaoParceiros from './components/SecaoParceiros';
+import SecaoResultadosBusca from './components/SecaoResultadosBusca';
 import CardPromocao from './components/CardPromocao';
 import VitrineRotativa from './components/VitrineRotativa';
 import VitrineParceirosDestaque from './components/VitrineParceirosDestaque';
@@ -21,7 +22,7 @@ import Reveal from './components/Reveal';
 import OnboardingTour from './components/OnboardingTour';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
-import { useProdutosSecao, useParceirosCompactos } from './useSecaoData';
+import { useProdutosSecao, useParceirosCompactos, useBusca } from './useSecaoData';
 import { useFechaMesProximo } from './useFechaMes';
 
 export default function Marketplace() {
@@ -73,15 +74,16 @@ export default function Marketplace() {
   const { info: fechaMesInfo } = useFechaMesProximo();
 
   const buscaAtiva = searchQuery.trim().length > 0;
-  const buscaNormalizada = normalizarCategoria(searchQuery.trim());
-
-  const combinaBusca = (p) => !buscaNormalizada
-    || normalizarCategoria(p.nome).includes(buscaNormalizada)
-    || normalizarCategoria(p.descricao).includes(buscaNormalizada);
+  // Busca de verdade contra o catálogo real (produtos + parceiros), ver
+  // useBusca/getBusca — antes buscar só filtrava, no cliente, esses
+  // parceiros estáticos aqui embaixo (o bug real reportado: "busca
+  // sempre mostra a mesma coisa"). Enquanto busca está ativa, essa lista
+  // nem é usada pra renderizar (ver JSX), só continua existindo pro modo
+  // sem busca (grade normal filtrada por categoria).
+  const { produtos: produtosBusca, parceiros: parceirosBusca, carregando: carregandoBusca } = useBusca(searchQuery);
 
   const parceirosFiltrados = PARCEIROS_INICIAIS
-    .filter(p => categoriaAtiva === 'Todas' || p.categorias.some(c => normalizarCategoria(c) === normalizarCategoria(categoriaAtiva)))
-    .filter(combinaBusca);
+    .filter(p => categoriaAtiva === 'Todas' || p.categorias.some(c => normalizarCategoria(c) === normalizarCategoria(categoriaAtiva)));
 
   function handleSearchSubmit() {
     document.querySelector('#parceiros')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -180,13 +182,22 @@ export default function Marketplace() {
       </div>
 
       <div id="parceiros" className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8 w-full flex-1 space-y-8 scroll-mt-16 mt-8">
-        <SecaoParceiros
-          titulo={categoriaAtiva === 'Todas' ? 'Compre de empresas de Itumbiara' : categoriaAtiva}
-          parceiros={parceirosFiltrados}
-          ehFavorito={ehFavorito}
-          onToggleFavorito={alternarFavorito}
-          vazio="Nenhum parceiro encontrado."
-        />
+        {buscaAtiva ? (
+          <SecaoResultadosBusca
+            termo={searchQuery.trim()}
+            produtos={produtosBusca}
+            parceiros={parceirosBusca}
+            carregando={carregandoBusca}
+          />
+        ) : (
+          <SecaoParceiros
+            titulo={categoriaAtiva === 'Todas' ? 'Compre de empresas de Itumbiara' : categoriaAtiva}
+            parceiros={parceirosFiltrados}
+            ehFavorito={ehFavorito}
+            onToggleFavorito={alternarFavorito}
+            vazio="Nenhum parceiro encontrado."
+          />
+        )}
       </div>
 
       <Footer />
