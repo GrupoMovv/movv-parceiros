@@ -7,10 +7,9 @@ import { Lightning, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons
 import TopNav from './components/TopNav';
 import CategoriaFaixa from './components/CategoriaFaixa';
 import HeroBannerCarousel from './components/HeroBannerCarousel';
-import PartnerCard from './components/PartnerCard';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
-import CardProdutoGrande from './components/CardProdutoGrande';
+import SecaoParceiros from './components/SecaoParceiros';
 import CardPromocao from './components/CardPromocao';
 import VitrineRotativa from './components/VitrineRotativa';
 import VitrineParceirosDestaque from './components/VitrineParceirosDestaque';
@@ -20,10 +19,9 @@ import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import OnboardingTour from './components/OnboardingTour';
-import MascoteIubMais from '../../../components/MascoteIubMais';
-import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
+import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
-import { useProdutosSecao, useProdutosPorIds, useParceirosCompactos } from './useSecaoData';
+import { useProdutosSecao, useParceirosCompactos } from './useSecaoData';
 import { useFechaMesProximo } from './useFechaMes';
 
 export default function Marketplace() {
@@ -31,10 +29,7 @@ export default function Marketplace() {
   const navigate = useNavigate();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
-  const [mostrarFavoritos, setMostrarFavoritos] = useState(false);
-  const { favoritos, alternar: alternarFavorito, ehFavorito } = useFavoritos();
-  const { favoritos: favoritosProdutos } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
-  const { produtos: produtosFavoritos, carregando: carregandoFavoritosProdutos } = useProdutosPorIds(mostrarFavoritos ? favoritosProdutos : []);
+  const { alternar: alternarFavorito, ehFavorito } = useFavoritos();
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
@@ -86,7 +81,6 @@ export default function Marketplace() {
 
   const parceirosFiltrados = PARCEIROS_INICIAIS
     .filter(p => categoriaAtiva === 'Todas' || p.categorias.some(c => normalizarCategoria(c) === normalizarCategoria(categoriaAtiva)))
-    .filter(p => !mostrarFavoritos || ehFavorito(p.slug))
     .filter(combinaBusca);
 
   function handleSearchSubmit() {
@@ -110,9 +104,6 @@ export default function Marketplace() {
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
-        favoritosAtivos={mostrarFavoritos}
-        onToggleFavoritos={() => setMostrarFavoritos(v => !v)}
-        qtdFavoritos={favoritos.length + favoritosProdutos.length}
         onSair={logout}
         onLoginSuccess={recarregar}
         searchQuery={searchQuery}
@@ -189,107 +180,21 @@ export default function Marketplace() {
       </div>
 
       <div id="parceiros" className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8 w-full flex-1 space-y-8 scroll-mt-16 mt-8">
-        {mostrarFavoritos ? (
-          <>
-            <SecaoProdutosFavoritos produtos={produtosFavoritos} carregando={carregandoFavoritosProdutos} />
-            <SecaoParceiros
-              titulo="Lojas favoritas"
-              parceiros={parceirosFiltrados}
-              ehFavorito={ehFavorito}
-              onToggleFavorito={alternarFavorito}
-              vazio="Você ainda não favoritou nenhuma loja."
-            />
-          </>
-        ) : (
-          <SecaoParceiros
-            titulo={categoriaAtiva === 'Todas' ? 'Compre de empresas de Itumbiara' : categoriaAtiva}
-            parceiros={parceirosFiltrados}
-            ehFavorito={ehFavorito}
-            onToggleFavorito={alternarFavorito}
-            vazio="Nenhum parceiro encontrado."
-          />
-        )}
+        <SecaoParceiros
+          titulo={categoriaAtiva === 'Todas' ? 'Compre de empresas de Itumbiara' : categoriaAtiva}
+          parceiros={parceirosFiltrados}
+          ehFavorito={ehFavorito}
+          onToggleFavorito={alternarFavorito}
+          vazio="Nenhum parceiro encontrado."
+        />
       </div>
 
       <Footer />
 
       <MobileBottomNav
-        favoritosAtivos={mostrarFavoritos}
-        onToggleFavoritos={() => setMostrarFavoritos(v => !v)}
         nomeAssociado={nomeAssociado}
         onLoginSuccess={recarregar}
       />
     </div>
-  );
-}
-
-// Produtos favoritos (ver useFavoritos(CHAVE_FAVORITOS_PRODUTOS) em
-// ProdutoDetalhe.jsx) são uma lista de ids separada dos parceiros
-// favoritos — bug real: a aba Favoritos só mostrava lojas, favoritar um
-// produto marcava o coração mas nunca aparecia em lugar nenhum.
-function SecaoProdutosFavoritos({ produtos, carregando }) {
-  if (carregando) {
-    return (
-      <section>
-        <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight mb-4" style={{ color: PRETO }}>
-          ❤️ Produtos favoritos
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[240px] rounded-lg bg-slate-100 animate-pulse" />)}
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section>
-      <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight mb-4" style={{ color: PRETO }}>
-        ❤️ Produtos favoritos
-      </h2>
-      {produtos.length === 0 ? (
-        <div className="text-center py-16">
-          <MascoteIubMais tamanho="large" animacao="float" className="mx-auto" />
-          <p className="text-iub-roxo font-bold text-lg mt-4">Você ainda não favoritou nenhum produto.</p>
-          <p className="text-iub-cinza mt-2">Mas continua procurando, tem muita coisa boa aqui!</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {produtos.map((p, i) => (
-            <Reveal key={p.id} delay={(i % 10) * 40}>
-              <CardProdutoGrande produto={p} />
-            </Reveal>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function SecaoParceiros({ titulo, parceiros, ehFavorito, onToggleFavorito, vazio }) {
-  return (
-    <section>
-      <h2 className="flex items-center gap-1.5 text-lg font-bold tracking-tight mb-4" style={{ color: PRETO }}>
-        📍 {titulo}
-      </h2>
-      {parceiros.length === 0 ? (
-        <div className="text-center py-16">
-          <MascoteIubMais tamanho="large" animacao="float" className="mx-auto" />
-          <p className="text-iub-roxo font-bold text-lg mt-4">{vazio}</p>
-          <p className="text-iub-cinza mt-2">Mas continua procurando, tem muita coisa boa aqui!</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {parceiros.map((p, i) => (
-            <Reveal key={p.slug} delay={(i % 10) * 40}>
-              <PartnerCard
-                parceiro={p}
-                favorito={ehFavorito(p.slug)}
-                onToggleFavorito={onToggleFavorito}
-              />
-            </Reveal>
-          ))}
-        </div>
-      )}
-    </section>
   );
 }

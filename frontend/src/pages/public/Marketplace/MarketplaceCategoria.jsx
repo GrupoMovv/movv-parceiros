@@ -7,7 +7,6 @@ import TopNav from './components/TopNav';
 import CardProduto from './components/CardProduto';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
-import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { PRETO, ROXO } from './theme';
 
@@ -34,7 +33,6 @@ function SkeletonCard() {
 export default function MarketplaceCategoria() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { favoritos } = useFavoritos();
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
@@ -92,9 +90,6 @@ export default function MarketplaceCategoria() {
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
-        favoritosAtivos={false}
-        onToggleFavoritos={() => navigate('/marketplace')}
-        qtdFavoritos={favoritos.length}
         onSair={logout}
         onLoginSuccess={recarregar}
         searchQuery={searchQuery}
@@ -190,8 +185,6 @@ export default function MarketplaceCategoria() {
       <Footer />
 
       <MobileBottomNav
-        favoritosAtivos={false}
-        onToggleFavoritos={() => navigate('/marketplace')}
         nomeAssociado={nomeAssociado}
         onLoginSuccess={recarregar}
       />

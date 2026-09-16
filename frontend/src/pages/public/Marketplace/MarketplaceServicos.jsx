@@ -5,7 +5,6 @@ import TopNav from './components/TopNav';
 import CardServico from './components/CardServico';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
-import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { ROXO } from './theme';
 
@@ -20,7 +19,6 @@ function normalizarCategoria(s) {
 // — inventar esse mapeamento seria dado fabricado, não uso).
 export default function MarketplaceServicos() {
   const navigate = useNavigate();
-  const { favoritos } = useFavoritos();
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
@@ -66,9 +64,6 @@ export default function MarketplaceServicos() {
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
-        favoritosAtivos={false}
-        onToggleFavoritos={() => navigate('/marketplace')}
-        qtdFavoritos={favoritos.length}
         onSair={logout}
         onLoginSuccess={recarregar}
         searchQuery={searchQuery}
@@ -127,7 +122,7 @@ export default function MarketplaceServicos() {
 
       <Footer />
 
-      <MobileBottomNav favoritosAtivos={false} onToggleFavoritos={() => navigate('/marketplace')} nomeAssociado={nomeAssociado} onLoginSuccess={recarregar} />
+      <MobileBottomNav nomeAssociado={nomeAssociado} onLoginSuccess={recarregar} />
     </div>
   );
 }

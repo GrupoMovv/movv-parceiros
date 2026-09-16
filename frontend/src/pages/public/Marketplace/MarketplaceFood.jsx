@@ -5,7 +5,6 @@ import TopNav from './components/TopNav';
 import CardFood from './components/CardFood';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
-import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { ROXO } from './theme';
 
@@ -21,7 +20,6 @@ function normalizarCategoria(s) {
 // seria dado fabricado.
 export default function MarketplaceFood() {
   const navigate = useNavigate();
-  const { favoritos } = useFavoritos();
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
@@ -67,9 +65,6 @@ export default function MarketplaceFood() {
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
-        favoritosAtivos={false}
-        onToggleFavoritos={() => navigate('/marketplace')}
-        qtdFavoritos={favoritos.length}
         onSair={logout}
         onLoginSuccess={recarregar}
         searchQuery={searchQuery}
@@ -128,7 +123,7 @@ export default function MarketplaceFood() {
 
       <Footer />
 
-      <MobileBottomNav favoritosAtivos={false} onToggleFavoritos={() => navigate('/marketplace')} nomeAssociado={nomeAssociado} onLoginSuccess={recarregar} />
+      <MobileBottomNav nomeAssociado={nomeAssociado} onLoginSuccess={recarregar} />
     </div>
   );
 }

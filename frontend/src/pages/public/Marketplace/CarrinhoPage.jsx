@@ -8,7 +8,6 @@ import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import { useCarrinho } from './CarrinhoContext';
 import { useAssociadoSessao } from './useAssociadoSessao';
-import { useFavoritos } from './useFavoritos';
 import { PRETO, ROXO } from './theme';
 
 function formatarPreco(v) {
@@ -19,7 +18,6 @@ export default function CarrinhoPage() {
   const navigate = useNavigate();
   const { grupos, totalItens, carregando, remover, limpar } = useCarrinho();
   const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
-  const { favoritos } = useFavoritos();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
   const totalParceiros = grupos.length;
@@ -47,9 +45,6 @@ export default function CarrinhoPage() {
         fotoUrl={associado?.foto_url ? assetUrl(associado.foto_url) : null}
         carteirinhaHash={associado?.carteirinha_hash}
         carregandoAssociado={carregandoAssociado}
-        favoritosAtivos={false}
-        onToggleFavoritos={() => navigate('/marketplace')}
-        qtdFavoritos={favoritos.length}
         onSair={logout}
         onLoginSuccess={recarregar}
         searchQuery=""
@@ -155,8 +150,6 @@ export default function CarrinhoPage() {
       <Footer />
 
       <MobileBottomNav
-        favoritosAtivos={false}
-        onToggleFavoritos={() => navigate('/marketplace')}
         nomeAssociado={nomeAssociado}
         onLoginSuccess={recarregar}
       />
