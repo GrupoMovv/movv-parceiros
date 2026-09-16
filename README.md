@@ -177,4 +177,34 @@ movv-parceiros/
 
 ---
 
+## PWA — instalável na tela inicial
+
+O frontend é um PWA (`vite-plugin-pwa`, config em `frontend/vite.config.js`,
+service worker em `frontend/src/sw.js`): dá pra "instalar" o site como app,
+com ícone próprio, splash screen e navegação offline básica (app shell e
+imagens já visitadas funcionam sem internet; API é sempre network-first,
+só cai pro cache com a rede fora por até 5min).
+
+**Como o usuário instala:**
+- **Android/Chrome**: aparece um banner "Instalar" (via `InstallPWABanner.jsx`,
+  mostrado no marketplace público e no painel do parceiro) ou menu ⋮ →
+  "Adicionar à tela inicial".
+- **iOS/Safari**: Apple não expõe o prompt automático — o banner mostra a
+  instrução manual (Compartilhar → "Adicionar à Tela de Início").
+- **Desktop/Chrome**: ícone de instalar na barra de endereço.
+
+**Como testar localmente**: `npm run build && npm run preview` (o SW só
+registra em build de produção — `devOptions.enabled` no vite.config.js
+liga uma versão de dev também, mas o teste real é contra o build). No
+Chrome DevTools → Application → Manifest/Service Workers pra conferir
+registro, e → Lighthouse → categoria PWA pra rodar o audit.
+
+**Como atualiza quando sobe versão nova**: `registerType: 'autoUpdate'` —
+o browser troca o SW sozinho na próxima checagem, sem prompt pro usuário.
+`main.jsx` força uma checagem (`registration.update()`) toda vez que o
+app volta pra primeiro plano, pra não ficar preso numa build antiga com
+o app horas em background no celular.
+
+---
+
 Grupo Movv — Itumbiara/GO © 2024
