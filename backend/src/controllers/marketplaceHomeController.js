@@ -141,10 +141,12 @@ async function getMaisVendidos(req, res) {
 // Bloco 8) — contagem por parceiro ativo cujo array `categorias` contenha
 // a categoria (comparação sem acento/maiúscula, mesmo criterio do front
 // em parceirosData.js normalizarCategoria).
+// "Alimentação" saiu daqui de propósito: virou área própria (IUB Food,
+// ver getFood/getFoodPorSlug) em vez de mais uma categoria genérica —
+// restaurante não deve aparecer duplicado em /marketplace/categoria/:slug.
 const CATEGORIAS_HOME = [
   { slug: 'saude', label: 'Saúde', emoji: '🏥' },
   { slug: 'beleza', label: 'Beleza', emoji: '💄' },
-  { slug: 'alimentacao', label: 'Alimentação', emoji: '🍔' },
   { slug: 'servicos', label: 'Serviços', emoji: '🔧' },
   { slug: 'fitness', label: 'Fitness', emoji: '💪' },
   { slug: 'casa', label: 'Casa', emoji: '🏠' },
@@ -439,6 +441,9 @@ async function getCuponsDisponiveis(req, res) {
 // híbrido aparece aqui E na listagem de produtos (fora do escopo desta
 // rodada), igual o pedido original descreve. Ordena por plano (Master
 // primeiro) com o mesmo boost_busca usado em getParceirosDestaques.
+// Exclui categoria Alimentação (ver getFood) — restaurante hibrido que
+// também vende por encomenda como "serviço" tem espaço dedicado no IUB
+// Food, não deve duplicar na listagem de Serviços.
 async function getServicos(req, res) {
   try {
     const result = await db.query(
@@ -448,7 +453,11 @@ async function getServicos(req, res) {
        WHERE status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')
        ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC`
     );
-    return res.json({ servicos: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
+    const alvoAlimentacao = normalizarCategoria('Alimentação');
+    const servicos = result.rows
+      .filter(p => !(p.categorias || []).some(c => normalizarCategoria(c) === alvoAlimentacao))
+      .map(p => ({ ...p, plano: planoEfetivo(p) }));
+    return res.json({ servicos });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar serviços' });
@@ -490,6 +499,71 @@ async function getServicoPorSlug(req, res) {
   }
 }
 
+// IUB Food — não é um tipo_negocio próprio (migration 049 só tem
+// produto/servico/hibrido, e faz sentido continuar assim: uma pizzaria
+// vende item de preço fixo igual qualquer produto, não presta "serviço"
+// com duração). É a categoria "Alimentação" (já existe na taxonomia real,
+// ver categorias[] e CATEGORIAS_HOME acima) que decide quem entra aqui —
+// filtro por categoria em JS, mesmo critério de getMasterPorCategoria (sem
+// depender de unaccent no Postgres). Não restringe por tipo_negocio de
+// propósito: um restaurante que também faz buffet por encomenda como
+// "serviço" ainda é Food se tiver a categoria marcada.
+async function getFood(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+              preco_medio, duracao_media, horario_atendimento
+       FROM sindicato_parceiros
+       WHERE status = 'ativo'`
+    );
+    const alvo = normalizarCategoria('Alimentação');
+    const restaurantes = result.rows
+      .filter(p => (p.categorias || []).some(c => normalizarCategoria(c) === alvo))
+      .map(p => ({ ...p, plano: planoEfetivo(p) }));
+    return res.json({ restaurantes });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar restaurantes' });
+  }
+}
+
+// Página individual de um restaurante (/food/:slug no front) — mesmo
+// critério de acesso do getFood (categoria Alimentação), então 404 pra
+// quem não tem essa categoria marcada. "Cardápio" reusa
+// sindicato_parceiro_produtos com foto/descrição (diferente de
+// getServicoPorSlug, que só devolve nome/preço porque "serviço" não tem
+// foto de prato pra mostrar).
+async function getFoodPorSlug(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+              descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
+              preco_medio, duracao_media, horario_atendimento, fotos_estabelecimento
+       FROM sindicato_parceiros
+       WHERE slug = $1 AND status = 'ativo'`,
+      [req.params.slug]
+    );
+    const parceiro = result.rows[0];
+    const alvo = normalizarCategoria('Alimentação');
+    if (!parceiro || !(parceiro.categorias || []).some(c => normalizarCategoria(c) === alvo)) {
+      return res.status(404).json({ error: 'Restaurante não encontrado' });
+    }
+
+    const itensResult = await db.query(
+      `SELECT id, nome, descricao, preco, preco_associado, fotos
+       FROM sindicato_parceiro_produtos
+       WHERE parceiro_id = $1 AND ativo = true AND rascunho = false
+       ORDER BY destaque DESC, created_at DESC`,
+      [parceiro.id]
+    );
+
+    return res.json({ ...parceiro, plano: planoEfetivo(parceiro), cardapio: itensResult.rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar restaurante' });
+  }
+}
+
 module.exports = {
   getOfertasSemana,
   getExclusivosAssociados,
@@ -508,4 +582,6 @@ module.exports = {
   getCuponsDisponiveis,
   getServicos,
   getServicoPorSlug,
+  getFood,
+  getFoodPorSlug,
 };

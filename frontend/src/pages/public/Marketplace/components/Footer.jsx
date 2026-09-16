@@ -21,8 +21,12 @@ export default function Footer() {
           <p className="font-semibold text-xs uppercase tracking-wide mb-3 text-white/40">Categorias populares</p>
           <div className="flex flex-col gap-1.5">
             {CATEGORIAS_HOME_FOOTER.map((c) => (
-              <Link key={c.slug} to={`/marketplace/categoria/${c.slug}`} className="text-white/60 hover:text-white text-sm transition-colors w-fit">
-                {c.label}
+              <Link
+                key={c.slug}
+                to={c.slug === 'alimentacao' ? '/marketplace/food' : `/marketplace/categoria/${c.slug}`}
+                className="text-white/60 hover:text-white text-sm transition-colors w-fit"
+              >
+                {c.slug === 'alimentacao' ? 'IUB Food' : c.label}
               </Link>
             ))}
           </div>

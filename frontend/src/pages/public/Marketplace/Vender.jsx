@@ -341,6 +341,33 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
         </div>
       </section>
 
+      {/* Banner estratégico do IUB Food — mesmo fluxo de cadastro de
+          qualquer parceiro (categoria "Alimentação" já basta pra aparecer
+          em /marketplace/food, ver categorizacaoAutomatica em
+          marketplaceHomeController.getFood), só um gancho visual a mais
+          pra restaurante bater o olho e reconhecer que tem espaço dedicado
+          pra ele. */}
+      <section className="max-w-5xl mx-auto px-6 sm:px-10 -mt-2 mb-2">
+        <button
+          type="button"
+          onClick={onComecar}
+          className="w-full flex flex-col sm:flex-row items-center gap-4 sm:gap-6 rounded-3xl p-6 sm:p-8 text-left transition-transform hover:-translate-y-0.5"
+          style={{ background: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 60%, #B87E00 150%)' }}
+        >
+          <span className="text-5xl flex-shrink-0">🍔</span>
+          <div className="flex-1">
+            <h2 className="text-white font-black text-lg sm:text-2xl">Você é restaurante? Cadastre na IUB Food!</h2>
+            <p className="text-white/85 text-sm mt-1">Categoria dedicada com destaque — pizzaria, hamburgueria, marmita, açaí, doceria e mais.</p>
+          </div>
+          <span
+            className="flex-shrink-0 inline-flex items-center gap-2 text-sm font-black px-5 py-2.5 rounded-xl whitespace-nowrap"
+            style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+          >
+            Cadastrar agora <ArrowRight className="w-4 h-4" />
+          </span>
+        </button>
+      </section>
+
       <section style={{ backgroundColor: `${ROXO}0D` }}>
         <div className="max-w-2xl mx-auto px-6 sm:px-10 py-16 text-center">
           <span className="text-4xl">🌆</span>

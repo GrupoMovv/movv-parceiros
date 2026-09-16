@@ -16,10 +16,15 @@ const ICONES = {
 // (marketplaceHomeController.CATEGORIAS_HOME) viram link — as outras
 // (Automotivo, Presentes, Educação, Esportes, Hospedagem, Bem-estar) ainda
 // só existem como filtro da grade de parceiros aqui embaixo ("Compre de
-// empresas de Itumbiara"), não como página própria.
+// empresas de Itumbiara"), não como página própria. Alimentação não está
+// mais em CATEGORIAS_HOME (virou área própria, IUB Food) — rota especial
+// abaixo em vez de entrar nesse mapa de slug genérico.
 const SLUG_POR_LABEL = {
-  Serviços: 'servicos', Alimentação: 'alimentacao', Moda: 'moda', Casa: 'casa',
+  Serviços: 'servicos', Moda: 'moda', Casa: 'casa',
   Tecnologia: 'tecnologia', Beleza: 'beleza', Saúde: 'saude', Fitness: 'fitness',
+};
+const ROTA_ESPECIAL_POR_LABEL = {
+  Alimentação: '/marketplace/food',
 };
 
 // Faixa única de categorias — TODAS as 14 (sem "Todas"), sem duplicar em
@@ -35,6 +40,7 @@ export default function CategoriaFaixa({ categoriaAtiva, onSelecionar }) {
       {CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => {
         const Icone = ICONES[c.label] || ShoppingBag;
         const slug = SLUG_POR_LABEL[c.label];
+        const rotaEspecial = ROTA_ESPECIAL_POR_LABEL[c.label];
         const ativa = normalizarCategoria(categoriaAtiva) === normalizarCategoria(c.label);
         const conteudo = (
           <>
@@ -51,6 +57,7 @@ export default function CategoriaFaixa({ categoriaAtiva, onSelecionar }) {
         );
         const className = 'flex flex-col items-center gap-1.5 flex-shrink-0 w-[76px]';
 
+        if (rotaEspecial) return <Link key={c.label} to={rotaEspecial} className={className}>{conteudo}</Link>;
         return slug ? (
           <Link key={c.label} to={`/marketplace/categoria/${slug}`} className={className}>{conteudo}</Link>
         ) : (
