@@ -499,6 +499,48 @@ async function getServicoPorSlug(req, res) {
   }
 }
 
+// Busca de verdade por termo — não existia NENHUM endpoint de busca antes
+// disso: a caixa de busca do TopNav só filtrava, no cliente, os ~11
+// parceiros estáticos de parceirosData.js (usados na grade "Compre de
+// empresas de Itumbiara"), nunca o catálogo real de produtos — bug real:
+// "busca sempre mostra a mesma coisa, filtro não funciona". Produtos
+// (nome/descrição) e parceiros (nome — cobre loja/serviço/restaurante,
+// já que Serviços e IUB Food são só parceiros com tipo_negocio/categoria
+// diferentes, não tabelas separadas) num ILIKE simples — sem full-text
+// search por enquanto, volume de dados ainda é pequeno pra precisar.
+async function getBusca(req, res) {
+  try {
+    const termo = String(req.query.q || '').trim().slice(0, 100);
+    if (!termo) return res.json({ produtos: [], parceiros: [] });
+
+    const like = `%${termo}%`;
+    const produtosResult = await db.query(
+      `SELECT ${SELECT_PRODUTO}
+       ${FROM_PRODUTO_ATIVO}
+         AND (pr.nome ILIKE $1 OR pr.descricao ILIKE $1)
+       ORDER BY pr.destaque DESC, pr.created_at DESC
+       LIMIT 24`,
+      [like]
+    );
+    const parceirosResult = await db.query(
+      `SELECT id, slug, nome, logo_url, categoria_principal, categorias, plano, tipo_negocio
+       FROM sindicato_parceiros
+       WHERE status = 'ativo' AND nome ILIKE $1
+       ORDER BY nome ASC
+       LIMIT 12`,
+      [like]
+    );
+
+    return res.json({
+      produtos: produtosResult.rows,
+      parceiros: parceirosResult.rows.map(p => ({ ...p, plano: planoEfetivo(p) })),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar' });
+  }
+}
+
 // IUB Food — não é um tipo_negocio próprio (migration 049 só tem
 // produto/servico/hibrido, e faz sentido continuar assim: uma pizzaria
 // vende item de preço fixo igual qualquer produto, não presta "serviço"
@@ -582,6 +624,7 @@ module.exports = {
   getCuponsDisponiveis,
   getServicos,
   getServicoPorSlug,
+  getBusca,
   getFood,
   getFoodPorSlug,
 };

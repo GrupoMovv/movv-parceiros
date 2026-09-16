@@ -137,6 +137,7 @@ router.get('/marketplace/pioneiros', marketplaceHomeCtrl.getPioneiros);
 router.get('/marketplace/parceiro-plano/:slug', marketplaceHomeCtrl.getParceiroPlanoPorSlug);
 router.get('/marketplace/servicos', marketplaceHomeCtrl.getServicos);
 router.get('/servicos/:slug', marketplaceHomeCtrl.getServicoPorSlug);
+router.get('/marketplace/busca', marketplaceHomeCtrl.getBusca);
 router.get('/marketplace/food', marketplaceHomeCtrl.getFood);
 router.get('/food/:slug', marketplaceHomeCtrl.getFoodPorSlug);
 router.get('/parceiros/master-por-categoria', marketplaceHomeCtrl.getMasterPorCategoria);
