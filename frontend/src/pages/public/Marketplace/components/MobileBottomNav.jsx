@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { House, MagnifyingGlass, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
 import { ROXO } from '../theme';
 import ModalEntrar from './ModalEntrar';
@@ -15,14 +15,26 @@ function focarBusca() {
 export default function MobileBottomNav({ favoritosAtivos, onToggleFavoritos, nomeAssociado, onLoginSuccess }) {
   const [modalAberto, setModalAberto] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const emCasa = location.pathname === '/marketplace';
   const noCarrinho = location.pathname === '/marketplace/carrinho';
   const { totalItens } = useCarrinho();
 
+  // Link puro pra "/marketplace" não faz nada quando já se está lá (mesma
+  // rota, React Router não navega de novo) — usuário rolava a página e
+  // clicava Início sem efeito nenhum. Intercepta e rola pro topo sempre;
+  // se estiver em outra rota, navega e já rola (sem scroll restoration
+  // automático de rota no app, ficaria na posição da rota anterior).
+  function irParaInicio(e) {
+    e.preventDefault();
+    if (emCasa) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else { navigate('/marketplace'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }
+
   return (
     <>
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex items-stretch h-14 pb-[env(safe-area-inset-bottom)]">
-        <Link to="/marketplace" className="flex-1 flex flex-col items-center justify-center gap-0.5">
+        <Link to="/marketplace" onClick={irParaInicio} className="flex-1 flex flex-col items-center justify-center gap-0.5">
           <House size={20} weight={emCasa ? 'fill' : 'regular'} color={emCasa ? ROXO : '#94A3B8'} />
           <span className="text-[10px] font-medium" style={{ color: emCasa ? ROXO : '#94A3B8' }}>Início</span>
         </Link>
