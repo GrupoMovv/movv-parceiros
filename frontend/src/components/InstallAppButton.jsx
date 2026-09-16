@@ -44,11 +44,14 @@ export default function InstallAppButton({ variant = 'header', tone = 'dark', cl
   const [modal, setModal] = useState(null); // null | 'ios' | 'manual' | 'unsupported'
 
   useEffect(() => {
-    if (jaRodandoInstalado() || localStorage.getItem(CHAVE_INSTALADO) === 'true') {
-      setInstalado(true);
-      return;
-    }
-    setInstalado(false);
+    // Só o estado AO VIVO (rodando em standalone agora) esconde o botão —
+    // não dá pra confiar só no localStorage "já instalado": não existe
+    // evento de desinstalação, então se o usuário instalou e depois
+    // desinstalou (comum em teste), essa flag ficava presa em "true" pra
+    // sempre e o botão sumia permanentemente mesmo sem o app instalado
+    // (bug real reportado: botão não aparecia em nenhum lugar no celular).
+    setInstalado(jaRodandoInstalado());
+    if (jaRodandoInstalado()) return;
 
     function aoTerPrompt(e) {
       e.preventDefault();

@@ -129,7 +129,18 @@ export default function TopNav({
           🎡 <span className="hidden sm:inline">JOGAR</span>
         </Link>
 
-        <InstallAppButton variant="full" tone="light" className="hidden sm:inline-flex" />
+        {/* wrapper externo em vez de passar "hidden" direto no className do
+            botão — o próprio componente já aplica "inline-flex" sem prefixo
+            nas próprias classes, e ter dois utilitários de display sem
+            prefixo (inline-flex + hidden) no mesmo elemento é ambíguo (quem
+            "ganha" depende da ordem interna do CSS gerado pelo Tailwind,
+            não é garantido) */}
+        <div className="hidden sm:inline-flex">
+          <InstallAppButton variant="full" tone="light" />
+        </div>
+        <div className="sm:hidden flex-shrink-0">
+          <InstallAppButton variant="compact" tone="light" />
+        </div>
 
         {carregandoAssociado ? (
           <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
@@ -257,7 +268,7 @@ export default function TopNav({
           ))}
           <Link to="/cadastrar-associado" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-bold py-1" style={{ color: ROXO }}>Sou SECI 💎</Link>
           <Link to="/vender" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-medium text-slate-600 py-1">Vender no IUB MAIS</Link>
-          <InstallAppButton variant="full" className="w-full justify-center text-xs py-2.5" />
+          <InstallAppButton variant="full" className="w-full justify-center text-xs py-2.5 mt-1 bg-[#FFF8E1] shadow-sm" />
           <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
