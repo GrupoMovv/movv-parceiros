@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import apiParceiro, { getParceiroToken, setParceiroToken } from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import InstallPWABanner from '../../components/InstallPWABanner';
+import InstallAppButton from '../../components/InstallAppButton';
 
 const ABAS = [
   { label: 'Dashboard', to: '/parceiro/painel', end: true },
@@ -86,6 +87,8 @@ export default function ParceiroPainelLayout() {
         <div className="max-w-6xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
           <img src="/iub-logo-sm.png" alt="IUB MAIS" className="h-8 w-auto rounded-lg flex-shrink-0" />
           <p className="flex-1 text-center font-bold text-sm truncate" style={{ color: PRETO }}>{parceiro.nome}</p>
+
+          <InstallAppButton variant="compact" />
 
           <div className="relative flex-shrink-0" ref={menuRef}>
             <button

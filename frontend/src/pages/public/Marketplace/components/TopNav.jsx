@@ -6,6 +6,7 @@ import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
+import InstallAppButton from '../../../../components/InstallAppButton';
 import { getPainelToken } from '../../../../services/apiPainel';
 
 // Itens com `rota` navegam de verdade (react-router); com `href` são
@@ -127,6 +128,8 @@ export default function TopNav({
         >
           🎡 <span className="hidden sm:inline">JOGAR</span>
         </Link>
+
+        <InstallAppButton variant="full" tone="light" className="hidden sm:inline-flex" />
 
         {carregandoAssociado ? (
           <div className="h-4 w-16 rounded-full bg-white/15 animate-pulse flex-shrink-0" />
@@ -254,6 +257,7 @@ export default function TopNav({
           ))}
           <Link to="/cadastrar-associado" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-bold py-1" style={{ color: ROXO }}>Sou SECI 💎</Link>
           <Link to="/vender" onClick={() => setMenuMobileAberto(false)} className="block text-sm font-medium text-slate-600 py-1">Vender no IUB MAIS</Link>
+          <InstallAppButton variant="full" className="w-full justify-center text-xs py-2.5" />
           <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
