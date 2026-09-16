@@ -7,12 +7,10 @@ import { Diamond, ShoppingCart } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
-import { useFavoritos } from './useFavoritos';
+import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useCarrinho } from './CarrinhoContext';
 import ModalLoginAssociado from './components/ModalLoginAssociado';
-
-const CHAVE_FAVORITOS_PRODUTOS = 'iub_mais_produtos_favoritos';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

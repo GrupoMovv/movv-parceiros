@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
 const CHAVE_PADRAO = 'iub_marketplace_favoritos';
+// Exportada porque mais de uma tela precisa da MESMA chave pra ler/escrever
+// a mesma lista: ProdutoDetalhe.jsx marca o favorito, Marketplace.jsx (aba
+// Favoritos) lê pra montar a vitrine — usar chaves diferentes nos dois
+// lados foi o bug de "favorito não aparece na lista".
+export const CHAVE_FAVORITOS_PRODUTOS = 'iub_mais_produtos_favoritos';
 
 function lerFavoritos(chave) {
   try {

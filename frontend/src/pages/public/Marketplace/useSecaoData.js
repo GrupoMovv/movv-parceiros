@@ -20,6 +20,33 @@ export function useProdutosSecao(endpoint, chave = 'produtos') {
   return { produtos, carregando };
 }
 
+// Não existe endpoint de "buscar produtos por lista de ids" — busca cada um
+// em paralelo pelo GET /public/produtos/:id (mesmo endpoint do
+// ProdutoDetalhe). Ids de produto que sumiram (excluído/pausado) só somem
+// da lista silenciosamente (404 é esperado, não é erro pra logar).
+export function useProdutosPorIds(ids) {
+  const [produtos, setProdutos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const chaveIds = ids.join(',');
+
+  useEffect(() => {
+    let ativo = true;
+    if (!ids.length) {
+      setProdutos([]);
+      setCarregando(false);
+      return;
+    }
+    setCarregando(true);
+    Promise.all(ids.map(id => api.get(`/public/produtos/${id}`).then(res => res.data).catch(() => null)))
+      .then(resultados => { if (ativo) setProdutos(resultados.filter(Boolean)); })
+      .finally(() => { if (ativo) setCarregando(false); });
+    return () => { ativo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveIds]);
+
+  return { produtos, carregando };
+}
+
 export function useCategorias() {
   const [categorias, setCategorias] = useState([]);
   const [carregando, setCarregando] = useState(true);
