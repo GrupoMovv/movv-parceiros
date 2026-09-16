@@ -1,15 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { House, MagnifyingGlass, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
+import { House, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
 import { ROXO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 import { useCarrinho } from '../CarrinhoContext';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
-
-function focarBusca() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => document.getElementById('busca-marketplace')?.focus(), 300);
-}
+import { getPainelToken } from '../../../../services/apiPainel';
 
 // Menu inferior fixo só no mobile — atalho de uma mão pras 4 ações mais
 // usadas, sem precisar rolar até o topo pra achar a navbar.
@@ -20,6 +16,7 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
   const emCasa = location.pathname === '/marketplace';
   const noCarrinho = location.pathname === '/marketplace/carrinho';
   const naFavoritos = location.pathname === '/favoritos';
+  const naJogar = location.pathname.startsWith('/jogar');
   const { totalItens } = useCarrinho();
   // Mesma lógica do TopNav — favorito calculado aqui, não via prop (ver
   // comentário lá: contagem espalhada por prop em cada página é fácil de
@@ -47,10 +44,17 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
           <span className="text-[10px] font-medium" style={{ color: emCasa ? ROXO : '#94A3B8' }}>Início</span>
         </Link>
 
-        <button type="button" onClick={focarBusca} className="flex-1 flex flex-col items-center justify-center gap-0.5">
-          <MagnifyingGlass size={20} color="#94A3B8" />
-          <span className="text-[10px] font-medium text-slate-400">Buscar</span>
-        </button>
+        {/* Trocado de "Buscar" pra "Jogar" por decisão explícita — busca já
+            existe fixa no topo mobile (não sumiu, só não duplica aqui
+            embaixo), e Jogar (Roleta + Memória, cupom diário) é o
+            diferencial do IUB MAIS+ que merecia mais destaque. */}
+        <Link
+          to={getPainelToken() ? '/jogar' : '/jogar/login'}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5"
+        >
+          <span className="text-xl leading-none">🎡</span>
+          <span className="text-[10px] font-medium" style={{ color: naJogar ? ROXO : '#94A3B8' }}>Jogar</span>
+        </Link>
 
         <Link to="/favoritos" className="relative flex-1 flex flex-col items-center justify-center gap-0.5">
           <Heart size={20} weight={naFavoritos ? 'fill' : 'regular'} color={naFavoritos ? '#EF4444' : '#94A3B8'} />
