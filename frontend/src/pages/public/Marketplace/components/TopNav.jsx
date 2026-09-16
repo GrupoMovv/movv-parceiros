@@ -10,14 +10,22 @@ import InstallAppButton from '../../../../components/InstallAppButton';
 import { getPainelToken } from '../../../../services/apiPainel';
 
 // Itens com `rota` navegam de verdade (react-router); com `href` são
-// âncora pra rolar até a seção na própria home (scrollPara).
+// âncora pra rolar até a seção na própria home (scrollPara). Emoji em vez
+// de ícone lucide/phosphor de propósito: "Serviços 🎯"/"Curiosidades
+// 💡"/"Sou SECI 💎" já usavam emoji antes dessa reorganização — manter o
+// mesmo estilo em todo o menu em vez de misturar com componente de ícone.
+// "Produtos" reusa a âncora que already existia como "Categorias" (rola
+// até a faixa de categorias da home, ver id="categorias" em
+// Marketplace.jsx) — não existe uma página /marketplace/produtos própria
+// ainda (ver TODO.md), então é só o rótulo/ícone que mudou.
 const MENU_SECUNDARIO = [
-  { label: 'Categorias', href: '#categorias' },
+  { label: '📦 Produtos', href: '#categorias' },
   { label: '🎯 Serviços', rota: '/marketplace/servicos' },
+  { label: '🍔 IUB Food', rota: '/marketplace/food' },
   { label: '💡 Curiosidades', rota: '/curiosidades' },
-  { label: 'Ofertas', href: '#ofertas' },
-  { label: 'Novidades', href: '#novidades' },
-  { label: 'Lojas', href: '#lojas' },
+  { label: '🔥 Ofertas', href: '#ofertas' },
+  { label: '✨ Novidades', href: '#novidades' },
+  { label: '🏪 Lojas', href: '#lojas' },
 ];
 
 function scrollPara(e, href) {
