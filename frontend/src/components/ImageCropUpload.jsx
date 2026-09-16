@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import toast from 'react-hot-toast';
-import { Camera, Check, Loader2, X, ZoomIn, ZoomOut } from 'lucide-react';
-import { ROXO } from '../pages/public/Marketplace/theme';
+import { Camera, Check, Images, Loader2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { DOURADO, ROXO } from '../pages/public/Marketplace/theme';
 
 // Botão + input file escondido + modal de crop (react-easy-crop) — usado em
 // todo formulário que recebe imagem do parceiro (logo, foto de produto,
@@ -18,17 +18,14 @@ import { ROXO } from '../pages/public/Marketplace/theme';
 // trocar o `<input type="file">` por isso e continuar mandando o File pro
 // mesmo endpoint de sempre.
 //
-// No mobile, o <input> ganha `capture="environment"` (câmera traseira) —
-// feedback real: "às vezes a pessoa já tira foto do produto e a IA já faz
-// o trabalho dela", mas antes só abria a galeria. No desktop `capture` não
-// existe (não tem câmera de trás pra puxar), então o comportamento não
-// muda lá. Ressalva conhecida: em alguns navegadores mobile (principalmente
-// iOS Safari) `capture` faz o seletor abrir a câmera DIRETO, sem passar
-// pelo chooser com "Galeria" — quem quiser escolher uma foto já existente
-// no rolo ainda consegue (o botão nativo de trocar pra galeria costuma
-// continuar disponível dentro do próprio app de câmera do iOS), mas vale
-// conferir num aparelho real antes de assumir que ficou 100% igual a
-// antes pra quem prefere galeria.
+// No mobile, viraram DOIS botões — "Tirar foto" (input com
+// `capture="environment"`, câmera traseira direto) e "Da galeria" (input
+// sem `capture`, chooser normal). Antes só existia um botão com `capture`
+// sempre ligado, e quem queria a galeria dependia do link pra trocar
+// dentro do próprio app de câmera do iOS. Feedback real: "ficou top
+// demais... só que tem como colocar dois botões? de um lado usar a câmera
+// e do outro lado carregar arquivo que já usa a galeria." No desktop
+// continua 1 botão só (não existe câmera de trás pra puxar).
 
 const FORMATOS_MIME_ACEITOS = ['image/jpeg', 'image/png', 'image/webp'];
 const EXT_HEIC = /\.(heic|heif)$/i;
@@ -135,7 +132,8 @@ async function getRecorteComoBlob(imageSrc, pixelCrop) {
  * @param {(file: File) => void|Promise<void>} onCropComplete - chamado com o File JPEG final a cada imagem confirmada
  */
 export default function ImageCropUpload({ aspectRatio = 1, multiple = false, label = 'Selecionar imagem', hint, disabled = false, tamanhoIcone = 'w-4 h-4', onCropComplete, className = '', botaoClassName }) {
-  const inputRef = useRef(null);
+  const inputGaleriaRef = useRef(null);
+  const inputCameraRef = useRef(null);
   const [carregandoSelecao, setCarregandoSelecao] = useState(false);
   const [arrastando, setArrastando] = useState(false);
   const [itemAtual, setItemAtual] = useState(null); // { src, nomeBase, restantes }
@@ -144,9 +142,14 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
   const [areaPixels, setAreaPixels] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
-  function abrirSeletor() {
+  function abrirGaleria() {
     if (disabled || carregandoSelecao || salvando) return;
-    inputRef.current?.click();
+    inputGaleriaRef.current?.click();
+  }
+
+  function abrirCamera() {
+    if (disabled || carregandoSelecao || salvando) return;
+    inputCameraRef.current?.click();
   }
 
   function aoArrastarSobre(e) {
@@ -236,25 +239,66 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
 
   return (
     <div className={className}>
-      <button
-        type="button"
-        onClick={abrirSeletor}
-        onDragOver={aoArrastarSobre}
-        onDragLeave={aoSairArraste}
-        onDrop={aoSoltar}
-        disabled={disabled || carregandoSelecao}
-        className={`${botaoClassName || 'flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-60'}${arrastando ? ' ring-2 ring-[#7C3AED] ring-offset-1' : ''}`}
-      >
-        {carregandoSelecao ? <Loader2 className={`${tamanhoIcone} animate-spin`} /> : <Camera className={tamanhoIcone} />}
-        {arrastando ? 'Solte a foto aqui' : label}
-      </button>
+      {EH_MOBILE ? (
+        <div
+          onDragOver={aoArrastarSobre}
+          onDragLeave={aoSairArraste}
+          onDrop={aoSoltar}
+          className={arrastando ? 'ring-2 ring-[#7C3AED] ring-offset-1 rounded-2xl' : ''}
+        >
+          {label && <p className="text-sm font-semibold text-slate-700 mb-2">{arrastando ? 'Solte a foto aqui' : label}</p>}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={abrirCamera}
+              disabled={disabled || carregandoSelecao}
+              className="min-h-[44px] flex flex-col items-center justify-center gap-1.5 py-4 px-2 rounded-2xl border-2 text-sm font-bold transition-colors disabled:opacity-60"
+              style={{ borderColor: ROXO, color: ROXO }}
+            >
+              {carregandoSelecao ? <Loader2 className="w-7 h-7 animate-spin" /> : <Camera className="w-7 h-7" />}
+              Tirar foto
+            </button>
+            <button
+              type="button"
+              onClick={abrirGaleria}
+              disabled={disabled || carregandoSelecao}
+              className="min-h-[44px] flex flex-col items-center justify-center gap-1.5 py-4 px-2 rounded-2xl border-2 text-sm font-bold transition-colors disabled:opacity-60"
+              style={{ borderColor: DOURADO, color: '#8A6200' }}
+            >
+              {carregandoSelecao ? <Loader2 className="w-7 h-7 animate-spin" /> : <Images className="w-7 h-7" />}
+              Da galeria
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={abrirGaleria}
+          onDragOver={aoArrastarSobre}
+          onDragLeave={aoSairArraste}
+          onDrop={aoSoltar}
+          disabled={disabled || carregandoSelecao}
+          className={`${botaoClassName || 'flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-60'}${arrastando ? ' ring-2 ring-[#7C3AED] ring-offset-1' : ''}`}
+        >
+          {carregandoSelecao ? <Loader2 className={`${tamanhoIcone} animate-spin`} /> : <Camera className={tamanhoIcone} />}
+          {arrastando ? 'Solte a foto aqui' : label}
+        </button>
+      )}
       <input
-        ref={inputRef}
+        ref={inputGaleriaRef}
         type="file"
         className="hidden"
         multiple={multiple}
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-        capture={EH_MOBILE ? 'environment' : undefined}
+        onChange={(e) => { aoEscolherArquivos(e.target.files); e.target.value = ''; }}
+      />
+      <input
+        ref={inputCameraRef}
+        type="file"
+        className="hidden"
+        multiple={multiple}
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+        capture="environment"
         onChange={(e) => { aoEscolherArquivos(e.target.files); e.target.value = ''; }}
       />
       {hint && <p className="text-slate-400 text-xs mt-1.5">{hint}</p>}
