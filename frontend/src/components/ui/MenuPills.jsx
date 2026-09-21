@@ -35,19 +35,38 @@ export default function MenuPills({ itens, ariaLabel = 'Menu' }) {
     if (!el) return undefined;
     medir();
     el.addEventListener('scroll', medir, { passive: true });
+    // Observa as pills também, não só o <nav>: a largura delas muda quando
+    // a fonte/emoji termina de carregar, sem o <nav> mudar de tamanho — sem
+    // isso a seta/fade ficavam com a medida velha (última pill cortada).
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
-    ro?.observe(el);
+    if (ro) [el, ...el.children].forEach(n => ro.observe(n));
     return () => { el.removeEventListener('scroll', medir); ro?.disconnect(); };
   }, [medir, itens.length]);
 
   // Centraliza a pill ativa (ex.: entrou direto em /configuracoes pelo
   // link do email — a aba certa aparece destacada sem precisar procurar).
-  useEffect(() => {
+  // Na 1ª renderização vai direto (sem animação) — abrir a página com o
+  // menu "deslizando" até a aba só atrasa ver onde se está.
+  const jaCentralizou = useRef(false);
+  const centralizarAtivo = useCallback((behavior) => {
     const el = navRef.current;
     const ativo = el?.querySelector('[aria-current="page"]');
     if (!el || !ativo || el.scrollWidth <= el.clientWidth) return;
-    el.scrollTo({ left: ativo.offsetLeft - el.clientWidth / 2 + ativo.offsetWidth / 2, behavior: 'smooth' });
-  }, [location.pathname]);
+    el.scrollTo({ left: ativo.offsetLeft - el.clientWidth / 2 + ativo.offsetWidth / 2, behavior });
+  }, []);
+
+  useEffect(() => {
+    centralizarAtivo(jaCentralizou.current ? 'smooth' : 'auto');
+    jaCentralizou.current = true;
+  }, [location.pathname, centralizarAtivo]);
+
+  // Refaz a conta quando as fontes terminam de carregar (as pills mudam de
+  // largura e o "meio" calculado antes fica errado).
+  useEffect(() => {
+    let vivo = true;
+    document.fonts?.ready.then(() => { if (vivo) { centralizarAtivo('auto'); medir(); } });
+    return () => { vivo = false; };
+  }, [centralizarAtivo, medir]);
 
   function rolar(direcao) {
     const el = navRef.current;
