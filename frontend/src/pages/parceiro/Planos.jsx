@@ -5,6 +5,9 @@ import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, Seal
 import api from '../../services/api';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Marketplace/theme';
+import ModalPix from '../../components/parceiro/assinatura/ModalPix';
+import ModalCartao from '../../components/parceiro/assinatura/ModalCartao';
+import { formatarBRL, dataBR } from '../../components/parceiro/assinatura/assinaturaUtils';
 
 // Mesma foto do slide institucional da home do marketplace (comércio local,
 // clima parecido) — mantém a identidade visual consistente entre as duas
@@ -74,7 +77,21 @@ function maskCNPJ(v) {
 }
 
 export default function ParceiroPlanos() {
-  const { parceiro } = useOutletContext();
+  const { parceiro, usuario } = useOutletContext();
+  // Assinatura online (Mercado Pago). Sem credenciais configuradas no
+  // servidor (opcoes.pronto = false) a tela continua no modo antigo de
+  // "Notificar-me quando lançar".
+  const [opcoes, setOpcoes] = useState(null);
+  const [minha, setMinha] = useState(null);
+  const [modalAssinar, setModalAssinar] = useState(null); // { tipo: 'pix'|'cartao', plano } | { tipo: 'pix-pendente' }
+  useEffect(() => {
+    apiParceiro.get('/parceiro/assinatura/opcoes').then(r => setOpcoes(r.data)).catch(() => setOpcoes(null));
+    apiParceiro.get('/parceiro/assinatura/minha').then(r => setMinha(r.data)).catch(() => setMinha(null));
+  }, []);
+  const cortesia = Boolean(opcoes?.cortesia_interna || minha?.cortesia_interna);
+  const modoAssinatura = Boolean(opcoes?.pronto) && !cortesia;
+  const assinaturaViva = ['trial', 'ativa', 'pausada'].includes(minha?.assinatura?.status) ? minha.assinatura : null;
+  const precoOnline = plano => opcoes?.planos?.find(p => p.plano === plano);
   const [interesses, setInteresses] = useState(null);
   const [planoModal, setPlanoModal] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -148,24 +165,70 @@ export default function ParceiroPlanos() {
   return (
     <div className="space-y-8">
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold" style={{ color: PRETO }}>Escolha o plano ideal pra sua empresa</h1>
-        <span
-          className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold px-4 py-2 rounded-full"
-          style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}
-        >
-          🔥 Todos os planos estão em breve — aproveite o Grátis ilimitado!
-        </span>
-        <p className="text-slate-500 text-sm mt-4">
-          Estamos ativando planos pagos em breve. Enquanto isso, aproveite o Grátis sem limites e garanta seu bônus como Pioneiro do IUB MAIS!
-        </p>
+        <h1 className="text-2xl font-bold" style={{ color: PRETO }}>
+          {modoAssinatura && opcoes.trial_disponivel ? `Escolha seu plano — ${opcoes.trial_dias_cartao} dias GRÁTIS` : 'Escolha o plano ideal pra sua empresa'}
+        </h1>
+        {modoAssinatura ? (
+          <p className="text-slate-500 text-sm mt-3">
+            Pague com <strong>PIX</strong> todo mês ou assine no <strong>cartão</strong> com {opcoes.desconto_cartao_pct}% de desconto
+            {opcoes.trial_disponivel ? ` e ${opcoes.trial_dias_cartao} dias grátis pra testar` : ''}. Cancele quando quiser.
+          </p>
+        ) : !cortesia && (
+          <>
+            <span
+              className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold px-4 py-2 rounded-full"
+              style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}
+            >
+              🔥 Todos os planos estão em breve — aproveite o Grátis ilimitado!
+            </span>
+            <p className="text-slate-500 text-sm mt-4">
+              Estamos ativando planos pagos em breve. Enquanto isso, aproveite o Grátis sem limites e garanta seu bônus como Pioneiro do IUB MAIS!
+            </p>
+          </>
+        )}
       </div>
 
-      <VerifiqueSeuPreco
-        cnpjInput={cnpjInput}
-        setCnpjInput={setCnpjInput}
-        checando={checandoCnpj}
-        onVerificar={() => verificarPreco(cnpjInput)}
-      />
+      {cortesia && (
+        <div className="rounded-2xl p-5 flex items-start gap-3" style={{ backgroundColor: `${DOURADO}15`, border: `1px solid ${DOURADO}66` }}>
+          <span className="text-2xl">🎁</span>
+          <div>
+            <p className="font-bold text-sm" style={{ color: '#7A5E00' }}>Cortesia interna — plano {minha?.plano_atual_nome || 'Premium'} sem cobrança</p>
+            <p className="text-xs mt-1" style={{ color: '#92700C' }}>Sua loja tem o plano oferecido pelo IUB MAIS. Não precisa assinar nem pagar nada.</p>
+          </div>
+        </div>
+      )}
+
+      {modoAssinatura && assinaturaViva && (
+        <div className="rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3" style={{ backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0' }}>
+          <p className="text-sm text-emerald-800">
+            ✅ Você assina o <strong>{assinaturaViva.plano_nome}</strong>
+            {assinaturaViva.status === 'trial' ? ` — trial grátis até ${dataBR(assinaturaViva.trial_ate)}` : assinaturaViva.acesso_ate ? ` — ativo até ${dataBR(assinaturaViva.acesso_ate)}` : ''}.
+          </p>
+          <Link to="/parceiro/painel/minha-assinatura" className="text-xs font-bold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
+            Minha assinatura
+          </Link>
+        </div>
+      )}
+
+      {modoAssinatura && !assinaturaViva && minha?.pix_pendente && minha?.assinatura?.status === 'aguardando_pagamento' && (
+        <div className="rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+          <p className="text-sm text-amber-800">⏳ Você tem um PIX de <strong>{formatarBRL(minha.pix_pendente.valor)}</strong> ({minha.assinatura.plano_nome}) aguardando pagamento.</p>
+          <button type="button" onClick={() => setModalAssinar({ tipo: 'pix-pendente' })} className="text-xs font-bold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
+            Ver QR Code
+          </button>
+        </div>
+      )}
+
+      {/* Com assinatura online o preço já vem calculado pro CNPJ da própria
+          loja — a caixa de "verificar outro CNPJ" só faz sentido no modo antigo. */}
+      {!modoAssinatura && !cortesia && (
+        <VerifiqueSeuPreco
+          cnpjInput={cnpjInput}
+          setCnpjInput={setCnpjInput}
+          checando={checandoCnpj}
+          onVerificar={() => verificarPreco(cnpjInput)}
+        />
+      )}
 
       {precosData?.cnpj_limpo && (
         <BannerSindicalizacao eSindicalizada={eSindicalizada} razaoSocial={precosData.razao_social} />
@@ -205,6 +268,16 @@ export default function ParceiroPlanos() {
             ehAtual={planoAtual === planoKey}
             jaInteressado={interesses?.includes(planoKey)}
             onNotificar={() => setPlanoModal(planoKey)}
+            cortesia={cortesia}
+            assinatura={modoAssinatura ? {
+              precos: precoOnline(planoKey),
+              trial: Boolean(opcoes.trial_disponivel),
+              trialDias: opcoes.trial_dias_cartao,
+              descontoPct: opcoes.desconto_cartao_pct,
+              bloqueado: Boolean(assinaturaViva),
+              onPix: () => setModalAssinar({ tipo: 'pix', plano: planoKey }),
+              onCartao: () => setModalAssinar({ tipo: 'cartao', plano: planoKey }),
+            } : null}
           />
         ))}
       </div>
@@ -243,6 +316,36 @@ export default function ParceiroPlanos() {
             : 'Vaga garantida assim que seu plano pago for ativado (o desconto é combinado com nossa equipe).'}
         </p>
       </div>
+
+      {modalAssinar?.tipo === 'pix' && (
+        <ModalPix
+          plano={modalAssinar.plano}
+          planoNome={opcoes.planos.find(p => p.plano === modalAssinar.plano)?.nome}
+          valor={precoOnline(modalAssinar.plano)?.pix}
+          onFechar={() => setModalAssinar(null)}
+        />
+      )}
+      {modalAssinar?.tipo === 'pix-pendente' && minha?.pix_pendente && (
+        <ModalPix
+          plano={minha.assinatura.plano}
+          planoNome={minha.assinatura.plano_nome}
+          valor={minha.pix_pendente.valor}
+          pixInicial={minha.pix_pendente}
+          onFechar={() => setModalAssinar(null)}
+        />
+      )}
+      {modalAssinar?.tipo === 'cartao' && (
+        <ModalCartao
+          plano={modalAssinar.plano}
+          planoNome={opcoes.planos.find(p => p.plano === modalAssinar.plano)?.nome}
+          valor={precoOnline(modalAssinar.plano)?.cartao_recorrente}
+          trial={Boolean(opcoes.trial_disponivel)}
+          trialDias={opcoes.trial_dias_cartao}
+          publicKey={opcoes.public_key}
+          emailPadrao={usuario?.email}
+          onFechar={() => setModalAssinar(null)}
+        />
+      )}
 
       {planoModal && (
         <ModalNotificar
@@ -372,8 +475,8 @@ function BannerFechaMes({ proximoFechaMes }) {
   );
 }
 
-function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, ehAtual, jaInteressado, onNotificar }) {
-  const emBreve = planoKey !== 'gratis';
+function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, ehAtual, jaInteressado, onNotificar, cortesia, assinatura }) {
+  const emBreve = planoKey !== 'gratis' && !assinatura && !cortesia;
   const temDesconto = eSindicalizada && precoInfo && precoInfo.economia > 0;
 
   return (
@@ -447,9 +550,21 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, 
       </ul>
 
       {planoKey === 'gratis' ? (
+        ehAtual ? (
+          <button disabled className="mt-6 w-full text-sm font-semibold py-3 rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed">
+            Plano ativo
+          </button>
+        ) : assinatura ? (
+          <Link to="/parceiro/painel/minha-assinatura" className="mt-6 w-full text-center text-sm font-semibold py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+            Voltar pro Grátis
+          </Link>
+        ) : null
+      ) : cortesia ? (
         <button disabled className="mt-6 w-full text-sm font-semibold py-3 rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed">
-          Plano ativo
+          {ehAtual ? 'Seu plano (cortesia)' : 'Cortesia interna'}
         </button>
+      ) : assinatura ? (
+        <OpcoesAssinatura planoKey={planoKey} destaque={meta.maisEscolhido} ehAtual={ehAtual} {...assinatura} />
       ) : jaInteressado ? (
         <button disabled className="mt-6 w-full flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-xl bg-emerald-50 text-emerald-600 cursor-not-allowed">
           <Check size={16} weight="bold" /> Você será notificado
@@ -464,6 +579,47 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, 
           <Bell size={15} weight="fill" /> Notificar-me quando lançar!
         </button>
       )}
+    </div>
+  );
+}
+
+// PIX (preço cheio, paga na hora, sem trial) x Cartão recorrente (5% OFF,
+// trial, recomendado). Preços já calculados pro CNPJ da loja (/opcoes).
+function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, descontoPct, bloqueado, onPix, onCartao }) {
+  if (!precos) return null;
+  if (bloqueado) {
+    return (
+      <Link to="/parceiro/painel/minha-assinatura"
+        className={`mt-6 w-full text-center text-sm font-semibold py-3 rounded-xl ${ehAtual ? 'bg-emerald-50 text-emerald-700' : 'border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+        {ehAtual ? 'Seu plano atual' : 'Ver minha assinatura'}
+      </Link>
+    );
+  }
+  return (
+    <div className="mt-6 space-y-2">
+      <div className="rounded-xl border-2 p-3" style={{ borderColor: DOURADO, background: `${DOURADO}0D` }}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>⭐ Recomendado</span>
+          <span className="text-[10px] font-bold text-emerald-700">{descontoPct}% OFF</span>
+        </div>
+        <p className="text-sm mt-1.5" style={{ color: PRETO }}>
+          Cartão: <strong>{formatarBRL(precos.cartao_recorrente)}</strong><span className="text-slate-400 text-xs">/mês</span>
+        </p>
+        {trial && <p className="text-[11px] font-semibold mt-0.5" style={{ color: '#7A5E00' }}>🎁 {trialDias} dias grátis pra testar</p>}
+        <button type="button" onClick={onCartao}
+          className="mt-2 w-full text-sm font-bold py-2.5 rounded-lg text-white transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ backgroundColor: ROXO }}>
+          {trial ? 'Começar grátis no cartão' : 'Assinar com cartão'}
+        </button>
+      </div>
+      <div className="rounded-xl border border-slate-200 p-3">
+        <p className="text-sm" style={{ color: PRETO }}>
+          PIX: <strong>{formatarBRL(precos.pix)}</strong><span className="text-slate-400 text-xs">/mês</span>
+        </p>
+        <button type="button" onClick={onPix}
+          className="mt-2 w-full text-sm font-semibold py-2.5 rounded-lg border-2 transition-colors hover:bg-purple-50" style={{ borderColor: ROXO, color: ROXO }}>
+          Assinar com PIX
+        </button>
+      </div>
     </div>
   );
 }
