@@ -462,7 +462,28 @@ async function enviarRelatorioFechaMes({ nome, nomeFantasia, email, cliques, med
   return enviar({ to: email, subject: '📊 IUB MAIS — Resultado do seu Fecha Mês', html });
 }
 
+// Assinatura (Mercado Pago): pagamento aprovado — tanto a 1ª ativação
+// quanto cada renovação mensal. `renovacao` só muda o título.
+async function enviarPagamentoAssinaturaConfirmado({ nome, nomeFantasia, email, plano, valor, metodo, acessoAte, renovacao }) {
+  const cfg = PLANOS[plano] || PLANOS.gratis;
+  const ateFmt = new Date(acessoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">${renovacao ? '✅ Plano renovado!' : '🎉 Pagamento confirmado — plano ativo!'}</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Recebemos o pagamento da <strong>${nomeFantasia}</strong>. Obrigado!</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('Plano', cfg.nome)}
+      ${linha('Valor pago', formatarPrecoBRL(valor), true)}
+      ${linha('Forma de pagamento', metodo === 'pix' ? 'PIX' : 'Cartão de crédito')}
+      ${linha('Plano ativo até', ateFmt, true)}
+    </table>
+    ${metodo === 'pix' ? `<p style="color:#555;line-height:1.6;font-size:13px;">No PIX a renovação é mensal: alguns dias antes de ${ateFmt} a gente te lembra de gerar o próximo PIX.</p>` : ''}
+    ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/planos`)}
+  `);
+  return enviar({ to: email, subject: renovacao ? `IUB MAIS — ${cfg.nome} renovado até ${ateFmt}` : `🎉 IUB MAIS — ${cfg.nome} ativo!`, html });
+}
+
 module.exports = {
+  enviarPagamentoAssinaturaConfirmado,
   enviarCredenciais,
   enviarCarteirinhaAtivada,
   enviarNovoDependente,
