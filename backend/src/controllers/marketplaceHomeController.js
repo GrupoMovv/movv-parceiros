@@ -1,19 +1,18 @@
 const db = require('../config/database');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
-const { PLANOS, PARCEIROS_SEED_DEMONSTRACAO, PLANO_SEED_DEMONSTRACAO, PIONEIRO_VAGAS_TOTAL, planoEfetivo } = require('../config/planos');
+const { PLANOS, PIONEIRO_VAGAS_TOTAL, planoEfetivo, sqlPlanoVigente } = require('../config/planos');
 const { normalizarCategoria, ehRestaurante } = require('../utils/categorias');
 
 const PLANOS_COM_DESTAQUE = Object.entries(PLANOS).filter(([, cfg]) => cfg.aparece_destaques_parceiros).map(([plano]) => plano);
 
-// CASE SQL que aplica o boost_busca de cada plano (config/planos.js) — os
-// slugs do seed de demonstração vêm de uma constante do nosso próprio
-// código (não de input do usuário), por isso entram como literal na query
-// em vez de bind param. Calculado uma vez só no boot, não por request.
-function sqlBoostBusca(aliasPlano = 'pa.plano', aliasSlug = 'pa.slug') {
-  const casos = Object.entries(PLANOS).map(([plano, cfg]) => `WHEN ${aliasPlano} = '${plano}' THEN ${cfg.boost_busca}`).join(' ');
-  const seedArray = PARCEIROS_SEED_DEMONSTRACAO.map(s => `'${s}'`).join(',') || `''`;
-  const seedBoost = PLANOS[PLANO_SEED_DEMONSTRACAO].boost_busca;
-  return `(CASE WHEN ${aliasSlug} IN (${seedArray}) THEN ${seedBoost} ${casos} ELSE 0 END)`;
+// CASE SQL que aplica o boost_busca de cada plano (config/planos.js). Os
+// nomes de plano vêm do nosso próprio código (não de input do usuário), por
+// isso entram como literal na query. Plano pago VENCIDO (fim do período da
+// assinatura, ver sqlPlanoVigente) não ganha boost — mesma regra de
+// planoEfetivo(). `alias` = prefixo de sindicato_parceiros ('pa.' ou '').
+function sqlBoostBusca(alias = 'pa.') {
+  const casos = Object.entries(PLANOS).map(([plano, cfg]) => `WHEN ${alias}plano = '${plano}' THEN ${cfg.boost_busca}`).join(' ');
+  return `(CASE WHEN NOT ${sqlPlanoVigente(alias)} THEN 0 ${casos} ELSE 0 END)`;
 }
 
 // Colunas comuns de produto pra qualquer vitrine da home — sempre junto do
@@ -296,17 +295,16 @@ async function getParceiros(req, res) {
 
 // Vitrine "Parceiros em Destaque" no topo da home (logo após categorias) —
 // só quem tem aparece_destaques_parceiros:true no plano (Premium/Master,
-// ver config/planos.js) + o seed de demonstração, que entra como se fosse
-// Premium.
+// ver config/planos.js) e com o plano vigente (não vencido).
 async function getParceirosDestaques(req, res) {
   try {
     const planosLiteral = PLANOS_COM_DESTAQUE.map(p => `'${p}'`).join(',') || `''`;
-    const seedLiteral = PARCEIROS_SEED_DEMONSTRACAO.map(s => `'${s}'`).join(',') || `''`;
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro,
+              plano_expira_em, cortesia_interna
        FROM sindicato_parceiros
-       WHERE status = 'ativo' AND (plano IN (${planosLiteral}) OR slug IN (${seedLiteral}))
-       ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC
+       WHERE status = 'ativo' AND plano IN (${planosLiteral}) AND ${sqlPlanoVigente()}
+       ORDER BY ${sqlBoostBusca('')} DESC, nome ASC
        LIMIT 12`
     );
     return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
@@ -449,7 +447,7 @@ async function getServicos(req, res) {
               preco_medio, duracao_media, modalidades
        FROM sindicato_parceiros
        WHERE status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')
-       ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC`
+       ORDER BY ${sqlBoostBusca('')} DESC, nome ASC`
     );
     const servicos = result.rows
       .filter(p => !ehRestaurante(p.categorias))

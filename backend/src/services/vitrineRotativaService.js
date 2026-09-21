@@ -3,13 +3,13 @@ const { beneficios, planoEfetivo } = require('../config/planos');
 
 // Regra oficial (Fase 1): Grátis NÃO entra na rotativa — só planos pagos
 // disputam a vitrine. Números batem com o que é vendido em
-// /parceiro/painel/planos ("X produtos em destaque"). Limite por plano e
-// lista de seed de demonstração vêm de config/planos.js — fonte única de
-// verdade compartilhada com o resto do sistema de planos.
+// /parceiro/painel/planos ("X produtos em destaque"). Limite por plano vem
+// de config/planos.js — fonte única de verdade compartilhada com o resto do
+// sistema de planos (plano vencido conta como Grátis, ver planoEfetivo).
 const LIMITE_TOTAL = 24;
 
 function limiteDoParceiro(row) {
-  const plano = planoEfetivo({ slug: row.parceiro_slug, plano: row.plano });
+  const plano = planoEfetivo({ plano: row.plano, plano_expira_em: row.plano_expira_em, cortesia_interna: row.cortesia_interna });
   return beneficios(plano).max_produtos_rotativa;
 }
 
@@ -70,7 +70,8 @@ function montarRoundRobin(porParceiro) {
 async function gerarRotacao() {
   const result = await db.query(
     `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos, pr.destaque, pr.created_at,
-            pa.id AS parceiro_id, pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.plano
+            pa.id AS parceiro_id, pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.plano,
+            pa.plano_expira_em, pa.cortesia_interna
      FROM sindicato_parceiro_produtos pr
      JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
      WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'

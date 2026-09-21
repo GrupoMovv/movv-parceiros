@@ -1,9 +1,19 @@
 // Fonte única de verdade dos limites/benefícios de cada plano do IUB MAIS.
-// Fase 2 (planos pagos) ainda está DESLIGADA — todo parceiro é 'gratis' até
-// alguém trocar manualmente pelo admin (ver sindicatoPlanosController). Os
-// campos aqui existem pra todo endpoint/tela que depende de plano ler DESTE
-// arquivo em vez de reinventar o número em outro lugar — quando decidirmos
-// mudar um limite ou lançar de verdade, é só editar aqui.
+// Todo endpoint/tela que depende de plano lê DESTE arquivo em vez de
+// reinventar o número em outro lugar — mudar um limite é só editar aqui.
+//
+// Fase 2 (planos pagos) LIGADA: o parceiro assina sozinho pelo Mercado Pago
+// (PIX mensal ou cartão recorrente — ver config/mercadopago.js e
+// sindicato_assinaturas, migration 052), e o admin ainda pode trocar plano
+// à mão (sindicatoPlanosController). Quem vale é sindicato_parceiros.plano,
+// lido por planoEfetivo():
+//   - cortesia_interna (migration 053) -> o plano gravado vale sempre,
+//     nunca vence e nunca é cobrado
+//   - plano 'gratis' -> nada a cobrar
+//   - plano pago com plano_expira_em (fim do período pago da assinatura)
+//     no passado -> vale como Grátis NA HORA, mesmo antes da rotina diária
+//     gravar o downgrade no banco
+//   - plano pago sem plano_expira_em (troca manual sem prazo) -> vale
 //
 // `max_produtos_rotativa`, `boost_busca` etc. já são consumidos por código
 // de verdade (vitrineRotativaService, marketplaceHomeController,
@@ -132,13 +142,6 @@ const PLANOS = {
   },
 };
 
-// SEED de demonstração (não pagam nada, mas rodam com os benefícios do
-// Premium) — enquanto ninguém paga plano de verdade (fase 100% grátis),
-// mostra a vitrine/selo funcionando de verdade pra alguém. Esvaziar essa
-// lista quando os planos pagos forem ativados.
-const PARCEIROS_SEED_DEMONSTRACAO = ['nossa-drogaria', 'azul-emprestimo'];
-const PLANO_SEED_DEMONSTRACAO = 'premium';
-
 // Promoção Pioneiro: os primeiros N parceiros que virarem plano pago ganham
 // o selo vitalício + 50% off nos 3 primeiros meses (o desconto em si é
 // negociado manualmente pelo admin na troca de plano — esse número aqui só
@@ -149,14 +152,26 @@ function planoValido(plano) {
   return Object.prototype.hasOwnProperty.call(PLANOS, plano);
 }
 
-// Plano "efetivo" pra fim de benefício — aplica o seed de demonstração por
-// cima do plano real gravado no banco (que continua 'gratis' pra todo
-// mundo, seed incluso — o seed nunca é cobrado, só finge ser premium nas
-// telas/regras).
+function planoVencido(parceiro, agora = new Date()) {
+  if (!parceiro?.plano_expira_em || parceiro.cortesia_interna) return false;
+  return new Date(parceiro.plano_expira_em).getTime() <= agora.getTime();
+}
+
+// Plano que vale AGORA pra fim de benefício (ver regras no topo do arquivo).
+// Quem chama com uma linha parcial (sem plano_expira_em/cortesia_interna
+// no SELECT) cai no plano gravado — a rotina diária de assinaturas grava o
+// downgrade no banco, então a diferença dura no máximo até ela rodar.
 function planoEfetivo(parceiro) {
-  if (!parceiro) return 'gratis';
-  if (PARCEIROS_SEED_DEMONSTRACAO.includes(parceiro.slug)) return PLANO_SEED_DEMONSTRACAO;
-  return planoValido(parceiro.plano) ? parceiro.plano : 'gratis';
+  if (!parceiro || !planoValido(parceiro.plano)) return 'gratis';
+  if (parceiro.plano !== 'gratis' && planoVencido(parceiro)) return 'gratis';
+  return parceiro.plano;
+}
+
+// Mesma regra de planoEfetivo() em SQL, pra consultas que filtram/ordenam
+// por plano no banco (boost de busca, destaques). `alias` = prefixo da
+// tabela sindicato_parceiros na query ('pa.' ou '').
+function sqlPlanoVigente(alias = '') {
+  return `(${alias}plano <> 'gratis' AND (${alias}cortesia_interna OR ${alias}plano_expira_em IS NULL OR ${alias}plano_expira_em > NOW()))`;
 }
 
 function beneficios(plano) {
@@ -209,11 +224,11 @@ function precoAssinatura(plano, sindicalizada, metodo) {
 
 module.exports = {
   PLANOS,
-  PARCEIROS_SEED_DEMONSTRACAO,
-  PLANO_SEED_DEMONSTRACAO,
   PIONEIRO_VAGAS_TOTAL,
   planoValido,
   planoEfetivo,
+  planoVencido,
+  sqlPlanoVigente,
   beneficios,
   limiteProdutos,
   limiteJogos,
