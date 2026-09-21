@@ -8,20 +8,24 @@ import InstallPWABanner from '../../components/InstallPWABanner';
 import InstallAppButton from '../../components/InstallAppButton';
 import MenuPills from '../../components/ui/MenuPills';
 
+// Ordem por frequência de uso: o dia a dia (produtos/promoções/entrega)
+// primeiro, conta (perfil/configurações/planos) no meio, e o que é
+// campanha/conteúdo por último. Configurações ficava em 12º e o parceiro
+// "custou achar" — subiu pra antes de Materiais/Roleta/Lives/Fecha Mês.
 const ABAS = [
-  { label: 'Dashboard', to: '/parceiro/painel', end: true },
-  { label: 'Meu Perfil', to: '/parceiro/painel/perfil' },
-  { label: 'Produtos', to: '/parceiro/painel/produtos' },
+  { label: '🏠 Dashboard', to: '/parceiro/painel', end: true },
+  { label: '📦 Produtos', to: '/parceiro/painel/produtos' },
+  { label: '🎯 Promoções', to: '/parceiro/painel/promocoes' },
   // IUB Food: só aparece pra quem tem "Alimentação" nas categorias (e_restaurante vem do /auth/me).
   { label: '🛵 Entrega', to: '/parceiro/painel/entrega', soRestaurante: true },
-  { label: 'Promoções', to: '/parceiro/painel/promocoes' },
-  { label: 'Estatísticas', to: '/parceiro/painel/estatisticas' },
+  { label: '📊 Estatísticas', to: '/parceiro/painel/estatisticas' },
+  { label: '👤 Meu Perfil', to: '/parceiro/painel/perfil' },
+  { label: '⚙️ Configurações', to: '/parceiro/painel/configuracoes' },
+  { label: '💎 Planos', to: '/parceiro/painel/planos' },
   { label: '🌟 Materiais', to: '/parceiro/painel/materiais' },
+  { label: '🎰 Roleta da Sorte', to: '/parceiro/painel/jogos' },
   { label: '🎥 Lives', to: '/parceiro/painel/lives' },
   { label: '🔥 Fecha Mês', to: '/parceiro/painel/fecha-mes' },
-  { label: '🎰 Roleta da Sorte', to: '/parceiro/painel/jogos' },
-  { label: 'Planos', to: '/parceiro/painel/planos' },
-  { label: 'Configurações', to: '/parceiro/painel/configuracoes' },
 ];
 
 export default function ParceiroPainelLayout() {
