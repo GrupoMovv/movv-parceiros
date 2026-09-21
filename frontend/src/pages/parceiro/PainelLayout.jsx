@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiParceiro, { getParceiroToken, setParceiroToken } from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import InstallPWABanner from '../../components/InstallPWABanner';
 import InstallAppButton from '../../components/InstallAppButton';
+import MenuPills from '../../components/ui/MenuPills';
 
 const ABAS = [
   { label: 'Dashboard', to: '/parceiro/painel', end: true },
@@ -125,26 +126,14 @@ export default function ParceiroPainelLayout() {
           </div>
         </div>
 
-        <nav className="max-w-6xl mx-auto px-4 sm:px-8 flex gap-1 overflow-x-auto scrollbar-none">
-          {ABAS.filter(aba => !aba.soRestaurante || parceiro.e_restaurante).map(aba => (
-            <NavLink
-              key={aba.to}
-              to={aba.to}
-              end={aba.end}
-              className={({ isActive }) =>
-                `flex-shrink-0 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${isActive ? '' : 'border-transparent text-slate-400 hover:text-slate-600'}`
-              }
-              style={({ isActive }) => isActive ? { borderColor: ROXO, color: ROXO } : undefined}
-            >
-              {aba.label}
-              {aba.to === '/parceiro/painel/promocoes' && promosTerminandoEm24h > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white bg-red-500">
-                  {promosTerminandoEm24h}
-                </span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="max-w-6xl mx-auto px-4 sm:px-8">
+          <MenuPills
+            ariaLabel="Menu do painel"
+            itens={ABAS
+              .filter(aba => !aba.soRestaurante || parceiro.e_restaurante)
+              .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h } : aba))}
+          />
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
