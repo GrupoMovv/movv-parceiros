@@ -143,9 +143,9 @@ const PLANOS = {
 };
 
 // Promoção Pioneiro: os primeiros N parceiros que virarem plano pago ganham
-// o selo vitalício + 50% off nos 3 primeiros meses (o desconto em si é
-// negociado manualmente pelo admin na troca de plano — esse número aqui só
-// limita QUEM pode ganhar o selo `e_pioneiro`, ver sindicatoPlanosController).
+// o selo vitalício (sem desconto na mensalidade — a cobrança é automática pelo
+// Mercado Pago; decisão de 2026-09-21). Esse número aqui só
+// limita QUEM pode ganhar o selo `e_pioneiro` (ver sindicatoPlanosController).
 const PIONEIRO_VAGAS_TOTAL = 20;
 
 function planoValido(plano) {

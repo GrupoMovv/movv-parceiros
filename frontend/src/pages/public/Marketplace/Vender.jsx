@@ -417,29 +417,29 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
 
       <section style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
         <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-          <p className="text-2xl">⭐</p>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">Vire um parceiro Pioneiro</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">🏆 SEJA UM PIONEIRO</h2>
           {vagasPioneiro && (
             <p className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold px-4 py-2 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: DOURADO }}>
               🔥 Só restam {vagasPioneiro.vagas_restantes} de {vagasPioneiro.total} vagas
             </p>
           )}
-          <p className="text-white/70 text-sm mt-4 max-w-lg mx-auto leading-relaxed">
-            Os 20 primeiros parceiros a assinarem um plano pago ganham benefícios vitalícios:
+          <p className="text-white/80 text-sm mt-4 max-w-lg mx-auto leading-relaxed">
+            Primeiros 20 parceiros ganham:
           </p>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 text-left max-w-lg mx-auto">
+          {/* Mesma lista do painel (Planos.jsx) — sem desconto na mensalidade:
+              a cobrança é automática pelo Mercado Pago. */}
+          <ul className="flex flex-col gap-2.5 mt-4 text-left max-w-xs mx-auto">
             {[
-              '50% OFF nos 3 primeiros meses',
-              'Selo dourado "PIONEIRO" vitalício',
-              '1 post grátis no Instagram @iubmais',
-              'Aparece no Mural da Fama do site',
-              'Prioridade em novas funcionalidades',
+              'Selo dourado Pioneiro vitalício',
+              'Destaque no marketplace',
+              'Reconhecimento como parceiro fundador',
             ].map(b => (
-              <li key={b} className="flex items-start gap-2 text-sm text-white/85">
-                <span className="flex-shrink-0" style={{ color: DOURADO }}>✓</span> {b}
+              <li key={b} className="flex items-start gap-2 text-sm text-white/90">
+                <span className="flex-shrink-0">✅</span> {b}
               </li>
             ))}
           </ul>
+          <p className="text-white/80 text-sm font-semibold mt-6">Assine agora e faça parte da história do IUB MAIS+!</p>
 
           {pioneiros.length > 0 && (
             <div className="mt-10">
