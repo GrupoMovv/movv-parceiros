@@ -190,6 +190,23 @@ function precoPlano(plano, sindicalizada) {
   return sindicalizada ? cfg.preco_sindicalizada : cfg.preco_nao_sindicalizada;
 }
 
+// Assinatura automática (Mercado Pago): PIX mensal paga o preço cheio do
+// plano; cartão recorrente ganha DESCONTO_CARTAO_RECORRENTE em cima dele
+// (incentivo pra cobrança automática, que não depende de o empresário
+// lembrar de pagar). Vale pros dois preços (sindicalizada ou não).
+const DESCONTO_CARTAO_RECORRENTE = 0.05;
+const TRIAL_ASSINATURA_DIAS = 7;
+const METODOS_ASSINATURA = ['pix', 'cartao_recorrente'];
+const PLANOS_PAGOS = Object.keys(PLANOS).filter(p => PLANOS[p].preco_sindicalizada > 0);
+
+// Conta em CENTAVOS inteiros: em float, 34.90 * 0.95 = 33.1549999... e
+// arredondaria pra 33,15 — o preço combinado é 33,16 (meio centavo pra cima).
+function precoAssinatura(plano, sindicalizada, metodo) {
+  const centavos = Math.round(precoPlano(plano, sindicalizada) * 100);
+  const final = metodo === 'cartao_recorrente' ? Math.round(centavos * (1 - DESCONTO_CARTAO_RECORRENTE)) : centavos;
+  return final / 100;
+}
+
 module.exports = {
   PLANOS,
   PARCEIROS_SEED_DEMONSTRACAO,
@@ -203,4 +220,9 @@ module.exports = {
   limiteIA,
   limiteVozDia,
   precoPlano,
+  precoAssinatura,
+  DESCONTO_CARTAO_RECORRENTE,
+  TRIAL_ASSINATURA_DIAS,
+  METODOS_ASSINATURA,
+  PLANOS_PAGOS,
 };
