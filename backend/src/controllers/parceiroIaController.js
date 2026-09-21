@@ -31,14 +31,21 @@ async function contarUsosMes(parceiroId) {
 
 // "Hoje" no fuso de Itumbiara, não do servidor (Render roda em UTC — sem
 // isso a cota "virava" às 21h daqui).
+// Cota é de CADASTROS por dia: voz rápida ('cadastro_voz') = 1 cadastro por
+// chamada; voz guiada ('cadastro_voz_etapa') faz 3 chamadas por produto
+// (nome/descrição/preço), então cada etapa vale 1/3 — sem isso o Grátis
+// (20/dia) cadastraria só ~6 produtos pela guiada. Regravar também conta
+// 1/3 (a chamada ao Whisper é cobrada igual). Pode voltar fracionário.
 async function contarUsosVozHoje(parceiroId) {
   const r = await db.query(
-    `SELECT COUNT(*)::int AS total FROM sindicato_ia_uso
-     WHERE parceiro_id = $1 AND tipo = 'cadastro_voz'
+    `SELECT COUNT(*) FILTER (WHERE tipo = 'cadastro_voz')::int AS rapida,
+            COUNT(*) FILTER (WHERE tipo = 'cadastro_voz_etapa')::int AS etapas
+     FROM sindicato_ia_uso
+     WHERE parceiro_id = $1 AND tipo IN ('cadastro_voz', 'cadastro_voz_etapa')
        AND data_uso >= (date_trunc('day', NOW() AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo')`,
     [parceiroId]
   );
-  return r.rows[0].total;
+  return r.rows[0].rapida + r.rows[0].etapas / 3;
 }
 
 async function contarUsosUltimoMinuto(parceiroId) {
@@ -68,7 +75,7 @@ async function getStatus(req, res) {
       usados,
       restantes: trial.ativo || !limiteFinito ? null : Math.max(0, limite - usados),
       voz_limite_dia: Number.isFinite(limiteVoz) ? limiteVoz : null,
-      voz_usados_hoje: vozUsadosHoje,
+      voz_usados_hoje: Math.ceil(vozUsadosHoje),
     });
   } catch (err) {
     console.error('[parceiroIaController.getStatus]', err);
@@ -148,22 +155,8 @@ async function cadastrarPorVoz(req, res) {
     const parceiro = req.parceiro;
     if (!req.file) return res.status(400).json({ error: 'Envie o áudio gravado' });
 
-    const usosRecentes = await contarUsosUltimoMinuto(parceiro.id);
-    if (usosRecentes >= RATE_LIMIT_MAX) {
-      return res.status(429).json({ error: 'Muitos cadastros em pouco tempo — aguarde um minuto e tente de novo.', codigo: 'RATE_LIMIT' });
-    }
-
-    const limite = limiteVozDia(planoEfetivo(parceiro));
-    if (Number.isFinite(limite)) {
-      const usadosHoje = await contarUsosVozHoje(parceiro.id);
-      if (usadosHoje >= limite) {
-        return res.status(403).json({
-          error: `Você usou seus ${limite} cadastros por voz de hoje. Amanhã libera de novo — ou cadastre manualmente.`,
-          codigo: 'LIMITE_ATINGIDO',
-          limite, usados: usadosHoje, plano: planoEfetivo(parceiro),
-        });
-      }
-    }
+    const bloqueio = await checarCotaVoz(parceiro, RATE_LIMIT_MAX);
+    if (bloqueio) return res.status(bloqueio.status).json(bloqueio.corpo);
 
     let transcricao;
     try {
@@ -201,6 +194,84 @@ async function cadastrarPorVoz(req, res) {
   }
 }
 
+// null = pode seguir; senão { status, corpo } pronto pra responder.
+// Rate limit primeiro (mais barato), depois a cota diária de cadastros.
+async function checarCotaVoz(parceiro, maxPorMinuto) {
+  const usosRecentes = await contarUsosUltimoMinuto(parceiro.id);
+  if (usosRecentes >= maxPorMinuto) {
+    return { status: 429, corpo: { error: 'Muitos cadastros em pouco tempo — aguarde um minuto e tente de novo.', codigo: 'RATE_LIMIT' } };
+  }
+  const limite = limiteVozDia(planoEfetivo(parceiro));
+  if (!Number.isFinite(limite)) return null;
+  const usadosHoje = await contarUsosVozHoje(parceiro.id);
+  if (usadosHoje < limite) return null;
+  return {
+    status: 403,
+    corpo: {
+      error: `Você usou seus ${limite} cadastros por voz de hoje. Amanhã libera de novo — ou cadastre manualmente.`,
+      codigo: 'LIMITE_ATINGIDO',
+      limite, usados: Math.ceil(usadosHoje), plano: planoEfetivo(parceiro),
+    },
+  };
+}
+
+const ETAPAS_VOZ_GUIADA = ['nome', 'descricao', 'preco'];
+// A guiada faz 3+ chamadas por produto (mais se regravar) — 5/min, o limite
+// da rápida, travava quem regrava uma vez só. 10/min ainda barra loop.
+const RATE_LIMIT_GUIADA = 10;
+const ERRO_ETAPA = {
+  nome: 'Não entendi o nome do produto. Fale só o nome, ex.: "X-Bacon".',
+  descricao: 'Não entendi a descrição. Fale o que vem no produto, ex.: "pão, hambúrguer, bacon e cheddar".',
+  preco: 'Não entendi o preço. Fale só o valor, ex.: "vinte e nove e noventa".',
+};
+
+// POST /parceiro/produtos/cadastrar-por-voz-guiada — uma ETAPA do cadastro
+// guiado por vez (campo "etapa": nome | descricao | preco, + "audio").
+// "nome" (opcional) dá contexto pra etapa de descrição. Devolve só o valor
+// daquela etapa; montar/salvar o produto é com o front (ProdutoForm).
+async function cadastrarPorVozGuiada(req, res) {
+  try {
+    const parceiro = req.parceiro;
+    const etapa = String(req.body.etapa || '');
+    if (!ETAPAS_VOZ_GUIADA.includes(etapa)) return res.status(400).json({ error: 'Etapa inválida' });
+    if (!req.file) return res.status(400).json({ error: 'Envie o áudio gravado' });
+
+    const bloqueio = await checarCotaVoz(parceiro, RATE_LIMIT_GUIADA);
+    if (bloqueio) return res.status(bloqueio.status).json(bloqueio.corpo);
+
+    let transcricao;
+    try {
+      transcricao = await openaiService.transcreverAudio(req.file.buffer, req.file.mimetype);
+    } catch (err) {
+      return responderErroIA(res, err);
+    }
+
+    const registrar = dados => registrarUso(parceiro.id, { etapa, transcricao, ...dados }, 'cadastro_voz_etapa');
+
+    if (transcricao.length < 2) {
+      await registrar({});
+      return res.status(422).json({ error: 'Não deu pra ouvir nada no áudio. Chegue mais perto do microfone e tente de novo.', codigo: 'NAO_IDENTIFICADO', transcricao });
+    }
+
+    let valor;
+    try {
+      valor = await openaiService.extrairEtapaVoz(etapa, transcricao, { nome: String(req.body.nome || '').slice(0, 100) });
+    } catch (err) {
+      await registrar({});
+      return responderErroIA(res, err);
+    }
+
+    await registrar({ valor });
+    if (valor === null) {
+      return res.status(422).json({ error: ERRO_ETAPA[etapa], codigo: 'NAO_IDENTIFICADO', transcricao });
+    }
+    return res.json({ etapa, valor, transcricao });
+  } catch (err) {
+    console.error('[parceiroIaController.cadastrarPorVozGuiada]', err);
+    return res.status(500).json({ error: 'Erro ao processar o áudio' });
+  }
+}
+
 function responderErroIA(res, err) {
   console.error('[parceiroIaController] Falha na chamada à IA:', err?.codigo, err?.message);
   const timeout = err?.codigo === 'TIMEOUT';
@@ -212,4 +283,4 @@ function responderErroIA(res, err) {
   });
 }
 
-module.exports = { getStatus, analisarImagem, cadastrarPorVoz };
+module.exports = { getStatus, analisarImagem, cadastrarPorVoz, cadastrarPorVozGuiada };

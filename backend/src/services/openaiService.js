@@ -251,4 +251,62 @@ async function estruturarProdutoPorTexto(transcricao) {
   };
 }
 
-module.exports = { analisarProdutoPorImagem, transcreverAudio, estruturarProdutoPorTexto, CATEGORIAS, MIMETYPES_AUDIO, mimetypeBase };
+// ---------------------------------------------------------------------------
+// Voz GUIADA: uma pergunta por vez (nome -> descrição -> preço). Cada etapa
+// recebe só a fala daquela resposta e devolve um valor só.
+// ---------------------------------------------------------------------------
+
+const PROMPTS_ETAPA = {
+  nome: () => `O comerciante de um restaurante/lanchonete respondeu, falando, à pergunta "Qual o NOME do produto?". Transforme a fala no nome do item como apareceria num cardápio: curto (máx. 60 caracteres), iniciais maiúsculas, sem artigo nem frase ("é o", "o nome é", "é um"), sem preço. Grafias usuais de cardápio: "xis bacon" -> "X-Bacon", "x salada" -> "X-Salada".
+Responda SOMENTE JSON: {"valor": "nome"}. Se a fala não contém nome de produto nenhum, responda {"erro": "motivo curto"}.`,
+
+  // Limite em CARACTERES (não palavras): o campo descrição do produto trava
+  // em 500 caracteres (parceiroProdutosController.validarCampos) — "100-200
+  // palavras" sairia cortado no meio da frase.
+  descricao: ({ nome }) => `O comerciante de um restaurante/lanchonete descreveu, falando, o produto${nome ? ` "${nome}"` : ''} (ingredientes, tamanho, acompanhamentos). Reescreva como descrição de cardápio apetitosa em português brasileiro, entre 150 e 450 caracteres, 1 a 3 frases completas — NUNCA termine cortada. Use SOMENTE o que foi dito: não invente ingredientes, porções, tamanhos nem características. Não inclua preço.
+Responda SOMENTE JSON: {"valor": "descrição"}. Se a fala não descreve produto nenhum, responda {"erro": "motivo curto"}.`,
+
+  preco: () => `O comerciante respondeu, falando, à pergunta "Qual o PREÇO?". Extraia o valor em reais como número decimal com ponto.
+Exemplos: "vinte e nove e noventa" => 29.90 ; "vinte e nove reais e noventa centavos" => 29.90 ; "R$ 29,90" => 29.90 ; "vinte e cinco" / "25 conto" => 25.00 ; "doze e cinquenta" => 12.50 ; "um e cinquenta" => 1.50 ; "sessenta" => 60.00.
+Responda SOMENTE JSON: {"valor": número}. Se não houver valor claro, responda {"erro": "motivo curto"} — nunca chute.`,
+};
+
+// null = a IA não achou o valor na fala (quem chama devolve 422 pedindo
+// pra regravar); lança erro pra falha de rede/timeout/JSON.
+async function extrairEtapaVoz(etapa, transcricao, contexto = {}) {
+  exigirConfigurado();
+  const montarPrompt = PROMPTS_ETAPA[etapa];
+  if (!montarPrompt) throw new Error(`Etapa desconhecida: ${etapa}`);
+
+  let resp;
+  try {
+    resp = await client.chat.completions.create({
+      model: MODELO,
+      response_format: { type: 'json_object' },
+      max_tokens: etapa === 'descricao' ? 400 : 100,
+      temperature: etapa === 'descricao' ? 0.5 : 0.1,
+      messages: [
+        { role: 'system', content: montarPrompt(contexto) },
+        { role: 'user', content: `Fala transcrita: """${transcricao.slice(0, 2000)}"""` },
+      ],
+    });
+  } catch (err) {
+    throw erroIA(err, 'Não foi possível entender o áudio agora.');
+  }
+
+  let dados;
+  try {
+    dados = JSON.parse(resp.choices?.[0]?.message?.content);
+  } catch {
+    const erro = new Error('A IA devolveu uma resposta inesperada.');
+    erro.codigo = 'JSON_INVALIDO';
+    throw erro;
+  }
+  if (dados.erro || dados.valor === undefined || dados.valor === null) return null;
+
+  if (etapa === 'preco') return normalizarPreco(dados.valor);
+  const texto = String(dados.valor).trim().slice(0, etapa === 'nome' ? 60 : 500);
+  return texto || null;
+}
+
+module.exports = { analisarProdutoPorImagem, transcreverAudio, estruturarProdutoPorTexto, extrairEtapaVoz, CATEGORIAS, MIMETYPES_AUDIO, mimetypeBase };

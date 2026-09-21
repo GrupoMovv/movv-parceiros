@@ -37,6 +37,7 @@ router.get('/',     ctrl.list);
 router.get('/ia-status',         iaCtrl.getStatus);
 router.post('/analisar-imagem',  upload.single('imagem'), iaCtrl.analisarImagem);
 router.post('/cadastrar-por-voz', uploadAudio.single('audio'), iaCtrl.cadastrarPorVoz);
+router.post('/cadastrar-por-voz-guiada', uploadAudio.single('audio'), iaCtrl.cadastrarPorVozGuiada);
 router.get('/:id',  ctrl.getOne);
 router.post('/',    ctrl.create);
 router.put('/:id',  ctrl.update);
