@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
 const { PLANOS, PARCEIROS_SEED_DEMONSTRACAO, PLANO_SEED_DEMONSTRACAO, PIONEIRO_VAGAS_TOTAL, planoEfetivo } = require('../config/planos');
+const { normalizarCategoria, ehRestaurante } = require('../utils/categorias');
 
 const PLANOS_COM_DESTAQUE = Object.entries(PLANOS).filter(([, cfg]) => cfg.aparece_destaques_parceiros).map(([plano]) => plano);
 
@@ -154,9 +155,6 @@ const CATEGORIAS_HOME = [
   { slug: 'tecnologia', label: 'Tecnologia', emoji: '💻' },
 ];
 
-function normalizarCategoria(s) {
-  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-}
 
 async function getCategorias(req, res) {
   try {
@@ -453,9 +451,8 @@ async function getServicos(req, res) {
        WHERE status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')
        ORDER BY ${sqlBoostBusca('plano', 'slug')} DESC, nome ASC`
     );
-    const alvoAlimentacao = normalizarCategoria('Alimentação');
     const servicos = result.rows
-      .filter(p => !(p.categorias || []).some(c => normalizarCategoria(c) === alvoAlimentacao))
+      .filter(p => !ehRestaurante(p.categorias))
       .map(p => ({ ...p, plano: planoEfetivo(p) }));
     return res.json({ servicos });
   } catch (err) {
@@ -550,17 +547,23 @@ async function getBusca(req, res) {
 // depender de unaccent no Postgres). Não restringe por tipo_negocio de
 // propósito: um restaurante que também faz buffet por encomenda como
 // "serviço" ainda é Food se tiver a categoria marcada.
+// Config de atendimento (migration 051, tela Entrega do painel). Aberto/
+// fechado NÃO é calculado aqui: o front calcula a partir de
+// horario_funcionamento no fuso de Itumbiara (frontend/src/utils/iubFood.js)
+// — assim o badge continua certo mesmo com a página aberta por horas.
+const SELECT_ENTREGA = `horario_funcionamento, delivery_disponivel, retirada_disponivel, taxa_entrega,
+              entrega_gratis_acima, raio_entrega_km, tempo_preparo_min`;
+
 async function getFood(req, res) {
   try {
     const result = await db.query(
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
-              preco_medio, duracao_media, horario_atendimento
+              preco_medio, duracao_media, horario_atendimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
        WHERE status = 'ativo'`
     );
-    const alvo = normalizarCategoria('Alimentação');
     const restaurantes = result.rows
-      .filter(p => (p.categorias || []).some(c => normalizarCategoria(c) === alvo))
+      .filter(p => ehRestaurante(p.categorias))
       .map(p => ({ ...p, plano: planoEfetivo(p) }));
     return res.json({ restaurantes });
   } catch (err) {
@@ -580,19 +583,18 @@ async function getFoodPorSlug(req, res) {
     const result = await db.query(
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
               descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
-              preco_medio, duracao_media, horario_atendimento, fotos_estabelecimento
+              preco_medio, duracao_media, horario_atendimento, fotos_estabelecimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
        WHERE slug = $1 AND status = 'ativo'`,
       [req.params.slug]
     );
     const parceiro = result.rows[0];
-    const alvo = normalizarCategoria('Alimentação');
-    if (!parceiro || !(parceiro.categorias || []).some(c => normalizarCategoria(c) === alvo)) {
+    if (!parceiro || !ehRestaurante(parceiro.categorias)) {
       return res.status(404).json({ error: 'Restaurante não encontrado' });
     }
 
     const itensResult = await db.query(
-      `SELECT id, nome, descricao, preco, preco_associado, fotos
+      `SELECT id, nome, descricao, preco, preco_associado, fotos, estoque_disponivel, tempo_preparo_min
        FROM sindicato_parceiro_produtos
        WHERE parceiro_id = $1 AND ativo = true AND rascunho = false
        ORDER BY destaque DESC, created_at DESC`,

@@ -4,6 +4,7 @@ const db = require('../config/database');
 const { gerarTokenParceiro } = require('../middleware/parceiroAuth');
 const { enviarRecuperacaoSenhaParceiro } = require('../services/emailService');
 const { planoEfetivo } = require('../config/planos');
+const { ehRestaurante } = require('../utils/categorias');
 
 const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 
@@ -17,7 +18,7 @@ const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
 // parceiro.plano e confia. Endpoints que enforçam limite continuam usando
 // planoEfetivo(req.parceiro) direto a partir do dado cru do banco.
 function parceiroPublico(p) {
-  return { id: p.id, nome: p.nome, slug: p.slug, cnpj: p.cnpj, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at };
+  return { id: p.id, nome: p.nome, slug: p.slug, cnpj: p.cnpj, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at, e_restaurante: ehRestaurante(p.categorias) };
 }
 
 async function login(req, res) {

@@ -87,9 +87,18 @@ function validarCampos(b) {
     if (precoAssociado >= preco) return { erro: 'Preço associado deve ser menor que o preço normal' };
   }
 
+  // Opcional (IUB Food): vazio/ausente = usa o tempo_preparo_min do restaurante.
+  let tempoPreparoMin = null;
+  if (b.tempo_preparo_min !== undefined && b.tempo_preparo_min !== null && b.tempo_preparo_min !== '') {
+    tempoPreparoMin = parseInt(b.tempo_preparo_min, 10);
+    if (!Number.isInteger(tempoPreparoMin) || tempoPreparoMin < 1 || tempoPreparoMin > 300) {
+      return { erro: 'Tempo de preparo deve ser entre 1 e 300 minutos' };
+    }
+  }
+
   return {
     valores: {
-      nome, descricao, preco, precoAssociado,
+      nome, descricao, preco, precoAssociado, tempoPreparoMin,
       categoria: sanitizeText(b.categoria, 60),
       marca: sanitizeText(b.marca, 120),
       estoqueDisponivel: b.estoque_disponivel !== false,
@@ -122,11 +131,11 @@ async function create(req, res) {
 
     const result = await db.query(
       `INSERT INTO sindicato_parceiro_produtos
-         (parceiro_id, nome, descricao, preco, preco_associado, categoria, marca, estoque_disponivel, destaque, ativo, rascunho)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         (parceiro_id, nome, descricao, preco, preco_associado, categoria, marca, estoque_disponivel, destaque, ativo, rascunho, tempo_preparo_min)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [req.parceiro.id, valores.nome, valores.descricao, valores.preco, valores.precoAssociado, valores.categoria,
-        valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho]
+        valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho, valores.tempoPreparoMin]
     );
     return res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -153,10 +162,14 @@ async function update(req, res) {
     const result = await db.query(
       `UPDATE sindicato_parceiro_produtos SET
          nome = $1, descricao = $2, preco = $3, preco_associado = $4, categoria = $5,
-         marca = $6, estoque_disponivel = $7, destaque = $8, ativo = $9, rascunho = $10
-       WHERE id = $11 RETURNING *`,
+         marca = $6, estoque_disponivel = $7, destaque = $8, ativo = $9, rascunho = $10,
+         tempo_preparo_min = $11
+       WHERE id = $12 RETURNING *`,
       [valores.nome, valores.descricao, valores.preco, valores.precoAssociado, valores.categoria,
-        valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho, produto.id]
+        valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho,
+        // Chave ausente no body (cliente antigo/cache do PWA) mantém o valor
+        // atual em vez de apagar — só um "" explícito limpa o override.
+        req.body.tempo_preparo_min === undefined ? produto.tempo_preparo_min : valores.tempoPreparoMin, produto.id]
     );
     return res.json(result.rows[0]);
   } catch (err) {

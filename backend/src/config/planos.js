@@ -46,6 +46,10 @@ const PLANOS = {
     // IA Assistente de cadastro (analisa foto do produto, sugere nome/
     // descrição/marca/categoria) — ver openaiService.js/parceiroIaController.js.
     max_ia_mes: 10,
+    // Cadastro por VOZ (IUB Food — Whisper + GPT-4o, ver
+    // openaiService.cadastrarProdutoPorVoz). Cota DIÁRIA e separada da
+    // max_ia_mes de foto: cada uso custa ~R$ 0,02, bem mais barato.
+    max_voz_dia: 20,
   },
   oficial: {
     nome: 'IUB Oficial',
@@ -69,6 +73,7 @@ const PLANOS = {
     max_jogos: 1, // só a Roleta existe na fase 1, mas já prevê Tigrinho/Raspadinha
     peso_roleta: 1,
     max_ia_mes: 50,
+    max_voz_dia: 100,
   },
   premium: {
     nome: 'IUB Premium',
@@ -94,6 +99,7 @@ const PLANOS = {
     max_jogos: 2,
     peso_roleta: 3,
     max_ia_mes: 150,
+    max_voz_dia: 500,
   },
   master: {
     nome: 'IUB Master',
@@ -122,6 +128,7 @@ const PLANOS = {
     max_jogos: null, // ilimitado
     peso_roleta: 5,
     max_ia_mes: 500,
+    max_voz_dia: null, // ilimitado
   },
 };
 
@@ -171,6 +178,11 @@ function limiteIA(plano) {
   return max === null || max === undefined ? Infinity : max;
 }
 
+function limiteVozDia(plano) {
+  const max = beneficios(plano).max_voz_dia;
+  return max === null || max === undefined ? Infinity : max;
+}
+
 // Preço de verdade a cobrar de um plano, dado se o CNPJ do parceiro está
 // sindicalizado ou não (ver sindicalizacaoService.verificarSindicalizacao).
 function precoPlano(plano, sindicalizada) {
@@ -189,5 +201,6 @@ module.exports = {
   limiteProdutos,
   limiteJogos,
   limiteIA,
+  limiteVozDia,
   precoPlano,
 };

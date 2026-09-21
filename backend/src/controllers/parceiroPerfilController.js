@@ -121,6 +121,91 @@ async function updatePerfil(req, res) {
   }
 }
 
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// Dia fechado pode vir com abre/fecha vazio; dia aberto precisa dos dois
+// em HH:MM. fecha < abre é permitido de propósito: pizzaria que abre 18:00
+// e fecha 02:00 (virada de dia — ver frontend/src/utils/iubFood.js).
+function validarHorario(horario) {
+  if (typeof horario !== 'object' || horario === null || Array.isArray(horario)) return { erro: 'Horário de funcionamento inválido' };
+  const limpo = {};
+  for (const [dia, info] of Object.entries(horario)) {
+    if (!DIAS_SEMANA.includes(dia)) return { erro: `Dia inválido: ${dia}` };
+    const aberto = info?.aberto === true;
+    const abre = String(info?.abre || '');
+    const fecha = String(info?.fecha || '');
+    if (aberto && (!HHMM.test(abre) || !HHMM.test(fecha))) return { erro: 'Preencha o horário de abrir e fechar dos dias marcados como abertos' };
+    if (aberto && abre === fecha) return { erro: 'Horário de abrir e fechar não podem ser iguais' };
+    limpo[dia] = { aberto, abre: HHMM.test(abre) ? abre : '', fecha: HHMM.test(fecha) ? fecha : '' };
+  }
+  return { horario: limpo };
+}
+
+// Número opcional: undefined = não mexe, ''/null = limpa, senão valida faixa.
+function numeroOpcional(v, { min, max, inteiro = false }) {
+  if (v === '' || v === null) return { valor: null };
+  const n = inteiro ? parseInt(v, 10) : parseFloat(String(v).replace(',', '.'));
+  if (!Number.isFinite(n) || n < min || n > max) return { erro: true };
+  return { valor: inteiro ? n : Math.round(n * 100) / 100 };
+}
+
+const CAMPOS_ENTREGA_NUMERICOS = {
+  taxa_entrega:         { min: 0, max: 500,  rotulo: 'Taxa de entrega' },
+  entrega_gratis_acima: { min: 0, max: 5000, rotulo: 'Valor pra entrega grátis' },
+  raio_entrega_km:      { min: 0, max: 200,  rotulo: 'Raio de entrega' },
+  tempo_preparo_min:    { min: 1, max: 300,  rotulo: 'Tempo de preparo', inteiro: true },
+};
+
+// PATCH /parceiro/perfil/entrega — tela "Entrega" do painel (IUB Food).
+// Update parcial igual updatePerfil: só mexe no que veio no body.
+async function updateEntrega(req, res) {
+  try {
+    const b = req.body;
+    const atualResult = await db.query('SELECT delivery_disponivel, retirada_disponivel FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
+    const atual = atualResult.rows[0];
+
+    const delivery = b.delivery_disponivel !== undefined ? b.delivery_disponivel === true : atual.delivery_disponivel;
+    const retirada = b.retirada_disponivel !== undefined ? b.retirada_disponivel === true : atual.retirada_disponivel;
+    if (!delivery && !retirada) {
+      return res.status(400).json({ error: 'Marque pelo menos uma forma de atendimento: delivery ou retirada' });
+    }
+
+    const sets = [];
+    const params = [];
+    function set(coluna, valor, cast = '') { params.push(valor); sets.push(`${coluna} = $${params.length}${cast}`); }
+
+    if (b.delivery_disponivel !== undefined) set('delivery_disponivel', delivery);
+    if (b.retirada_disponivel !== undefined) set('retirada_disponivel', retirada);
+
+    if (b.horario_funcionamento !== undefined) {
+      const { erro, horario } = validarHorario(b.horario_funcionamento);
+      if (erro) return res.status(400).json({ error: erro });
+      set('horario_funcionamento', JSON.stringify(horario), '::jsonb');
+    }
+
+    for (const [campo, cfg] of Object.entries(CAMPOS_ENTREGA_NUMERICOS)) {
+      if (b[campo] === undefined) continue;
+      const { erro, valor } = numeroOpcional(b[campo], cfg);
+      if (erro) return res.status(400).json({ error: `${cfg.rotulo} inválido (entre ${cfg.min} e ${cfg.max})` });
+      set(campo, valor);
+    }
+
+    if (!sets.length) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+
+    params.push(req.parceiro.id);
+    const result = await db.query(
+      `UPDATE sindicato_parceiros SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${params.length}
+       RETURNING delivery_disponivel, retirada_disponivel, horario_funcionamento, taxa_entrega,
+                 entrega_gratis_acima, raio_entrega_km, tempo_preparo_min`,
+      params
+    );
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao salvar configuração de entrega' });
+  }
+}
+
 async function uploadLogo(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'Envie uma imagem' });
@@ -213,4 +298,4 @@ async function reordenarFotos(req, res) {
   }
 }
 
-module.exports = { getPerfil, updatePerfil, uploadLogo, uploadFotos, deleteFoto, reordenarFotos };
+module.exports = { getPerfil, updatePerfil, updateEntrega, uploadLogo, uploadFotos, deleteFoto, reordenarFotos };

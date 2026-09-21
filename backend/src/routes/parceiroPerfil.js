@@ -18,6 +18,7 @@ router.use(authenticateParceiro);
 
 router.get('/',            ctrl.getPerfil);
 router.put('/',             ctrl.updatePerfil);
+router.patch('/entrega',    ctrl.updateEntrega);
 router.post('/logo',        upload.single('logo'), ctrl.uploadLogo);
 router.post('/fotos',       upload.array('fotos', 5), ctrl.uploadFotos);
 router.delete('/fotos/:index', ctrl.deleteFoto);

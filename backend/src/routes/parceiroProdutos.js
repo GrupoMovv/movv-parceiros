@@ -3,6 +3,7 @@ const multer = require('multer');
 const { authenticateParceiro } = require('../middleware/parceiroAuth');
 const ctrl = require('../controllers/parceiroProdutosController');
 const iaCtrl = require('../controllers/parceiroIaController');
+const { MIMETYPES_AUDIO, mimetypeBase } = require('../services/openaiService');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -15,6 +16,19 @@ const upload = multer({
   },
 });
 
+// Áudio do cadastro por voz — o front limita a gravação a 60s (webm/opus
+// dá ~0,5 MB), 10 MB é folga pra Safari/mp4, bem abaixo dos 25 MB do Whisper.
+const uploadAudio = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!MIMETYPES_AUDIO.includes(mimetypeBase(file.mimetype))) {
+      return cb(new Error('Formato de áudio não suportado'));
+    }
+    cb(null, true);
+  },
+});
+
 router.use(authenticateParceiro);
 
 router.get('/',     ctrl.list);
@@ -22,6 +36,7 @@ router.get('/',     ctrl.list);
 // valor de :id e cai no handler errado.
 router.get('/ia-status',         iaCtrl.getStatus);
 router.post('/analisar-imagem',  upload.single('imagem'), iaCtrl.analisarImagem);
+router.post('/cadastrar-por-voz', uploadAudio.single('audio'), iaCtrl.cadastrarPorVoz);
 router.get('/:id',  ctrl.getOne);
 router.post('/',    ctrl.create);
 router.put('/:id',  ctrl.update);
