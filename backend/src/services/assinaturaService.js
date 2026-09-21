@@ -1,7 +1,7 @@
-const { Payment } = require('mercadopago');
+const { Payment, PreApproval } = require('mercadopago');
 const db = require('../config/database');
 const mp = require('../config/mercadopago');
-const { PLANOS, PLANOS_PAGOS, PIONEIRO_VAGAS_TOTAL, precoAssinatura, TRIAL_ASSINATURA_DIAS, DESCONTO_CARTAO_RECORRENTE } = require('../config/planos');
+const { PLANOS, PLANOS_PAGOS, PIONEIRO_VAGAS_TOTAL, precoAssinatura, TRIAL_ASSINATURA_DIAS, DESCONTO_CARTAO_RECORRENTE, planoEfetivo } = require('../config/planos');
 const { verificarSindicalizacao } = require('./sindicalizacaoService');
 const emailService = require('./emailService');
 
@@ -24,6 +24,11 @@ const LEMBRETE_PIX_DIAS = 3;
 // URL pública do webhook, se quiser mandar em cada pagamento. Opcional: o
 // normal é configurar a URL uma vez no painel do MP (Webhooks).
 const NOTIFICATION_URL = (process.env.MP_NOTIFICATION_URL || '').trim() || undefined;
+// Cartão: o MP cobra no fim do período e retenta cobrança recusada por
+// alguns dias. O plano segue valendo CARENCIA_CARTAO_DIAS além do período
+// pra não cair entre a data da cobrança e o webhook/retentativa chegarem.
+const CARENCIA_CARTAO_DIAS = 3;
+const URL_MINHA_ASSINATURA = `${(process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br').replace(/\/$/, '')}/parceiro/painel/minha-assinatura`;
 
 class ErroAssinatura extends Error {
   constructor(status, codigo, mensagem, extra = {}) {
@@ -45,9 +50,12 @@ function exigirPronto() {
 function referenciaExterna(pagamentoId) {
   return `iubmais:${mp.AMBIENTE}:pag:${pagamentoId}`;
 }
+function referenciaAssinatura(assinaturaId) {
+  return `iubmais:${mp.AMBIENTE}:ass:${assinaturaId}`;
+}
 function lerReferenciaExterna(ref) {
-  const m = /^iubmais:(test|prod):pag:(\d+)$/.exec(String(ref || ''));
-  return m ? { ambiente: m[1], pagamentoId: Number(m[2]) } : null;
+  const m = /^iubmais:(test|prod):(pag|ass):(\d+)$/.exec(String(ref || ''));
+  return m ? { ambiente: m[1], tipo: m[2], id: Number(m[3]) } : null;
 }
 
 // Formato de data que a API do MP pede (offset explícito). Brasil sem
@@ -92,6 +100,7 @@ async function opcoesDoParceiro(parceiroId) {
     ambiente: mp.AMBIENTE,
     public_key: mp.PRONTO ? mp.PUBLIC_KEY : null,
     cortesia_interna: Boolean(parceiro?.cortesia_interna),
+    trial_disponivel: await trialDisponivel(parceiroId),
     sindicalizada,
     trial_dias_cartao: TRIAL_ASSINATURA_DIAS,
     desconto_cartao_pct: Math.round(DESCONTO_CARTAO_RECORRENTE * 100),
@@ -202,6 +211,7 @@ async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
     throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS — não precisa assinar.');
   }
 
+  await cancelarCartoesSoltos(parceiroId);
   const { sindicalizada } = parceiro.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
   const valor = precoAssinatura(plano, sindicalizada, 'pix');
 
@@ -303,7 +313,7 @@ async function renovarPix({ parceiroId, email }) {
 // sindicatoPlanosController.alterarPlano, incluindo a promoção Pioneiro).
 // Só registra histórico quando o plano MUDA — renovação fica em
 // sindicato_pagamentos.
-async function aplicarPlanoNoParceiro(cx, assinatura, acessoAte) {
+async function aplicarPlanoNoParceiro(cx, assinatura, planoExpiraEm, motivo = 'assinatura_ativa') {
   const atual = (await cx.query('SELECT plano, e_pioneiro FROM sindicato_parceiros WHERE id = $1 FOR UPDATE', [assinatura.parceiro_id])).rows[0];
   const mudou = atual.plano !== assinatura.plano_nome;
   let virouPioneiro = false;
@@ -319,13 +329,13 @@ async function aplicarPlanoNoParceiro(cx, assinatura, acessoAte) {
             plano_preco_cobrado = $4, plano_era_sindicalizada = $5,
             e_pioneiro = e_pioneiro OR $6
       WHERE id = $7`,
-    [assinatura.plano_nome, acessoAte, mudou, assinatura.valor_mensal, assinatura.era_sindicalizada, virouPioneiro, assinatura.parceiro_id]
+    [assinatura.plano_nome, planoExpiraEm, mudou, assinatura.valor_mensal, assinatura.era_sindicalizada, virouPioneiro, assinatura.parceiro_id]
   );
   if (mudou) {
     await cx.query(
       `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por, preco_cobrado, era_sindicalizada)
-       VALUES ($1, $2, $3, 'assinatura_ativa', $4, 'mercado_pago', $5, $6)`,
-      [assinatura.parceiro_id, atual.plano, assinatura.plano_nome, `Assinatura #${assinatura.id} (${assinatura.metodo_pagamento})`,
+       VALUES ($1, $2, $3, $4, $5, 'mercado_pago', $6, $7)`,
+      [assinatura.parceiro_id, atual.plano, assinatura.plano_nome, motivo, `Assinatura #${assinatura.id} (${assinatura.metodo_pagamento})`,
         assinatura.valor_mensal, assinatura.era_sindicalizada]
     );
   }
@@ -336,13 +346,24 @@ async function aplicarPlanoNoParceiro(cx, assinatura, acessoAte) {
 // Retorna { resultado, ... } pra log (sindicato_mp_eventos).
 async function processarPagamentoMp(mpPay) {
   const ref = lerReferenciaExterna(mpPay.external_reference);
+  // Cobrança recorrente do cartão: o pagamento carrega a referência da
+  // ASSINATURA (ou o id da preapproval) em vez da de um pagamento nosso.
+  const subscriptionId = mpPay.metadata?.preapproval_id || mpPay.point_of_interaction?.transaction_data?.subscription_id || null;
+  if (ref?.tipo === 'ass' || (!ref && subscriptionId)) {
+    if (ref && ref.ambiente !== mp.AMBIENTE) return { resultado: 'ignorado', motivo: `pagamento de ${ref.ambiente}, servidor em ${mp.AMBIENTE}` };
+    return registrarCobrancaCartao({
+      assinaturaId: ref?.tipo === 'ass' ? ref.id : null, subscriptionId,
+      mpPaymentId: mpPay.id, status: statusLocal(mpPay), statusDetalhe: mpPay.status_detail,
+      valor: mpPay.transaction_amount, dataAprovacao: mpPay.date_approved,
+    });
+  }
   if (!ref) return { resultado: 'ignorado', motivo: 'external_reference de fora do IUB MAIS' };
   if (ref.ambiente !== mp.AMBIENTE) return { resultado: 'ignorado', motivo: `pagamento de ${ref.ambiente}, servidor em ${mp.AMBIENTE}` };
 
   const efeitos = [];
   const saida = await transacao(async cx => {
-    const pag = (await cx.query('SELECT * FROM sindicato_pagamentos WHERE id = $1 FOR UPDATE', [ref.pagamentoId])).rows[0];
-    if (!pag) return { resultado: 'ignorado', motivo: `pagamento local ${ref.pagamentoId} não existe` };
+    const pag = (await cx.query('SELECT * FROM sindicato_pagamentos WHERE id = $1 FOR UPDATE', [ref.id])).rows[0];
+    if (!pag) return { resultado: 'ignorado', motivo: `pagamento local ${ref.id} não existe` };
     if (pag.mp_payment_id && pag.mp_payment_id !== String(mpPay.id)) {
       return { resultado: 'ignorado', motivo: `mp_payment_id diferente (${pag.mp_payment_id} x ${mpPay.id})` };
     }
@@ -452,12 +473,21 @@ async function sincronizarPagamento({ parceiroId, pagamentoId }) {
 
 // GET /parceiro/assinatura/minha
 async function minhaAssinatura(parceiroId) {
+  const parceiro = (await db.query(
+    'SELECT plano, plano_expira_em, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId]
+  )).rows[0];
+  const base = {
+    cortesia_interna: Boolean(parceiro?.cortesia_interna),
+    plano_atual: planoEfetivo(parceiro),
+    plano_atual_nome: PLANOS[planoEfetivo(parceiro)]?.nome,
+  };
+
   const a = (await db.query(
     `SELECT * FROM sindicato_assinaturas WHERE parceiro_id = $1
       ORDER BY (status IN ('aguardando_pagamento', 'trial', 'ativa', 'pausada')) DESC, created_at DESC LIMIT 1`,
     [parceiroId]
   )).rows[0];
-  if (!a) return { assinatura: null, pagamentos: [], pix_pendente: null };
+  if (!a) return { ...base, assinatura: null, pagamentos: [], pix_pendente: null };
 
   const pagamentos = (await db.query(
     `SELECT pg.id, pg.valor, pg.metodo, pg.status, pg.data_pagamento, pg.periodo_inicio, pg.periodo_fim, pg.created_at
@@ -472,20 +502,380 @@ async function minhaAssinatura(parceiroId) {
     [a.id]
   )).rows[0];
 
+  const viva = ['aguardando_pagamento', 'trial', 'ativa', 'pausada'].includes(a.status);
   const renovacaoLiberaEm = a.metodo_pagamento === 'pix' && a.acesso_ate
     ? new Date(new Date(a.acesso_ate).getTime() - RENOVACAO_PIX_ANTECEDENCIA_DIAS * 864e5) : null;
+  const trialDiasRestantes = a.status === 'trial' && a.trial_ate
+    ? Math.max(0, Math.ceil((new Date(a.trial_ate).getTime() - Date.now()) / 864e5)) : null;
   return {
+    ...base,
     assinatura: {
       id: a.id, plano: a.plano_nome, plano_nome: PLANOS[a.plano_nome]?.nome, metodo: a.metodo_pagamento,
-      valor_mensal: Number(a.valor_mensal), status: a.status, trial_ate: a.trial_ate, data_inicio: a.data_inicio,
-      acesso_ate: a.acesso_ate, data_proxima_cobranca: a.data_proxima_cobranca, data_cancelamento: a.data_cancelamento,
-      ambiente: a.ambiente,
+      valor_mensal: Number(a.valor_mensal), status: a.status, trial_ate: a.trial_ate, trial_dias_restantes: trialDiasRestantes,
+      data_inicio: a.data_inicio, acesso_ate: a.acesso_ate, data_proxima_cobranca: a.data_proxima_cobranca,
+      data_cancelamento: a.data_cancelamento, ambiente: a.ambiente,
+      cartao_bandeira: a.cartao_bandeira, cartao_final: a.cartao_final,
       renovacao_pix_libera_em: renovacaoLiberaEm,
       pode_renovar_pix: a.status === 'ativa' && a.metodo_pagamento === 'pix' && renovacaoLiberaEm && Date.now() >= renovacaoLiberaEm.getTime(),
+      pode_cancelar: viva,
     },
     pagamentos: pagamentos.map(p => ({ ...p, valor: Number(p.valor) })),
     pix_pendente: pend ? pixDaLinha(pend) : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Cartão recorrente (fase C): preapproval do MP com free_trial de 7 dias.
+// O cartão é tokenizado no navegador (Bricks) — aqui só chega o token.
+// ---------------------------------------------------------------------------
+
+// Trial de 7 dias é UMA vez por parceiro (cancelar e assinar de novo não
+// ganha outro trial). Só conta trial que chegou a existir no MP
+// (mp_subscription_id): tentativa com cartão recusado não consome o trial.
+async function trialDisponivel(parceiroId) {
+  const r = await db.query(
+    'SELECT 1 FROM sindicato_assinaturas WHERE parceiro_id = $1 AND trial_ate IS NOT NULL AND mp_subscription_id IS NOT NULL LIMIT 1',
+    [parceiroId]
+  );
+  return !r.rows[0];
+}
+
+// Endpoints do MP que o SDK não cobre (authorized_payments).
+async function mpApiGet(caminho) {
+  const r = await fetch(`https://api.mercadopago.com${caminho}`, {
+    headers: { Authorization: `Bearer ${process.env[`MP_ACCESS_TOKEN_${mp.AMBIENTE === 'prod' ? 'PROD' : 'TEST'}`]}` },
+  });
+  const corpo = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const erro = new Error(`MP ${caminho} -> ${r.status} ${corpo.message || ''}`);
+    erro.status = r.status;
+    throw erro;
+  }
+  return corpo;
+}
+
+async function cancelarPreapprovalNoMp(subscriptionId) {
+  await new PreApproval(mp.client).update({ id: subscriptionId, body: { status: 'cancelled' } });
+}
+
+// Assinatura de cartão que venceu (cobrança falhou até depois da carência)
+// continua "authorized" no MP e poderia cobrar de novo depois — antes de o
+// parceiro assinar outra vez, solta essas no MP pra nunca cobrar dobrado.
+async function cancelarCartoesSoltos(parceiroId) {
+  if (!mp.client) return;
+  const soltas = (await db.query(
+    `SELECT id, mp_subscription_id FROM sindicato_assinaturas
+      WHERE parceiro_id = $1 AND metodo_pagamento = 'cartao_recorrente' AND status = 'vencida' AND mp_subscription_id IS NOT NULL`,
+    [parceiroId]
+  )).rows;
+  for (const s of soltas) {
+    try {
+      await cancelarPreapprovalNoMp(s.mp_subscription_id);
+      await db.query("UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = NOW(), updated_at = NOW() WHERE id = $1", [s.id]);
+    } catch (err) {
+      console.warn('[assinatura] não soltou preapproval', s.mp_subscription_id, err?.message);
+    }
+  }
+}
+
+// Mensagem amigável pra recusa do MP na criação (cartão inválido, dados
+// errados etc.) — o erro técnico vai pro log.
+function erroCartaoMp(err) {
+  const bruto = JSON.stringify(err?.cause || err?.error || err?.message || '').toLowerCase();
+  console.error('[assinatura] MP recusou a assinatura de cartão:', err?.status, bruto.slice(0, 500));
+  if (err?.status >= 500 || !err?.status) {
+    return new ErroAssinatura(502, 'ERRO_MP', 'O Mercado Pago não respondeu agora. Tente de novo em instantes.');
+  }
+  if (bruto.includes('payer') && bruto.includes('email')) {
+    return new ErroAssinatura(422, 'EMAIL_PAGADOR', 'O e-mail informado não foi aceito pelo Mercado Pago. Confira e tente de novo.');
+  }
+  return new ErroAssinatura(422, 'CARTAO_RECUSADO', 'Não foi possível validar esse cartão. Confira os dados ou use outro cartão.');
+}
+
+// POST /parceiro/assinatura/criar-cartao-recorrente
+async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmail, bandeira, final4 }) {
+  exigirPronto();
+  if (!PLANOS_PAGOS.includes(plano)) throw new ErroAssinatura(400, 'PLANO_INVALIDO', 'Plano inválido');
+  if (typeof cardToken !== 'string' || !/^[A-Za-z0-9-]{16,64}$/.test(cardToken)) {
+    throw new ErroAssinatura(400, 'TOKEN_INVALIDO', 'Dados do cartão inválidos. Preencha o cartão de novo.');
+  }
+  const email = String(payerEmail || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ErroAssinatura(400, 'EMAIL_INVALIDO', 'Informe um e-mail válido.');
+
+  const parceiro = (await db.query('SELECT id, cnpj, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId])).rows[0];
+  if (!parceiro) throw new ErroAssinatura(404, 'NAO_ENCONTRADO', 'Parceiro não encontrado');
+  if (parceiro.cortesia_interna) {
+    throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS — não precisa assinar.');
+  }
+
+  await cancelarCartoesSoltos(parceiroId);
+  const comTrial = await trialDisponivel(parceiroId);
+  const { sindicalizada } = parceiro.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
+  const valor = precoAssinatura(plano, sindicalizada, 'cartao_recorrente');
+
+  const { assinatura, pixParaCancelar } = await transacao(async cx => {
+    const viva = (await cx.query(
+      `SELECT * FROM sindicato_assinaturas
+        WHERE parceiro_id = $1 AND status IN ('aguardando_pagamento', 'trial', 'ativa', 'pausada') FOR UPDATE`,
+      [parceiroId]
+    )).rows[0];
+    const cancelar = [];
+    if (viva && viva.status !== 'aguardando_pagamento') {
+      throw new ErroAssinatura(409, 'JA_ASSINANTE', 'Você já tem uma assinatura ativa. Veja em Minha Assinatura.', { assinatura_id: viva.id });
+    }
+    if (viva) {
+      // Tinha um PIX em aberto e preferiu cartão: descarta o PIX.
+      const antigos = await cx.query(
+        `UPDATE sindicato_pagamentos SET status = 'cancelado', status_detalhe = 'substituido', updated_at = NOW()
+          WHERE assinatura_id = $1 AND status = 'pendente' RETURNING mp_payment_id`,
+        [viva.id]
+      );
+      cancelar.push(...antigos.rows.map(r => r.mp_payment_id).filter(Boolean));
+      await cx.query("UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = NOW(), updated_at = NOW() WHERE id = $1", [viva.id]);
+    }
+    const nova = (await cx.query(
+      `INSERT INTO sindicato_assinaturas
+         (parceiro_id, plano_nome, metodo_pagamento, valor_mensal, era_sindicalizada, status, trial_ate, ambiente,
+          mp_payer_email, cartao_bandeira, cartao_final)
+       VALUES ($1, $2, 'cartao_recorrente', $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [parceiroId, plano, valor, sindicalizada, comTrial ? 'trial' : 'aguardando_pagamento',
+        comTrial ? new Date(Date.now() + TRIAL_ASSINATURA_DIAS * 864e5) : null, mp.AMBIENTE,
+        email, String(bandeira || '').slice(0, 30) || null, /^\d{4}$/.test(String(final4 || '')) ? String(final4) : null]
+    )).rows[0];
+    return { assinatura: nova, pixParaCancelar: cancelar };
+  }).catch(err => {
+    if (err.code === '23505') throw new ErroAssinatura(409, 'EM_ANDAMENTO', 'Já tem uma assinatura sendo criada — aguarde um instante e recarregue.');
+    throw err;
+  });
+  pixParaCancelar.forEach(id => cancelarPixNoMp(id));
+
+  const body = {
+    reason: `IUB MAIS+ — ${PLANOS[plano].nome}`,
+    external_reference: referenciaAssinatura(assinatura.id),
+    payer_email: email,
+    card_token_id: cardToken,
+    back_url: URL_MINHA_ASSINATURA,
+    status: 'authorized',
+    auto_recurring: {
+      frequency: 1,
+      frequency_type: 'months',
+      transaction_amount: valor,
+      currency_id: 'BRL',
+      ...(comTrial ? { free_trial: { frequency: TRIAL_ASSINATURA_DIAS, frequency_type: 'days' } } : {}),
+    },
+  };
+
+  let resp;
+  try {
+    resp = await new PreApproval(mp.client).create({ body, requestOptions: { idempotencyKey: `iubmais-${mp.AMBIENTE}-ass-${assinatura.id}` } });
+  } catch (err) {
+    await db.query("UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = NOW(), updated_at = NOW() WHERE id = $1", [assinatura.id]);
+    throw erroCartaoMp(err);
+  }
+
+  const proxima = resp.next_payment_date ? new Date(resp.next_payment_date) : assinatura.trial_ate;
+  const final = await transacao(async cx => {
+    const upd = (await cx.query(
+      `UPDATE sindicato_assinaturas
+          SET mp_subscription_id = $1, mp_customer_id = $2, data_proxima_cobranca = $3,
+              acesso_ate = CASE WHEN status = 'trial' THEN trial_ate ELSE acesso_ate END, updated_at = NOW()
+        WHERE id = $4 RETURNING *`,
+      [String(resp.id), resp.payer_id ? String(resp.payer_id) : null, proxima, assinatura.id]
+    )).rows[0];
+    // Trial: libera o plano JÁ, até o fim do trial (+ carência pra a 1ª
+    // cobrança chegar). Sem trial: só ativa quando a 1ª cobrança aprovar.
+    if (comTrial) {
+      await aplicarPlanoNoParceiro(cx, upd, new Date(new Date(upd.trial_ate).getTime() + CARENCIA_CARTAO_DIAS * 864e5), 'assinatura_trial');
+    }
+    return upd;
+  });
+
+  if (comTrial) {
+    contatoDoParceiro(parceiroId).then(c => c?.email && emailService.enviarTrialAtivado({
+      nome: c.nome, nomeFantasia: c.nome, email: c.email, plano, valor, trialAte: final.trial_ate,
+    })).catch(err => console.error('[assinatura] e-mail de trial falhou:', err.message));
+  }
+
+  return {
+    assinatura_id: final.id,
+    subscription_id: final.mp_subscription_id,
+    status: final.status,
+    trial: comTrial,
+    trial_ate: final.trial_ate,
+    primeira_cobranca: final.data_proxima_cobranca,
+    valor,
+    plano,
+  };
+}
+
+// Cobrança recorrente do cartão (webhook subscription_authorized_payment
+// ou payment de uma preapproval). Idempotente por mp_payment_id.
+async function registrarCobrancaCartao({ assinaturaId, subscriptionId, mpPaymentId, status, statusDetalhe, valor, dataAprovacao }) {
+  if (!mpPaymentId) return { resultado: 'ignorado', motivo: 'cobrança ainda sem pagamento' };
+  const efeitos = [];
+  const saida = await transacao(async cx => {
+    const a = (await cx.query(
+      `SELECT * FROM sindicato_assinaturas
+        WHERE (($1::int IS NOT NULL AND id = $1) OR ($2::text IS NOT NULL AND mp_subscription_id = $2))
+          AND metodo_pagamento = 'cartao_recorrente' FOR UPDATE`,
+      [assinaturaId, subscriptionId ? String(subscriptionId) : null]
+    )).rows[0];
+    if (!a) return { resultado: 'ignorado', motivo: `assinatura de cartão não encontrada (${assinaturaId || subscriptionId})` };
+    if (a.ambiente !== mp.AMBIENTE) return { resultado: 'ignorado', motivo: `assinatura de ${a.ambiente}` };
+
+    let pag = (await cx.query('SELECT * FROM sindicato_pagamentos WHERE mp_payment_id = $1 FOR UPDATE', [String(mpPaymentId)])).rows[0];
+    if (pag && pag.assinatura_id !== a.id) return { resultado: 'ignorado', motivo: 'pagamento pertence a outra assinatura' };
+    if (pag && (pag.status === status || (pag.status === 'aprovado' && status === 'pendente'))) {
+      return { resultado: 'sem_mudanca', status: pag.status };
+    }
+    const statusAnterior = pag?.status || null;
+    if (!pag) {
+      pag = (await cx.query(
+        `INSERT INTO sindicato_pagamentos (assinatura_id, valor, metodo, status, status_detalhe, mp_payment_id, data_pagamento, ambiente)
+         VALUES ($1, $2, 'cartao', $3, $4, $5, $6, $7) RETURNING *`,
+        [a.id, Number(valor) || a.valor_mensal, status, statusDetalhe || null, String(mpPaymentId),
+          dataAprovacao ? new Date(dataAprovacao) : null, mp.AMBIENTE]
+      )).rows[0];
+    } else {
+      await cx.query(
+        `UPDATE sindicato_pagamentos SET status = $1, status_detalhe = $2, data_pagamento = COALESCE($3, data_pagamento), updated_at = NOW()
+          WHERE id = $4`,
+        [status, statusDetalhe || null, dataAprovacao ? new Date(dataAprovacao) : null, pag.id]
+      );
+    }
+
+    if (status === 'aprovado' && statusAnterior !== 'aprovado') {
+      if (Number(valor) + 0.001 < Number(a.valor_mensal)) {
+        return { resultado: 'requer_atencao', motivo: `valor cobrado ${valor} < contratado ${a.valor_mensal}` };
+      }
+      // Soma a partir do fim do período atual (fim do trial / mês anterior);
+      // assinatura que já tinha vencido recomeça agora.
+      const per = (await cx.query(
+        `SELECT GREATEST(NOW(), COALESCE($1::timestamptz, NOW())) AS inicio,
+                GREATEST(NOW(), COALESCE($1::timestamptz, NOW())) + INTERVAL '1 month' AS fim`,
+        [['trial', 'ativa'].includes(a.status) ? a.acesso_ate : null]
+      )).rows[0];
+      await cx.query('UPDATE sindicato_pagamentos SET periodo_inicio = $1, periodo_fim = $2 WHERE id = $3', [per.inicio, per.fim, pag.id]);
+      const renovacao = a.status === 'ativa';
+      await cx.query(
+        `UPDATE sindicato_assinaturas
+            SET status = 'ativa', acesso_ate = $1, data_proxima_cobranca = $1,
+                ultimo_lembrete_tipo = NULL, ultimo_lembrete_em = NULL, updated_at = NOW()
+          WHERE id = $2`,
+        [per.fim, a.id]
+      );
+      const plano = await aplicarPlanoNoParceiro(cx, a, new Date(new Date(per.fim).getTime() + CARENCIA_CARTAO_DIAS * 864e5));
+      efeitos.push({ tipo: 'confirmado', a, valor: pag.valor, acessoAte: per.fim, renovacao });
+      return { resultado: 'processado', status, assinatura_id: a.id, acesso_ate: per.fim, renovacao, ...plano };
+    }
+    if (status === 'rejeitado') efeitos.push({ tipo: 'falha', a, valor: pag.valor });
+    if (status === 'reembolsado') return { resultado: 'requer_atencao', status, motivo: 'cobrança do cartão estornada' };
+    return { resultado: 'processado', status };
+  });
+
+  for (const e of efeitos) {
+    contatoDoParceiro(e.a.parceiro_id).then(c => {
+      if (!c?.email) return null;
+      if (e.tipo === 'confirmado') {
+        return emailService.enviarPagamentoAssinaturaConfirmado({
+          nome: c.nome, nomeFantasia: c.nome, email: c.email, plano: e.a.plano_nome, valor: e.valor,
+          metodo: 'cartao_recorrente', acessoAte: e.acessoAte, renovacao: e.renovacao,
+        });
+      }
+      return emailService.enviarFalhaPagamentoCartao({ nome: c.nome, nomeFantasia: c.nome, email: c.email, plano: e.a.plano_nome, valor: e.valor });
+    }).catch(err => console.error('[assinatura] e-mail da cobrança do cartão falhou:', err.message));
+  }
+  return saida;
+}
+
+// Webhook subscription_authorized_payment: uma cobrança agendada da
+// preapproval. Consulta no MP e registra (sem pagamento ainda = ignora).
+async function processarCobrancaAutorizada(authorizedPaymentId) {
+  const ap = await mpApiGet(`/authorized_payments/${encodeURIComponent(authorizedPaymentId)}`);
+  const pay = ap.payment || {};
+  return registrarCobrancaCartao({
+    subscriptionId: ap.preapproval_id,
+    mpPaymentId: pay.id,
+    status: statusLocal({ status: pay.status, status_detail: pay.status_detail }),
+    statusDetalhe: pay.status_detail,
+    valor: ap.transaction_amount,
+    dataAprovacao: pay.status === 'approved' ? (ap.last_modified || ap.date_created || new Date().toISOString()) : null,
+  });
+}
+
+// Webhook subscription_preapproval: mudou a ASSINATURA no MP (cancelada
+// por lá, pausada, próxima data de cobrança).
+async function sincronizarPreapproval(subscriptionId) {
+  const pre = await new PreApproval(mp.client).get({ id: subscriptionId });
+  return transacao(async cx => {
+    const a = (await cx.query('SELECT * FROM sindicato_assinaturas WHERE mp_subscription_id = $1 FOR UPDATE', [String(subscriptionId)])).rows[0];
+    if (!a) return { resultado: 'ignorado', motivo: `preapproval ${subscriptionId} não é nossa` };
+    const proxima = pre.next_payment_date ? new Date(pre.next_payment_date) : a.data_proxima_cobranca;
+
+    if (pre.status === 'cancelled' && a.status !== 'cancelada') {
+      await cx.query(
+        "UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = COALESCE(data_cancelamento, NOW()), updated_at = NOW() WHERE id = $1",
+        [a.id]
+      );
+      // Sem mais cobrança: o plano vale até o fim do período, sem carência.
+      if (a.acesso_ate) {
+        await cx.query('UPDATE sindicato_parceiros SET plano_expira_em = $1 WHERE id = $2 AND NOT cortesia_interna', [a.acesso_ate, a.parceiro_id]);
+      }
+      return { resultado: 'processado', status: 'cancelada' };
+    }
+    if (pre.status === 'paused' && a.status !== 'pausada') {
+      await cx.query("UPDATE sindicato_assinaturas SET status = 'pausada', updated_at = NOW() WHERE id = $1", [a.id]);
+      return { resultado: 'processado', status: 'pausada' };
+    }
+    if (pre.status === 'authorized' && a.status === 'pausada') {
+      await cx.query("UPDATE sindicato_assinaturas SET status = CASE WHEN trial_ate > NOW() THEN 'trial' ELSE 'ativa' END, updated_at = NOW() WHERE id = $1", [a.id]);
+    }
+    await cx.query('UPDATE sindicato_assinaturas SET data_proxima_cobranca = $1, updated_at = NOW() WHERE id = $2', [proxima, a.id]);
+    return { resultado: 'processado', status: pre.status };
+  });
+}
+
+// POST /parceiro/assinatura/cancelar — cancela a assinatura viva. O plano
+// continua até o fim do período já pago (ou do trial); depois a rotina
+// devolve pro Grátis. Cartão: cancela no MP ANTES de marcar aqui — se o MP
+// falhar, não finge que cancelou (senão a cobrança continuaria).
+async function cancelarAssinatura({ parceiroId }) {
+  const a = (await db.query(
+    "SELECT * FROM sindicato_assinaturas WHERE parceiro_id = $1 AND status IN ('aguardando_pagamento', 'trial', 'ativa', 'pausada')",
+    [parceiroId]
+  )).rows[0];
+  if (!a) throw new ErroAssinatura(404, 'SEM_ASSINATURA', 'Você não tem assinatura ativa pra cancelar.');
+
+  if (a.metodo_pagamento === 'cartao_recorrente' && a.mp_subscription_id) {
+    if (!mp.client) throw new ErroAssinatura(503, 'PAGAMENTO_INDISPONIVEL', 'Não foi possível cancelar agora. Tente de novo em instantes.');
+    try {
+      await cancelarPreapprovalNoMp(a.mp_subscription_id);
+    } catch (err) {
+      console.error('[assinatura] falha ao cancelar preapproval', a.mp_subscription_id, err?.status, err?.message);
+      throw new ErroAssinatura(502, 'ERRO_MP', 'O Mercado Pago não confirmou o cancelamento. Tente de novo em instantes.');
+    }
+  }
+
+  const pixParaCancelar = await transacao(async cx => {
+    const pend = await cx.query(
+      `UPDATE sindicato_pagamentos SET status = 'cancelado', status_detalhe = 'assinatura_cancelada', updated_at = NOW()
+        WHERE assinatura_id = $1 AND status = 'pendente' RETURNING mp_payment_id`,
+      [a.id]
+    );
+    await cx.query("UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = NOW(), updated_at = NOW() WHERE id = $1", [a.id]);
+    if (a.acesso_ate) {
+      await cx.query('UPDATE sindicato_parceiros SET plano_expira_em = $1 WHERE id = $2 AND NOT cortesia_interna', [a.acesso_ate, a.parceiro_id]);
+    }
+    return pend.rows.map(r => r.mp_payment_id).filter(Boolean);
+  });
+  pixParaCancelar.forEach(id => cancelarPixNoMp(id));
+
+  const acessoAte = a.acesso_ate && new Date(a.acesso_ate) > new Date() ? a.acesso_ate : null;
+  contatoDoParceiro(parceiroId).then(c => c?.email && emailService.enviarAssinaturaCancelada({
+    nome: c.nome, nomeFantasia: c.nome, email: c.email, plano: a.plano_nome, acessoAte,
+  })).catch(err => console.error('[assinatura] e-mail de cancelamento falhou:', err.message));
+
+  return { assinatura_id: a.id, status: 'cancelada', acesso_ate: acessoAte };
 }
 
 // Rotina diária (Render Cron Job -> POST /api/interno/assinaturas/rotina).
@@ -495,9 +885,13 @@ async function rotinaDiaria() {
 
   // 1. Período pago acabou -> assinatura 'vencida' (PIX não renovado).
   //    Cancelada continua 'cancelada' (só perde o acesso).
+  //    Cartão (trial ou ativa) só depois da carência: a cobrança/retentativa
+  //    do MP pode chegar alguns dias depois do fim do período.
   res.assinaturas_vencidas = (await db.query(
     `UPDATE sindicato_assinaturas SET status = 'vencida', updated_at = NOW()
-      WHERE status = 'ativa' AND acesso_ate IS NOT NULL AND acesso_ate <= NOW()`
+      WHERE status IN ('ativa', 'trial') AND acesso_ate IS NOT NULL
+        AND acesso_ate + (CASE WHEN metodo_pagamento = 'cartao_recorrente' THEN $1::int ELSE 0 END) * INTERVAL '1 day' <= NOW()`,
+    [CARENCIA_CARTAO_DIAS]
   )).rowCount;
 
   // 2. Plano pago com prazo vencido volta pro Grátis NO BANCO (o acesso já
@@ -557,6 +951,34 @@ async function rotinaDiaria() {
     }
   }
 
+  // 3b. Trial do cartão acabando: "faltam 2 dias" e "amanhã vamos cobrar"
+  //     (uma vez cada — a chave leva o tipo e a data do fim do trial).
+  const trials = (await db.query(
+    `SELECT a.*, TO_CHAR(a.trial_ate AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS fim_dia,
+            (a.trial_ate <= NOW() + INTERVAL '1 day') AS amanha
+       FROM sindicato_assinaturas a JOIN sindicato_parceiros p ON p.id = a.parceiro_id
+      WHERE a.status = 'trial' AND a.metodo_pagamento = 'cartao_recorrente' AND NOT p.cortesia_interna
+        AND a.trial_ate > NOW() AND a.trial_ate <= NOW() + INTERVAL '2 days'`
+  )).rows;
+  res.lembretes_trial = 0;
+  for (const a of trials) {
+    const chave = `${a.amanha ? 'trial_amanha' : 'trial_2dias'}:${a.fim_dia}`;
+    if (a.ultimo_lembrete_tipo === chave) continue;
+    try {
+      const c = await contatoDoParceiro(a.parceiro_id);
+      if (c?.email) {
+        await emailService.enviarTrialTerminando({
+          nome: c.nome, nomeFantasia: c.nome, email: c.email, plano: a.plano_nome,
+          valor: a.valor_mensal, dataCobranca: a.trial_ate, amanha: a.amanha,
+        });
+      }
+      await db.query('UPDATE sindicato_assinaturas SET ultimo_lembrete_tipo = $1, ultimo_lembrete_em = NOW() WHERE id = $2', [chave, a.id]);
+      res.lembretes_trial++;
+    } catch (err) {
+      res.erros.push(`lembrete trial ${a.id}: ${err.message}`);
+    }
+  }
+
   // 4. Limpeza: PIX pendente vencido há mais de 1h e primeira assinatura
   //    PIX nunca paga há mais de 1 dia.
   res.pix_expirados = (await db.query(
@@ -565,7 +987,7 @@ async function rotinaDiaria() {
   )).rowCount;
   res.assinaturas_abandonadas = (await db.query(
     `UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = NOW(), updated_at = NOW()
-      WHERE status = 'aguardando_pagamento' AND created_at < NOW() - INTERVAL '1 day'`
+      WHERE status = 'aguardando_pagamento' AND metodo_pagamento = 'pix' AND created_at < NOW() - INTERVAL '1 day'`
   )).rowCount;
 
   return res;
@@ -573,6 +995,13 @@ async function rotinaDiaria() {
 
 module.exports = {
   ErroAssinatura,
+  iniciarAssinaturaCartao,
+  cancelarAssinatura,
+  registrarCobrancaCartao,
+  processarCobrancaAutorizada,
+  sincronizarPreapproval,
+  trialDisponivel,
+  CARENCIA_CARTAO_DIAS,
   opcoesDoParceiro,
   iniciarAssinaturaPix,
   renovarPix,

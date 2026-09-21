@@ -4,8 +4,9 @@ const mp = require('../config/mercadopago');
 const svc = require('../services/assinaturaService');
 
 // POST /api/webhook/mercadopago — notificações do MP (configurar a URL no
-// painel do MP -> Webhooks, eventos "Pagamentos"; o painel gera o
-// MP_WEBHOOK_SECRET).
+// painel do MP -> Webhooks, eventos "Pagamentos", "Planos e assinaturas"
+// (subscription_preapproval) e "Pagamentos recorrentes"
+// (subscription_authorized_payment); o painel gera o MP_WEBHOOK_SECRET).
 //
 // Segurança:
 // - toda notificação é registrada em sindicato_mp_eventos (válida ou não)
@@ -46,6 +47,16 @@ async function atualizarEvento(id, resultado, erro) {
     .catch(err => console.error('[webhook MP] não atualizou evento:', err.message));
 }
 
+// Cada tipo de notificação reconsulta o recurso no MP e processa.
+// (Nomes antigos "preapproval"/"authorized_payment" também aceitos.)
+const HANDLERS = {
+  payment: async id => svc.processarPagamentoMp(await svc.buscarPagamentoMp(id)),
+  subscription_preapproval: id => svc.sincronizarPreapproval(id),
+  preapproval: id => svc.sincronizarPreapproval(id),
+  subscription_authorized_payment: id => svc.processarCobrancaAutorizada(id),
+  authorized_payment: id => svc.processarCobrancaAutorizada(id),
+};
+
 async function receber(req, res) {
   const body = req.body || {};
   const tipo = String(req.query.type || req.query.topic || body.type || body.topic || '') || null;
@@ -80,8 +91,8 @@ async function receber(req, res) {
   const eventoId = await registrarEvento({ ...base, assinaturaValida: true, resultado: 'recebido' });
 
   try {
-    if (tipo !== 'payment' || !dataId) {
-      // Assinatura de cartão (subscription_preapproval etc.) entra na fase C.
+    const tratar = HANDLERS[tipo];
+    if (!tratar || !dataId) {
       await atualizarEvento(eventoId, 'ignorado', `tipo ${tipo} não tratado`);
       return res.status(200).json({ ok: true, ignorado: true });
     }
@@ -90,10 +101,9 @@ async function receber(req, res) {
       return res.status(503).json({ error: 'credenciais ausentes' });
     }
 
-    const pagamento = await svc.buscarPagamentoMp(dataId);
-    const r = await svc.processarPagamentoMp(pagamento);
+    const r = await tratar(dataId);
     await atualizarEvento(eventoId, r.resultado, r.motivo);
-    console.log('[webhook MP] payment', dataId, '->', r.resultado, r.status || '', r.motivo || '');
+    console.log('[webhook MP]', tipo, dataId, '->', r.resultado, r.status || '', r.motivo || '');
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('[webhook MP] erro processando', tipo, dataId, err?.message);

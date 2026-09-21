@@ -56,6 +56,39 @@ async function renovarPix(req, res) {
   }
 }
 
+// POST /parceiro/assinatura/criar-cartao-recorrente
+//   { plano, card_token, payer_email, payment_method_id?, ultimos4? }
+// card_token vem dos Bricks do MP (cartão tokenizado no navegador — número
+// e CVV nunca chegam aqui).
+async function criarCartaoRecorrente(req, res) {
+  try {
+    const b = req.body || {};
+    const r = await svc.iniciarAssinaturaCartao({
+      parceiroId: req.parceiro.id,
+      plano: String(b.plano || ''),
+      cardToken: b.card_token,
+      payerEmail: b.payer_email || req.parceiroUsuario.email,
+      bandeira: b.payment_method_id,
+      final4: b.ultimos4,
+    });
+    console.log('[assinatura] cartão recorrente criado', { parceiro: req.parceiro.id, assinatura: r.assinatura_id, plano: r.plano, trial: r.trial, valor: r.valor });
+    return res.status(201).json(r);
+  } catch (err) {
+    return responderErro(res, err, 'criarCartaoRecorrente');
+  }
+}
+
+// POST /parceiro/assinatura/cancelar
+async function cancelar(req, res) {
+  try {
+    const r = await svc.cancelarAssinatura({ parceiroId: req.parceiro.id });
+    console.log('[assinatura] cancelada', { parceiro: req.parceiro.id, assinatura: r.assinatura_id, acesso_ate: r.acesso_ate });
+    return res.json(r);
+  } catch (err) {
+    return responderErro(res, err, 'cancelar');
+  }
+}
+
 // GET /parceiro/assinatura/pagamentos/:id/status — polling do modal do QR.
 async function statusPagamento(req, res) {
   try {
@@ -67,4 +100,4 @@ async function statusPagamento(req, res) {
   }
 }
 
-module.exports = { opcoes, minha, criarPix, renovarPix, statusPagamento };
+module.exports = { opcoes, minha, criarPix, renovarPix, statusPagamento, criarCartaoRecorrente, cancelar };

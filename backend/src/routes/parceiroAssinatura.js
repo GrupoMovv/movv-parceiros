@@ -16,5 +16,7 @@ router.get('/minha',                  limiteLeitura, ctrl.minha);
 router.get('/pagamentos/:id/status',  limiteLeitura, ctrl.statusPagamento);
 router.post('/criar-pix',             limiteCobranca, ctrl.criarPix);
 router.post('/pix/renovar',           limiteCobranca, ctrl.renovarPix);
+router.post('/criar-cartao-recorrente', limiteCobranca, ctrl.criarCartaoRecorrente);
+router.post('/cancelar',              limiteCobranca, ctrl.cancelar);
 
 module.exports = router;

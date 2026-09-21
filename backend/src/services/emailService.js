@@ -477,13 +477,76 @@ async function enviarPagamentoAssinaturaConfirmado({ nome, nomeFantasia, email, 
       ${linha('Plano ativo até', ateFmt, true)}
     </table>
     ${metodo === 'pix' ? `<p style="color:#555;line-height:1.6;font-size:13px;">No PIX a renovação é mensal: alguns dias antes de ${ateFmt} a gente te lembra de gerar o próximo PIX.</p>` : ''}
-    ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/planos`)}
+    ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
   `);
   return enviar({ to: email, subject: renovacao ? `IUB MAIS — ${cfg.nome} renovado até ${ateFmt}` : `🎉 IUB MAIS — ${cfg.nome} ativo!`, html });
 }
 
+function dataBR(d) {
+  return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+// Cartão recorrente: trial de 7 dias começou.
+async function enviarTrialAtivado({ nome, nomeFantasia, email, plano, valor, trialAte }) {
+  const cfg = PLANOS[plano] || PLANOS.gratis;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Bem-vindo ao ${cfg.nome}! 7 dias grátis ativados</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A <strong>${nomeFantasia}</strong> já está com todos os benefícios do <strong>${cfg.nome}</strong>. Aproveite pra testar tudo.</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('Trial grátis até', dataBR(trialAte))}
+      ${linha('Primeira cobrança', `${formatarPrecoBRL(valor)} em ${dataBR(trialAte)}`, true)}
+      ${linha('Depois', `${formatarPrecoBRL(valor)} por mês, no cartão`)}
+    </table>
+    <p style="color:#555;line-height:1.6;font-size:13px;">Não quer continuar? Cancele antes de ${dataBR(trialAte)} em Minha Assinatura e nada é cobrado.</p>
+    ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
+  `);
+  return enviar({ to: email, subject: `🎉 IUB MAIS — ${cfg.nome}: 7 dias grátis ativados`, html });
+}
+
+// Cartão recorrente: lembretes do fim do trial (dia 5 e dia 7).
+async function enviarTrialTerminando({ nome, nomeFantasia, email, plano, valor, dataCobranca, amanha }) {
+  const cfg = PLANOS[plano] || PLANOS.gratis;
+  const titulo = amanha ? 'Amanhã vamos cobrar seu cartão' : 'Faltam 2 dias pro seu trial acabar';
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">${titulo}</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! O trial grátis do <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> termina em <strong>${dataBR(dataCobranca)}</strong>.</p>
+    <p style="color:#555;line-height:1.6;">Nessa data cobramos <strong>${formatarPrecoBRL(valor)}</strong> no cartão cadastrado e o plano continua sem interrupção. Não precisa fazer nada.</p>
+    <p style="color:#555;line-height:1.6;font-size:13px;">Se não quiser continuar, cancele antes em Minha Assinatura.</p>
+    ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
+  `);
+  return enviar({ to: email, subject: `IUB MAIS — ${titulo}`, html });
+}
+
+// Cartão recorrente: cobrança recusada (o MP tenta de novo sozinho).
+async function enviarFalhaPagamentoCartao({ nome, nomeFantasia, email, plano, valor }) {
+  const cfg = PLANOS[plano] || PLANOS.gratis;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">⚠️ Não conseguimos cobrar seu cartão</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. A cobrança de <strong>${formatarPrecoBRL(valor)}</strong> do <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> foi recusada pelo cartão.</p>
+    <p style="color:#555;line-height:1.6;">Vamos tentar de novo automaticamente nos próximos dias. Pra não perder os benefícios, confira se o cartão tem limite ou assine de novo com outro cartão (ou PIX).</p>
+    ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
+  `);
+  return enviar({ to: email, subject: `⚠️ IUB MAIS — Falha no pagamento do ${cfg.nome}`, html });
+}
+
+async function enviarAssinaturaCancelada({ nome, nomeFantasia, email, plano, acessoAte }) {
+  const cfg = PLANOS[plano] || PLANOS.gratis;
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Assinatura cancelada — sentiremos sua falta</h2>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. A assinatura do <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> foi cancelada e <strong>não haverá novas cobranças</strong>.</p>
+    ${acessoAte ? `<p style="color:#555;line-height:1.6;">Os benefícios continuam até <strong>${dataBR(acessoAte)}</strong>. Depois disso sua loja volta pro plano Grátis — seus produtos continuam no ar.</p>` : ''}
+    <p style="color:#555;line-height:1.6;font-size:13px;">Mudou de ideia? É só assinar de novo quando quiser.</p>
+    ${botao('Ver Planos', `${PORTAL_URL}/parceiro/painel/planos`)}
+  `);
+  return enviar({ to: email, subject: `IUB MAIS — Assinatura ${cfg.nome} cancelada`, html });
+}
+
 module.exports = {
   enviarPagamentoAssinaturaConfirmado,
+  enviarTrialAtivado,
+  enviarTrialTerminando,
+  enviarFalhaPagamentoCartao,
+  enviarAssinaturaCancelada,
   enviarCredenciais,
   enviarCarteirinhaAtivada,
   enviarNovoDependente,
