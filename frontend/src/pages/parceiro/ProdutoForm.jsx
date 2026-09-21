@@ -9,6 +9,7 @@ import CampoPreco from '../../components/ui/CampoPreco';
 import ImageCropUpload from '../../components/ImageCropUpload';
 import IACadastroProduto from '../../components/IACadastroProduto';
 import CadastroPorVoz from '../../components/parceiro/CadastroPorVoz';
+import CadastroVozGuiada from '../../components/parceiro/CadastroVozGuiada';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DICAS = [
@@ -115,39 +116,64 @@ export default function ParceiroProdutoForm() {
     carregarStatusIA();
   }
 
+  // Callback do CadastroVozGuiada. `publicar`: salva na hora pelo mesmo
+  // handleSalvar do botão Publicar (mesmas validações/limites — se algo
+  // falhar, o toast explica e o form já fica preenchido pra corrigir).
+  function aplicarSugestaoGuiada(d, { publicar }) {
+    const novoForm = {
+      ...form,
+      nome: d.nome || form.nome,
+      descricao: d.descricao || form.descricao,
+      categoria: form.categoria || 'Alimentação',
+      preco: d.preco != null ? Number(d.preco).toFixed(2) : form.preco,
+    };
+    setForm(novoForm);
+    setTranscricaoVoz(null);
+    if (d.foto) {
+      setFotoDaIA(d.foto);
+      setFotoDaIAPreview(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(d.foto); });
+    }
+    carregarStatusIA();
+    if (publicar) handleSalvar(false, novoForm, d.foto || fotoDaIA);
+    else toast.success('Pronto! Confira os dados e clique em Publicar.');
+  }
+
   function removerFotoDaIA() {
     if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
     setFotoDaIA(null);
     setFotoDaIAPreview(null);
   }
 
-  function validar() {
-    if (form.nome.trim().length < 3) return 'Nome precisa ter pelo menos 3 caracteres';
-    if (form.descricao.trim().length < 20) return 'Descrição precisa ter pelo menos 20 caracteres';
-    const preco = parseFloat(form.preco);
+  function validar(f = form) {
+    if (f.nome.trim().length < 3) return 'Nome precisa ter pelo menos 3 caracteres';
+    if (f.descricao.trim().length < 20) return 'Descrição precisa ter pelo menos 20 caracteres';
+    const preco = parseFloat(f.preco);
     if (!Number.isFinite(preco) || preco <= 0) return 'Preço normal é obrigatório e deve ser maior que zero';
-    if (form.preco_associado) {
-      const pa = parseFloat(form.preco_associado);
+    if (f.preco_associado) {
+      const pa = parseFloat(f.preco_associado);
       if (!Number.isFinite(pa) || pa <= 0) return 'Preço associado inválido';
       if (pa >= preco) return 'Preço associado deve ser menor que o preço normal';
     }
-    if (form.tempo_preparo_min !== '') {
-      const t = Number(form.tempo_preparo_min);
+    if (f.tempo_preparo_min !== '') {
+      const t = Number(f.tempo_preparo_min);
       if (!Number.isInteger(t) || t < 1 || t > 300) return 'Tempo de preparo deve ser entre 1 e 300 minutos';
     }
     return null;
   }
 
-  async function handleSalvar(rascunho) {
-    const erro = validar();
+  // `f`/`foto` explícitos pra voz guiada poder publicar direto da revisão
+  // com os dados que acabou de montar (o setForm dela ainda não aplicou
+  // nesse mesmo tick). Os botões da tela chamam só handleSalvar(rascunho).
+  async function handleSalvar(rascunho, f = form, foto = fotoDaIA) {
+    const erro = validar(f);
     if (erro) return toast.error(erro);
 
     setSalvando(true);
     const payload = {
-      ...form,
-      preco: parseFloat(form.preco),
-      preco_associado: form.preco_associado ? parseFloat(form.preco_associado) : null,
-      tempo_preparo_min: form.tempo_preparo_min === '' ? null : Number(form.tempo_preparo_min),
+      ...f,
+      preco: parseFloat(f.preco),
+      preco_associado: f.preco_associado ? parseFloat(f.preco_associado) : null,
+      tempo_preparo_min: f.tempo_preparo_min === '' ? null : Number(f.tempo_preparo_min),
       rascunho,
       ativo: !rascunho,
     };
@@ -167,8 +193,8 @@ export default function ParceiroProdutoForm() {
         // novo depois, o que era exatamente o bug reportado (a seção
         // "Fotos" ficava bloqueada dizendo "salve primeiro" mesmo já tendo
         // uma foto escolhida via IA).
-        if (fotoDaIA) {
-          await enviarFotoDaIA(novoId, fotoDaIA);
+        if (foto) {
+          await enviarFotoDaIA(novoId, foto);
         } else {
           toast.success(rascunho ? 'Rascunho salvo! Agora você já pode adicionar fotos.' : 'Produto publicado!');
         }
@@ -191,7 +217,7 @@ export default function ParceiroProdutoForm() {
       fd.append('fotos', file);
       const res = await apiParceiro.post(`/parceiro/produtos/${produtoIdAlvo}/fotos`, fd);
       setFotos(res.data.fotos);
-      toast.success('Produto criado com a foto da IA! 🎉');
+      toast.success('Produto criado com a foto! 🎉');
     } catch (err) {
       const d = err.response?.data;
       toast.error(
@@ -201,9 +227,10 @@ export default function ParceiroProdutoForm() {
         { duration: 8000 }
       );
     } finally {
-      if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
+      // Funcional: o preview pode ter sido criado neste mesmo tick (voz
+      // guiada publicando direto) e ainda não estar no `fotoDaIAPreview`.
+      setFotoDaIAPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
       setFotoDaIA(null);
-      setFotoDaIAPreview(null);
     }
   }
 
@@ -280,7 +307,10 @@ export default function ParceiroProdutoForm() {
             )}
             <div className={eRestaurante ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : ''}>
               {eRestaurante && <CadastroPorVoz onConfirmar={aplicarSugestaoVoz} autoAbrir={searchParams.get('voz') === '1'} />}
-              <IACadastroProduto onConfirmar={aplicarSugestaoIA} />
+              {eRestaurante && <CadastroVozGuiada onConfirmar={aplicarSugestaoGuiada} />}
+              <div className={eRestaurante ? 'sm:col-span-2' : ''}>
+                <IACadastroProduto onConfirmar={aplicarSugestaoIA} />
+              </div>
             </div>
             {statusIA && (!statusIA.trial_ativo || eRestaurante) && (
               <p className="text-center text-[11px] text-slate-400 mt-2">
