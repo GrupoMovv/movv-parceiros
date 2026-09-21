@@ -93,6 +93,7 @@ import ParceiroLives from './pages/parceiro/Lives';
 import ParceiroFechaMes from './pages/parceiro/FechaMes';
 import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
+import ParceiroMinhaAssinatura from './pages/parceiro/MinhaAssinatura';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
@@ -268,6 +269,7 @@ export default function App() {
           <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
           <Route path="planos" element={<ParceiroPlanos />} />
+          <Route path="minha-assinatura" element={<ParceiroMinhaAssinatura />} />
           <Route path="configuracoes" element={<ParceiroConfiguracoes />} />
         </Route>
 

@@ -22,6 +22,7 @@ const ABAS = [
   { label: '👤 Meu Perfil', to: '/parceiro/painel/perfil' },
   { label: '⚙️ Configurações', to: '/parceiro/painel/configuracoes' },
   { label: '💎 Planos', to: '/parceiro/painel/planos' },
+  { label: '💳 Assinatura', to: '/parceiro/painel/minha-assinatura' },
   { label: '🌟 Materiais', to: '/parceiro/painel/materiais' },
   { label: '🎰 Roleta da Sorte', to: '/parceiro/painel/jogos' },
   { label: '🎥 Lives', to: '/parceiro/painel/lives' },
