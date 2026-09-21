@@ -101,6 +101,9 @@ async function opcoesDoParceiro(parceiroId) {
     public_key: mp.PRONTO ? mp.PUBLIC_KEY : null,
     cortesia_interna: Boolean(parceiro?.cortesia_interna),
     trial_disponivel: await trialDisponivel(parceiroId),
+    credito_troca: await creditoTrocaDePlano(parceiroId).then(c => c && {
+      ate: c.ate, plano_anterior: c.planoAnterior, plano_anterior_nome: PLANOS[c.planoAnterior]?.nome, janela_ate: c.janelaAte,
+    }),
     sindicalizada,
     trial_dias_cartao: TRIAL_ASSINATURA_DIAS,
     desconto_cartao_pct: Math.round(DESCONTO_CARTAO_RECORRENTE * 100),
@@ -212,6 +215,7 @@ async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
   }
 
   await cancelarCartoesSoltos(parceiroId);
+  const credito = await creditoTrocaDePlano(parceiroId);
   const { sindicalizada } = parceiro.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
   const valor = precoAssinatura(plano, sindicalizada, 'pix');
 
@@ -248,9 +252,10 @@ async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
     }
 
     const nova = (await cx.query(
-      `INSERT INTO sindicato_assinaturas (parceiro_id, plano_nome, metodo_pagamento, valor_mensal, era_sindicalizada, status, ambiente)
-       VALUES ($1, $2, 'pix', $3, $4, 'aguardando_pagamento', $5) RETURNING *`,
-      [parceiroId, plano, valor, sindicalizada, mp.AMBIENTE]
+      `INSERT INTO sindicato_assinaturas (parceiro_id, plano_nome, metodo_pagamento, valor_mensal, era_sindicalizada, status, ambiente,
+         origem_credito_id, credito_ate)
+       VALUES ($1, $2, 'pix', $3, $4, 'aguardando_pagamento', $5, $6, $7) RETURNING *`,
+      [parceiroId, plano, valor, sindicalizada, mp.AMBIENTE, credito?.assinaturaId || null, credito?.ate || null]
     )).rows[0];
     const pag = (await cx.query(
       `INSERT INTO sindicato_pagamentos (assinatura_id, valor, metodo, status, ambiente)
@@ -392,7 +397,9 @@ async function processarPagamentoMp(mpPay) {
       const per = (await cx.query(
         `SELECT GREATEST(NOW(), COALESCE($1::timestamptz, NOW())) AS inicio,
                 GREATEST(NOW(), COALESCE($1::timestamptz, NOW())) + INTERVAL '1 month' AS fim`,
-        [assinatura.status === 'ativa' ? assinatura.acesso_ate : null]
+        // 1º PIX de uma troca de plano: o mês começa depois dos dias já
+        // pagos da assinatura anterior (credito_ate) — nada cobrado 2x.
+        [assinatura.status === 'ativa' ? assinatura.acesso_ate : assinatura.credito_ate]
       )).rows[0];
       await cx.query('UPDATE sindicato_pagamentos SET periodo_inicio = $1, periodo_fim = $2 WHERE id = $3', [per.inicio, per.fim, pag.id]);
       const renovacao = assinatura.status === 'ativa';
@@ -515,6 +522,8 @@ async function minhaAssinatura(parceiroId) {
       data_inicio: a.data_inicio, acesso_ate: a.acesso_ate, data_proxima_cobranca: a.data_proxima_cobranca,
       data_cancelamento: a.data_cancelamento, ambiente: a.ambiente,
       cartao_bandeira: a.cartao_bandeira, cartao_final: a.cartao_final,
+      // Veio de troca de plano: o "trial" são dias já pagos do plano anterior.
+      credito: Boolean(a.origem_credito_id && a.credito_ate), credito_ate: a.credito_ate,
       renovacao_pix_libera_em: renovacaoLiberaEm,
       pode_renovar_pix: a.status === 'ativa' && a.metodo_pagamento === 'pix' && renovacaoLiberaEm && Date.now() >= renovacaoLiberaEm.getTime(),
       pode_cancelar: viva,
@@ -528,6 +537,34 @@ async function minhaAssinatura(parceiroId) {
 // Cartão recorrente (fase C): preapproval do MP com free_trial de 7 dias.
 // O cartão é tokenizado no navegador (Bricks) — aqui só chega o token.
 // ---------------------------------------------------------------------------
+
+// Troca de plano sem cobrança em dobro: cancelou há menos de
+// JANELA_TROCA_HORAS e ainda tem dias pagos (ou de trial) -> a próxima
+// assinatura aproveita esses dias. "ate" nunca passa da data original:
+// se a origem já era um crédito ainda não pago, vale o credito_ate dela
+// (trocar várias vezes seguidas não cria dia extra).
+const JANELA_TROCA_HORAS = 24;
+async function creditoTrocaDePlano(parceiroId, cx = db) {
+  const r = (await cx.query(
+    `SELECT a.id, a.plano_nome, a.data_cancelamento,
+            CASE WHEN a.credito_ate IS NOT NULL AND NOT EXISTS (
+                   SELECT 1 FROM sindicato_pagamentos p WHERE p.assinatura_id = a.id AND p.status = 'aprovado')
+                 THEN LEAST(a.acesso_ate, a.credito_ate) ELSE a.acesso_ate END AS ate
+       FROM sindicato_assinaturas a
+      WHERE a.parceiro_id = $1 AND a.status = 'cancelada' AND a.ambiente = $2 AND a.acesso_ate IS NOT NULL
+        AND a.data_cancelamento >= NOW() - ($3 || ' hours')::interval
+        -- Crédito "gasto" = uma assinatura nova que chegou a DAR ACESSO com
+        -- ele (trial de cartão ou PIX pago). PIX aguardando/abandonado não
+        -- gasta: acesso_ate dele é NULL até pagar.
+        AND NOT EXISTS (
+          SELECT 1 FROM sindicato_assinaturas n
+           WHERE n.origem_credito_id = a.id AND n.acesso_ate IS NOT NULL)
+      ORDER BY a.data_cancelamento DESC LIMIT 1`,
+    [parceiroId, mp.AMBIENTE, String(JANELA_TROCA_HORAS)]
+  )).rows[0];
+  if (!r || new Date(r.ate).getTime() < Date.now() + 3600 * 1000) return null; // menos de 1h: não vale a pena
+  return { assinaturaId: r.id, ate: r.ate, planoAnterior: r.plano_nome, janelaAte: new Date(new Date(r.data_cancelamento).getTime() + JANELA_TROCA_HORAS * 3600 * 1000) };
+}
 
 // Trial de 7 dias é UMA vez por parceiro (cancelar e assinar de novo não
 // ganha outro trial). Só conta trial que chegou a existir no MP
@@ -610,8 +647,20 @@ async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmai
 
   await cancelarCartoesSoltos(parceiroId);
   const comTrial = await trialDisponivel(parceiroId);
+  const credito = await creditoTrocaDePlano(parceiroId);
   const { sindicalizada } = parceiro.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
   const valor = precoAssinatura(plano, sindicalizada, 'cartao_recorrente');
+
+  // Dias sem cobrança = o maior entre o trial (1ª assinatura de cartão) e
+  // os dias já pagos da assinatura cancelada há pouco (troca de plano).
+  // O MP conta free_trial em dias inteiros: arredonda pra CIMA (nunca
+  // cobra antes de acabar o que já foi pago).
+  const agoraMs = Date.now();
+  const fimTrialMs = comTrial ? agoraMs + TRIAL_ASSINATURA_DIAS * 864e5 : 0;
+  const fimCreditoMs = credito ? new Date(credito.ate).getTime() : 0;
+  const diasGratis = Math.max(fimTrialMs, fimCreditoMs) > agoraMs ? Math.ceil((Math.max(fimTrialMs, fimCreditoMs) - agoraMs) / 864e5) : 0;
+  const gratisAte = diasGratis ? new Date(agoraMs + diasGratis * 864e5) : null;
+  const porCredito = Boolean(credito) && fimCreditoMs >= fimTrialMs;
 
   const { assinatura, pixParaCancelar } = await transacao(async cx => {
     const viva = (await cx.query(
@@ -636,11 +685,12 @@ async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmai
     const nova = (await cx.query(
       `INSERT INTO sindicato_assinaturas
          (parceiro_id, plano_nome, metodo_pagamento, valor_mensal, era_sindicalizada, status, trial_ate, ambiente,
-          mp_payer_email, cartao_bandeira, cartao_final)
-       VALUES ($1, $2, 'cartao_recorrente', $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [parceiroId, plano, valor, sindicalizada, comTrial ? 'trial' : 'aguardando_pagamento',
-        comTrial ? new Date(Date.now() + TRIAL_ASSINATURA_DIAS * 864e5) : null, mp.AMBIENTE,
-        email, String(bandeira || '').slice(0, 30) || null, /^\d{4}$/.test(String(final4 || '')) ? String(final4) : null]
+          mp_payer_email, cartao_bandeira, cartao_final, origem_credito_id, credito_ate)
+       VALUES ($1, $2, 'cartao_recorrente', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [parceiroId, plano, valor, sindicalizada, gratisAte ? 'trial' : 'aguardando_pagamento',
+        gratisAte, mp.AMBIENTE,
+        email, String(bandeira || '').slice(0, 30) || null, /^\d{4}$/.test(String(final4 || '')) ? String(final4) : null,
+        credito?.assinaturaId || null, credito?.ate || null]
     )).rows[0];
     return { assinatura: nova, pixParaCancelar: cancelar };
   }).catch(err => {
@@ -661,7 +711,7 @@ async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmai
       frequency_type: 'months',
       transaction_amount: valor,
       currency_id: 'BRL',
-      ...(comTrial ? { free_trial: { frequency: TRIAL_ASSINATURA_DIAS, frequency_type: 'days' } } : {}),
+      ...(diasGratis ? { free_trial: { frequency: diasGratis, frequency_type: 'days' } } : {}),
     },
   };
 
@@ -682,17 +732,17 @@ async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmai
         WHERE id = $4 RETURNING *`,
       [String(resp.id), resp.payer_id ? String(resp.payer_id) : null, proxima, assinatura.id]
     )).rows[0];
-    // Trial: libera o plano JÁ, até o fim do trial (+ carência pra a 1ª
-    // cobrança chegar). Sem trial: só ativa quando a 1ª cobrança aprovar.
-    if (comTrial) {
+    // Trial/crédito: libera o plano JÁ, até o fim dos dias grátis (+
+    // carência pra a 1ª cobrança chegar). Sem: ativa na 1ª cobrança.
+    if (gratisAte) {
       await aplicarPlanoNoParceiro(cx, upd, new Date(new Date(upd.trial_ate).getTime() + CARENCIA_CARTAO_DIAS * 864e5), 'assinatura_trial');
     }
     return upd;
   });
 
-  if (comTrial) {
+  if (gratisAte) {
     contatoDoParceiro(parceiroId).then(c => c?.email && emailService.enviarTrialAtivado({
-      nome: c.nome, nomeFantasia: c.nome, email: c.email, plano, valor, trialAte: final.trial_ate,
+      nome: c.nome, nomeFantasia: c.nome, email: c.email, plano, valor, trialAte: final.trial_ate, credito: porCredito,
     })).catch(err => console.error('[assinatura] e-mail de trial falhou:', err.message));
   }
 
@@ -700,7 +750,9 @@ async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmai
     assinatura_id: final.id,
     subscription_id: final.mp_subscription_id,
     status: final.status,
-    trial: comTrial,
+    trial: Boolean(gratisAte) && !porCredito,
+    credito: porCredito,
+    dias_gratis: diasGratis,
     trial_ate: final.trial_ate,
     primeira_cobranca: final.data_proxima_cobranca,
     valor,
@@ -969,7 +1021,7 @@ async function rotinaDiaria() {
       if (c?.email) {
         await emailService.enviarTrialTerminando({
           nome: c.nome, nomeFantasia: c.nome, email: c.email, plano: a.plano_nome,
-          valor: a.valor_mensal, dataCobranca: a.trial_ate, amanha: a.amanha,
+          valor: a.valor_mensal, dataCobranca: a.trial_ate, amanha: a.amanha, credito: Boolean(a.origem_credito_id),
         });
       }
       await db.query('UPDATE sindicato_assinaturas SET ultimo_lembrete_tipo = $1, ultimo_lembrete_em = NOW() WHERE id = $2', [chave, a.id]);

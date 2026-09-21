@@ -487,29 +487,32 @@ function dataBR(d) {
 }
 
 // Cartão recorrente: trial de 7 dias começou.
-async function enviarTrialAtivado({ nome, nomeFantasia, email, plano, valor, trialAte }) {
+// credito = troca de plano: os dias sem cobrança são os que já estavam
+// pagos no plano anterior (não é trial).
+async function enviarTrialAtivado({ nome, nomeFantasia, email, plano, valor, trialAte, credito }) {
   const cfg = PLANOS[plano] || PLANOS.gratis;
   const html = template(`
-    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Bem-vindo ao ${cfg.nome}! 7 dias grátis ativados</h2>
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">${credito ? `🔁 Plano trocado — ${cfg.nome} já ativo!` : `🎉 Bem-vindo ao ${cfg.nome}! 7 dias grátis ativados`}</h2>
+    ${credito ? `<p style="color:#555;line-height:1.6;">Aproveitamos os dias que você já tinha pago no plano anterior: <strong>nada é cobrado em dobro</strong>.</p>` : ''}
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A <strong>${nomeFantasia}</strong> já está com todos os benefícios do <strong>${cfg.nome}</strong>. Aproveite pra testar tudo.</p>
     <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
-      ${linha('Trial grátis até', dataBR(trialAte))}
+      ${linha(credito ? 'Já pago até' : 'Trial grátis até', dataBR(trialAte))}
       ${linha('Primeira cobrança', `${formatarPrecoBRL(valor)} em ${dataBR(trialAte)}`, true)}
       ${linha('Depois', `${formatarPrecoBRL(valor)} por mês, no cartão`)}
     </table>
     <p style="color:#555;line-height:1.6;font-size:13px;">Não quer continuar? Cancele antes de ${dataBR(trialAte)} em Minha Assinatura e nada é cobrado.</p>
     ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
   `);
-  return enviar({ to: email, subject: `🎉 IUB MAIS — ${cfg.nome}: 7 dias grátis ativados`, html });
+  return enviar({ to: email, subject: credito ? `IUB MAIS — ${cfg.nome} ativo (troca de plano)` : `🎉 IUB MAIS — ${cfg.nome}: 7 dias grátis ativados`, html });
 }
 
 // Cartão recorrente: lembretes do fim do trial (dia 5 e dia 7).
-async function enviarTrialTerminando({ nome, nomeFantasia, email, plano, valor, dataCobranca, amanha }) {
+async function enviarTrialTerminando({ nome, nomeFantasia, email, plano, valor, dataCobranca, amanha, credito }) {
   const cfg = PLANOS[plano] || PLANOS.gratis;
-  const titulo = amanha ? 'Amanhã vamos cobrar seu cartão' : 'Faltam 2 dias pro seu trial acabar';
+  const titulo = amanha ? 'Amanhã vamos cobrar seu cartão' : credito ? 'Faltam 2 dias pra primeira cobrança do novo plano' : 'Faltam 2 dias pro seu trial acabar';
   const html = template(`
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">${titulo}</h2>
-    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! O trial grátis do <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> termina em <strong>${dataBR(dataCobranca)}</strong>.</p>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! ${credito ? `Os dias já pagos do plano anterior` : `O trial grátis do <strong>${cfg.nome}</strong>`} da <strong>${nomeFantasia}</strong> ${credito ? 'terminam' : 'termina'} em <strong>${dataBR(dataCobranca)}</strong>.</p>
     <p style="color:#555;line-height:1.6;">Nessa data cobramos <strong>${formatarPrecoBRL(valor)}</strong> no cartão cadastrado e o plano continua sem interrupção. Não precisa fazer nada.</p>
     <p style="color:#555;line-height:1.6;font-size:13px;">Se não quiser continuar, cancele antes em Minha Assinatura.</p>
     ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}

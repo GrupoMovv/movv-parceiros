@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { X, Loader2, Copy, CheckCircle2, Clock, RotateCcw, QrCode } from 'lucide-react';
 import apiParceiro from '../../../services/apiParceiro';
 import { ROXO, PRETO } from '../../../pages/public/Marketplace/theme';
-import { formatarBRL, mensagemErro } from './assinaturaUtils';
+import { formatarBRL, dataBR, mensagemErro } from './assinaturaUtils';
 
 const POLLING_MS = 3000;
 
@@ -18,7 +18,7 @@ function formatarContagem(ms) {
 //   modo 'nova'    -> POST /criar-pix { plano }  (1º mês)
 //   modo 'renovar' -> POST /pix/renovar           (próximo mês)
 //   pixInicial     -> PIX já gerado e ainda válido (reabre direto no QR)
-export default function ModalPix({ plano, planoNome, valor, modo = 'nova', pixInicial = null, onFechar }) {
+export default function ModalPix({ plano, planoNome, valor, modo = 'nova', pixInicial = null, creditoAte = null, onFechar }) {
   const [fase, setFase] = useState(pixInicial ? 'qr' : 'confirmar'); // confirmar | gerando | qr | pago | expirado | erro
   const [pix, setPix] = useState(pixInicial);
   const [aceito, setAceito] = useState(false);
@@ -98,8 +98,13 @@ export default function ModalPix({ plano, planoNome, valor, modo = 'nova', pixIn
             <div className="rounded-2xl bg-slate-50 p-4 mt-4 space-y-1.5 text-sm">
               <div className="flex justify-between"><span className="text-slate-500">Plano</span><strong style={{ color: PRETO }}>{planoNome}</strong></div>
               <div className="flex justify-between"><span className="text-slate-500">Valor</span><strong style={{ color: ROXO }}>{formatarBRL(valor)}/mês</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Acesso</span><strong style={{ color: PRETO }}>30 dias após o pagamento</strong></div>
+              <div className="flex justify-between"><span className="text-slate-500">Acesso</span><strong style={{ color: PRETO }}>{creditoAte && modo === 'nova' ? `1 mês a partir de ${dataBR(creditoAte)}` : '30 dias após o pagamento'}</strong></div>
             </div>
+            {modo === 'nova' && creditoAte && (
+              <p className="text-xs text-blue-800 bg-blue-50 rounded-xl px-3 py-2 mt-3">
+                🔁 Troca de plano: o mês que você pagar agora começa em <strong>{dataBR(creditoAte)}</strong>, depois dos dias que você já pagou — nada é cobrado em dobro.
+              </p>
+            )}
             {modo === 'nova' && (
               <p className="text-xs text-slate-500 mt-3">
                 No PIX o pagamento é na hora e a renovação é mensal (a gente te lembra). O <strong>trial de 7 dias grátis</strong> é só na assinatura com cartão.

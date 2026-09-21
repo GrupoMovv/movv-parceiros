@@ -100,6 +100,9 @@ export default function ParceiroPlanos() {
   const modoAssinatura = Boolean(opcoes?.pronto) && !cortesia;
   const assinaturaViva = ['trial', 'ativa', 'pausada'].includes(minha?.assinatura?.status) ? minha.assinatura : null;
   const precoOnline = plano => opcoes?.planos?.find(p => p.plano === plano);
+  // Trocando de plano (crédito de dias já pagos): o cabeçalho não promete
+  // o trial — quem aparece nos cards é a data da 1ª cobrança.
+  const destacarTrial = modoAssinatura && opcoes.trial_disponivel && !opcoes.credito_troca;
   const [interesses, setInteresses] = useState(null);
   const [planoModal, setPlanoModal] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -174,12 +177,12 @@ export default function ParceiroPlanos() {
     <div className="space-y-8">
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold" style={{ color: PRETO }}>
-          {modoAssinatura && opcoes.trial_disponivel ? `Escolha seu plano — ${opcoes.trial_dias_cartao} dias GRÁTIS` : 'Escolha o plano ideal pra sua empresa'}
+          {destacarTrial ? `Escolha seu plano — ${opcoes.trial_dias_cartao} dias GRÁTIS` : 'Escolha o plano ideal pra sua empresa'}
         </h1>
         {modoAssinatura ? (
           <p className="text-slate-500 text-sm mt-3">
             Pague com <strong>PIX</strong> todo mês ou assine no <strong>cartão</strong> com {opcoes.desconto_cartao_pct}% de desconto
-            {opcoes.trial_disponivel ? ` e ${opcoes.trial_dias_cartao} dias grátis pra testar` : ''}. Cancele quando quiser.
+            {destacarTrial ? ` e ${opcoes.trial_dias_cartao} dias grátis pra testar` : ''}. Cancele quando quiser.
           </p>
         ) : !cortesia && (
           <>
@@ -224,6 +227,17 @@ export default function ParceiroPlanos() {
           <button type="button" onClick={() => setModalAssinar({ tipo: 'pix-pendente' })} className="text-xs font-bold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
             Ver QR Code
           </button>
+        </div>
+      )}
+
+      {modoAssinatura && !assinaturaViva && opcoes.credito_troca && (
+        <div className="rounded-2xl p-5" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+          <p className="font-bold text-sm text-blue-900">🔁 Trocando de plano?</p>
+          <p className="text-xs text-blue-800 mt-1">
+            Você ainda tem o <strong>{opcoes.credito_troca.plano_anterior_nome}</strong> pago até <strong>{dataBR(opcoes.credito_troca.ate)}</strong>.
+            Assinando outro plano até {new Date(opcoes.credito_troca.janela_ate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })},
+            a gente aproveita esses dias — <strong>nada é cobrado em dobro</strong>.
+          </p>
         </div>
       )}
 
@@ -281,6 +295,7 @@ export default function ParceiroPlanos() {
               precos: precoOnline(planoKey),
               trial: Boolean(opcoes.trial_disponivel),
               trialDias: opcoes.trial_dias_cartao,
+              creditoAte: opcoes.credito_troca?.ate,
               descontoPct: opcoes.desconto_cartao_pct,
               bloqueado: Boolean(assinaturaViva),
               onPix: () => setModalAssinar({ tipo: 'pix', plano: planoKey }),
@@ -325,6 +340,7 @@ export default function ParceiroPlanos() {
           plano={modalAssinar.plano}
           planoNome={opcoes.planos.find(p => p.plano === modalAssinar.plano)?.nome}
           valor={precoOnline(modalAssinar.plano)?.pix}
+          creditoAte={opcoes.credito_troca?.ate}
           onFechar={() => setModalAssinar(null)}
         />
       )}
@@ -344,6 +360,7 @@ export default function ParceiroPlanos() {
           valor={precoOnline(modalAssinar.plano)?.cartao_recorrente}
           trial={Boolean(opcoes.trial_disponivel)}
           trialDias={opcoes.trial_dias_cartao}
+          creditoAte={opcoes.credito_troca?.ate}
           publicKey={opcoes.public_key}
           emailPadrao={usuario?.email}
           onFechar={() => setModalAssinar(null)}
@@ -588,8 +605,11 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, 
 
 // PIX (preço cheio, paga na hora, sem trial) x Cartão recorrente (5% OFF,
 // trial, recomendado). Preços já calculados pro CNPJ da loja (/opcoes).
-function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, descontoPct, bloqueado, onPix, onCartao }) {
+function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, creditoAte, descontoPct, bloqueado, onPix, onCartao }) {
   if (!precos) return null;
+  // Troca de plano: se os dias já pagos passam do trial, é isso que o
+  // cartão oferece (mesma regra do ModalCartao/backend).
+  const porCredito = Boolean(creditoAte) && new Date(creditoAte).getTime() >= (trial ? Date.now() + trialDias * 864e5 : 0);
   if (bloqueado) {
     return (
       <Link to="/parceiro/painel/minha-assinatura"
@@ -608,10 +628,12 @@ function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, descontoPct, bloq
         <p className="text-sm mt-1.5" style={{ color: PRETO }}>
           Cartão: <strong>{formatarBRL(precos.cartao_recorrente)}</strong><span className="text-slate-400 text-xs">/mês</span>
         </p>
-        {trial && <p className="text-[11px] font-semibold mt-0.5" style={{ color: '#7A5E00' }}>🎁 {trialDias} dias grátis pra testar</p>}
+        {porCredito
+          ? <p className="text-[11px] font-semibold mt-0.5 text-blue-800">🔁 1ª cobrança só em {dataBR(creditoAte)} (dias já pagos)</p>
+          : trial && <p className="text-[11px] font-semibold mt-0.5" style={{ color: '#7A5E00' }}>🎁 {trialDias} dias grátis pra testar</p>}
         <button type="button" onClick={onCartao}
           className="mt-2 w-full text-sm font-bold py-2.5 rounded-lg text-white transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ backgroundColor: ROXO }}>
-          {trial ? 'Começar grátis no cartão' : 'Assinar com cartão'}
+          {porCredito ? 'Trocar pro cartão' : trial ? 'Começar grátis no cartão' : 'Assinar com cartão'}
         </button>
       </div>
       <div className="rounded-xl border border-slate-200 p-3">

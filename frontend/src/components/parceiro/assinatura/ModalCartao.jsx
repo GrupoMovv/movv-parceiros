@@ -10,14 +10,20 @@ const CONTAINER_ID = 'iubmais-card-brick';
 // (Card Payment Brick do Mercado Pago — número/CVV ficam nos iframes do
 // MP, a gente só recebe o token) -> POST /criar-cartao-recorrente ->
 // "7 dias grátis ativados".
-export default function ModalCartao({ plano, planoNome, valor, trial, trialDias, publicKey, emailPadrao, onFechar }) {
+export default function ModalCartao({ plano, planoNome, valor, trial, trialDias, creditoAte, publicKey, emailPadrao, onFechar }) {
   const [fase, setFase] = useState('confirmar'); // confirmar | cartao | enviando | sucesso | erro
   const [aceito, setAceito] = useState(false);
   const [carregandoBrick, setCarregandoBrick] = useState(true);
   const [erro, setErro] = useState(null);
   const [resultado, setResultado] = useState(null);
   const controllerRef = useRef(null);
-  const primeiraCobranca = new Date(Date.now() + (trial ? trialDias : 0) * 864e5);
+  // Dias sem cobrança = maior entre o trial e os dias já pagos do plano
+  // cancelado há pouco (troca de plano) — mesma conta do backend.
+  const fimTrial = trial ? Date.now() + trialDias * 864e5 : 0;
+  const fimCredito = creditoAte ? new Date(creditoAte).getTime() : 0;
+  const porCredito = Boolean(creditoAte) && fimCredito >= fimTrial;
+  const semCobrancaAgora = Math.max(fimTrial, fimCredito) > Date.now();
+  const primeiraCobranca = new Date(semCobrancaAgora ? Math.max(fimTrial, fimCredito) : Date.now());
 
   function desmontarBrick() {
     try { controllerRef.current?.unmount(); } catch { /* já desmontado */ }
@@ -42,7 +48,7 @@ export default function ModalCartao({ plano, planoNome, valor, trial, trialDias,
             paymentMethods: { maxInstallments: 1, minInstallments: 1, types: { excluded: ['debit_card'] } },
             visual: {
               hidePaymentButton: false,
-              texts: { formTitle: 'Cartão de crédito', formSubmit: trial ? `Começar ${trialDias} dias grátis` : `Assinar por ${formatarBRL(valor)}/mês` },
+              texts: { formTitle: 'Cartão de crédito', formSubmit: porCredito ? 'Trocar de plano' : trial ? `Começar ${trialDias} dias grátis` : `Assinar por ${formatarBRL(valor)}/mês` },
               style: { theme: 'default', customVariables: { baseColor: ROXO, borderRadiusLarge: '16px' } },
             },
           },
@@ -93,7 +99,11 @@ export default function ModalCartao({ plano, planoNome, valor, trial, trialDias,
           <div>
             <CreditCard className="w-8 h-8" style={{ color: ROXO }} />
             <h2 className="font-black text-lg mt-2" style={{ color: PRETO }}>Assinar com cartão</h2>
-            {trial && (
+            {porCredito ? (
+              <p className="inline-block mt-2 text-xs font-black px-3 py-1 rounded-full bg-blue-50 text-blue-800">
+                🔁 Dias já pagos do plano anterior aproveitados
+              </p>
+            ) : trial && (
               <p className="inline-block mt-2 text-xs font-black px-3 py-1 rounded-full" style={{ backgroundColor: `${DOURADO}33`, color: '#7A5E00' }}>
                 🎁 {trialDias} dias GRÁTIS pra testar
               </p>
@@ -101,13 +111,15 @@ export default function ModalCartao({ plano, planoNome, valor, trial, trialDias,
             <div className="rounded-2xl bg-slate-50 p-4 mt-4 space-y-1.5 text-sm">
               <div className="flex justify-between"><span className="text-slate-500">Plano</span><strong style={{ color: PRETO }}>{planoNome}</strong></div>
               <div className="flex justify-between"><span className="text-slate-500">Mensalidade</span><strong style={{ color: ROXO }}>{formatarBRL(valor)}/mês</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Primeira cobrança</span><strong style={{ color: PRETO }}>{trial ? dataBR(primeiraCobranca) : 'agora'}</strong></div>
+              <div className="flex justify-between"><span className="text-slate-500">Primeira cobrança</span><strong style={{ color: PRETO }}>{semCobrancaAgora ? dataBR(primeiraCobranca) : 'agora'}</strong></div>
             </div>
             <label className="flex items-start gap-2 mt-4 text-xs text-slate-600">
               <input type="checkbox" checked={aceito} onChange={e => setAceito(e.target.checked)} className="rounded mt-0.5" />
-              {trial
-                ? `Li e aceito: ${trialDias} dias grátis e depois ${formatarBRL(valor)} por mês no cartão, renovação automática. Cancele quando quiser em Minha Assinatura — cancelando antes de ${dataBR(primeiraCobranca)}, nada é cobrado.`
-                : `Li e aceito: ${formatarBRL(valor)} por mês no cartão, renovação automática. Cancele quando quiser em Minha Assinatura.`}
+              {porCredito
+                ? `Li e aceito: o novo plano vale agora; a primeira cobrança de ${formatarBRL(valor)} é em ${dataBR(primeiraCobranca)} (depois dos dias que já paguei) e depois todo mês no cartão, renovação automática. Cancele quando quiser em Minha Assinatura.`
+                : trial
+                  ? `Li e aceito: ${trialDias} dias grátis e depois ${formatarBRL(valor)} por mês no cartão, renovação automática. Cancele quando quiser em Minha Assinatura — cancelando antes de ${dataBR(primeiraCobranca)}, nada é cobrado.`
+                  : `Li e aceito: ${formatarBRL(valor)} por mês no cartão, renovação automática. Cancele quando quiser em Minha Assinatura.`}
             </label>
             <button type="button" onClick={() => setFase('cartao')} disabled={!aceito}
               className="w-full mt-5 text-sm font-bold py-3.5 rounded-xl text-white disabled:opacity-50" style={{ backgroundColor: ROXO }}>
@@ -140,10 +152,10 @@ export default function ModalCartao({ plano, planoNome, valor, trial, trialDias,
           <div className="text-center py-6">
             <CheckCircle2 className="w-14 h-14 mx-auto text-emerald-500" />
             <h2 className="font-black text-xl mt-3" style={{ color: PRETO }}>
-              {resultado.trial ? `🎉 Sucesso! ${trialDias} dias grátis ativados` : '🎉 Assinatura criada!'}
+              {resultado.credito ? '🔁 Plano trocado!' : resultado.trial ? `🎉 Sucesso! ${trialDias} dias grátis ativados` : '🎉 Assinatura criada!'}
             </h2>
             <p className="text-slate-500 text-sm mt-2">
-              {resultado.trial
+              {resultado.trial || resultado.credito
                 ? <>Plano <strong>{planoNome}</strong> já liberado. Primeira cobrança de <strong>{formatarBRL(resultado.valor)}</strong> em <strong>{dataBR(resultado.primeira_cobranca || resultado.trial_ate)}</strong>.</>
                 : <>Estamos processando a primeira cobrança de <strong>{formatarBRL(resultado.valor)}</strong>. O plano ativa assim que o cartão for aprovado.</>}
             </p>

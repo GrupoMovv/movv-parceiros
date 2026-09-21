@@ -127,7 +127,7 @@ export default function MinhaAssinatura() {
           <Cartao>
             <p className="font-bold" style={{ color: PRETO }}>Histórico de pagamentos</p>
             {dados.pagamentos.length === 0 ? (
-              <p className="text-sm text-slate-400 mt-2">Nenhum pagamento ainda{a.status === 'trial' ? ' — você está no trial grátis.' : '.'}</p>
+              <p className="text-sm text-slate-400 mt-2">Nenhum pagamento ainda{a.status === 'trial' ? (a.credito ? ' neste plano — os dias já pagos do plano anterior estão valendo.' : ' — você está no trial grátis.') : '.'}</p>
             ) : (
               <ul className="divide-y divide-slate-100 mt-2">
                 {dados.pagamentos.map(p => (
@@ -198,8 +198,9 @@ function rotuloData(a) {
 
 function StatusBadge({ assinatura: a }) {
   const r = ROTULO_STATUS[a.status] || ROTULO_STATUS.ativa;
+  const dias = a.trial_dias_restantes != null ? `${a.trial_dias_restantes} ${a.trial_dias_restantes === 1 ? 'dia' : 'dias'}` : '';
   const texto = a.status === 'trial' && a.trial_dias_restantes != null
-    ? `Trial — ${a.trial_dias_restantes} ${a.trial_dias_restantes === 1 ? 'dia restante' : 'dias restantes'}`
+    ? (a.credito ? `Já pago — ${dias}` : `Trial — ${dias} ${a.trial_dias_restantes === 1 ? 'restante' : 'restantes'}`)
     : r.texto;
   return <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ color: r.cor, backgroundColor: r.fundo }}>{texto}</span>;
 }
@@ -207,7 +208,9 @@ function StatusBadge({ assinatura: a }) {
 // Textos combinados por caso (trial / cartão ativo / PIX ativo / cancelada).
 function MensagemStatus({ assinatura: a }) {
   let texto = null;
-  if (a.status === 'trial') {
+  if (a.status === 'trial' && a.credito) {
+    texto = `Plano trocado: os dias que você já tinha pago no plano anterior foram aproveitados. Primeira cobrança do ${a.plano_nome} (${formatarBRL(a.valor_mensal)}) em ${dataBR(a.trial_ate)}.`;
+  } else if (a.status === 'trial') {
     const d = diasAte(a.trial_ate);
     texto = `Você está no trial gratuito. Primeira cobrança de ${formatarBRL(a.valor_mensal)} ${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d} dias`} (${dataBR(a.trial_ate)}). Cancele antes e nada é cobrado.`;
   } else if (a.status === 'ativa' && a.metodo === 'cartao_recorrente') {
