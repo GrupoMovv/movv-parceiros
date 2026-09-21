@@ -11,6 +11,8 @@ const ABAS = [
   { label: 'Dashboard', to: '/parceiro/painel', end: true },
   { label: 'Meu Perfil', to: '/parceiro/painel/perfil' },
   { label: 'Produtos', to: '/parceiro/painel/produtos' },
+  // IUB Food: só aparece pra quem tem "Alimentação" nas categorias (e_restaurante vem do /auth/me).
+  { label: '🛵 Entrega', to: '/parceiro/painel/entrega', soRestaurante: true },
   { label: 'Promoções', to: '/parceiro/painel/promocoes' },
   { label: 'Estatísticas', to: '/parceiro/painel/estatisticas' },
   { label: '🌟 Materiais', to: '/parceiro/painel/materiais' },
@@ -124,7 +126,7 @@ export default function ParceiroPainelLayout() {
         </div>
 
         <nav className="max-w-6xl mx-auto px-4 sm:px-8 flex gap-1 overflow-x-auto scrollbar-none">
-          {ABAS.map(aba => (
+          {ABAS.filter(aba => !aba.soRestaurante || parceiro.e_restaurante).map(aba => (
             <NavLink
               key={aba.to}
               to={aba.to}

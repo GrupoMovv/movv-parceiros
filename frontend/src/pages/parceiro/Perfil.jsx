@@ -5,14 +5,9 @@ import apiParceiro from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
 import ImageCropUpload from '../../components/ImageCropUpload';
+import { DIAS, statusFuncionamento } from '../../utils/iubFood';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
-const DIAS = [
-  { chave: 'seg', label: 'Segunda' }, { chave: 'ter', label: 'Terça' }, { chave: 'qua', label: 'Quarta' },
-  { chave: 'qui', label: 'Quinta' }, { chave: 'sex', label: 'Sexta' }, { chave: 'sab', label: 'Sábado' },
-  { chave: 'dom', label: 'Domingo' },
-];
-const DIAS_POR_INDICE = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 
 const DIMENSAO_MINIMA = 400;
 
@@ -45,27 +40,6 @@ function formatarTelefone(v) {
   return d.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3').replace(/-$/, '');
 }
 
-function statusFuncionamento(horario) {
-  const agora = new Date();
-  const diaHoje = DIAS_POR_INDICE[agora.getDay()];
-  const hoje = horario?.[diaHoje];
-  const hhmm = agora.toTimeString().slice(0, 5);
-
-  if (hoje?.aberto && hoje.abre && hoje.fecha && hhmm >= hoje.abre && hhmm <= hoje.fecha) {
-    return { aberto: true, texto: `Estamos abertos agora — fecha às ${hoje.fecha}` };
-  }
-
-  for (let i = 1; i <= 7; i++) {
-    const idx = (agora.getDay() + i) % 7;
-    const dia = DIAS_POR_INDICE[idx];
-    const info = horario?.[dia];
-    if (info?.aberto && info.abre) {
-      const rotulo = i === 1 ? 'amanhã' : DIAS.find(d => d.chave === dia)?.label.toLowerCase();
-      return { aberto: false, texto: `Fechado até ${rotulo} ${info.abre}` };
-    }
-  }
-  return { aberto: false, texto: 'Horário de funcionamento não configurado' };
-}
 
 export default function ParceiroPerfil() {
   const [perfil, setPerfil] = useState(null);
@@ -209,7 +183,7 @@ export default function ParceiroPerfil() {
     }
   }
 
-  const statusHoje = statusFuncionamento(horario);
+  const statusHoje = statusFuncionamento(horario) || { aberto: false, texto: 'Horário de funcionamento não configurado' };
 
   return (
     <div className="space-y-6 max-w-3xl">

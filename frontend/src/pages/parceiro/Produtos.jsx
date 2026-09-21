@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Plus, Search, Pencil, Trash2, Pause, Play, Star, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Pause, Play, Star, Loader2, Mic } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
@@ -10,6 +10,7 @@ const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c
 const LIMITE = 30;
 
 export default function ParceiroProdutos() {
+  const { parceiro } = useOutletContext();
   const [produtos, setProdutos] = useState(null);
   const [total, setTotal] = useState(0);
   const [categoria, setCategoria] = useState('');
@@ -60,13 +61,24 @@ export default function ParceiroProdutos() {
           <h1 className="text-xl font-bold" style={{ color: PRETO }}>Produtos</h1>
           <p className="text-slate-500 text-sm mt-0.5">{total} de {LIMITE} produtos usados</p>
         </div>
-        <Link
-          to="/parceiro/painel/produtos/novo"
-          className="flex items-center gap-2 text-white font-semibold text-sm px-5 py-3 rounded-xl transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg"
-          style={{ backgroundColor: ROXO }}
-        >
-          <Plus className="w-4 h-4" /> Cadastrar novo produto
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {parceiro?.e_restaurante && (
+            <Link
+              to="/parceiro/painel/produtos/novo?voz=1"
+              className="flex items-center gap-2 font-semibold text-sm px-5 py-3 rounded-xl border-2 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg"
+              style={{ borderColor: ROXO, color: ROXO }}
+            >
+              <Mic className="w-4 h-4" /> Falar pra cadastrar
+            </Link>
+          )}
+          <Link
+            to="/parceiro/painel/produtos/novo"
+            className="flex items-center gap-2 text-white font-semibold text-sm px-5 py-3 rounded-xl transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg"
+            style={{ backgroundColor: ROXO }}
+          >
+            <Plus className="w-4 h-4" /> Cadastrar novo produto
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">

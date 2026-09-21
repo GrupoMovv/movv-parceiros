@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { X, Loader2, Star, Lightbulb, Check, Send } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
@@ -8,6 +8,7 @@ import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
 import CampoPreco from '../../components/ui/CampoPreco';
 import ImageCropUpload from '../../components/ImageCropUpload';
 import IACadastroProduto from '../../components/IACadastroProduto';
+import CadastroPorVoz from '../../components/parceiro/CadastroPorVoz';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 const DICAS = [
@@ -18,12 +19,17 @@ const DICAS = [
   'Não precisa ser foto profissional!',
 ];
 const LIMITE_FOTOS = 3;
-const VAZIO = { nome: '', descricao: '', categoria: '', marca: '', preco: '', preco_associado: '', estoque_disponivel: true, destaque: false };
+const VAZIO = { nome: '', descricao: '', categoria: '', marca: '', preco: '', preco_associado: '', estoque_disponivel: true, destaque: false, tempo_preparo_min: '' };
 
 export default function ParceiroProdutoForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { parceiro } = useOutletContext();
+  const [searchParams] = useSearchParams();
   const modoEdicao = id && id !== 'novo';
+  // Voz e tempo de preparo são do IUB Food — o prompt da IA de voz é
+  // pensado pra cardápio (ver openaiService.montarPromptVoz).
+  const eRestaurante = Boolean(parceiro?.e_restaurante);
 
   const [produtoId, setProdutoId] = useState(modoEdicao ? id : null);
   const [form, setForm] = useState(VAZIO);
@@ -35,7 +41,8 @@ export default function ParceiroProdutoForm() {
   const [fotoDaIA, setFotoDaIA] = useState(null); // File já recortado, guardado em memória até o produto ser criado
   const [fotoDaIAPreview, setFotoDaIAPreview] = useState(null);
   const [mostrarBannerIA, setMostrarBannerIA] = useState(true);
-  const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados }
+  const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados, voz_limite_dia, voz_usados_hoje }
+  const [transcricaoVoz, setTranscricaoVoz] = useState(null);
   const pendentesRef = useRef(pendentes);
   pendentesRef.current = pendentes;
   const fotoDaIAPreviewRef = useRef(fotoDaIAPreview);
@@ -53,9 +60,10 @@ export default function ParceiroProdutoForm() {
 
   // Contador "IA: X/Y usos este mês" / banner de trial — só usado na tela
   // de produto novo (banner de IA), não custa buscar sempre.
-  useEffect(() => {
+  function carregarStatusIA() {
     apiParceiro.get('/parceiro/produtos/ia-status').then(res => setStatusIA(res.data)).catch(() => {});
-  }, []);
+  }
+  useEffect(carregarStatusIA, []);
 
   useEffect(() => {
     if (!modoEdicao) return;
@@ -65,6 +73,7 @@ export default function ParceiroProdutoForm() {
         nome: p.nome, descricao: p.descricao, categoria: p.categoria || '', marca: p.marca || '',
         preco: p.preco, preco_associado: p.preco_associado || '',
         estoque_disponivel: p.estoque_disponivel, destaque: p.destaque,
+        tempo_preparo_min: p.tempo_preparo_min ?? '',
       });
       setFotos(p.fotos || []);
     }).catch(() => toast.error('Erro ao carregar produto')).finally(() => setCarregando(false));
@@ -91,6 +100,21 @@ export default function ParceiroProdutoForm() {
     }
   }
 
+  // Callback do CadastroPorVoz — mesma ideia do aplicarSugestaoIA, mas a
+  // voz traz preço (e às vezes tempo de preparo), e não traz foto/marca.
+  function aplicarSugestaoVoz(d) {
+    setForm(f => ({
+      ...f,
+      nome: d.nome || f.nome,
+      descricao: d.descricao || f.descricao,
+      categoria: d.categoria || f.categoria,
+      preco: d.preco != null ? Number(d.preco).toFixed(2) : f.preco,
+      tempo_preparo_min: d.tempo_preparo_min ?? f.tempo_preparo_min,
+    }));
+    setTranscricaoVoz(d.transcricao || null);
+    carregarStatusIA();
+  }
+
   function removerFotoDaIA() {
     if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
     setFotoDaIA(null);
@@ -107,6 +131,10 @@ export default function ParceiroProdutoForm() {
       if (!Number.isFinite(pa) || pa <= 0) return 'Preço associado inválido';
       if (pa >= preco) return 'Preço associado deve ser menor que o preço normal';
     }
+    if (form.tempo_preparo_min !== '') {
+      const t = Number(form.tempo_preparo_min);
+      if (!Number.isInteger(t) || t < 1 || t > 300) return 'Tempo de preparo deve ser entre 1 e 300 minutos';
+    }
     return null;
   }
 
@@ -119,6 +147,7 @@ export default function ParceiroProdutoForm() {
       ...form,
       preco: parseFloat(form.preco),
       preco_associado: form.preco_associado ? parseFloat(form.preco_associado) : null,
+      tempo_preparo_min: form.tempo_preparo_min === '' ? null : Number(form.tempo_preparo_min),
       rascunho,
       ativo: !rascunho,
     };
@@ -239,20 +268,43 @@ export default function ParceiroProdutoForm() {
         {!produtoId && mostrarBannerIA && (
           <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #FFF7E0 0%, #FFFFFF 100%)', border: '1px solid #FDE9B8' }}>
             <p className="font-black text-sm" style={{ color: PRETO }}>🎊 NOVO! Cadastro com IA</p>
-            <p className="text-slate-500 text-xs mt-1 mb-4">Nossa IA reconhece o produto na foto e preenche nome, descrição, marca e categoria pra você — de 3-5 minutos pra 30 segundos.</p>
+            <p className="text-slate-500 text-xs mt-1 mb-4">
+              {eRestaurante
+                ? 'Fale o produto e o preço, ou mande uma foto — a IA preenche o cadastro pra você em segundos.'
+                : 'Nossa IA reconhece o produto na foto e preenche nome, descrição, marca e categoria pra você — de 3-5 minutos pra 30 segundos.'}
+            </p>
             {statusIA?.trial_ativo && (
               <p className="text-center text-xs font-bold px-3 py-1.5 rounded-full mb-3" style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}>
                 🎉 Trial ativo! IA ilimitada por mais {statusIA.trial_dias_restantes} {statusIA.trial_dias_restantes === 1 ? 'dia' : 'dias'}
               </p>
             )}
-            <IACadastroProduto onConfirmar={aplicarSugestaoIA} />
-            {statusIA && !statusIA.trial_ativo && (
+            <div className={eRestaurante ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : ''}>
+              {eRestaurante && <CadastroPorVoz onConfirmar={aplicarSugestaoVoz} autoAbrir={searchParams.get('voz') === '1'} />}
+              <IACadastroProduto onConfirmar={aplicarSugestaoIA} />
+            </div>
+            {statusIA && (!statusIA.trial_ativo || eRestaurante) && (
               <p className="text-center text-[11px] text-slate-400 mt-2">
-                IA: {statusIA.usados}/{statusIA.limite ?? '∞'} usos este mês ({statusIA.plano})
+                {eRestaurante && `Voz: ${statusIA.voz_usados_hoje}/${statusIA.voz_limite_dia ?? '∞'} hoje`}
+                {eRestaurante && !statusIA.trial_ativo && ' · '}
+                {!statusIA.trial_ativo && `Foto: ${statusIA.usados}/${statusIA.limite ?? '∞'} usos este mês (${statusIA.plano})`}
               </p>
             )}
             <button type="button" onClick={() => setMostrarBannerIA(false)} className="block mx-auto text-xs text-slate-400 underline mt-3">
               Cadastrar manualmente
+            </button>
+          </div>
+        )}
+
+        {transcricaoVoz && (
+          <div className="rounded-2xl border border-purple-100 bg-purple-50/60 px-4 py-3 flex items-start gap-3">
+            <span className="text-lg leading-none mt-0.5">🎤</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold" style={{ color: ROXO }}>Você disse:</p>
+              <p className="text-sm text-slate-600 mt-0.5">“{transcricaoVoz}”</p>
+              <p className="text-[11px] text-slate-400 mt-1">Confira os campos abaixo, ajuste se precisar e clique em Publicar.</p>
+            </div>
+            <button type="button" onClick={() => setTranscricaoVoz(null)} aria-label="Fechar" className="w-7 h-7 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+              <X className="w-3.5 h-3.5 text-slate-500" />
             </button>
           </div>
         )}
@@ -350,6 +402,18 @@ export default function ParceiroProdutoForm() {
             <Campo label="Preço normal" value={form.preco} onChange={v => setCampo('preco', v)} type="money" />
             <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" />
           </div>
+          {eRestaurante && (
+            <div className="mt-4 max-w-[240px]">
+              <Label>Tempo de preparo (min) — opcional</Label>
+              <input
+                type="number" inputMode="numeric" min={1} max={300}
+                value={form.tempo_preparo_min}
+                onChange={e => setCampo('tempo_preparo_min', e.target.value.replace(/\D/g, '').slice(0, 3))}
+                placeholder="Usa o padrão da loja"
+                className={campoCls}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-2 mt-4">
             <label className="flex items-center gap-2 text-sm font-medium" style={{ color: PRETO }}>
               <input type="checkbox" checked={form.estoque_disponivel} onChange={e => setCampo('estoque_disponivel', e.target.checked)} className="rounded" />
