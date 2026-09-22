@@ -76,11 +76,23 @@ function CardNivel({ nivel, onJogar }) {
   const cfg = NIVEIS.find(n => n.nivel === nivel.nivel);
   const bloqueado = !nivel.desbloqueado;
 
+  // Nível de destaque (LENDARIO) ganha uma moldura em gradiente roxo→dourado
+  // pra se distinguir dos outros na lista — só quando já está desbloqueado,
+  // senão o cadeado perderia a leitura de "bloqueado".
+  const destaque = cfg.destaque && !bloqueado;
+
   return (
     <div
       className={`rounded-2xl p-4 flex items-center gap-3 transition-colors ${
         bloqueado ? 'bg-white/5' : nivel.completado ? 'bg-white' : 'bg-white/95'
       }`}
+      style={destaque ? {
+        background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 62%, #FFF6DE 100%)',
+        border: '2px solid transparent',
+        backgroundImage: 'linear-gradient(#fff, #fff), linear-gradient(135deg, #4C1D95 0%, #FFB800 100%)',
+        backgroundOrigin: 'border-box',
+        backgroundClip: 'padding-box, border-box',
+      } : undefined}
     >
       <div className={`text-3xl sm:text-4xl shrink-0 ${bloqueado ? 'grayscale opacity-40' : ''}`}>{cfg.emoji}</div>
       <div className="flex-1 min-w-0">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import MascoteIubMais from '../../../components/MascoteIubMais';
+import { NIVEIS as NIVEIS_MEMORIA } from './memoriaConfig';
 
 // Landing dos IUB MAIS+ Joguinhos — hoje só a Roleta existe de verdade;
 // Tigrinho do Bem e Raspadinha são cards "em breve" (sem rota própria
@@ -69,12 +70,12 @@ export default function JogosHub() {
         >
           <div className="text-5xl text-center">🧠</div>
           <h2 className="font-black text-lg text-iub-roxo text-center mt-2">JOGO DA MEMÓRIA</h2>
-          <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">5 níveis, sem limite de partidas!</p>
+          <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">{NIVEIS_MEMORIA.length} níveis, sem limite de partidas!</p>
           {niveisCompletados != null ? (
             <>
-              <p className="text-center text-xs text-iub-cinza mt-2">🏅 {niveisCompletados} de 5 níveis completados</p>
+              <p className="text-center text-xs text-iub-cinza mt-2">🏅 {niveisCompletados} de {NIVEIS_MEMORIA.length} níveis completados</p>
               <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden mt-1.5">
-                <div className="h-full bg-iub-dourado rounded-full" style={{ width: `${(niveisCompletados / 5) * 100}%` }} />
+                <div className="h-full bg-iub-dourado rounded-full" style={{ width: `${(niveisCompletados / NIVEIS_MEMORIA.length) * 100}%` }} />
               </div>
             </>
           ) : (

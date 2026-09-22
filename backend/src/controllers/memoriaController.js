@@ -14,7 +14,7 @@ function nivelDaQuery(query) {
   return getNivel(query.nivel) ? Number(query.nivel) : 1;
 }
 
-// Status de cada um dos 5 níveis pro associado logado: desbloqueado (nivel
+// Status de cada nível (config/memoriaNiveis) pro associado logado: desbloqueado (nivel
 // 1 sempre; N>1 só se completou N-1), completado, melhor tempo pessoal —
 // alimenta a tela de seleção de nível e a barra de progresso no hub.
 async function getMeusNiveis(req, res) {
