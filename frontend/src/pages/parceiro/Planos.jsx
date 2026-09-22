@@ -10,6 +10,7 @@ import ModalPix from '../../components/parceiro/assinatura/ModalPix';
 import ModalCartao from '../../components/parceiro/assinatura/ModalCartao';
 import { formatarBRL, dataBR } from '../../components/parceiro/assinatura/assinaturaUtils';
 import { CONTATO_IUBMAIS, SEM_CANAL_AINDA, linkWhatsapp } from '../../config/contato';
+import { precosDoPlano, economiaMensal } from '../../utils/precoPlanos';
 
 // Mesma foto do slide institucional da home do marketplace (comércio local,
 // clima parecido) — mantém a identidade visual consistente entre as duas
@@ -86,26 +87,6 @@ function maskCNPJ(v) {
     .replace(/(\d{3})(\d)/, '$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
 }
 
-// O endpoint /public/planos/precos devolve `preco_mensal` = preço da situação
-// que o backend DETECTOU pelo CNPJ, e `preco_alternativo` = o outro. Qual dos
-// dois é o de sindicalizada depende de `e_sindicalizada`, nunca da ordem dos
-// campos — por isso o toggle de visualização desempacota os dois aqui em vez
-// de assumir que "alternativo" é o mais barato.
-function precosDoPlano(precoInfo, eSindicalizada) {
-  if (!precoInfo) return null;
-  const sind = eSindicalizada ? precoInfo.preco_mensal : precoInfo.preco_alternativo;
-  const normal = eSindicalizada ? precoInfo.preco_alternativo : precoInfo.preco_mensal;
-  return {
-    sind,
-    normal,
-    sindFmt: eSindicalizada ? precoInfo.preco_mensal_formatado : precoInfo.preco_alternativo_formatado,
-    normalFmt: eSindicalizada ? precoInfo.preco_alternativo_formatado : precoInfo.preco_mensal_formatado,
-    // % real de desconto DESTE plano. Não é fixo: Oficial 69,90→34,90 dá 50%,
-    // mas Premium dá 38% e Master 23% — badge com número chapado mentiria.
-    offPct: normal > 0 ? Math.round(((normal - sind) / normal) * 100) : 0,
-  };
-}
-
 // Mesma conta de utils/planos.js (formatarValorDiario) no backend — precisa
 // existir aqui porque o `preco_diario_formatado` pronto só vem pro preço
 // detectado, e o toggle também mostra o outro.
@@ -117,12 +98,6 @@ function diarioFmt(precoMensal) {
 // 34.90 * 0.95 = 33.1549... e cairia pra 33,15 em vez de 33,16.
 function comDescontoCartao(precoMensal, descontoPct) {
   return Math.round(Math.round(precoMensal * 100) * (1 - descontoPct / 100)) / 100;
-}
-
-// Também em centavos: 69.90 - 34.90 dá 35.00000000000001 em float, e esse
-// resto vaza pra conta do ano (x12).
-function economiaMensal({ normal, sind }) {
-  return (Math.round(normal * 100) - Math.round(sind * 100)) / 100;
 }
 
 // Modal de sindicalização: 1x por SESSÃO (fecha a aba, vê de novo).

@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown, Search } from 'lucide-react';
 import api from '../../../services/api';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
-import { CONTATO_IUBMAIS, SEM_CANAL_AINDA, linkWhatsapp } from '../../../config/contato';
+import { CONTATO_IUBMAIS, linkWhatsapp } from '../../../config/contato';
+import { descontoMaxPct } from '../../../utils/precoPlanos';
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -207,14 +208,18 @@ export default function Vender() {
     }
   }
 
-  // Checagem de sindicalização (SECI) — só informativa aqui: avisa a
-  // empresa que ela já ganha desconto nos planos pagos assim que forem
-  // lançados (ou como conseguir o desconto), sem travar o cadastro.
+  // Checagem de sindicalização (SECI) — só informativa aqui: avisa a empresa
+  // que ela tem (ou como conseguir) desconto nos planos pagos, sem travar o
+  // cadastro. A mesma resposta já traz os preços, então o "até X% OFF" sai
+  // dela em vez de ser escrito à mão.
   useEffect(() => {
     if (cnpjDigits.length !== 14 || !isValidCNPJ(cnpjDigits)) { setSindicalizacao(null); return; }
     const timer = setTimeout(() => {
       api.get('/public/planos/precos', { params: { cnpj: cnpjDigits } })
-        .then(res => setSindicalizacao({ eSindicalizada: res.data.e_sindicalizada }))
+        .then(res => setSindicalizacao({
+          eSindicalizada: res.data.e_sindicalizada,
+          offPct: descontoMaxPct(res.data.planos, res.data.e_sindicalizada),
+        }))
         .catch(() => setSindicalizacao(null));
     }, 500);
     return () => clearTimeout(timer);
@@ -751,24 +756,35 @@ function StatusConsultaReceita({ status, onConsultarNovamente }) {
   );
 }
 
-// Só informativo — não trava o cadastro (que continua 100% grátis
-// enquanto os planos pagos não são lançados). Avisa desde já quem já tem
-// desconto garantido, ou como consegui-lo.
+// Só informativo — não trava o cadastro. Sem tempo verbal de lançamento: o
+// desconto é uma regra de preço que já existe (config/planos.js), então o
+// texto não depende de o checkout estar ligado ou não. O "até X% OFF" vem do
+// endpoint (hoje 50%, do Oficial) pra não virar número chapado.
 function AvisoSindicalizacao({ sindicalizacao }) {
   if (!sindicalizacao) return null;
-  if (sindicalizacao.eSindicalizada) {
+  const { eSindicalizada, offPct } = sindicalizacao;
+  const cta = CONTATO_IUBMAIS.whatsapp
+    ? (
+      <a
+        href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Quero saber mais sobre o desconto de empresa sindicalizada nos planos do IUB MAIS+')}
+        target="_blank" rel="noreferrer" className="font-bold underline"
+        style={{ color: eSindicalizada ? '#166534' : '#92700C' }}
+      >
+        Fale conosco pelo WhatsApp pra saber mais.
+      </a>
+    )
+    : null;
+
+  if (eSindicalizada) {
     return (
       <p className="text-[11px] mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#ECFDF5', color: '#166534' }}>
-        🎉 Sua empresa é <strong>SINDICALIZADA ao SECI</strong> — você terá desconto exclusivo quando os planos pagos do IUB MAIS forem lançados!
+        🎉 Sua empresa é <strong>SINDICALIZADA ao SECI</strong> — você já tem {offPct ? `até ${offPct}% OFF` : 'desconto'} em todos os planos pagos do IUB MAIS! {cta}
       </p>
     );
   }
   return (
     <p className="text-[11px] mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#FFFBEB', color: '#92700C' }}>
-      💡 Sua empresa ainda não está contribuindo com o SECI — sindicalize-se e ganhe desconto nos planos pagos do IUB MAIS.{' '}
-      {CONTATO_IUBMAIS.whatsapp
-        ? <a href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Quero saber como sindicalizar minha empresa ao SECI e pagar menos no IUB MAIS+')} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: '#92700C' }}>Fale com o IUB MAIS+ pra saber como.</a>
-        : SEM_CANAL_AINDA}
+      💡 Empresas sindicalizadas ao SECI ganham {offPct ? `até ${offPct}% OFF` : 'desconto'} em todos os planos! Sua empresa ainda não está contribuindo. {cta}
     </p>
   );
 }
