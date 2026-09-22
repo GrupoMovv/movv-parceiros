@@ -17,15 +17,21 @@ import { precosDoPlano, economiaMensal } from '../../utils/precoPlanos';
 // telas em vez de escolher uma imagem nova.
 const FOTO_FECHA_MES = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=60';
 
-// Metadados de exibição por plano — o PREÇO de verdade (sindicalizada ou
-// não) vem sempre do endpoint GET /public/planos/precos (config/planos.js
-// no backend), nunca hardcoded aqui, pra nunca divergir.
+// Metadados de exibição por plano. Nem preço nem LIMITE ficam escritos aqui:
+// os dois vêm de GET /public/planos/precos (config/planos.js no backend).
+//
+// Todo número que o backend conhece entra como {token} e é preenchido por
+// `beneficioPreenchido`. Mudar max_produtos_rotativa lá tem que mudar o que o
+// parceiro lê aqui — antes esses números eram digitados, e a mesma tela já
+// mostrava o "4/9/15" de duas fontes (endpoint no bloco da rotativa, texto no
+// Fecha Mês). Os itens sem número (selo, live, banner) seguem texto puro,
+// porque não existe campo correspondente no backend.
 const META_PLANOS = {
   gratis: {
     nome: 'Parceiro IUB — Grátis',
     beneficios: [
       'Perfil completo da empresa',
-      'Até 30 produtos',
+      'Até {max_produtos} produtos',
       'WhatsApp direto',
       'Aparece no marketplace',
       'Selo "Parceiro IUB"',
@@ -36,7 +42,7 @@ const META_PLANOS = {
     beneficios: [
       'Tudo do Grátis',
       'Selo dourado "PARCEIRO OFICIAL"',
-      '4 produtos em destaque na home',
+      '{produtos_rotativa} produtos em destaque na home',
       'Analytics básico (visitas, cliques)',
       'Suporte prioritário por e-mail',
     ],
@@ -46,8 +52,8 @@ const META_PLANOS = {
     maisEscolhido: true,
     beneficios: [
       'Tudo do Oficial',
-      '9 produtos em destaque',
-      'Push notification pros associados (2/mês)',
+      '{produtos_rotativa} produtos em destaque',
+      'Push notification pros associados ({push_por_mes}/mês)',
       'Aparece em "Parceiros em Destaque" (topo da home)',
       'Analytics completo',
       'Suporte prioritário por WhatsApp',
@@ -60,7 +66,7 @@ const META_PLANOS = {
     beneficios: [
       'Tudo do Premium',
       'Produtos ilimitados',
-      '15 produtos em destaque',
+      '{produtos_rotativa} produtos em destaque',
       'Post no Instagram oficial IUB MAIS (mensal)',
       'Live mensal exclusiva com nossa equipe',
       'Biblioteca de materiais exclusivos (vídeos, PDFs, templates)',
@@ -70,6 +76,21 @@ const META_PLANOS = {
     ],
   },
 };
+
+// Preenche os {token} de um benefício com o que o endpoint devolveu. Se o
+// valor ainda não chegou (ou o campo sumiu do payload), devolve null e o
+// item é OMITIDO da lista — melhor faltar uma linha por um instante do que
+// mostrar "{produtos_rotativa} produtos" ou um número errado na tela.
+function beneficioPreenchido(texto, precoInfo) {
+  if (!texto.includes('{')) return texto;
+  let faltou = false;
+  const preenchido = texto.replace(/\{(\w+)\}/g, (_, campo) => {
+    const valor = precoInfo?.[campo];
+    if (valor === null || valor === undefined) { faltou = true; return ''; }
+    return String(valor);
+  });
+  return faltou ? null : preenchido;
+}
 
 const ORDEM_PLANOS = ['gratis', 'oficial', 'premium', 'master'];
 
@@ -365,7 +386,7 @@ export default function ParceiroPlanos() {
         </div>
       </div>
 
-      <BannerFechaMes proximoFechaMes={proximoFechaMes} />
+      <BannerFechaMes proximoFechaMes={proximoFechaMes} planos={precosData?.planos} />
 
       {!cortesia && precosData && (
         <TogglePrecoSindicalizada
@@ -605,7 +626,7 @@ function BannerSindicalizacao({ eSindicalizada, razaoSocial, economiaMax }) {
 
 // Gradient roxo/dourado com foto de fundo desfocada — troca o vermelho
 // "alerta" antigo por algo premium, alinhado com a identidade IUB MAIS.
-function BannerFechaMes({ proximoFechaMes }) {
+function BannerFechaMes({ proximoFechaMes, planos }) {
   return (
     <div className="relative rounded-3xl overflow-hidden text-white">
       <div
@@ -636,9 +657,12 @@ function BannerFechaMes({ proximoFechaMes }) {
             </p>
 
             <div className="grid grid-cols-3 gap-3 mt-5 max-w-md">
-              {[['Oficial', 4], ['Premium', 9], ['Master', 15]].map(([nome, n]) => (
+              {/* Mesmos max_produtos_rotativa do bloco da vitrine rotativa lá
+                  em cima — antes eram digitados aqui, então a mesma tela podia
+                  mostrar o número certo num lugar e o velho no outro. */}
+              {ORDEM_PLANOS.filter(p => p !== 'gratis').map(p => [META_PLANOS[p].nome, planos?.[p]?.produtos_rotativa]).map(([nome, n]) => (
                 <div key={nome} className="rounded-xl bg-white/10 border border-white/15 px-3 py-2.5 text-center backdrop-blur-sm">
-                  <p className="text-xl font-black" style={{ color: DOURADO }}>{n}</p>
+                  <p className="text-xl font-black" style={{ color: DOURADO }}>{n ?? '—'}</p>
                   <p className="text-[11px] text-white/70 mt-0.5">{nome}</p>
                 </div>
               ))}
@@ -734,12 +758,16 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, verSindicalizada
       </div>
 
       <ul className="space-y-2 mt-5 flex-1">
-        {meta.beneficios.map(b => (
-          <li key={b} className="flex items-start gap-2 text-xs text-slate-600">
-            <Check size={14} weight="bold" className="flex-shrink-0 mt-0.5" style={{ color: '#16A34A' }} />
-            {b}
-          </li>
-        ))}
+        {meta.beneficios.map(b => {
+          const texto = beneficioPreenchido(b, precoInfo);
+          if (!texto) return null; // número ainda não carregou: some a linha
+          return (
+            <li key={b} className="flex items-start gap-2 text-xs text-slate-600">
+              <Check size={14} weight="bold" className="flex-shrink-0 mt-0.5" style={{ color: '#16A34A' }} />
+              {texto}
+            </li>
+          );
+        })}
       </ul>
 
       {planoKey === 'gratis' ? (

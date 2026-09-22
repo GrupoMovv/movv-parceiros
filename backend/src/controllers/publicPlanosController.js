@@ -25,7 +25,12 @@ function montarPlanos(sindicalizada) {
       economia_formatada: formatarPrecoBRL(sindicalizada ? economiaMensal : 0),
       economia_maxima: economiaMensal,
       economia_maxima_formatada: formatarPrecoBRL(economiaMensal),
+      // Limites que a tela de Planos escreve na lista de benefícios. Vêm
+      // daqui pra não existir a mesma informação escrita à mão no front:
+      // mudar o limite em config/planos.js tem que mudar o que o parceiro lê.
       produtos_rotativa: cfg.max_produtos_rotativa,
+      max_produtos: cfg.max_produtos, // null = ilimitado
+      push_por_mes: cfg.push_por_mes || 0,
     };
   }
   return planos;
