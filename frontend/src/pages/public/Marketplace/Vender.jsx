@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown, Search } from 'lucide-react';
 import api from '../../../services/api';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
+import { CONTATO_IUBMAIS, SEM_CANAL_AINDA, linkWhatsapp } from '../../../config/contato';
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -764,7 +765,10 @@ function AvisoSindicalizacao({ sindicalizacao }) {
   }
   return (
     <p className="text-[11px] mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#FFFBEB', color: '#92700C' }}>
-      💡 Sua empresa ainda não está contribuindo com o SECI — sindicalize-se e ganhe desconto nos planos pagos do IUB MAIS. Saiba como pelo WhatsApp.
+      💡 Sua empresa ainda não está contribuindo com o SECI — sindicalize-se e ganhe desconto nos planos pagos do IUB MAIS.{' '}
+      {CONTATO_IUBMAIS.whatsapp
+        ? <a href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Quero saber como sindicalizar minha empresa ao SECI e pagar menos no IUB MAIS+')} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: '#92700C' }}>Fale com o IUB MAIS+ pra saber como.</a>
+        : SEM_CANAL_AINDA}
     </p>
   );
 }

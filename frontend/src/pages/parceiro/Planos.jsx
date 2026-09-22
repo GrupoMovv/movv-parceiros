@@ -9,6 +9,7 @@ import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Mar
 import ModalPix from '../../components/parceiro/assinatura/ModalPix';
 import ModalCartao from '../../components/parceiro/assinatura/ModalCartao';
 import { formatarBRL, dataBR } from '../../components/parceiro/assinatura/assinaturaUtils';
+import { CONTATO_IUBMAIS, SEM_CANAL_AINDA, linkWhatsapp } from '../../config/contato';
 
 // Mesma foto do slide institucional da home do marketplace (comércio local,
 // clima parecido) — mantém a identidade visual consistente entre as duas
@@ -122,27 +123,6 @@ function comDescontoCartao(precoMensal, descontoPct) {
 // resto vaza pra conta do ano (x12).
 function economiaMensal({ normal, sind }) {
   return (Math.round(normal * 100) - Math.round(sind * 100)) / 100;
-}
-
-// Canal de atendimento do PRÓPRIO IUB MAIS+ (não do SECI). Enquanto
-// `whatsapp` for null, nenhum modal oferece botão de contato — melhor não
-// prometer canal do que mandar o parceiro pra um número que não atende.
-// Pra ligar, basta preencher o número aqui: com ou sem o DDI 55, a conta é
-// normalizada em `linkWhatsapp`.
-const CONTATO_IUBMAIS = {
-  whatsapp: null, // ex.: '5564999999999' ou '64999999999'
-  site: null,     // ex.: 'https://iubmais.com.br'
-};
-
-const MSG_WHATSAPP_PADRAO = 'Olá! Quero saber mais sobre os planos do IUB MAIS+';
-
-// Aceita o número com ou sem DDI pra que preencher a constante seja mesmo
-// uma linha só, sem o link quebrar por falta do 55.
-function linkWhatsapp(numero, mensagem = MSG_WHATSAPP_PADRAO) {
-  const digitos = String(numero || '').replace(/\D/g, '');
-  if (!digitos) return null;
-  const comDdi = digitos.startsWith('55') ? digitos : `55${digitos}`;
-  return `https://wa.me/${comDdi}?text=${encodeURIComponent(mensagem)}`;
 }
 
 // Modal de sindicalização: 1x por SESSÃO (fecha a aba, vê de novo).
@@ -383,7 +363,11 @@ export default function ParceiroPlanos() {
       )}
 
       {precosData?.cnpj_limpo && (
-        <BannerSindicalizacao eSindicalizada={eSindicalizada} razaoSocial={precosData.razao_social} />
+        <BannerSindicalizacao
+          eSindicalizada={eSindicalizada}
+          razaoSocial={precosData.razao_social}
+          economiaMax={Math.max(0, ...resumoPlanos.map(economiaMensal))}
+        />
       )}
 
       <div className="rounded-3xl p-8 text-white" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
@@ -616,7 +600,7 @@ function TogglePrecoSindicalizada({ valor, onChange, eSindicalizada }) {
   );
 }
 
-function BannerSindicalizacao({ eSindicalizada, razaoSocial }) {
+function BannerSindicalizacao({ eSindicalizada, razaoSocial, economiaMax }) {
   if (eSindicalizada) {
     return (
       <div className="rounded-2xl p-5 flex items-start gap-3" style={{ backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0' }}>
@@ -633,7 +617,12 @@ function BannerSindicalizacao({ eSindicalizada, razaoSocial }) {
       <WarningCircle size={26} weight="fill" color="#D97706" className="flex-shrink-0 mt-0.5" />
       <div>
         <p className="font-bold text-sm text-amber-800">⚠️ {razaoSocial ? `${razaoSocial} não está` : 'Sua empresa não está'} contribuindo com o SECI.</p>
-        <p className="text-amber-700 text-xs mt-1">Sindicalize-se e economize até R$ 35/mês nos planos pagos do IUB MAIS. Fale com a gente pelo WhatsApp pra saber como.</p>
+        <p className="text-amber-700 text-xs mt-1">
+          Sindicalize-se e economize até {formatarBRL(economiaMax)}/mês nos planos pagos do IUB MAIS.{' '}
+          {CONTATO_IUBMAIS.whatsapp
+            ? <a href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Quero saber como sindicalizar minha empresa ao SECI e pagar menos no IUB MAIS+')} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: '#92700C' }}>Fale com o IUB MAIS+ pra saber como.</a>
+            : SEM_CANAL_AINDA}
+        </p>
       </div>
     </div>
   );
@@ -1029,7 +1018,7 @@ function ModalComoSindicalizar({ economiaAnual, onVoltar, onFechar }) {
           </div>
         </div>
       ) : (
-        <p className="text-center text-slate-400 text-xs mt-5">Em breve teremos canal dedicado pra tirar dúvidas.</p>
+        <p className="text-center text-slate-400 text-xs mt-5">{SEM_CANAL_AINDA}</p>
       )}
 
       <div className="rounded-2xl p-4 mt-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
