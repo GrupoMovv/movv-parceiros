@@ -38,6 +38,9 @@ export default function RoletaLogin() {
   const [dataISO, setDataISO] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
+  // CPF digitado que não existe na base — guarda pra levar pro cadastro já
+  // preenchido, em vez de a pessoa digitar de novo.
+  const [cpfNaoEncontrado, setCpfNaoEncontrado] = useState(null);
 
   // Já logado (bookmark antigo, botão voltar etc.) — não precisa ver o
   // formulário de novo, já vai direto jogar.
@@ -59,6 +62,9 @@ export default function RoletaLogin() {
       if (!ok) { setErro('Não deu pra confirmar sua sessão. Tente de novo.'); return; }
       navigate('/jogar');
     } catch (err) {
+      // "CPF não encontrado" não é erro da pessoa — é a primeira vez dela
+      // aqui. Vira convite, não mensagem seca em vermelho.
+      if (err.response?.status === 404) { setCpfNaoEncontrado(digits); return; }
       setErro(err.response?.data?.error || 'Erro ao entrar. Tente de novo.');
     } finally {
       setEnviando(false);
@@ -94,10 +100,58 @@ export default function RoletaLogin() {
           {enviando ? 'Entrando...' : '🎡 ENTRAR E JOGAR'}
         </button>
 
-        <Link to="/cadastrar" className="block text-center text-xs text-iub-cinza underline">
-          Não tenho cadastro
-        </Link>
+        {/* Era um link em letras miúdas que ninguém lia. Virou CTA de
+            verdade — é por aqui que entra associado novo. */}
+        <div className="pt-1">
+          <p className="text-center text-sm font-semibold text-iub-roxo-escuro">Ainda não tem conta?</p>
+          <p className="text-center text-xs text-iub-cinza mt-0.5">Cadastre-se em 1 minuto — grátis para associados SECI</p>
+          <Link
+            to="/cadastrar"
+            className="mt-2.5 w-full min-h-[56px] flex items-center justify-center gap-2 rounded-2xl font-black text-base"
+            style={{ backgroundColor: '#FFB800', color: '#0F0F14' }}
+          >
+            ✨ CADASTRAR AGORA
+          </Link>
+        </div>
       </form>
+
+      {cpfNaoEncontrado && (
+        <ModalCpfNaoEncontrado
+          onCriarConta={() => navigate('/cadastrar', { state: { cpf: cpfNaoEncontrado } })}
+          onCorrigir={() => { setCpfNaoEncontrado(null); setCpf(''); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// "CPF não cadastrado" espantava quem chegava pela primeira vez. Aqui a
+// mesma situação vira convite, e o CPF digitado segue pro cadastro.
+function ModalCpfNaoEncontrado({ onCriarConta, onCorrigir }) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.75)' }}>
+      <div className="w-full max-w-sm bg-white rounded-[2rem] p-7 text-center shadow-2xl">
+        <div className="text-4xl">🤔</div>
+        <h2 className="text-slate-900 font-bold text-lg mt-3">CPF não encontrado</h2>
+        <p className="text-slate-600 text-sm mt-2">
+          Parece que essa é sua <strong>primeira vez</strong> no IUB MAIS+! Vamos criar sua conta grátis?
+        </p>
+        <div className="flex flex-col gap-2.5 mt-6">
+          <button
+            type="button" onClick={onCriarConta}
+            className="w-full min-h-[56px] rounded-2xl font-bold text-white text-base"
+            style={{ backgroundColor: '#4C1D95' }}
+          >
+            ✨ SIM, CRIAR CONTA
+          </button>
+          <button
+            type="button" onClick={onCorrigir}
+            className="w-full min-h-[48px] rounded-2xl font-semibold text-slate-600 bg-slate-100"
+          >
+            Digitei o CPF errado
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, CheckCircle2, XCircle, AlertTriangle, Loader2,
@@ -10,6 +10,7 @@ import api, { assetUrl } from '../../../services/api';
 import { setPainelToken } from '../../../services/apiPainel';
 import { montarMensagemCadastroPublico, linkWhatsappComTexto, publicCarteirinhaUrl } from '../../../utils/carteirinhaWhatsapp';
 import { entrarNoPainelSeguro } from '../../../utils/entrarNoPainelSeguro';
+import { salvarRascunho, lerRascunho, limparRascunho, contarPreenchidos, totalCampos } from './rascunhoCadastro';
 import CapturaFoto from './CapturaFoto';
 import Confete from './Confete';
 import InputDataBR from './InputDataBR';
@@ -121,6 +122,72 @@ export default function CadastroPublico() {
   // Tela final
   const [resultado, setResultado] = useState(null);
 
+  // ── Rascunho (localStorage) ───────────────────────────────────────────
+  // Sair do cadastro deixou de ser destrutivo: o wizard salva sozinho a
+  // cada mudança e oferece retomar na volta. Ver rascunhoCadastro.js.
+  const [rascunhoOferecido, setRascunhoOferecido] = useState(null); // dados pendentes de resposta
+  const [confirmarSaida, setConfirmarSaida] = useState(null);       // () => void a executar se sair
+  const noWizard = typeof step === 'number';
+
+  // Oferece o rascunho uma vez, na abertura da tela. Nunca preenche
+  // escondido — a pessoa pode não ser a mesma do rascunho.
+  useEffect(() => {
+    const salvo = lerRascunho();
+    if (salvo) setRascunhoOferecido(salvo);
+  }, []);
+
+  // CPF que veio do login (RoletaLogin manda em location.state quando o
+  // CPF não existe na base): já chega preenchido, sem digitar de novo.
+  const location = useLocation();
+  useEffect(() => {
+    const vindo = location.state?.cpf;
+    if (vindo) setCpfInicial(maskCPF(vindo));
+  }, [location.state]);
+
+  // Auto-save: só dentro do wizard (steps numéricos). Nos steps de login/
+  // recadastro não há o que rascunhar.
+  useEffect(() => {
+    if (!noWizard) return;
+    salvarRascunho({ step, form, dependentes, cnpj, declaracaoAceita, aceite });
+  }, [noWizard, step, form, dependentes, cnpj, declaracaoAceita, aceite]);
+
+  // Fechar/recarregar a aba com dados preenchidos: o navegador mostra o
+  // próprio aviso. Os dados já estão salvos, então isso é só pra evitar o
+  // susto de sumir a tela no meio.
+  useEffect(() => {
+    if (!noWizard || contarPreenchidos(form) === 0) return;
+    const aviso = e => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', aviso);
+    return () => window.removeEventListener('beforeunload', aviso);
+  }, [noWizard, form]);
+
+  function restaurarRascunho() {
+    const d = rascunhoOferecido;
+    setRascunhoOferecido(null);
+    if (!d) return;
+    setForm({ ...FORM_VAZIO, ...(d.form || {}) });
+    setDependentes(Array.isArray(d.dependentes) ? d.dependentes : []);
+    setCnpj(d.cnpj || '');
+    setDeclaracaoAceita(Boolean(d.declaracaoAceita));
+    setAceite(Boolean(d.aceite));
+    // A foto não é salva (File não serializa), então nunca volta na etapa
+    // dela achando que já tem foto.
+    setStep(typeof d.step === 'number' ? Math.min(d.step, 4) : 1);
+    toast.success('Cadastro anterior restaurado!');
+  }
+
+  function descartarRascunho() {
+    limparRascunho();
+    setRascunhoOferecido(null);
+  }
+
+  // Pede confirmação antes de abandonar o wizard com dados preenchidos.
+  // `acao` é o que fazer se a pessoa confirmar que quer sair.
+  function tentarSair(acao) {
+    if (noWizard && contarPreenchidos(form) > 0) setConfirmarSaida(() => acao);
+    else acao();
+  }
+
   function setCampo(campo, valor) {
     setForm(f => ({ ...f, [campo]: valor }));
     setErrors(e => ({ ...e, [campo]: '' }));
@@ -193,7 +260,7 @@ export default function CadastroPublico() {
   // ── Landing: CPF primeiro ──────────────────────────────────────────────
   async function handleContinuarCpf() {
     const digits = cpfInicial.replace(/\D/g, '');
-    if (!validCPF(digits)) { toast.error('CPF inválido'); return; }
+    if (!validCPF(digits)) { toast.error('🤔 Esse CPF não está correto. Confere os números?'); return; }
 
     // Derruba qualquer sessão anterior (de outra pessoa, no mesmo
     // navegador) assim que alguém começa a se identificar de novo — nunca
@@ -247,13 +314,13 @@ export default function CadastroPublico() {
 
   function validarPasso2() {
     const e = {};
-    if (!form.nome_completo.trim()) e.nome_completo = 'Nome obrigatório';
-    if (!form.data_nascimento) e.data_nascimento = 'Data de nascimento obrigatória';
-    if (!form.sexo) e.sexo = 'Selecione uma opção';
-    if (!form.categoria_profissional) e.categoria_profissional = 'Selecione uma categoria';
-    if (form.whatsapp.replace(/\D/g, '').length < 10) e.whatsapp = 'WhatsApp obrigatório';
-    if (!form.cidade.trim()) e.cidade = 'Cidade obrigatória';
-    if (!form.estado) e.estado = 'Estado obrigatório';
+    if (!form.nome_completo.trim()) e.nome_completo = '✨ Precisamos do seu nome completo';
+    if (!form.data_nascimento) e.data_nascimento = '✨ Precisamos da sua data de nascimento';
+    if (!form.sexo) e.sexo = '✨ Escolha uma opção pra continuar';
+    if (!form.categoria_profissional) e.categoria_profissional = '✨ Escolha sua categoria pra continuar';
+    if (form.whatsapp.replace(/\D/g, '').length < 10) e.whatsapp = '✨ Precisamos do seu WhatsApp pra enviar a carteirinha';
+    if (!form.cidade.trim()) e.cidade = '✨ Em qual cidade você mora?';
+    if (!form.estado) e.estado = '✨ Escolha seu estado';
     return e;
   }
 
@@ -297,6 +364,7 @@ export default function CadastroPublico() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setResultado({ ...res.data, tipo: 'cadastro', cpfAutenticado: form.cpf.replace(/\D/g, '') });
+      limparRascunho(); // cadastro concluído: nada de dado pessoal sobrando no navegador
       setStep('final');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao enviar cadastro. Tente novamente.');
@@ -308,17 +376,17 @@ export default function CadastroPublico() {
   // ── Recadastro: atualiza tudo de uma vez e gera carteirinha nova ───────
   function validarRecadastro() {
     const e = {};
-    if (!formRecadastro.nome_completo.trim()) e.nome_completo = 'Nome obrigatório';
-    if (!formRecadastro.data_nascimento) e.data_nascimento = 'Data de nascimento obrigatória';
-    if (formRecadastro.whatsapp.replace(/\D/g, '').length < 10) e.whatsapp = 'WhatsApp obrigatório';
-    if (!formRecadastro.cidade.trim()) e.cidade = 'Cidade obrigatória';
-    if (!formRecadastro.estado) e.estado = 'Estado obrigatório';
+    if (!formRecadastro.nome_completo.trim()) e.nome_completo = '✨ Precisamos do seu nome completo';
+    if (!formRecadastro.data_nascimento) e.data_nascimento = '✨ Precisamos da sua data de nascimento';
+    if (formRecadastro.whatsapp.replace(/\D/g, '').length < 10) e.whatsapp = '✨ Precisamos do seu WhatsApp pra enviar a carteirinha';
+    if (!formRecadastro.cidade.trim()) e.cidade = '✨ Em qual cidade você mora?';
+    if (!formRecadastro.estado) e.estado = '✨ Escolha seu estado';
     return e;
   }
 
   async function handleRecadastrar() {
     const e = validarRecadastro();
-    if (Object.keys(e).length) { setErrors(e); toast.error('Preencha os campos obrigatórios'); return; }
+    if (Object.keys(e).length) { setErrors(e); toast.error('✨ Faltou preencher alguns campos — dá uma olhada nos marcados'); return; }
 
     setEnviandoRecadastro(true);
     setErroRecadastro(null);
@@ -339,6 +407,7 @@ export default function CadastroPublico() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setResultado({ ...res.data, tipo: 'cadastro', cpfAutenticado: cpfInicial.replace(/\D/g, '') });
+      limparRascunho();
       setStep('final');
     } catch (err) {
       setErroRecadastro(err.response?.data?.error || 'Erro ao atualizar cadastro. Tente novamente.');
@@ -428,6 +497,13 @@ export default function CadastroPublico() {
   if (step === 'cpf') {
     return (
       <PageShell>
+        {rascunhoOferecido && (
+          <ModalRascunho
+            dados={rascunhoOferecido}
+            onContinuar={restaurarRascunho}
+            onDescartar={descartarRascunho}
+          />
+        )}
         <div className="w-full max-w-[420px]">
           <div className="text-center mb-6">
             <p className="text-white font-black text-2xl tracking-wide">SECI</p>
@@ -663,11 +739,25 @@ export default function CadastroPublico() {
         </div>
 
         <ProgressoTopo step={typeof step === 'number' ? step : 6} />
+        {noWizard && (
+          <p className="text-center text-white/60 text-xs mt-2">
+            Etapa {step} de 5 · <span style={{ color: LIME }}>salvamos sozinho — pode sair e voltar</span>
+          </p>
+        )}
+
+        {confirmarSaida && (
+          <ModalSairCadastro
+            preenchidos={contarPreenchidos(form)}
+            total={totalCampos(form)}
+            onFicar={() => setConfirmarSaida(null)}
+            onSair={() => { const acao = confirmarSaida; setConfirmarSaida(null); acao(); }}
+          />
+        )}
 
         <div className="bg-white rounded-[2rem] p-6 sm:p-7 mt-4 shadow-2xl">
           {step === 1 && (
             <div className="space-y-4">
-              <BotaoVoltar onClick={() => setStep('cpf')} />
+              <BotaoVoltar onClick={() => tentarSair(() => setStep('cpf'))} />
               <Titulo numero={1} texto="CNPJ da sua empresa" />
               <input
                 type="text" inputMode="numeric" placeholder="00.000.000/0000-00"
@@ -959,6 +1049,76 @@ function ProgressoTopo({ step }) {
       {[1, 2, 3, 4, 5, 6].map(n => (
         <div key={n} className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: n <= step ? LIME : 'rgba(255,255,255,0.15)' }} />
       ))}
+    </div>
+  );
+}
+
+// Oferece retomar o cadastro salvo. Pergunta em vez de preencher sozinho:
+// o navegador pode ser compartilhado e o rascunho ser de outra pessoa.
+function ModalRascunho({ dados, onContinuar, onDescartar }) {
+  const preenchidos = contarPreenchidos(dados.form);
+  const nome = String(dados.form?.nome_completo || '').trim().split(' ')[0];
+  const quando = new Date(dados.salvo_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(11,31,58,0.75)' }}>
+      <div className="w-full max-w-sm bg-white rounded-[2rem] p-7 text-center shadow-2xl">
+        <div className="text-4xl">📝</div>
+        <h2 className="text-slate-900 font-bold text-lg mt-3">
+          {nome ? `Oi de novo, ${nome}!` : 'Você já tinha começado!'}
+        </h2>
+        <p className="text-slate-600 text-sm mt-2">
+          Encontramos um cadastro que você começou em {quando}, com <strong>{preenchidos} {preenchidos === 1 ? 'campo preenchido' : 'campos preenchidos'}</strong>. Quer continuar de onde parou?
+        </p>
+        <div className="flex flex-col gap-2.5 mt-6">
+          <button
+            type="button" onClick={onContinuar}
+            className="w-full min-h-[56px] rounded-2xl font-bold text-white text-base"
+            style={{ backgroundColor: '#4C1D95' }}
+          >
+            ✨ Continuar de onde parei
+          </button>
+          <button
+            type="button" onClick={onDescartar}
+            className="w-full min-h-[48px] rounded-2xl font-semibold text-slate-600 bg-slate-100"
+          >
+            Começar do zero
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sair do wizard com campos preenchidos. O texto é tranquilizador de
+// propósito: os dados JÁ estão salvos quando este modal aparece.
+function ModalSairCadastro({ preenchidos, total, onFicar, onSair }) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(11,31,58,0.75)' }}>
+      <div className="w-full max-w-sm bg-white rounded-[2rem] p-7 text-center shadow-2xl">
+        <div className="text-4xl">💾</div>
+        <h2 className="text-slate-900 font-bold text-lg mt-3">Sair do cadastro?</h2>
+        <p className="text-slate-600 text-sm mt-2">
+          Você preencheu <strong>{preenchidos} de {total} campos</strong>.
+        </p>
+        <div className="rounded-2xl p-3 mt-3" style={{ backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0' }}>
+          <p className="text-emerald-800 text-xs font-semibold">✅ Seus dados já estão salvos. Você pode continuar depois, deste mesmo celular.</p>
+        </div>
+        <div className="flex flex-col gap-2.5 mt-6">
+          <button
+            type="button" onClick={onFicar}
+            className="w-full min-h-[56px] rounded-2xl font-bold text-white text-base"
+            style={{ backgroundColor: '#4C1D95' }}
+          >
+            Continuar cadastro
+          </button>
+          <button
+            type="button" onClick={onSair}
+            className="w-full min-h-[48px] rounded-2xl font-semibold text-slate-600 bg-slate-100"
+          >
+            Sair (dados salvos)
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
