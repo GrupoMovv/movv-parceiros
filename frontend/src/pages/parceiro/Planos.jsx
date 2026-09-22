@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle, ArrowRight, Storefront, TrendUp, Bank, Buildings } from '@phosphor-icons/react';
@@ -115,6 +116,33 @@ function diarioFmt(precoMensal) {
 // 34.90 * 0.95 = 33.1549... e cairia pra 33,15 em vez de 33,16.
 function comDescontoCartao(precoMensal, descontoPct) {
   return Math.round(Math.round(precoMensal * 100) * (1 - descontoPct / 100)) / 100;
+}
+
+// Também em centavos: 69.90 - 34.90 dá 35.00000000000001 em float, e esse
+// resto vaza pra conta do ano (x12).
+function economiaMensal({ normal, sind }) {
+  return (Math.round(normal * 100) - Math.round(sind * 100)) / 100;
+}
+
+// PREENCHER: contato do SECI pro modal "Como virar sindicalizada". Enquanto
+// estiver null o modal explica o processo mas não mostra botão de contato —
+// melhor faltar o canal do que mandar o parceiro pra um número inventado.
+const CONTATO_SECI = {
+  whatsapp: null, // só dígitos com DDI, ex.: '5564999999999'
+  site: null,     // ex.: 'https://seci.org.br'
+};
+
+// Modal de sindicalização: 1x por SESSÃO (fecha a aba, vê de novo).
+const CHAVE_MODAL_SINDICALIZACAO = 'iub_mais_planos_sindicalizacao_visto';
+
+// sessionStorage quebra em aba anônima/storage bloqueado. Na dúvida trata
+// como "já viu": não mostrar é melhor do que estourar a tela ou repetir o
+// modal a cada render.
+function jaViuModal(chave) {
+  try { return sessionStorage.getItem(chave) === '1'; } catch { return true; }
+}
+function marcarModalVisto(chave) {
+  try { sessionStorage.setItem(chave, '1'); } catch { /* sem storage: só não persiste */ }
 }
 
 export default function ParceiroPlanos() {
@@ -239,6 +267,28 @@ export default function ParceiroPlanos() {
     setVerSindicalizada(false); // alinha a tela com o valor que será cobrado
     setModalAssinar({ tipo: alvo.tipo, plano: alvo.plano });
   }
+
+  // Modal de boas-vindas da sindicalização. É INFORMATIVO: mostra o que o
+  // backend já detectou pelo CNPJ, não pergunta nada. Perguntar "você é
+  // sindicalizada?" faria a tela prometer um preço que a cobrança não
+  // honraria — quem decide o valor é o CNPJ, em assinaturaService.
+  const [modalSindicalizacao, setModalSindicalizacao] = useState(null); // null | 'principal' | 'como'
+  useEffect(() => {
+    if (!precosData || cortesia) return;
+    if (jaViuModal(CHAVE_MODAL_SINDICALIZACAO)) return;
+    marcarModalVisto(CHAVE_MODAL_SINDICALIZACAO);
+    setModalSindicalizacao('principal');
+  }, [precosData, cortesia]);
+
+  // Preços dos planos pagos já desempacotados (sind x normal) pro modal —
+  // todos os números que ele mostra saem daqui, nunca de texto chapado.
+  const resumoPlanos = ORDEM_PLANOS
+    .filter(p => p !== 'gratis')
+    .map(p => {
+      const pr = precosDoPlano(precosData?.planos?.[p], eSindicalizada);
+      return pr && { chave: p, nome: META_PLANOS[p].nome, ...pr };
+    })
+    .filter(Boolean);
 
   return (
     <div className="space-y-8">
@@ -442,6 +492,23 @@ export default function ParceiroPlanos() {
         />
       )}
 
+      {modalSindicalizacao === 'principal' && resumoPlanos.length > 0 && (
+        <ModalSindicalizacao
+          eSindicalizada={eSindicalizada}
+          razaoSocial={precosData?.razao_social}
+          planos={resumoPlanos}
+          onVerPlanos={() => setModalSindicalizacao(null)}
+          onComoSindicalizar={() => setModalSindicalizacao('como')}
+        />
+      )}
+      {modalSindicalizacao === 'como' && (
+        <ModalComoSindicalizar
+          economiaAnual={Math.max(...resumoPlanos.map(economiaMensal)) * 12}
+          onVoltar={() => setModalSindicalizacao('principal')}
+          onFechar={() => setModalSindicalizacao(null)}
+        />
+      )}
+
       {avisoPreco && (
         <ModalPrecoNormal
           planoNome={opcoes?.planos?.find(p => p.plano === avisoPreco.plano)?.nome}
@@ -510,10 +577,12 @@ function TogglePrecoSindicalizada({ valor, onChange, eSindicalizada }) {
               type="button"
               onClick={() => onChange(id)}
               aria-pressed={ativo}
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-bold px-5 py-3 rounded-full transition-all duration-300 hover:-translate-y-0.5"
+              // Inativo continua com cara de BOTÃO (cinza visível + borda),
+              // não de campo desabilitado — era a queixa do toggle antigo.
               style={ativo
-                ? { backgroundColor: ROXO, color: 'white', boxShadow: `0 8px 20px ${ROXO}40` }
-                : { backgroundColor: '#F1F5F9', color: '#334155' }}
+                ? { backgroundColor: ROXO, color: 'white', border: `2px solid ${ROXO_ESCURO}`, boxShadow: `0 8px 20px ${ROXO}40` }
+                : { backgroundColor: '#E5E7EB', color: '#6B7280', border: '2px solid #D1D5DB' }}
             >
               <Icone size={17} weight={ativo ? 'fill' : 'regular'} color={ativo ? DOURADO : '#64748B'} />
               {rotulo}
@@ -773,6 +842,193 @@ function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, creditoAte, desco
         </button>
       </div>
     </div>
+  );
+}
+
+// Casca comum dos modais da sindicalização: backdrop escuro, centralizado,
+// 500px no desktop e tela cheia no celular.
+//
+// Vai num portal pro <body> de propósito. Renderizado dentro do <main>, o
+// `position: fixed` não colava no topo da viewport (medido: rect.top = 32 num
+// viewport de 844, sem ancestral com transform aparente) e o header do painel
+// aparecia por cima do modal full-screen no celular. No body não há ancestral
+// nenhum pra criar bloco contentor, então `inset-0` é a tela inteira de novo.
+function CascaModal({ children, onFechar }) {
+  // Sem isso a página (4000+px) rola atrás do modal de tela cheia.
+  useEffect(() => {
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = anterior; };
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-4 animate-fade-in" style={{ backgroundColor: 'rgba(15,15,20,0.72)' }} onClick={onFechar}>
+      <div
+        className="relative bg-white w-full h-full overflow-y-auto sm:h-auto sm:max-h-[92vh] sm:max-w-[500px] sm:rounded-3xl shadow-2xl p-6 sm:p-7 animate-scale-in"
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function BotaoGrande({ children, onClick, variante = 'roxo' }) {
+  const estilos = {
+    roxo: { backgroundColor: ROXO, color: 'white', border: `2px solid ${ROXO_ESCURO}` },
+    claro: { backgroundColor: '#F1F5F9', color: '#334155', border: '2px solid #E2E8F0' },
+  };
+  return (
+    <button
+      type="button" onClick={onClick}
+      className="w-full min-h-[60px] flex items-center justify-center gap-2 text-sm font-bold rounded-2xl cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg px-4"
+      style={estilos[variante]}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Primeira visita da tela de Planos (1x por sessão). INFORMATIVO: conta o que
+// o backend já sabe pelo CNPJ. Todos os valores vêm de `planos`, inclusive os
+// percentuais — "50% OFF" só vale pro Oficial, então a copy fala "até X%".
+function ModalSindicalizacao({ eSindicalizada, razaoSocial, planos, onVerPlanos, onComoSindicalizar }) {
+  const economias = planos.map(economiaMensal);
+  const economiaMax = Math.max(...economias);
+  const economiaMin = Math.min(...economias);
+  const pctMax = Math.max(...planos.map(p => p.offPct));
+  const anual = economiaMax * 12;
+
+  if (eSindicalizada) {
+    return (
+      <CascaModal onFechar={onVerPlanos}>
+        <div className="text-center">
+          <span className="inline-flex w-20 h-20 rounded-full items-center justify-center text-4xl" style={{ backgroundColor: '#DCFCE7' }}>🎊</span>
+          <h2 className="text-xl font-black mt-4 leading-tight" style={{ color: '#166534' }}>PARABÉNS! VOCÊ É SÓCIA SECI!</h2>
+          <p className="text-slate-600 text-sm mt-2">
+            {razaoSocial ? <strong>{razaoSocial}</strong> : 'Sua empresa'} está em dia com o SECI, então seus preços já saem com até <strong>{pctMax}% OFF</strong> aplicado:
+          </p>
+        </div>
+
+        <div className="rounded-2xl mt-5 divide-y" style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', border: '1px solid #BBF7D0' }}>
+          {planos.map(p => (
+            <div key={p.chave} className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderColor: '#BBF7D0' }}>
+              <span className="text-sm font-bold" style={{ color: '#166534' }}>{p.nome}</span>
+              <span className="text-sm">
+                <span className="text-slate-400 line-through mr-2">{p.normalFmt}</span>
+                <strong className="text-base" style={{ color: '#15803D' }}>{p.sindFmt}</strong>
+                <span className="text-slate-400 text-xs">/mês</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-sm font-bold mt-4" style={{ color: '#166534' }}>
+          💰 Economia de {formatarBRL(economiaMin)} a {formatarBRL(economiaMax)} por mês
+        </p>
+
+        <div className="mt-6">
+          <BotaoGrande onClick={onVerPlanos}>Ver planos</BotaoGrande>
+        </div>
+      </CascaModal>
+    );
+  }
+
+  return (
+    <CascaModal onFechar={onVerPlanos}>
+      <div className="text-center">
+        <span className="inline-flex w-20 h-20 rounded-full items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+          <Bank size={40} weight="duotone" color="#B45309" />
+        </span>
+        <h2 className="text-xl font-black mt-4 leading-tight" style={{ color: '#92400E' }}>SUA EMPRESA PODE PAGAR MENOS!</h2>
+        <p className="text-slate-600 text-sm mt-2">
+          Empresas sindicalizadas ao SECI pagam até <strong>{pctMax}% a menos</strong> em todos os planos:
+        </p>
+      </div>
+
+      <div className="rounded-2xl mt-5" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+        {planos.map((p, i) => (
+          <div key={p.chave} className="flex items-center justify-between gap-3 px-4 py-3" style={i ? { borderTop: '1px solid #FDE68A' } : undefined}>
+            <span className="text-sm font-bold" style={{ color: '#92400E' }}>{p.nome}</span>
+            <span className="text-sm">
+              <strong className="text-base" style={{ color: '#B45309' }}>{p.sindFmt}</strong>
+              <span className="text-slate-400 text-xs"> (era {p.normalFmt})</span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-center text-sm font-bold mt-4" style={{ color: '#92400E' }}>
+        💰 Economia de até {formatarBRL(anual)} por ano!
+      </p>
+
+      <div className="flex flex-col gap-2.5 mt-6">
+        <BotaoGrande onClick={onVerPlanos}>Ver planos</BotaoGrande>
+        <BotaoGrande onClick={onComoSindicalizar} variante="claro">
+          <Bank size={18} weight="bold" /> Como virar sindicalizada SECI
+        </BotaoGrande>
+      </div>
+    </CascaModal>
+  );
+}
+
+// Segundo modal. A regra de "em dia" é a do backend
+// (contribuintesImportService.classificarStatus): pagou pelo menos 1 das 3
+// guias mensais recentes.
+function ModalComoSindicalizar({ economiaAnual, onVoltar, onFechar }) {
+  const passos = [
+    'Sua empresa precisa estar contribuindo com o SECI através da guia mensal do sindicato.',
+    'Vale como "em dia" quem pagou pelo menos 1 das 3 guias mais recentes.',
+    'O IUB MAIS confere seu CNPJ na base de contribuintes do SECI e aplica o desconto sozinho — você não precisa avisar nem pedir.',
+  ];
+  return (
+    <CascaModal onFechar={onFechar}>
+      <div className="text-center">
+        <span className="inline-flex w-20 h-20 rounded-full items-center justify-center" style={{ backgroundColor: `${ROXO}15` }}>
+          <Bank size={40} weight="duotone" color={ROXO} />
+        </span>
+        <h2 className="text-xl font-black mt-4 leading-tight" style={{ color: PRETO }}>Como virar sindicalizada SECI</h2>
+        <p className="text-slate-500 text-sm mt-2">Sindicalizando, você economiza até <strong>{formatarBRL(economiaAnual)}/ano</strong> só no IUB MAIS+.</p>
+      </div>
+
+      <ol className="flex flex-col gap-3 mt-5">
+        {passos.map((passo, i) => (
+          <li key={passo} className="flex items-start gap-3 text-sm text-slate-600">
+            <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white" style={{ backgroundColor: ROXO }}>{i + 1}</span>
+            {passo}
+          </li>
+        ))}
+      </ol>
+
+      {(CONTATO_SECI.whatsapp || CONTATO_SECI.site) && (
+        <div className="rounded-2xl p-4 mt-5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Fale com o SECI</p>
+          <div className="flex flex-col gap-2 mt-2">
+            {CONTATO_SECI.whatsapp && (
+              <a href={`https://wa.me/${CONTATO_SECI.whatsapp}`} target="_blank" rel="noreferrer" className="text-sm font-bold" style={{ color: ROXO }}>
+                💬 Falar no WhatsApp
+              </a>
+            )}
+            {CONTATO_SECI.site && (
+              <a href={CONTATO_SECI.site} target="_blank" rel="noreferrer" className="text-sm font-bold" style={{ color: ROXO }}>
+                🔗 {CONTATO_SECI.site.replace(/^https?:\/\//, '')}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl p-4 mt-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+        <p className="text-xs" style={{ color: '#92700C' }}>
+          <strong>Já é sindicalizada e aparece que não?</strong> Pode ser que seu CNPJ ainda não esteja na base que o IUB MAIS recebe do SECI. Fale com a nossa equipe pelo WhatsApp que a gente regulariza.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2.5 mt-6">
+        <BotaoGrande onClick={onVoltar} variante="claro">Voltar</BotaoGrande>
+      </div>
+    </CascaModal>
   );
 }
 
