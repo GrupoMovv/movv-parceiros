@@ -68,6 +68,7 @@ import Roleta from './pages/public/Jogos/Roleta';
 import Memoria from './pages/public/Jogos/Memoria';
 import MemoriaNiveis from './pages/public/Jogos/MemoriaNiveis';
 import JogosHub from './pages/public/Jogos/JogosHub';
+import Entrar from './pages/public/Entrar';
 import RoletaLogin from './pages/public/Jogos/RoletaLogin';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuCupons from './pages/public/Cadastro/MeuCupons';
@@ -224,6 +225,7 @@ export default function App() {
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
         <Route path="/marketplace/carrinho"       element={<MarketplaceFallback><MarketplaceCarrinho /></MarketplaceFallback>} />
         <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
+        <Route path="/entrar"             element={<Entrar />} />
         <Route path="/jogar/login"        element={<RoletaLogin />} />
         <Route path="/jogar"              element={<JogosHub />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />

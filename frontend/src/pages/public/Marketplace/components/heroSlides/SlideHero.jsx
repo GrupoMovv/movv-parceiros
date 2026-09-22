@@ -21,13 +21,16 @@ export default function SlideHero() {
         <p className="text-white/85 font-semibold mt-2 text-lg sm:text-2xl lg:text-3xl" style={{ fontFamily: 'Poppins, sans-serif' }}>
           Marketplace de Itumbiara
         </p>
+        {/* Ia pra /marketplace, que é a própria página onde o slide vive —
+            clicar não fazia nada. Agora leva pra bifurcação de entrada,
+            que é o que o slide institucional deveria convidar a fazer. */}
         <button
           type="button"
-          onClick={() => navigate('/marketplace')}
+          onClick={() => navigate('/entrar')}
           className="inline-flex items-center gap-2 w-fit mt-5 sm:mt-7 text-sm sm:text-base font-black px-6 sm:px-8 py-3 sm:py-4 rounded-2xl shadow-xl hover:scale-[1.03] transition-transform"
           style={{ backgroundColor: DOURADO, color: '#0F0F14', boxShadow: '0 8px 24px rgba(255,184,0,0.35)' }}
         >
-          Explorar loja <ArrowRight size={18} weight="bold" />
+          Quero entrar <ArrowRight size={18} weight="bold" />
         </button>
       </div>
 
