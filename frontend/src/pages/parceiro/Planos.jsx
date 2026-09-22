@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle, ArrowRight, Storefront, TrendUp } from '@phosphor-icons/react';
+import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle, ArrowRight, Storefront, TrendUp, Bank, Buildings } from '@phosphor-icons/react';
 import api from '../../services/api';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Marketplace/theme';
@@ -82,6 +82,39 @@ function maskCNPJ(v) {
   return String(v || '').replace(/\D/g, '').slice(0, 14)
     .replace(/(\d{2})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d)/, '$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
+// O endpoint /public/planos/precos devolve `preco_mensal` = preço da situação
+// que o backend DETECTOU pelo CNPJ, e `preco_alternativo` = o outro. Qual dos
+// dois é o de sindicalizada depende de `e_sindicalizada`, nunca da ordem dos
+// campos — por isso o toggle de visualização desempacota os dois aqui em vez
+// de assumir que "alternativo" é o mais barato.
+function precosDoPlano(precoInfo, eSindicalizada) {
+  if (!precoInfo) return null;
+  const sind = eSindicalizada ? precoInfo.preco_mensal : precoInfo.preco_alternativo;
+  const normal = eSindicalizada ? precoInfo.preco_alternativo : precoInfo.preco_mensal;
+  return {
+    sind,
+    normal,
+    sindFmt: eSindicalizada ? precoInfo.preco_mensal_formatado : precoInfo.preco_alternativo_formatado,
+    normalFmt: eSindicalizada ? precoInfo.preco_alternativo_formatado : precoInfo.preco_mensal_formatado,
+    // % real de desconto DESTE plano. Não é fixo: Oficial 69,90→34,90 dá 50%,
+    // mas Premium dá 38% e Master 23% — badge com número chapado mentiria.
+    offPct: normal > 0 ? Math.round(((normal - sind) / normal) * 100) : 0,
+  };
+}
+
+// Mesma conta de utils/planos.js (formatarValorDiario) no backend — precisa
+// existir aqui porque o `preco_diario_formatado` pronto só vem pro preço
+// detectado, e o toggle também mostra o outro.
+function diarioFmt(precoMensal) {
+  return `R$ ${(precoMensal / 30).toFixed(2).replace('.', ',')}`;
+}
+
+// Mesmo arredondamento em CENTAVOS de precoAssinatura() no backend: em float,
+// 34.90 * 0.95 = 33.1549... e cairia pra 33,15 em vez de 33,16.
+function comDescontoCartao(precoMensal, descontoPct) {
+  return Math.round(Math.round(precoMensal * 100) * (1 - descontoPct / 100)) / 100;
 }
 
 export default function ParceiroPlanos() {
@@ -172,6 +205,40 @@ export default function ParceiroPlanos() {
   }
 
   const eSindicalizada = Boolean(precosData?.e_sindicalizada);
+
+  // Toggle de VISUALIZAÇÃO de preço (sindicalizada x não). Só muda o que a
+  // tela mostra — quem decide o preço cobrado continua sendo o backend, pelo
+  // CNPJ (sindicalizacaoService.verificarSindicalizacao). Começa no que foi
+  // detectado; o parceiro alterna só pra comparar os dois.
+  const [verSindicalizada, setVerSindicalizada] = useState(false);
+  useEffect(() => { setVerSindicalizada(eSindicalizada); }, [eSindicalizada]);
+
+  // Preço exibido nos botões de assinar: na situação detectada usa os valores
+  // que o backend já calculou (/opcoes); na outra, recalcula com a mesma conta
+  // só pra comparação.
+  function precosExibidos(planoKey) {
+    const reais = precoOnline(planoKey);
+    if (!reais || verSindicalizada === eSindicalizada) return reais;
+    const p = precosDoPlano(precosData?.planos?.[planoKey], eSindicalizada);
+    if (!p) return reais;
+    const base = verSindicalizada ? p.sind : p.normal;
+    return { ...reais, pix: base, cartao_recorrente: comDescontoCartao(base, opcoes.desconto_cartao_pct) };
+  }
+
+  // Toggle em "Sou sindicalizada" com CNPJ fora do SECI: o backend vai cobrar
+  // o preço cheio (ele olha o CNPJ, não o toggle). Avisa ANTES, em vez de o
+  // parceiro descobrir o valor só no QR do PIX / checkout do cartão.
+  const [avisoPreco, setAvisoPreco] = useState(null); // { tipo, plano }
+  function pedirAssinatura(tipo, plano) {
+    if (verSindicalizada && !eSindicalizada) setAvisoPreco({ tipo, plano });
+    else setModalAssinar({ tipo, plano });
+  }
+  function confirmarPrecoNormal() {
+    const alvo = avisoPreco;
+    setAvisoPreco(null);
+    setVerSindicalizada(false); // alinha a tela com o valor que será cobrado
+    setModalAssinar({ tipo: alvo.tipo, plano: alvo.plano });
+  }
 
   return (
     <div className="space-y-8">
@@ -278,6 +345,14 @@ export default function ParceiroPlanos() {
 
       <BannerFechaMes proximoFechaMes={proximoFechaMes} />
 
+      {!cortesia && precosData && (
+        <TogglePrecoSindicalizada
+          valor={verSindicalizada}
+          onChange={setVerSindicalizada}
+          eSindicalizada={eSindicalizada}
+        />
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {ORDEM_PLANOS.map(planoKey => (
           <CardPlano
@@ -286,20 +361,20 @@ export default function ParceiroPlanos() {
             meta={META_PLANOS[planoKey]}
             precoInfo={precosData?.planos?.[planoKey]}
             eSindicalizada={eSindicalizada}
-            cnpjVerificado={Boolean(precosData?.cnpj_limpo)}
+            verSindicalizada={verSindicalizada}
             ehAtual={planoAtual === planoKey}
             jaInteressado={interesses?.includes(planoKey)}
             onNotificar={() => setPlanoModal(planoKey)}
             cortesia={cortesia}
             assinatura={modoAssinatura ? {
-              precos: precoOnline(planoKey),
+              precos: precosExibidos(planoKey),
               trial: Boolean(opcoes.trial_disponivel),
               trialDias: opcoes.trial_dias_cartao,
               creditoAte: opcoes.credito_troca?.ate,
               descontoPct: opcoes.desconto_cartao_pct,
               bloqueado: Boolean(assinaturaViva),
-              onPix: () => setModalAssinar({ tipo: 'pix', plano: planoKey }),
-              onCartao: () => setModalAssinar({ tipo: 'cartao', plano: planoKey }),
+              onPix: () => pedirAssinatura('pix', planoKey),
+              onCartao: () => pedirAssinatura('cartao', planoKey),
             } : null}
           />
         ))}
@@ -367,6 +442,16 @@ export default function ParceiroPlanos() {
         />
       )}
 
+      {avisoPreco && (
+        <ModalPrecoNormal
+          planoNome={opcoes?.planos?.find(p => p.plano === avisoPreco.plano)?.nome}
+          metodo={avisoPreco.tipo}
+          valorCobrado={avisoPreco.tipo === 'pix' ? precoOnline(avisoPreco.plano)?.pix : precoOnline(avisoPreco.plano)?.cartao_recorrente}
+          onContinuar={confirmarPrecoNormal}
+          onCancelar={() => setAvisoPreco(null)}
+        />
+      )}
+
       {planoModal && (
         <ModalNotificar
           plano={META_PLANOS[planoModal]}
@@ -401,6 +486,50 @@ function VerifiqueSeuPreco({ cnpjInput, setCnpjInput, checando, onVerificar }) {
           <MagnifyingGlass size={16} weight="bold" /> {checando ? 'Verificando...' : 'Ver meu preço'}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Alterna só a VISUALIZAÇÃO dos preços (sindicalizada x não) pro parceiro
+// comparar quanto economizaria sindicalizando. Não muda nada do que é
+// cobrado — ver `pedirAssinatura` em ParceiroPlanos.
+function TogglePrecoSindicalizada({ valor, onChange, eSindicalizada }) {
+  const opcoes = [
+    { id: true, rotulo: 'Sou sindicalizada SECI', Icone: Bank },
+    { id: false, rotulo: 'Não sou', Icone: Buildings },
+  ];
+  const simulando = valor !== eSindicalizada;
+  return (
+    <div className="text-center">
+      <div className="inline-flex flex-wrap justify-center gap-2">
+        {opcoes.map(({ id, rotulo, Icone }) => {
+          const ativo = valor === id;
+          return (
+            <button
+              key={String(id)}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-pressed={ativo}
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-0.5"
+              style={ativo
+                ? { backgroundColor: ROXO, color: 'white', boxShadow: `0 8px 20px ${ROXO}40` }
+                : { backgroundColor: '#F1F5F9', color: '#334155' }}
+            >
+              <Icone size={17} weight={ativo ? 'fill' : 'regular'} color={ativo ? DOURADO : '#64748B'} />
+              {rotulo}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs mt-2.5 animate-fade-in" key={`${valor}-${eSindicalizada}`} style={{ color: simulando ? '#92700C' : '#64748B' }}>
+        {simulando
+          ? (valor
+            ? '👀 Simulação — seu CNPJ ainda não consta no SECI, então a cobrança sai pelo preço normal.'
+            : '👀 Simulação — sua empresa é sindicalizada, você paga os preços com desconto.')
+          : (valor
+            ? '✅ Estes já são os seus preços de empresa sindicalizada.'
+            : 'Estes são os seus preços. Toque em "Sou sindicalizada SECI" pra ver quanto dá pra economizar.')}
+      </p>
     </div>
   );
 }
@@ -495,9 +624,14 @@ function BannerFechaMes({ proximoFechaMes }) {
   );
 }
 
-function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, ehAtual, jaInteressado, onNotificar, cortesia, assinatura }) {
+function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, verSindicalizada, ehAtual, jaInteressado, onNotificar, cortesia, assinatura }) {
   const emBreve = planoKey !== 'gratis' && !assinatura && !cortesia;
-  const temDesconto = eSindicalizada && precoInfo && precoInfo.economia > 0;
+  const p = planoKey === 'gratis' ? null : precosDoPlano(precoInfo, eSindicalizada);
+  const valor = p && (verSindicalizada ? p.sind : p.normal);
+  const valorFmt = p && (verSindicalizada ? p.sindFmt : p.normalFmt);
+  // "De R$ X" + badge só aparecem na visão sindicalizada e só se esse plano
+  // realmente tiver desconto.
+  const mostrarDesconto = Boolean(p && verSindicalizada && p.offPct > 0);
 
   return (
     <div
@@ -536,27 +670,20 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, 
           <p className="text-3xl font-extrabold" style={{ color: PRETO }}>
             R$ 0 <span className="text-sm font-medium text-slate-400">/mês SEMPRE</span>
           </p>
-        ) : temDesconto ? (
-          <>
-            <p className="text-slate-400 text-sm line-through">De {precoInfo.preco_alternativo_formatado}</p>
-            <p className="text-3xl font-extrabold" style={{ color: meta.maisEscolhido ? ROXO : PRETO }}>
-              {precoInfo.preco_mensal_formatado} <span className="text-sm font-medium text-slate-400">/mês</span>
-            </p>
-            <p className="text-slate-400 text-xs mt-0.5">Apenas {precoInfo.preco_diario_formatado} por dia</p>
-            <span className="inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${DOURADO}33`, color: '#92700C' }}>
-              Economia {precoInfo.economia_formatada}/mês
-            </span>
-          </>
         ) : (
-          <>
+          // key força o remount a cada troca de toggle — é o que dispara o fade.
+          <div key={verSindicalizada ? 'sind' : 'normal'} className="animate-fade-in">
+            {mostrarDesconto && <p className="text-slate-400 text-sm line-through">De {p.normalFmt}</p>}
             <p className="text-3xl font-extrabold" style={{ color: meta.maisEscolhido ? ROXO : PRETO }}>
-              {precoInfo.preco_mensal_formatado} <span className="text-sm font-medium text-slate-400">/mês</span>
+              {valorFmt} <span className="text-sm font-medium text-slate-400">/mês</span>
             </p>
-            <p className="text-slate-400 text-xs mt-0.5">Apenas {precoInfo.preco_diario_formatado} por dia</p>
-            {!cnpjVerificado && (
-              <p className="text-[11px] mt-1.5" style={{ color: '#92700C' }}>💡 {precoInfo.preco_alternativo_formatado} pra empresas sindicalizadas</p>
+            <p className="text-slate-400 text-xs mt-0.5">Apenas {diarioFmt(valor)} por dia</p>
+            {mostrarDesconto && (
+              <span className="inline-block mt-1.5 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: `${DOURADO}33`, color: '#92700C' }}>
+                🏆 {p.offPct}% OFF SINDICALIZADA
+              </span>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -584,7 +711,7 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, cnpjVerificado, 
           {ehAtual ? 'Seu plano (cortesia)' : 'Cortesia interna'}
         </button>
       ) : assinatura ? (
-        <OpcoesAssinatura planoKey={planoKey} destaque={meta.maisEscolhido} ehAtual={ehAtual} {...assinatura} />
+        <OpcoesAssinatura key={verSindicalizada ? 'sind' : 'normal'} planoKey={planoKey} destaque={meta.maisEscolhido} ehAtual={ehAtual} {...assinatura} />
       ) : jaInteressado ? (
         <button disabled className="mt-6 w-full flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-xl bg-emerald-50 text-emerald-600 cursor-not-allowed">
           <Check size={16} weight="bold" /> Você será notificado
@@ -619,7 +746,7 @@ function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, creditoAte, desco
     );
   }
   return (
-    <div className="mt-6 space-y-2">
+    <div className="mt-6 space-y-2 animate-fade-in">
       <div className="rounded-xl border-2 p-3" style={{ borderColor: DOURADO, background: `${DOURADO}0D` }}>
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>⭐ Recomendado</span>
@@ -644,6 +771,43 @@ function OpcoesAssinatura({ ehAtual, precos, trial, trialDias, creditoAte, desco
           className="mt-2 w-full text-sm font-semibold py-2.5 rounded-lg border-2 transition-colors hover:bg-purple-50" style={{ borderColor: ROXO, color: ROXO }}>
           Assinar com PIX
         </button>
+      </div>
+    </div>
+  );
+}
+
+// O parceiro estava vendo os preços de sindicalizada, mas o CNPJ dele não
+// está no SECI. O fluxo NÃO é bloqueado: explica e segue pelo preço cheio,
+// que é o que o backend cobra de qualquer jeito.
+function ModalPrecoNormal({ planoNome, metodo, valorCobrado, onContinuar, onCancelar }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={onCancelar}>
+      <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 text-center animate-scale-in" onClick={e => e.stopPropagation()}>
+        <WarningCircle size={40} weight="duotone" color="#D97706" className="mx-auto" />
+        <h2 className="text-lg font-extrabold mt-3" style={{ color: PRETO }}>Preço sindicalizada precisa do SECI</h2>
+        <p className="text-slate-600 text-sm mt-2">
+          Pra pagar o preço de empresa sindicalizada, seu CNPJ precisa estar cadastrado e em dia no SECI.
+          Por enquanto, será cobrado o <strong>preço normal</strong>.
+        </p>
+
+        {valorCobrado != null && (
+          <div className="rounded-2xl p-4 mt-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#92700C' }}>Valor que será cobrado</p>
+            <p className="text-2xl font-black mt-1" style={{ color: '#7A5E00' }}>{formatarBRL(valorCobrado)}<span className="text-sm font-medium">/mês</span></p>
+            <p className="text-[11px] mt-0.5" style={{ color: '#92700C' }}>{planoNome} — {metodo === 'pix' ? 'PIX' : 'cartão'}</p>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 mt-6">
+          <button type="button" onClick={onContinuar} className="text-sm font-bold py-3 rounded-xl text-white transition-colors" style={{ backgroundColor: ROXO }}>
+            Continuar pelo preço normal
+          </button>
+          <button type="button" onClick={onCancelar} className="text-sm font-semibold py-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+        </div>
+
+        <p className="text-slate-400 text-[11px] mt-4">Já é sindicalizada? Fale com a gente pelo WhatsApp pra regularizar o cadastro do CNPJ.</p>
       </div>
     </div>
   );
