@@ -133,8 +133,13 @@ export default function SlideFechaMes({ info }) {
           largo (≳1920px) o frame preenche 100% da altura e o botão passa
           a ficar por cima do canto inferior esquerdo (mascote + sacolas
           "COMPRE LOCAL"). Se incomodar em algum desses casos, é só mover
-          pra outro canto. */}
-      <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8">
+          pra outro canto.
+          Posição separa o botão dos controles do carrossel (play/pause
+          no canto inferior esquerdo, dots no centro, ver
+          HeroBannerCarousel): <768px sobe acima dessa linha (bottom-12/
+          sm:bottom-16), porque de lado ia bater nos dots; >=768px fica
+          na altura de sempre e só anda pra direita do play (md:left-20). */}
+      <div className="absolute bottom-12 sm:bottom-16 md:bottom-8 left-4 md:left-20">
         <button
           type="button"
           onClick={verProdutos}
