@@ -47,6 +47,7 @@ import SindicatoSolicitacoes from './pages/sindicato/Solicitacoes/SindicatoSolic
 import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitacoes/SindicatoParceirosSolicitacoes';
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
 import SindicatoPlanos from './pages/sindicato/Planos/SindicatoPlanos';
+import SindicatoBeerModeracao from './pages/sindicato/Beer/SindicatoBeerModeracao';
 import Carteirinha from './pages/public/Carteirinha';
 import Curiosidades from './pages/public/Curiosidades';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
@@ -55,7 +56,13 @@ const MarketplaceServicos = lazy(() => import('./pages/public/Marketplace/Market
 const ServicoDetalhe = lazy(() => import('./pages/public/Marketplace/ServicoDetalhe'));
 const MarketplaceFood = lazy(() => import('./pages/public/Marketplace/MarketplaceFood'));
 const FoodDetalhe = lazy(() => import('./pages/public/Marketplace/FoodDetalhe'));
+// IUB Disk Bebidas (/beer/*): BeerLayout faz a porta +18 pra todas as subrotas
+const BeerLayout = lazy(() => import('./pages/beer/BeerLayout'));
 const IUBBeerHome = lazy(() => import('./pages/beer/IUBBeerHome'));
+const BeerQueroAgora = lazy(() => import('./pages/beer/QueroAgora'));
+const BeerCategoriaLista = lazy(() => import('./pages/beer/CategoriaLista'));
+const BeerEstabelecimentoDetail = lazy(() => import('./pages/beer/EstabelecimentoDetail'));
+const BeerBuscaResultado = lazy(() => import('./pages/beer/BuscaResultado'));
 const Favoritos = lazy(() => import('./pages/public/Marketplace/Favoritos'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
@@ -93,6 +100,7 @@ import ParceiroEstatisticas from './pages/parceiro/Estatisticas';
 import ParceiroMateriais from './pages/parceiro/Materiais';
 import ParceiroLives from './pages/parceiro/Lives';
 import ParceiroFechaMes from './pages/parceiro/FechaMes';
+import ParceiroBeer from './pages/parceiro/Beer';
 import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
 import ParceiroMinhaAssinatura from './pages/parceiro/MinhaAssinatura';
@@ -220,7 +228,13 @@ export default function App() {
         <Route path="/servicos/:slug"             element={<MarketplaceFallback><ServicoDetalhe /></MarketplaceFallback>} />
         <Route path="/marketplace/food"           element={<MarketplaceFallback><MarketplaceFood /></MarketplaceFallback>} />
         <Route path="/food/:slug"                 element={<MarketplaceFallback><FoodDetalhe /></MarketplaceFallback>} />
-        <Route path="/beer"                       element={<MarketplaceFallback><IUBBeerHome /></MarketplaceFallback>} />
+        <Route path="/beer" element={<MarketplaceFallback><BeerLayout /></MarketplaceFallback>}>
+          <Route index element={<IUBBeerHome />} />
+          <Route path="quero-agora" element={<BeerQueroAgora />} />
+          <Route path="categoria/:codigo" element={<BeerCategoriaLista />} />
+          <Route path="estabelecimento/:slug" element={<BeerEstabelecimentoDetail />} />
+          <Route path="busca" element={<BeerBuscaResultado />} />
+        </Route>
         <Route path="/favoritos"                  element={<MarketplaceFallback><Favoritos /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
@@ -270,6 +284,7 @@ export default function App() {
           <Route path="materiais" element={<ParceiroMateriais />} />
           <Route path="lives" element={<ParceiroLives />} />
           <Route path="fecha-mes" element={<ParceiroFechaMes />} />
+          <Route path="beer" element={<ParceiroBeer />} />
           <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
           <Route path="planos" element={<ParceiroPlanos />} />
@@ -324,6 +339,7 @@ export default function App() {
           <Route path="sindicato/parceiros-solicitacoes" element={<RequireSindicatoEmpresas><SindicatoParceirosSolicitacoes /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/parceiro-interessados" element={<RequireSindicatoEmpresas><SindicatoParceiroInteressados /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/planos" element={<RequireSindicatoEmpresas><SindicatoPlanos /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/beer-moderacao" element={<RequireAdmin><SindicatoBeerModeracao /></RequireAdmin>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />

@@ -420,6 +420,34 @@ async function enviarPlanoExpirado({ nome, nomeFantasia, email, planoAnterior })
   return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfgAnterior.nome} expirou`, html });
 }
 
+// --- IUB Disk Bebidas: resultado da moderação de produto ---------------
+// Disparado na hora pela moderação (sindicatoBeerController), não por job.
+function escaparHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function enviarModeracaoBeer({ email, nomeFantasia, produtoNome, aprovado, motivo }) {
+  const produto = escaparHtml(produtoNome);
+  const html = template(aprovado ? `
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🍻 Produto aprovado no IUB Disk Bebidas</h2>
+    <p style="color:#555;line-height:1.6;">O produto <strong>${produto}</strong> da <strong>${escaparHtml(nomeFantasia)}</strong> foi aprovado e já aparece pros clientes no /beer.</p>
+    ${botao('Ver Meu IUB Beer', `${PORTAL_URL}/parceiro/painel/beer`)}
+  ` : `
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Produto não aprovado no IUB Disk Bebidas</h2>
+    <p style="color:#555;line-height:1.6;">O produto <strong>${produto}</strong> da <strong>${escaparHtml(nomeFantasia)}</strong> não foi aprovado.</p>
+    <div style="background:#fdf2f2;border-left:4px solid #dc2626;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7f1d1d;font-size:13px;"><strong>Motivo:</strong> ${escaparHtml(motivo)}</p>
+    </div>
+    <p style="color:#555;line-height:1.6;">Você pode corrigir e enviar de novo pelo painel.</p>
+    ${botao('Corrigir Produto', `${PORTAL_URL}/parceiro/painel/beer`)}
+  `);
+  return enviar({
+    to: email,
+    subject: aprovado ? `🍻 IUB MAIS — "${produtoNome}" aprovado no Disk Bebidas` : `IUB MAIS — "${produtoNome}" não foi aprovado no Disk Bebidas`,
+    html,
+  });
+}
+
 // --- Templates do Fecha Mês -------------------------------------------
 // Preparados, NÃO disparados por nenhum job automático ainda (não existe
 // cron nesse projeto — ver comentário em config/fechaMes.js sobre por que
@@ -545,6 +573,7 @@ async function enviarAssinaturaCancelada({ nome, nomeFantasia, email, plano, ace
 }
 
 module.exports = {
+  enviarModeracaoBeer,
   enviarPagamentoAssinaturaConfirmado,
   enviarTrialAtivado,
   enviarTrialTerminando,

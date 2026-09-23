@@ -24,7 +24,7 @@ const MENU_SECUNDARIO = [
   { label: '📦 Produtos', href: '#categorias' },
   { label: '🎯 Serviços', rota: '/marketplace/servicos' },
   { label: '🍔 IUB Food', rota: '/marketplace/food' },
-  { label: '🍻 IUB Beer', rota: '/beer' },
+  { label: '🍻 Disk Bebidas', rota: '/beer' },
   { label: '💡 Curiosidades', rota: '/curiosidades' },
   { label: '🔥 Ofertas', href: '#ofertas' },
   { label: '✨ Novidades', href: '#novidades' },

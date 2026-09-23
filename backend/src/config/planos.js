@@ -34,6 +34,7 @@ const PLANOS = {
     preco_nao_sindicalizada: 0,
     max_produtos: 30,
     max_produtos_rotativa: 0, // não aparece na rotativa
+    max_destaques_beer: 0, // IUB Disk Bebidas: produtos em destaque no /beer
     // Fecha Mês: Grátis agora participa, mas só com os produtos bônus
     // (exclusivos daquela edição) — zero vaga de catálogo normal.
     participa_fecha_mes: true,
@@ -67,6 +68,7 @@ const PLANOS = {
     preco_nao_sindicalizada: 69.90,
     max_produtos: 30,
     max_produtos_rotativa: 4,
+    max_destaques_beer: 4,
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
     tem_selo: true,
@@ -91,6 +93,7 @@ const PLANOS = {
     preco_nao_sindicalizada: 79.90,
     max_produtos: 30,
     max_produtos_rotativa: 9,
+    max_destaques_beer: 9,
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
     tem_selo: true,
@@ -117,6 +120,7 @@ const PLANOS = {
     preco_nao_sindicalizada: 127.90,
     max_produtos: null, // ilimitado
     max_produtos_rotativa: 15,
+    max_destaques_beer: null, // ilimitado
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
     tem_selo: true,
@@ -198,6 +202,11 @@ function limiteVozDia(plano) {
   return max === null || max === undefined ? Infinity : max;
 }
 
+function limiteDestaquesBeer(plano) {
+  const max = beneficios(plano).max_destaques_beer;
+  return max === null || max === undefined ? Infinity : max;
+}
+
 // Preço de verdade a cobrar de um plano, dado se o CNPJ do parceiro está
 // sindicalizado ou não (ver sindicalizacaoService.verificarSindicalizacao).
 function precoPlano(plano, sindicalizada) {
@@ -234,6 +243,7 @@ module.exports = {
   limiteJogos,
   limiteIA,
   limiteVozDia,
+  limiteDestaquesBeer,
   precoPlano,
   precoAssinatura,
   DESCONTO_CARTAO_RECORRENTE,
