@@ -80,6 +80,7 @@ app.use('/api/webhook/mercadopago',     require('./routes/webhookMercadoPago'));
 app.use('/api/interno',                 require('./routes/interno'));
 app.use('/api/parceiro',               require('./routes/parceiroConta'));
 app.use('/api/public/parceiro',        require('./routes/publicParceiroConta'));
+app.use('/api/public/beer',            require('./routes/beer'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 app.use('/',                           require('./routes/produtoPublico'));

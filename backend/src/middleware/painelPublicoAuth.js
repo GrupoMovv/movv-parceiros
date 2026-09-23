@@ -37,4 +37,24 @@ async function authenticatePainelPublico(req, res, next) {
   }
 }
 
-module.exports = { gerarTokenPainel, authenticatePainelPublico };
+// Versão que NÃO barra: pra rota pública que muda de comportamento quando
+// o visitante é associado logado (ex.: +18 do IUB BEER), mas continua
+// funcionando sem login. Token ausente/inválido = req.painelAssociado null.
+async function lerPainelPublicoOpcional(req, res, next) {
+  req.painelAssociado = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+      if (decoded.type === TIPO) {
+        const result = await db.query('SELECT * FROM sindicato_associados WHERE id = $1', [decoded.associado_id]);
+        req.painelAssociado = result.rows[0] || null;
+      }
+    } catch {
+      // token velho/de outro sistema — segue como visitante anônimo
+    }
+  }
+  next();
+}
+
+module.exports = { gerarTokenPainel, authenticatePainelPublico, lerPainelPublicoOpcional };

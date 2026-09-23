@@ -119,6 +119,7 @@ export const CATEGORIAS_FILTRO = [
   { label: 'Saúde', emoji: '💊' },
   { label: 'Beleza', emoji: '💄' },
   { label: 'Alimentação', emoji: '🍔' },
+  { label: 'Bebidas', emoji: '🍷' },
   { label: 'Serviços', emoji: '🔧' },
   { label: 'Fitness', emoji: '🏋️' },
   { label: 'Casa', emoji: '🏠' },

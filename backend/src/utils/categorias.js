@@ -13,4 +13,11 @@ function ehRestaurante(categorias) {
   return (categorias || []).some(c => normalizarCategoria(c) === alvo);
 }
 
-module.exports = { normalizarCategoria, ehRestaurante };
+// IUB BEER = parceiro com "Bebidas" no categorias[] — mesmo critério do
+// Food (ver beerController.js). Um bar pode ter as duas e aparecer nos dois.
+function ehBebidas(categorias) {
+  const alvo = normalizarCategoria('Bebidas');
+  return (categorias || []).some(c => normalizarCategoria(c) === alvo);
+}
+
+module.exports = { normalizarCategoria, ehRestaurante, ehBebidas };

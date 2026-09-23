@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   ShoppingBag, Wrench, ForkKnife, TShirt, House, Car, Laptop, Sparkle, Gift,
-  GraduationCap, Barbell, Pill, Bed, Brain,
+  GraduationCap, Barbell, Pill, Bed, Brain, Wine,
 } from '@phosphor-icons/react';
 import { CATEGORIAS_FILTRO, normalizarCategoria } from '../parceirosData';
 import { ROXO } from '../theme';
@@ -9,7 +9,7 @@ import { ROXO } from '../theme';
 const ICONES = {
   Produtos: ShoppingBag, Serviços: Wrench, Alimentação: ForkKnife, Moda: TShirt, Casa: House,
   Automotivo: Car, Tecnologia: Laptop, Beleza: Sparkle, Presentes: Gift, Educação: GraduationCap,
-  Esportes: Barbell, Fitness: Barbell, Saúde: Pill, Hospedagem: Bed, 'Bem-estar': Brain,
+  Esportes: Barbell, Fitness: Barbell, Saúde: Pill, Hospedagem: Bed, 'Bem-estar': Brain, Bebidas: Wine,
 };
 
 // Só as categorias que já têm página de produtos de verdade no backend
@@ -18,16 +18,18 @@ const ICONES = {
 // só existem como filtro da grade de parceiros aqui embaixo ("Compre de
 // empresas de Itumbiara"), não como página própria. Alimentação não está
 // mais em CATEGORIAS_HOME (virou área própria, IUB Food) — rota especial
-// abaixo em vez de entrar nesse mapa de slug genérico.
+// abaixo em vez de entrar nesse mapa de slug genérico. Bebidas idem (IUB
+// BEER, área +18 própria).
 const SLUG_POR_LABEL = {
   Serviços: 'servicos', Moda: 'moda', Casa: 'casa',
   Tecnologia: 'tecnologia', Beleza: 'beleza', Saúde: 'saude', Fitness: 'fitness',
 };
 const ROTA_ESPECIAL_POR_LABEL = {
   Alimentação: '/marketplace/food',
+  Bebidas: '/beer',
 };
 
-// Faixa única de categorias — TODAS as 14 (sem "Todas"), sem duplicar em
+// Faixa única de categorias — TODAS as 15 (sem "Todas"), sem duplicar em
 // outro lugar da página. Ícone Phosphor em círculo pastel roxo + nome
 // embaixo, scroll horizontal livre (sem setas). Quem tem página de
 // produtos própria navega pra lá; o resto filtra a grade de parceiros
