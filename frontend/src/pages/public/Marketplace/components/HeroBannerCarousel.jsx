@@ -25,10 +25,16 @@ const LIMIAR_SWIPE_PX = 40;
 // foi escolhido calculando o preenchimento nos 3 tamanhos de teste
 // (320/375/414px): 84%/99%/100% (corta só ~17px de cada lado em 414px,
 // imperceptível) — o melhor equilíbrio dentro da faixa 380-420 pedida.
-// Os 6 slides novos usam a altura do redesign (280-300 mobile / 400-450
-// desktop), sem relação com o Fecha Mês.
+// Os slides de categoria/cupons usam a altura do redesign (280-300 mobile
+// / 400-450 desktop), sem relação com o Fecha Mês. Hero/Jogos/Serviços são
+// arte pronta (ver SlideBannerArteBase): a altura acompanha a proporção da
+// peça — 1:1 no mobile, 3:1 do sm pra cima — pra arte aparecer inteira.
+// Em vw (não aspect-ratio) pra continuar animando a troca de altura; a
+// barra de rolagem do desktop entra no vw, mas a diferença é de ~6px e o
+// object-cover absorve.
 const ALTURA_PADRAO = 'h-[290px] sm:h-[380px] lg:h-[440px]';
 const ALTURA_FECHA_MES = 'h-[380px] sm:h-[480px] lg:h-[620px]';
+const ALTURA_BANNER_ARTE = 'h-[100vw] sm:h-[33.34vw]';
 
 // TODO (painel admin futuro, não implementado ainda):
 //  - editor de slides do banner (texto, imagem, botão, ordem)
@@ -64,14 +70,14 @@ export default function HeroBannerCarousel({ fechaMesInfo }) {
     && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 20;
   const fechaMesEhPrincipal = mostrarFechaMes && diasRestantes <= 3;
   const slideFechaMes = mostrarFechaMes && {
-    id: 'fecha-mes', Componente: SlideFechaMes, props: { info: fechaMesInfo }, cor: DOURADO, alturaClassica: true,
+    id: 'fecha-mes', Componente: SlideFechaMes, props: { info: fechaMesInfo }, cor: DOURADO, altura: ALTURA_FECHA_MES,
   };
 
   const slides = useMemo(() => {
     const base = [
-      { id: 'hero', Componente: SlideHero, props: {}, cor: DOURADO },
-      { id: 'jogos', Componente: SlideJogos, props: {}, cor: '#FFB800' },
-      { id: 'servicos', Componente: SlideServicos, props: {}, cor: '#FFB800' },
+      { id: 'hero', Componente: SlideHero, props: {}, cor: DOURADO, altura: ALTURA_BANNER_ARTE },
+      { id: 'jogos', Componente: SlideJogos, props: {}, cor: '#FFB800', altura: ALTURA_BANNER_ARTE },
+      { id: 'servicos', Componente: SlideServicos, props: {}, cor: '#FFB800', altura: ALTURA_BANNER_ARTE },
       masterPorCategoria.beleza.length > 0 && { id: 'categoria-beleza', Componente: SlideCategoriaBeleza, props: { lojas: masterPorCategoria.beleza }, cor: '#EC4899' },
       masterPorCategoria.saude.length > 0 && { id: 'categoria-saude', Componente: SlideCategoriaSaude, props: { lojas: masterPorCategoria.saude }, cor: '#10B981' },
       masterPorCategoria.fitness.length > 0 && { id: 'categoria-fitness', Componente: SlideCategoriaFitness, props: { lojas: masterPorCategoria.fitness }, cor: '#F97316' },
@@ -122,7 +128,7 @@ export default function HeroBannerCarousel({ fechaMesInfo }) {
 
   if (total === 0) return null;
 
-  const alturaAtual = slides[indice]?.alturaClassica ? ALTURA_FECHA_MES : ALTURA_PADRAO;
+  const alturaAtual = slides[indice]?.altura || ALTURA_PADRAO;
 
   return (
     <section

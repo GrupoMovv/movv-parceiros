@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { otimizarCloudinary } from '../../../../../utils/cloudinary';
 
 // Peça antiga — tinha "25 DE SETEMBRO" e "Faltam 16 dias" DESENHADOS na
 // imagem. Mantida só como fallback caso SLIDE_FECHA_MES_SEM_TEXTO (abaixo)
@@ -82,9 +83,9 @@ export default function SlideFechaMes({ info }) {
         style={{ containerType: 'inline-size' }}
       >
         <picture>
-          <source media="(max-width: 639px)" srcSet={SLIDE_FECHA_MES_MOBILE} />
+          <source media="(max-width: 639px)" srcSet={otimizarCloudinary(SLIDE_FECHA_MES_MOBILE)} />
           <img
-            src={imagemSlide}
+            src={otimizarCloudinary(imagemSlide)}
             alt={`Fecha Mês IUB MAIS+ — ${formatarDataDestaque(info.data_evento)}, faltam ${textoDias}`}
             loading="lazy"
             className="w-full h-full object-cover"
