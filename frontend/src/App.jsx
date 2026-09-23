@@ -63,6 +63,7 @@ const BeerQueroAgora = lazy(() => import('./pages/beer/QueroAgora'));
 const BeerCategoriaLista = lazy(() => import('./pages/beer/CategoriaLista'));
 const BeerEstabelecimentoDetail = lazy(() => import('./pages/beer/EstabelecimentoDetail'));
 const BeerBuscaResultado = lazy(() => import('./pages/beer/BuscaResultado'));
+const BeerTodasCategorias = lazy(() => import('./pages/beer/TodasCategoriasPage'));
 const Favoritos = lazy(() => import('./pages/public/Marketplace/Favoritos'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
@@ -231,6 +232,7 @@ export default function App() {
         <Route path="/beer" element={<MarketplaceFallback><BeerLayout /></MarketplaceFallback>}>
           <Route index element={<IUBBeerHome />} />
           <Route path="quero-agora" element={<BeerQueroAgora />} />
+          <Route path="categorias" element={<BeerTodasCategorias />} />
           <Route path="categoria/:codigo" element={<BeerCategoriaLista />} />
           <Route path="estabelecimento/:slug" element={<BeerEstabelecimentoDetail />} />
           <Route path="busca" element={<BeerBuscaResultado />} />

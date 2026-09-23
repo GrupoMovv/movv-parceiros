@@ -1,6 +1,6 @@
 const db = require('../config/database');
 const { PLANOS, planoEfetivo, sqlPlanoVigente } = require('../config/planos');
-const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto } = require('../config/beer');
+const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto, abertoEfetivo } = require('../config/beer');
 const { onlyDigits, isValidCPF } = require('../utils/validators');
 
 // IUB DISK BEBIDAS — rotas públicas (/api/public/beer). Modelo híbrido
@@ -29,13 +29,27 @@ const FROM_PRODUTO = `
 // de propósito: é pra onde vai o pedido ("Pedir no WhatsApp").
 const SELECT_ESTABELECIMENTO = `
   be.id AS estabelecimento_id, pa.slug, pa.nome, pa.logo_url, be.tipo, be.whatsapp,
-  be.bairros_entrega, be.horario_funcionamento, be.status_aberto, be.tempo_entrega_min, be.retirada_disponivel,
+  be.bairros_entrega, be.horario_funcionamento, be.status_aberto, be.ultimo_status_update, be.tempo_entrega_min, be.retirada_disponivel,
   pa.plano, pa.plano_expira_em, pa.cortesia_interna
 `;
 
-// Tira os campos internos de plano e devolve o plano que vale AGORA.
-function publicoEstabelecimento({ plano_expira_em, cortesia_interna, estabelecimento_id, ...e }) {
-  return { id: estabelecimento_id, ...e, plano: planoEfetivo({ ...e, plano_expira_em, cortesia_interna }) };
+// Tira os campos internos e devolve o que vale AGORA: plano efetivo e
+// status_aberto EFETIVO — botão "Aberto agora" ligado dentro do turno do
+// horário e neste turno (config/beer.js abertoEfetivo). O cliente nunca vê
+// o valor cru do botão: esquecido ligado de ontem = Fechado.
+function publicoEstabelecimento({ plano_expira_em, cortesia_interna, estabelecimento_id, ultimo_status_update, ...e }) {
+  return {
+    id: estabelecimento_id, ...e,
+    status_aberto: abertoEfetivo({ ...e, ultimo_status_update }),
+    plano: planoEfetivo({ ...e, plano_expira_em, cortesia_interna }),
+  };
+}
+
+// Mesma ordem do SQL (plano), com quem está aberto DE VERDADE na frente
+// dentro de cada plano — "aberto" só dá pra saber em JS (turno do horário).
+function ordenarAbertosPrimeiro(lista) {
+  const peso = e => PLANOS[e.plano]?.boost_busca || 0;
+  return [...lista].sort((a, b) => (peso(b) - peso(a)) || (Number(b.status_aberto) - Number(a.status_aberto)));
 }
 
 function publicoProduto(r) {
@@ -98,11 +112,11 @@ async function getCategorias(req, res) {
 async function getResumo(req, res) {
   try {
     const r = await db.query(
-      `SELECT COUNT(*)::int AS estabelecimentos, COUNT(*) FILTER (WHERE be.status_aberto)::int AS abertos
+      `SELECT be.status_aberto, be.ultimo_status_update, be.horario_funcionamento
        FROM beer_estabelecimentos be JOIN sindicato_parceiros pa ON pa.id = be.parceiro_id
        WHERE ${WHERE_ESTABELECIMENTO_VISIVEL}`
     );
-    return res.json(r.rows[0]);
+    return res.json({ estabelecimentos: r.rows.length, abertos: r.rows.filter(e => abertoEfetivo(e)).length });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar resumo' });
@@ -117,6 +131,7 @@ async function getEstabelecimentos(req, res) {
     const { categoria, bairro, aberto } = req.query;
     const params = [];
     const filtros = [WHERE_ESTABELECIMENTO_VISIVEL];
+    // botão ligado é condição necessária; o turno confere em JS lá embaixo
     if (aberto === 'true') filtros.push('be.status_aberto = true');
     if (categoria) {
       const sqlCat = await filtroCategoria(categoria, params);
@@ -133,7 +148,7 @@ async function getEstabelecimentos(req, res) {
                 WHERE bp.estabelecimento_id = be.id AND bp.status = 'aprovado' AND bp.disponivel = true) AS grupos
        FROM beer_estabelecimentos be JOIN sindicato_parceiros pa ON pa.id = be.parceiro_id
        WHERE ${filtros.join(' AND ')}
-       ORDER BY ${sqlOrdemPlano()} DESC, be.status_aberto DESC, pa.nome ASC`,
+       ORDER BY ${sqlOrdemPlano()} DESC, pa.nome ASC`,
       params
     );
 
@@ -142,7 +157,9 @@ async function getEstabelecimentos(req, res) {
       const alvo = normalizarTexto(bairro);
       lista = lista.filter(e => (e.bairros_entrega || []).some(b => normalizarTexto(b) === alvo));
     }
-    return res.json({ estabelecimentos: lista.map(publicoEstabelecimento) });
+    lista = ordenarAbertosPrimeiro(lista.map(publicoEstabelecimento));
+    if (aberto === 'true') lista = lista.filter(e => e.status_aberto);
+    return res.json({ estabelecimentos: lista });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar estabelecimentos' });
@@ -232,7 +249,8 @@ async function listarProdutos({ categoria, dia, disponivelAgora, soAbertos, q, t
     const termo = normalizarTexto(q);
     linhas = linhas.filter(p => normalizarTexto([p.produto_nome, p.descricao, p.categoria_nome, p.nome].join(' ')).includes(termo));
   }
-  return linhas.map(publicoProduto);
+  const produtos = linhas.map(publicoProduto);
+  return soAbertos ? produtos.filter(p => p.estabelecimento.status_aberto) : produtos;
 }
 
 function diaDaQuery(dia) {

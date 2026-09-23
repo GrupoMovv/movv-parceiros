@@ -103,6 +103,86 @@ function diaDeHoje(agora = new Date()) {
   return { Mon: 'seg', Tue: 'ter', Wed: 'qua', Thu: 'qui', Fri: 'sex', Sat: 'sab', Sun: 'dom' }[curto];
 }
 
+// ---------------------------------------------------------------------
+// "Aberto agora" preso ao horário de funcionamento (evita loja "aberta
+// 24h" porque o parceiro esqueceu o botão ligado):
+//   - o botão só LIGA dentro de um turno do horário cadastrado;
+//   - ligado vale só pro turno em que foi ligado — terminou o turno, a loja
+//     aparece Fechada sozinha e no próximo turno precisa ligar de novo
+//     (senão reabria "sozinha" todo dia no horário, mesmo sem ninguém lá).
+// Mesmo formato/regras do IUB Food (frontend/src/utils/iubFood.js):
+// fecha < abre = vira a noite (18:00–02:00), e de madrugada quem vale é o
+// turno de ONTEM. São Paulo não tem horário de verão desde 2019: -03:00 fixo.
+const DIAS_POR_INDICE = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+const HHMM_VALIDO = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function paraMin(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+function turnoValido(t) {
+  return Boolean(t?.aberto && HHMM_VALIDO.test(t.abre || '') && HHMM_VALIDO.test(t.fecha || ''));
+}
+// "YYYY-MM-DD" em Itumbiara, `deslocDias` dias a partir de hoje.
+function dataSP(agora, deslocDias = 0) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })
+    .format(new Date(agora.getTime() + deslocDias * 86400000));
+}
+function instante(ymd, hhmm) {
+  return new Date(`${ymd}T${hhmm}:00-03:00`);
+}
+
+function horarioConfigurado(horario) {
+  return DIAS.some(d => turnoValido(horario?.[d]));
+}
+
+// Turno que está valendo AGORA: { inicio: Date, fim: Date, abre, fecha } ou null.
+function turnoAtual(horario, agora = new Date()) {
+  if (!horario) return null;
+  const hoje = dataSP(agora);
+  const ontem = dataSP(agora, -1);
+  const amanha = dataSP(agora, 1);
+  const idx = DIAS_POR_INDICE.indexOf(diaDeHoje(agora));
+  const [hh, mm] = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .format(agora).split(':').map(Number);
+  const minutos = hh * 60 + mm;
+
+  const tOntem = horario[DIAS_POR_INDICE[(idx + 6) % 7]];
+  if (turnoValido(tOntem) && paraMin(tOntem.fecha) <= paraMin(tOntem.abre) && minutos < paraMin(tOntem.fecha)) {
+    return { inicio: instante(ontem, tOntem.abre), fim: instante(hoje, tOntem.fecha), abre: tOntem.abre, fecha: tOntem.fecha };
+  }
+  const tHoje = horario[DIAS_POR_INDICE[idx]];
+  if (turnoValido(tHoje)) {
+    const a = paraMin(tHoje.abre);
+    const f = paraMin(tHoje.fecha);
+    if (f > a && minutos >= a && minutos < f) return { inicio: instante(hoje, tHoje.abre), fim: instante(hoje, tHoje.fecha), abre: tHoje.abre, fecha: tHoje.fecha };
+    if (f <= a && minutos >= a) return { inicio: instante(hoje, tHoje.abre), fim: instante(amanha, tHoje.fecha), abre: tHoje.abre, fecha: tHoje.fecha };
+  }
+  return null;
+}
+
+// "hoje às 18:00" / "sex às 18:00" / null — próxima abertura FORA de turno.
+function proximaAbertura(horario, agora = new Date()) {
+  if (!horarioConfigurado(horario)) return null;
+  const idx = DIAS_POR_INDICE.indexOf(diaDeHoje(agora));
+  const [hh, mm] = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .format(agora).split(':').map(Number);
+  const minutos = hh * 60 + mm;
+  for (let i = 0; i <= 7; i++) {
+    const t = horario[DIAS_POR_INDICE[(idx + i) % 7]];
+    if (!turnoValido(t) || (i === 0 && paraMin(t.abre) <= minutos)) continue;
+    return `${i === 0 ? 'hoje' : i === 1 ? 'amanhã' : DIAS_POR_INDICE[(idx + i) % 7]} às ${t.abre}`;
+  }
+  return null;
+}
+
+// O que o cliente vê: botão ligado DENTRO de um turno E ligado neste turno.
+function abertoEfetivo(est, agora = new Date()) {
+  if (!est?.status_aberto || !est.ultimo_status_update) return false;
+  const turno = turnoAtual(est.horario_funcionamento, agora);
+  return Boolean(turno && new Date(est.ultimo_status_update) >= turno.inicio);
+}
+
 // dias_disponiveis aceito do front: {"todos": true} ou só chaves de DIAS
 // marcadas true. Qualquer outra coisa vira "todos".
 function normalizarDias(entrada) {
@@ -115,4 +195,5 @@ module.exports = {
   TIPOS_ESTABELECIMENTO, DIAS, IDADE_MINIMA, TERMO_VERSAO,
   TERMOS_BLOQUEADOS, TERMOS_CONTEXTO, MENSAGEM_TERMO_PROIBIDO,
   verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias,
+  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
 };

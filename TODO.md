@@ -1,5 +1,22 @@
 # TODO
 
+## IUB Disk Bebidas (/beer) — pendências da fase 1 (2026-09-23)
+
+- **Parecer jurídico sobre cigarros (Lei 9.294/96)** ANTES de intensificar
+  marketing dessa categoria. A lei proíbe propaganda de produto fumígeno
+  fora do ponto de venda; vitrine online com foto/preço/marca pode ser
+  enquadrada. Hoje a categoria `cigarros` existe (só cigarro comum, vape/pod
+  bloqueados no filtro), com aviso legal no card — nada de banner, destaque
+  em campanha ou push com cigarro até ter o parecer.
+- **Fase 2: lista oficial de bairros de Itumbiara** pro "Bairros de entrega"
+  do cadastro (hoje é campo livre em `pages/parceiro/Beer.jsx` → texto
+  solto em `beer_estabelecimentos.bairros_entrega`; o filtro `?bairro=`
+  compara sem acento/maiúscula, mas "Jd. Europa" ≠ "Jardim Europa").
+  Com a lista: trocar por multi-select e normalizar o que já existir.
+- Roadmap fase 2/3 do spec (combos, "Para quem é?", kits, vitrine premium,
+  ofertas dinâmicas, busca inteligente, Monte seu Drink ativo, avaliações)
+  — nada implementado.
+
 ## IA Assistente de cadastro de produtos — falta ativar e testar com fotos reais
 
 Em 2026-09-15, implementamos o cadastro de produto assistido por IA

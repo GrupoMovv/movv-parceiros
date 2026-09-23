@@ -59,7 +59,13 @@ export default function ParceiroBeer() {
         dados={dados}
         editando={editandoCadastro}
         onCancelar={editandoCadastro ? () => setEditandoCadastro(false) : null}
-        onSalvo={async () => { setEditandoCadastro(false); await carregar(); }}
+        // Usa a resposta do PUT (já traz o status novo) antes de sair do modo
+        // edição — senão o painel mostrava o status VELHO até o reload.
+        onSalvo={async data => {
+          setDados(d => ({ ...d, estabelecimento: data.estabelecimento, status: data.status, parceiro: data.parceiro }));
+          setEditandoCadastro(false);
+          await carregar();
+        }}
       />
     );
   }
@@ -67,9 +73,10 @@ export default function ParceiroBeer() {
   async function alternarStatus() {
     setMudandoStatus(true);
     try {
-      const res = await apiParceiro.post('/parceiro/beer/meu/status', { status_aberto: !est.status_aberto });
-      setDados(d => ({ ...d, estabelecimento: { ...d.estabelecimento, ...res.data } }));
-      toast.success(res.data.status_aberto ? 'Você está ABERTO no Disk Bebidas' : 'Você está FECHADO no Disk Bebidas');
+      const res = await apiParceiro.post('/parceiro/beer/meu/status', { status_aberto: !aberto });
+      const { status, ...campos } = res.data;
+      setDados(d => ({ ...d, status, estabelecimento: { ...d.estabelecimento, ...campos } }));
+      toast.success(status.aberto ? 'Você está ABERTO no Disk Bebidas' : 'Você está FECHADO no Disk Bebidas');
     } catch (err) {
       toast.error(mensagemErro(err, 'Erro ao mudar status'));
     } finally {
@@ -90,6 +97,16 @@ export default function ParceiroBeer() {
 
   const lim = dados.limites;
   const destaquesUsados = produtos.filter(p => p.destaque).length;
+  // "aberto" = o que o CLIENTE vê (backend: botão ligado dentro do turno e
+  // neste turno). Fora do horário o botão nem liga.
+  const st = dados.status || {};
+  const aberto = Boolean(st.aberto);
+  const travado = !aberto && !st.pode_abrir;
+  const turnoAcabou = est.status_aberto && !aberto;
+  let apoio;
+  if (aberto) apoio = `Seus produtos "disponível agora" aparecem no Quero Agora. Fecha sozinho às ${st.turno?.fecha}. Toque pra fechar antes.`;
+  else if (travado) apoio = `Fora do seu horário de funcionamento${st.proxima_abertura ? ` — você abre ${st.proxima_abertura}` : ''}. O botão libera no horário.`;
+  else apoio = turnoAcabou ? 'O turno anterior acabou e você fechou sozinho. Toque pra abrir de novo.' : 'Você não aparece no Quero Agora. Toque pra abrir.';
 
   return (
     <div className="space-y-6">
@@ -112,28 +129,26 @@ export default function ParceiroBeer() {
       <button
         type="button"
         onClick={alternarStatus}
-        disabled={mudandoStatus}
-        className="w-full rounded-2xl p-5 sm:p-6 flex items-center justify-between gap-4 text-left transition-colors disabled:opacity-70"
-        style={{ backgroundColor: est.status_aberto ? '#DCFCE7' : '#FEE2E2', border: `2px solid ${est.status_aberto ? '#16A34A' : '#DC2626'}` }}
-        aria-pressed={est.status_aberto}
+        disabled={mudandoStatus || travado}
+        className="w-full rounded-2xl p-5 sm:p-6 flex items-center justify-between gap-4 text-left transition-colors disabled:cursor-not-allowed"
+        style={travado
+          ? { backgroundColor: '#F1F5F9', border: '2px solid #CBD5E1' }
+          : { backgroundColor: aberto ? '#DCFCE7' : '#FEE2E2', border: `2px solid ${aberto ? '#16A34A' : '#DC2626'}` }}
+        aria-pressed={aberto}
       >
         <div>
-          <p className="text-lg sm:text-2xl font-black" style={{ color: est.status_aberto ? '#166534' : '#991B1B' }}>
-            {est.status_aberto ? '🟢 Aberto agora' : '🔴 Fechado'}
+          <p className="text-lg sm:text-2xl font-black" style={{ color: travado ? '#475569' : aberto ? '#166534' : '#991B1B' }}>
+            {aberto ? '🟢 Aberto agora' : '🔴 Fechado'}
           </p>
-          <p className="text-xs sm:text-sm mt-1" style={{ color: est.status_aberto ? '#166534' : '#991B1B' }}>
-            {est.status_aberto
-              ? 'Seus produtos "disponível agora" aparecem no Quero Agora. Toque pra fechar.'
-              : 'Você não aparece no Quero Agora. Toque pra abrir.'}
-          </p>
-          {est.ultimo_status_update && (
+          <p className="text-xs sm:text-sm mt-1" style={{ color: travado ? '#64748B' : aberto ? '#166534' : '#991B1B' }}>{apoio}</p>
+          {aberto && est.ultimo_status_update && (
             <p className="text-[11px] mt-1 text-slate-500 flex items-center gap-1">
               <Clock className="w-3 h-3" /> desde {new Date(est.ultimo_status_update).toLocaleString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
             </p>
           )}
         </div>
-        <span className="relative w-16 h-9 rounded-full flex-shrink-0 transition-colors" style={{ backgroundColor: est.status_aberto ? '#16A34A' : '#CBD5E1' }}>
-          <span className="absolute top-1 w-7 h-7 rounded-full bg-white shadow transition-all" style={{ left: est.status_aberto ? '2.1rem' : '0.25rem' }} />
+        <span className="relative w-16 h-9 rounded-full flex-shrink-0 transition-colors" style={{ backgroundColor: aberto ? '#16A34A' : '#CBD5E1' }}>
+          <span className="absolute top-1 w-7 h-7 rounded-full bg-white shadow transition-all" style={{ left: aberto ? '2.1rem' : '0.25rem' }} />
         </span>
       </button>
 
@@ -448,12 +463,12 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
     e.preventDefault();
     setSalvando(true);
     try {
-      await apiParceiro.put('/parceiro/beer/meu', {
+      const res = await apiParceiro.put('/parceiro/beer/meu', {
         tipo, cnpj, cnae, whatsapp, bairros_entrega: bairros, tempo_entrega_min: tempo ? Number(tempo) : null,
         retirada_disponivel: retirada, horario_funcionamento: horario, aceite_termo: aceite,
       });
       toast.success(editando ? 'Dados atualizados' : 'Bem-vindo ao IUB Disk Bebidas! 🍻');
-      onSalvo();
+      onSalvo(res.data);
     } catch (err) {
       toast.error(mensagemErro(err, 'Erro ao salvar'));
     } finally {
@@ -535,7 +550,7 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-2">Horário de funcionamento</label>
+          <label className="block text-xs font-semibold text-slate-500 mb-2">Horário de funcionamento *</label>
           <div className="space-y-1.5">
             {DIAS.map(d => {
               const h = horario[d.chave] || {};
@@ -556,7 +571,7 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
               );
             })}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1.5">Informativo. Quem decide se você aparece como aberto é o botão “Aberto agora” do painel.</p>
+          <p className="text-[11px] text-slate-400 mt-1.5">Obrigatório (pelo menos um dia). O botão “Aberto agora” só liga dentro desse horário e desliga sozinho quando o turno acaba — assim ninguém aparece aberto de madrugada por esquecimento.</p>
         </div>
       </div>
 
@@ -564,7 +579,7 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
 
       <div className="flex gap-2">
         {onCancelar && <button type="button" onClick={onCancelar} className="flex-1 sm:flex-none px-6 text-sm font-semibold py-3 rounded-xl border border-slate-200 hover:bg-slate-50">Cancelar</button>}
-        <button type="submit" disabled={salvando || (precisaTermo && !aceite) || !tipo} className="flex-1 sm:flex-none px-8 text-sm font-bold py-3 rounded-xl text-white disabled:opacity-40" style={{ backgroundColor: ROXO }}>
+        <button type="submit" disabled={salvando || (precisaTermo && !aceite) || !tipo || !DIAS.some(d => horario[d.chave]?.aberto)} className="flex-1 sm:flex-none px-8 text-sm font-bold py-3 rounded-xl text-white disabled:opacity-40" style={{ backgroundColor: ROXO }}>
           {salvando ? 'Salvando…' : editando ? 'Salvar' : 'Ativar Disk Bebidas'}
         </button>
       </div>

@@ -3,6 +3,7 @@ const cloudinaryService = require('../services/cloudinaryService');
 const { planoEfetivo, limiteProdutos, limiteDestaquesBeer } = require('../config/planos');
 const {
   TIPOS_ESTABELECIMENTO, DIAS, TERMO_VERSAO, MENSAGEM_TERMO_PROIBIDO, verificarTermos, normalizarDias,
+  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
 } = require('../config/beer');
 const { onlyDigits, isValidCNPJ } = require('../utils/validators');
 
@@ -40,6 +41,20 @@ function limites(parceiro) {
   return { plano, destaques: destaques === Infinity ? null : destaques, produtos: produtos === Infinity ? null : produtos };
 }
 
+// Situação do "Aberto agora" pro painel: o que o cliente vê (aberto), se
+// dá pra ligar agora (dentro de um turno) e o texto de apoio.
+function statusPainel(ext) {
+  if (!ext) return null;
+  const turno = turnoAtual(ext.horario_funcionamento);
+  return {
+    aberto: abertoEfetivo(ext),
+    pode_abrir: Boolean(turno),
+    turno: turno ? { abre: turno.abre, fecha: turno.fecha, fim: turno.fim } : null,
+    proxima_abertura: turno ? null : proximaAbertura(ext.horario_funcionamento),
+    horario_configurado: horarioConfigurado(ext.horario_funcionamento),
+  };
+}
+
 // GET /meu — extensão (ou null = ainda não entrou no Beer) + plano/limites.
 async function getMeu(req, res) {
   try {
@@ -47,6 +62,7 @@ async function getMeu(req, res) {
     const p = await db.query('SELECT cnpj, whatsapp FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
     return res.json({
       estabelecimento: ext,
+      status: statusPainel(ext),
       parceiro: { nome: req.parceiro.nome, slug: req.parceiro.slug, cnpj: p.rows[0]?.cnpj || null, whatsapp: p.rows[0]?.whatsapp || null },
       limites: limites(req.parceiro),
       termo_versao_atual: TERMO_VERSAO,
@@ -100,7 +116,12 @@ async function salvarMeu(req, res) {
     if (tempo !== null && !(Number.isInteger(tempo) && tempo >= 5 && tempo <= 240)) {
       return res.status(400).json({ error: 'Tempo de entrega deve ser entre 5 e 240 minutos' });
     }
-    const valores = [b.tipo, cnae, whatsapp, JSON.stringify(validarHorario(b.horario_funcionamento)), bairros, tempo, b.retirada_disponivel === true];
+    // Horário é obrigatório: o "Aberto agora" só liga dentro dele.
+    const horario = validarHorario(b.horario_funcionamento);
+    if (!horarioConfigurado(horario)) {
+      return res.status(400).json({ error: 'Cadastre o horário de funcionamento de pelo menos um dia — o "Aberto agora" só funciona dentro dele.' });
+    }
+    const valores = [b.tipo, cnae, whatsapp, JSON.stringify(horario), bairros, tempo, b.retirada_disponivel === true];
 
     if (cnpjInformado && cnpjInformado !== onlyDigits(atual.rows[0]?.cnpj)) {
       await db.query('UPDATE sindicato_parceiros SET cnpj = $1, updated_at = NOW() WHERE id = $2', [cnpj, req.parceiro.id]);
@@ -125,7 +146,13 @@ async function salvarMeu(req, res) {
         precisaTermo ? [...valores, req.parceiro.id, TERMO_VERSAO, getIp(req)] : [...valores, req.parceiro.id]
       );
     }
-    return res.json({ estabelecimento: r.rows[0] });
+    // Devolve o parceiro junto (CNPJ pode ter mudado aqui): o painel usa essa
+    // resposta direto, sem esperar recarregar o /meu.
+    const pAtual = await db.query('SELECT cnpj, whatsapp FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
+    return res.json({
+      estabelecimento: r.rows[0], status: statusPainel(r.rows[0]),
+      parceiro: { nome: req.parceiro.nome, slug: req.parceiro.slug, cnpj: pAtual.rows[0]?.cnpj || null, whatsapp: pAtual.rows[0]?.whatsapp || null },
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao salvar IUB Disk Bebidas' });
@@ -152,12 +179,17 @@ async function desativar(req, res) {
 async function atualizarStatus(req, res) {
   try {
     if (typeof req.body?.status_aberto !== 'boolean') return res.status(400).json({ error: 'status_aberto deve ser true ou false' });
+    // Só LIGA dentro de um turno do horário cadastrado (fechar pode sempre).
+    if (req.body.status_aberto && !turnoAtual(req.beer.horario_funcionamento)) {
+      const prox = proximaAbertura(req.beer.horario_funcionamento);
+      return res.status(400).json({ error: `Fora do seu horário de funcionamento${prox ? ` — você abre ${prox}` : ''}. Ajuste o horário em "Editar dados" se abriu diferente hoje.` });
+    }
     const r = await db.query(
       `UPDATE beer_estabelecimentos SET status_aberto = $1, ultimo_status_update = NOW(), updated_at = NOW()
-       WHERE id = $2 RETURNING status_aberto, ultimo_status_update`,
+       WHERE id = $2 RETURNING *`,
       [req.body.status_aberto, req.beer.id]
     );
-    return res.json(r.rows[0]);
+    return res.json({ status_aberto: r.rows[0].status_aberto, ultimo_status_update: r.rows[0].ultimo_status_update, status: statusPainel(r.rows[0]) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao atualizar status' });
