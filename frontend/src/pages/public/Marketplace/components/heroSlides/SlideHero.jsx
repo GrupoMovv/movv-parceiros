@@ -15,8 +15,8 @@ export default function SlideHero() {
       imagemDesktop="https://res.cloudinary.com/emv2nb1j/image/upload/v1790107588/hero-desktop.png"
       imagemMobile="https://res.cloudinary.com/emv2nb1j/image/upload/v1790107589/hero-mobile.png"
       alt="Roxinho do IUB MAIS+ carregando sacolas de compras pela cidade"
-      titulo="Marketplace de Itumbiara"
-      subtitulo="Mais qualidade. Mais confiança."
+      titulo={<>Bem-vindo ao <span className="whitespace-nowrap">IUB MAIS+</span></>}
+      subtitulo="O marketplace de Itumbiara"
       botao="Explorar"
       aoClicar={explorarProdutos}
     />
