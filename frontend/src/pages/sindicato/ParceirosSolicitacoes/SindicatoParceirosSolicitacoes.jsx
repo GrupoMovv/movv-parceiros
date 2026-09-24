@@ -6,6 +6,7 @@ import {
   CheckCircle2, XCircle, Copy, Check, PartyPopper,
 } from 'lucide-react';
 import Modal from '../../../components/ui/Modal';
+import { TIPOS_ESTABELECIMENTO, DIAS } from '../../beer/beerConfig';
 
 const LIMIT = 20;
 
@@ -16,7 +17,7 @@ const STATUS_LABEL = {
 };
 
 const SEGMENTO_LABEL = {
-  produtos: 'Produtos', servicos: 'Serviços', alimentacao: 'Alimentação', hospedagem: 'Hospedagem',
+  produtos: 'Produtos', servicos: 'Serviços', alimentacao: 'Alimentação', bebidas: '🍻 Bebidas', hospedagem: 'Hospedagem',
   automotivo: 'Automotivo', imoveis: 'Imóveis', turismo: 'Turismo, Lazer & Experiências', outro: 'Outro',
 };
 
@@ -199,6 +200,8 @@ export default function SindicatoParceirosSolicitacoes() {
               {detalhe.observacoes_admin && <Linha label="Motivo rejeição" valor={detalhe.observacoes_admin} />}
             </div>
 
+            {detalhe.beer_dados && <BlocoBeer beer={detalhe.beer_dados} />}
+
             <div className="flex flex-wrap gap-2">
               <a
                 href={`https://api.whatsapp.com/send?phone=55${String(detalhe.whatsapp).replace(/\D/g, '')}`}
@@ -277,6 +280,22 @@ export default function SindicatoParceirosSolicitacoes() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+// Segmento Bebidas: o que vira a extensão do IUB Disk Bebidas ao aprovar.
+function BlocoBeer({ beer }) {
+  const h = beer.horario_funcionamento || {};
+  const horario = DIAS.filter(d => h[d.chave]?.aberto).map(d => `${d.curto} ${h[d.chave].abre}–${h[d.chave].fecha}`).join(' · ');
+  return (
+    <div className="rounded-xl p-4 border border-violet-200 bg-violet-50 space-y-2 text-sm">
+      <p className="text-xs font-bold text-violet-800">🍻 IUB Disk Bebidas — ativa automático ao aprovar</p>
+      <Linha label="Tipo" valor={TIPOS_ESTABELECIMENTO[beer.tipo] || beer.tipo} />
+      <Linha label="WhatsApp pedidos" valor={beer.whatsapp} />
+      <Linha label="Horário" valor={horario} />
+      <Linha label="Bairros de entrega" valor={beer.bairros_entrega?.length ? beer.bairros_entrega.join(', ') : 'Não informou'} />
+      <Linha label="Termo aceito" valor={`versão ${beer.termo_versao} em ${fmtDataHora(beer.termo_aceito_em)}`} />
     </div>
   );
 }

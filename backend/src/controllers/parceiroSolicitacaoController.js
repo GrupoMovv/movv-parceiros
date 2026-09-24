@@ -3,6 +3,9 @@ const db = require('../config/database');
 const emailService = require('../services/emailService');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { verificarSindicalizacao } = require('../services/sindicalizacaoService');
+const {
+  TIPOS_ESTABELECIMENTO, TERMO_VERSAO, validarHorario, normalizarBairros, horarioConfigurado,
+} = require('../config/beer');
 
 const MAX_SOLICITACOES_POR_IP_24H = 3;
 
@@ -13,7 +16,9 @@ const SEGMENTOS = {
   produtos:     { label: 'Produtos',     icone: '🛍️', cor: '#8B5CF6' },
   servicos:     { label: 'Serviços',     icone: '🛠️', cor: '#0EA5E9' },
   alimentacao:  { label: 'Alimentação',  icone: '🍔', cor: '#F97316' },
-  hospedagem:   { label: 'Hospedagem',   icone: '🏨', cor: '#10B981' },
+  // Bebidas = entra direto no IUB Disk Bebidas ao ser aprovado (ver dadosBeer).
+  bebidas:      { label: 'Bebidas',      icone: '🍻', cor: '#7C3AED' },
+  hospedagem:  { label: 'Hospedagem',   icone: '🏨', cor: '#10B981' },
   automotivo:   { label: 'Automotivo',   icone: '🚗', cor: '#334155' },
   imoveis:      { label: 'Imóveis',      icone: '🏠', cor: '#0369A1' },
   turismo:      { label: 'Turismo, Lazer & Experiências', icone: '🎯', cor: '#DB2777' },
@@ -96,6 +101,33 @@ async function verificarCnpj(req, res) {
 
 // POST /api/public/vender/solicitacao — público, cria a solicitação em
 // análise. Não cria login nenhum ainda — isso só acontece na aprovação.
+// Segmento Bebidas: valida os dados do IUB Disk Bebidas que vêm junto do
+// cadastro (mesmas regras do painel — parceiroBeerController.salvarMeu) e
+// devolve o JSON que fica em beer_dados até a aprovação.
+// { erro } | { dados }
+function dadosBeer(beer, ip) {
+  const b = beer || {};
+  if (!TIPOS_ESTABELECIMENTO.includes(b.tipo)) return { erro: 'Escolha o tipo do estabelecimento' };
+  const whatsapp = onlyDigits(b.whatsapp);
+  if (!whatsappValido(whatsapp)) return { erro: 'WhatsApp de pedidos inválido' };
+  const horario = validarHorario(b.horario_funcionamento);
+  if (!horarioConfigurado(horario)) {
+    return { erro: 'Informe o horário de funcionamento de pelo menos um dia' };
+  }
+  if (b.aceite_termo !== true) return { erro: 'Leia e aceite os termos do IUB Disk Bebidas' };
+  return {
+    dados: {
+      tipo: b.tipo,
+      whatsapp,
+      horario_funcionamento: horario,
+      bairros_entrega: normalizarBairros(b.bairros_entrega),
+      termo_versao: TERMO_VERSAO,
+      termo_aceito_em: new Date().toISOString(),
+      termo_aceito_ip: ip,
+    },
+  };
+}
+
 async function criarSolicitacao(req, res) {
   const b = req.body || {};
   const cnpj = onlyDigits(b.cnpj);
@@ -115,6 +147,13 @@ async function criarSolicitacao(req, res) {
   if (!b.termos_aceitos) return res.status(400).json({ error: 'É preciso aceitar os termos de uso' });
 
   const ip = getIp(req);
+
+  let beerDados = null;
+  if (segmento === 'bebidas') {
+    const beer = dadosBeer(b.beer, ip);
+    if (beer.erro) return res.status(400).json({ error: beer.erro });
+    beerDados = beer.dados;
+  }
 
   try {
     if (ip) {
@@ -148,8 +187,8 @@ async function criarSolicitacao(req, res) {
       `INSERT INTO sindicato_parceiros_solicitacoes
         (segmento, nome_fantasia, razao_social, cnpj, categoria_principal, descricao_curta,
          endereco, bairro, cidade, estado, whatsapp, email, instagram,
-         responsavel_nome, responsavel_cpf, responsavel_cargo, termos_aceitos_em, termos_ip)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),$17)
+         responsavel_nome, responsavel_cpf, responsavel_cargo, termos_aceitos_em, termos_ip, beer_dados)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),$17,$18)
        RETURNING id`,
       [
         segmento, b.nome_fantasia.trim(), b.razao_social?.trim() || null, cnpj,
@@ -157,6 +196,7 @@ async function criarSolicitacao(req, res) {
         b.endereco.trim(), b.bairro.trim(), b.cidade?.trim() || 'Itumbiara', b.estado?.trim() || 'GO',
         whatsapp, email, b.instagram?.trim() || null,
         b.responsavel_nome.trim(), responsavelCpf, b.responsavel_cargo?.trim() || null, ip,
+        beerDados ? JSON.stringify(beerDados) : null,
       ]
     );
 
@@ -244,10 +284,13 @@ async function aprovarSolicitacao(req, res) {
     const aprovadoPor = req.user?.email || req.user?.name || 'admin';
 
     let parceiro;
+    // Conexão dedicada: db.query vai pro pool e cada chamada pode cair numa
+    // conexão diferente — BEGIN/COMMIT por lá não formam transação nenhuma.
+    const client = await db.pool.connect();
     try {
-      await db.query('BEGIN');
+      await client.query('BEGIN');
 
-      const parceiroResult = await db.query(
+      const parceiroResult = await client.query(
         `INSERT INTO sindicato_parceiros
           (slug, nome, razao_social, cnpj, categorias, categoria_principal, icone, cor_icone,
            descricao_completa, endereco, bairro, cidade, estado, whatsapp, instagram, status)
@@ -261,23 +304,43 @@ async function aprovarSolicitacao(req, res) {
       );
       parceiro = parceiroResult.rows[0];
 
-      await db.query(
+      await client.query(
         `INSERT INTO sindicato_parceiro_usuarios (parceiro_id, email, senha_hash, cargo, ativo)
          VALUES ($1,$2,$3,$4,true)`,
         [parceiro.id, sol.email, senhaHash, sol.responsavel_cargo || 'dono']
       );
 
-      await db.query(
+      // Segmento Bebidas: já entra no IUB Disk Bebidas (extensão ativa). O
+      // termo foi aceito no cadastro — vale a versão/data/IP de lá. Se o texto
+      // do termo mudar até a aprovação, o painel pede o aceite de novo
+      // (mesma regra de versão de sempre).
+      const beer = sol.segmento === 'bebidas' ? sol.beer_dados : null;
+      if (beer) {
+        await client.query(
+          `INSERT INTO beer_estabelecimentos
+             (parceiro_id, tipo, whatsapp, horario_funcionamento, bairros_entrega,
+              termo_versao, termo_aceito_em, termo_aceito_ip)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            parceiro.id, beer.tipo, beer.whatsapp, JSON.stringify(beer.horario_funcionamento || {}),
+            beer.bairros_entrega || [], beer.termo_versao, beer.termo_aceito_em, beer.termo_aceito_ip,
+          ]
+        );
+      }
+
+      await client.query(
         `UPDATE sindicato_parceiros_solicitacoes
          SET status = 'aprovado', aprovado_em = NOW(), aprovado_por = $1, parceiro_id = $2, updated_at = NOW()
          WHERE id = $3`,
         [aprovadoPor, parceiro.id, sol.id]
       );
 
-      await db.query('COMMIT');
+      await client.query('COMMIT');
     } catch (txErr) {
-      await db.query('ROLLBACK');
+      await client.query('ROLLBACK');
       throw txErr;
+    } finally {
+      client.release();
     }
 
     const { sindicalizada } = await verificarSindicalizacao(sol.cnpj).catch(() => ({ sindicalizada: null }));
@@ -286,7 +349,9 @@ async function aprovarSolicitacao(req, res) {
     }).catch(err => console.error('[EMAIL]', err.message));
 
     const mensagemWhatsapp = `🎉 Olá ${sol.responsavel_nome.split(' ')[0]}! Sua loja foi APROVADA no IUB MAIS!\n\n`
-      + `Já pode começar a anunciar seus produtos.\n\n`
+      + (sol.segmento === 'bebidas'
+        ? `Seu IUB Disk Bebidas 🍻 já está ativo — cadastre suas bebidas na aba "Meu IUB Beer" do painel.\n\n`
+        : `Já pode começar a anunciar seus produtos.\n\n`)
       + `🔗 Link: portal.grupomovv.com.br/parceiro/login\n`
       + `📧 Email: ${sol.email}\n`
       + `🔑 Senha: ${senha}\n\n`

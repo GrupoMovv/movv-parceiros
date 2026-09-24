@@ -204,10 +204,29 @@ function normalizarDias(entrada) {
   return Object.keys(dias).length ? dias : { todos: true };
 }
 
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// horario_funcionamento vindo do front, no formato da migration 025.
+// Dia ausente ou inválido = fechado naquele dia. Usado pelo painel (Meu IUB
+// Beer) e pelo cadastro do /vender com segmento Bebidas.
+function validarHorario(h) {
+  if (!h || typeof h !== 'object') return {};
+  return Object.fromEntries(DIAS.filter(d => h[d]).map(d => {
+    const { aberto, abre, fecha } = h[d];
+    return [d, aberto && HHMM.test(abre) && HHMM.test(fecha) ? { aberto: true, abre, fecha } : { aberto: false }];
+  }));
+}
+
+// Bairros de entrega: sem vazio, sem repetido, no máximo 60.
+function normalizarBairros(lista) {
+  return [...new Set((Array.isArray(lista) ? lista : [])
+    .map(x => String(x || '').trim().slice(0, 80)).filter(Boolean))].slice(0, 60);
+}
+
 module.exports = {
   TIPOS_ESTABELECIMENTO, DIAS, IDADE_MINIMA, TERMO_VERSAO,
   TERMOS_BLOQUEADOS, TERMOS_CONTEXTO, MENSAGEM_TERMO_PROIBIDO,
-  verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias,
+  verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias, validarHorario, normalizarBairros,
   horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
   FAIXAS_VOLUME, faixaVolume,
 };

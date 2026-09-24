@@ -2,8 +2,8 @@ const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
 const { planoEfetivo, limiteProdutos, limiteDestaquesBeer } = require('../config/planos');
 const {
-  TIPOS_ESTABELECIMENTO, DIAS, TERMO_VERSAO, MENSAGEM_TERMO_PROIBIDO, verificarTermos, normalizarDias,
-  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
+  TIPOS_ESTABELECIMENTO, TERMO_VERSAO, MENSAGEM_TERMO_PROIBIDO, verificarTermos, normalizarDias,
+  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo, validarHorario, normalizarBairros,
 } = require('../config/beer');
 const { onlyDigits, isValidCNPJ } = require('../utils/validators');
 
@@ -74,18 +74,6 @@ async function getMeu(req, res) {
   }
 }
 
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-// Mesmo formato do horario_funcionamento do parceiro (migration 025).
-// Dia ausente ou inválido = fechado naquele dia.
-function validarHorario(h) {
-  if (!h || typeof h !== 'object') return {};
-  return Object.fromEntries(DIAS.filter(d => h[d]).map(d => {
-    const { aberto, abre, fecha } = h[d];
-    return [d, aberto && HHMM.test(abre) && HHMM.test(fecha) ? { aberto: true, abre, fecha } : { aberto: false }];
-  }));
-}
-
 // PUT /meu — cria (ativa) ou atualiza a extensão. Termo obrigatório ao
 // ativar, ao reativar e quando o texto do termo mudou de versão.
 async function salvarMeu(req, res) {
@@ -110,8 +98,7 @@ async function salvarMeu(req, res) {
     const cnpj = cnpjInformado || onlyDigits(atual.rows[0]?.cnpj);
     if (!isValidCNPJ(cnpj)) return res.status(400).json({ error: 'Informe um CNPJ válido — o Disk Bebidas exige empresa com CNPJ' });
 
-    const bairros = [...new Set((Array.isArray(b.bairros_entrega) ? b.bairros_entrega : [])
-      .map(x => String(x || '').trim().slice(0, 80)).filter(Boolean))].slice(0, 60);
+    const bairros = normalizarBairros(b.bairros_entrega);
     const tempo = b.tempo_entrega_min ? Number(b.tempo_entrega_min) : null;
     if (tempo !== null && !(Number.isInteger(tempo) && tempo >= 5 && tempo <= 240)) {
       return res.status(400).json({ error: 'Tempo de entrega deve ser entre 5 e 240 minutos' });

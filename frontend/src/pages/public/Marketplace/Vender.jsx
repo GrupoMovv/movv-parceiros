@@ -7,6 +7,9 @@ import api from '../../../services/api';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../../config/contato';
 import { descontoMaxPct } from '../../../utils/precoPlanos';
+import { TIPOS_ESTABELECIMENTO } from '../../beer/beerConfig';
+import EditorHorario from '../../../components/beer/EditorHorario';
+import TermoDiskBebidas from '../../../components/beer/TermoDiskBebidas';
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -14,6 +17,9 @@ const SEGMENTOS = [
   { valor: 'produtos', label: 'Produtos', emoji: '🛍️', desc: 'Roupas, eletrônicos, casa, beleza, saúde...' },
   { valor: 'servicos', label: 'Serviços', emoji: '🛠️', desc: 'Consultoria, reparos, estética, saúde...' },
   { valor: 'alimentacao', label: 'Alimentação', emoji: '🍔', desc: 'Restaurante, lanchonete, padaria, cafeteria...' },
+  // Bebidas ganha uma etapa a mais (IUB Disk Bebidas) e, aprovado, já entra
+  // no /beer — ver PASSOS_POR_SEGMENTO e aprovarSolicitacao no backend.
+  { valor: 'bebidas', label: 'Bebidas', emoji: '🍻', desc: 'Adegas, distribuidoras, conveniências, petiscos, comidas prontas, cigarros...' },
   { valor: 'hospedagem', label: 'Hospedagem', emoji: '🏨', desc: 'Hotel, pousada, camping, temporada...' },
   { valor: 'automotivo', label: 'Automotivo', emoji: '🚗', desc: 'Veículos, peças, acessórios, oficinas, serviços automotivos...' },
   { valor: 'imoveis', label: 'Imóveis', emoji: '🏠', desc: 'Venda, aluguel, terrenos, casas, apartamentos, imóveis comerciais...' },
@@ -31,6 +37,16 @@ const CATEGORIAS_POR_SEGMENTO = {
   turismo: ['Passeios e excursões', 'Atrações turísticas', 'Eventos', 'Lazer', 'Outras experiências'],
   outro: ['Outro'],
 };
+
+// Etapas do wizard. Bebidas tem a etapa do IUB Disk Bebidas antes do
+// responsável (o aceite do Termo fica perto do aceite dos termos gerais).
+const PASSOS_PADRAO = ['empresa', 'local', 'responsavel'];
+const PASSOS_BEBIDAS = ['empresa', 'local', 'beer', 'responsavel'];
+function passosDo(segmento) {
+  return segmento === 'bebidas' ? PASSOS_BEBIDAS : PASSOS_PADRAO;
+}
+
+const BEER_VAZIO = { tipo: '', whatsapp: '', bairros_entrega: [], horario_funcionamento: {}, aceite_termo: false };
 
 function vantagens(qtdAssociados) {
   return [
@@ -117,6 +133,7 @@ export default function Vender() {
   const [segmento, setSegmento] = useState(null);
   const [etapa, setEtapa] = useState(1);
   const [form, setForm] = useState(FORM_VAZIO);
+  const [beer, setBeer] = useState(BEER_VAZIO);
   const [enviando, setEnviando] = useState(false);
   const [faqAberta, setFaqAberta] = useState(null);
   const [statusCnpj, setStatusCnpj] = useState(null); // null | 'checando' | 'ok' | { erro }
@@ -229,18 +246,27 @@ export default function Vender() {
     setForm(f => ({ ...f, [campo]: valor }));
   }
 
+  function setCampoBeer(campo, valor) {
+    setBeer(b => ({ ...b, [campo]: valor }));
+  }
+
   function escolherSegmento(valor) {
     setSegmento(valor);
     setForm(f => ({ ...f, categoria_principal: '' }));
+    setBeer(BEER_VAZIO);
     setEtapa(1);
     setTela('formulario');
   }
+
+  const passos = passosDo(segmento);
+  const passoAtual = passos[etapa - 1];
 
   function validarEtapa1() {
     if (!isValidCNPJ(form.cnpj)) return 'CNPJ inválido';
     if (statusCnpj && statusCnpj.erro) return statusCnpj.erro;
     if (!consultaReceita || consultaReceita === 'consultando') return 'Aguarde a consulta do CNPJ terminar';
     if (!form.nome_fantasia.trim()) return 'Informe o nome fantasia';
+    if (segmento === 'bebidas' && !beer.tipo) return 'Escolha o tipo do estabelecimento';
     return null;
   }
 
@@ -253,25 +279,38 @@ export default function Vender() {
     return null;
   }
 
-  function validarEtapa3() {
+  function validarEtapaBeer() {
+    const d = beer.whatsapp.replace(/\D/g, '');
+    if (d.length < 10 || d.length > 11) return 'WhatsApp de pedidos inválido';
+    const algumDia = Object.values(beer.horario_funcionamento).some(h => h?.aberto);
+    if (!algumDia) return 'Marque o horário de funcionamento de pelo menos um dia';
+    if (!beer.aceite_termo) return 'Leia e aceite os termos do IUB Disk Bebidas';
+    return null;
+  }
+
+  function validarEtapaResponsavel() {
     if (!form.responsavel_nome.trim()) return 'Informe o nome do responsável';
     if (!isValidCPF(form.responsavel_cpf)) return 'CPF do responsável inválido';
     if (!form.termos_aceitos) return 'É preciso aceitar os termos de uso';
     return null;
   }
 
+  const VALIDADORES = { empresa: validarEtapa1, local: validarEtapa2, beer: validarEtapaBeer, responsavel: validarEtapaResponsavel };
+
   function avancar() {
-    const erro = etapa === 1 ? validarEtapa1() : validarEtapa2();
+    const erro = VALIDADORES[passoAtual]();
     if (erro) { toast.error(erro); return; }
+    // WhatsApp de pedidos começa igual ao da empresa (quase sempre é o mesmo).
+    if (passos[etapa] === 'beer' && !beer.whatsapp) setCampoBeer('whatsapp', form.whatsapp);
     setEtapa(e => e + 1);
   }
 
   async function enviarCadastro() {
-    const erro = validarEtapa3();
+    const erro = validarEtapaResponsavel();
     if (erro) { toast.error(erro); return; }
     setEnviando(true);
     try {
-      await api.post('/public/vender/solicitacao', { ...form, segmento });
+      await api.post('/public/vender/solicitacao', { ...form, segmento, ...(segmento === 'bebidas' ? { beer } : {}) });
       setTela('confirmacao');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao enviar cadastro. Tente novamente.');
@@ -287,11 +326,12 @@ export default function Vender() {
     />
   );
   if (tela === 'segmento') return <TelaSegmento onVoltar={() => setTela('landing')} onEscolher={escolherSegmento} />;
-  if (tela === 'confirmacao') return <TelaConfirmacao onVoltar={() => navigate('/marketplace')} />;
+  if (tela === 'confirmacao') return <TelaConfirmacao bebidas={segmento === 'bebidas'} onVoltar={() => navigate('/marketplace')} />;
 
   return (
     <TelaFormulario
-      segmento={segmento} etapa={etapa} form={form} setCampo={setCampo}
+      segmento={segmento} etapa={etapa} passos={passos} form={form} setCampo={setCampo}
+      beer={beer} setCampoBeer={setCampoBeer}
       statusCnpj={statusCnpj} consultaReceita={consultaReceita} camposAutoPreenchidos={camposAutoPreenchidos}
       sindicalizacao={sindicalizacao} enviando={enviando}
       onVoltarEtapa={() => (etapa === 1 ? setTela('segmento') : setEtapa(e => e - 1))}
@@ -527,13 +567,15 @@ function TelaSegmento({ onVoltar, onEscolher }) {
 
 // ─── Tela 3: Formulário (wizard) ────────────────────────────────────────────
 
-function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaReceita, camposAutoPreenchidos, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar, onConsultarReceitaNovamente }) {
+function TelaFormulario({ segmento, etapa, passos, form, setCampo, beer, setCampoBeer, statusCnpj, consultaReceita, camposAutoPreenchidos, sindicalizacao, enviando, onVoltarEtapa, onAvancar, onEnviar, onConsultarReceitaNovamente }) {
   const seg = SEGMENTOS.find(s => s.valor === segmento);
   // Enquanto o CNPJ não passou pela consulta na BrasilAPI (ainda digitando,
   // inválido, ou consulta em andamento), os campos que ela preencheria
   // ficam ocultos — evita o cliente digitar Nome fantasia/Razão social à
   // mão só pra descobrir depois que o CNPJ preenchia tudo sozinho.
   const dadosEmpresaVisiveis = isValidCNPJ(form.cnpj) && !!consultaReceita && consultaReceita !== 'consultando';
+  const passo = passos[etapa - 1];
+  const total = passos.length;
 
   return (
     <div className="min-h-screen w-full px-6 py-10" style={{ backgroundColor: '#FAFAFA' }}>
@@ -544,14 +586,14 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
 
         {/* barra de progresso */}
         <div className="flex items-center gap-2 mb-2">
-          {[1, 2, 3].map(n => (
-            <div key={n} className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: n <= etapa ? ROXO : '#E5E7EB' }} />
+          {passos.map((p, i) => (
+            <div key={p} className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: i < etapa ? ROXO : '#E5E7EB' }} />
           ))}
         </div>
-        <p className="text-xs text-slate-400 mb-6">Etapa {etapa} de 3</p>
+        <p className="text-xs text-slate-400 mb-6">Etapa {etapa} de {total}</p>
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8">
-          {etapa === 1 && (
+          {passo === 'empresa' && (
             <Etapa titulo="Dados da empresa">
               <div>
                 <label className="block text-sm font-extrabold mb-1.5" style={{ color: PRETO }}>
@@ -592,19 +634,32 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
                   <span>{seg?.emoji}</span> {seg?.label}
                 </div>
               </Campo>
-              <Campo label="Categoria principal">
-                <select className={campoCls} value={form.categoria_principal} onChange={e => setCampo('categoria_principal', e.target.value)}>
-                  <option value="">Selecione...</option>
-                  {(CATEGORIAS_POR_SEGMENTO[segmento] || []).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </Campo>
+              {segmento === 'bebidas' ? (
+                // Em Bebidas o tipo do Disk Bebidas é a própria categoria.
+                <Campo label="Tipo de estabelecimento" obrigatorio>
+                  <select
+                    className={campoCls} value={beer.tipo}
+                    onChange={e => { setCampoBeer('tipo', e.target.value); setCampo('categoria_principal', TIPOS_ESTABELECIMENTO[e.target.value] || ''); }}
+                  >
+                    <option value="">Selecione...</option>
+                    {Object.entries(TIPOS_ESTABELECIMENTO).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </Campo>
+              ) : (
+                <Campo label="Categoria principal">
+                  <select className={campoCls} value={form.categoria_principal} onChange={e => setCampo('categoria_principal', e.target.value)}>
+                    <option value="">Selecione...</option>
+                    {(CATEGORIAS_POR_SEGMENTO[segmento] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </Campo>
+              )}
               <Campo label={`Descrição curta (${form.descricao_curta.length}/200)`}>
                 <textarea className={`${campoCls} resize-none`} rows={3} maxLength={200} value={form.descricao_curta} onChange={e => setCampo('descricao_curta', e.target.value)} />
               </Campo>
             </Etapa>
           )}
 
-          {etapa === 2 && (
+          {passo === 'local' && (
             <Etapa titulo="Localização e contato">
               <Campo label="Endereço completo" obrigatorio badge={camposAutoPreenchidos.has('endereco')}>
                 <input className={campoCls} value={form.endereco} onChange={e => setCampo('endereco', e.target.value)} placeholder="Rua, número" />
@@ -635,7 +690,9 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
             </Etapa>
           )}
 
-          {etapa === 3 && (
+          {passo === 'beer' && <EtapaBeer beer={beer} setCampoBeer={setCampoBeer} />}
+
+          {passo === 'responsavel' && (
             <Etapa titulo="Dados do responsável">
               <Campo label="Nome completo do responsável" obrigatorio>
                 <input className={campoCls} value={form.responsavel_nome} onChange={e => setCampo('responsavel_nome', e.target.value)} />
@@ -660,7 +717,7 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
           )}
 
           <div className="mt-8">
-            {etapa < 3 ? (
+            {etapa < total ? (
               <button onClick={onAvancar} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl text-white transition-transform hover:-translate-y-0.5" style={{ backgroundColor: ROXO }}>
                 Próximo <ArrowRight className="w-4 h-4" />
               </button>
@@ -677,6 +734,73 @@ function TelaFormulario({ segmento, etapa, form, setCampo, statusCnpj, consultaR
         </div>
       </div>
     </div>
+  );
+}
+
+// Etapa extra do segmento Bebidas: o que o /beer precisa pra listar a loja.
+// Tipo já foi escolhido na etapa 1. Fotos (logo/capa) ficam pro painel
+// depois da aprovação — upload aqui exigiria endpoint público de imagem.
+function EtapaBeer({ beer, setCampoBeer }) {
+  const [bairroNovo, setBairroNovo] = useState('');
+
+  function adicionarBairro() {
+    const b = bairroNovo.trim().replace(/\s+/g, ' ');
+    if (b && !beer.bairros_entrega.some(x => x.toLowerCase() === b.toLowerCase())) {
+      setCampoBeer('bairros_entrega', [...beer.bairros_entrega, b]);
+    }
+    setBairroNovo('');
+  }
+
+  return (
+    <Etapa titulo="🍻 IUB Disk Bebidas">
+      <p className="text-xs text-slate-500 -mt-2">
+        Aprovado o cadastro, sua loja entra direto no IUB Disk Bebidas (área +18 do marketplace).
+      </p>
+
+      <Campo label="WhatsApp para pedidos" obrigatorio>
+        <input className={campoCls} inputMode="numeric" value={beer.whatsapp} onChange={e => setCampoBeer('whatsapp', maskPhone(e.target.value))} placeholder="(64) 90000-0000" />
+        <p className="text-[11px] text-slate-400 mt-1">É pra esse número que os pedidos do Disk Bebidas chegam.</p>
+      </Campo>
+
+      <Campo label="Bairros de entrega">
+        <div className="flex gap-2">
+          <input
+            className={`${campoCls} flex-1 min-w-0`} value={bairroNovo}
+            onChange={e => setBairroNovo(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); adicionarBairro(); } }}
+            placeholder="Digite o bairro e aperte Enter"
+          />
+          <button type="button" onClick={adicionarBairro} className="px-4 rounded-xl border border-slate-200 text-sm font-semibold hover:bg-slate-50 flex-shrink-0">
+            Adicionar
+          </button>
+        </div>
+        {beer.bairros_entrega.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {beer.bairros_entrega.map(b => (
+              <span key={b} className="inline-flex items-center gap-1 text-xs font-semibold pl-2.5 pr-1 py-1 rounded-full" style={{ backgroundColor: '#EDE9FE', color: ROXO }}>
+                {b}
+                <button
+                  type="button" aria-label={`Tirar ${b}`}
+                  onClick={() => setCampoBeer('bairros_entrega', beer.bairros_entrega.filter(x => x !== b))}
+                  className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/60"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </Campo>
+
+      <Campo label="Horário de funcionamento" obrigatorio>
+        <EditorHorario horario={beer.horario_funcionamento} onChange={h => setCampoBeer('horario_funcionamento', h)} />
+        <p className="text-[11px] text-slate-400 mt-1.5">Pelo menos um dia. O botão “Aberto agora” do painel só liga dentro desse horário.</p>
+      </Campo>
+
+      <p className="text-[11px] text-slate-400">📸 Logo e foto de capa você envia no painel, logo depois da aprovação.</p>
+
+      <TermoDiskBebidas aceito={beer.aceite_termo} onChange={v => setCampoBeer('aceite_termo', v)} />
+    </Etapa>
   );
 }
 
@@ -789,7 +913,7 @@ function AvisoSindicalizacao({ sindicalizacao }) {
 
 // ─── Tela 4: Confirmação ────────────────────────────────────────────────────
 
-function TelaConfirmacao({ onVoltar }) {
+function TelaConfirmacao({ bebidas, onVoltar }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-6 text-center" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
       <div className="max-w-sm">
@@ -800,6 +924,11 @@ function TelaConfirmacao({ onVoltar }) {
         <p className="text-white/80 text-sm sm:text-base mt-3">
           Seu cadastro está em análise. Você receberá um e-mail ou WhatsApp em até 24h com o resultado e, se aprovado, suas credenciais de acesso.
         </p>
+        {bebidas && (
+          <p className="text-white/90 text-sm mt-3 rounded-xl px-4 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+            🍻 Aprovado, seu <strong>IUB Disk Bebidas</strong> já fica ativo — é só cadastrar as bebidas no painel.
+          </p>
+        )}
         <p className="font-semibold text-sm sm:text-base mt-5" style={{ color: DOURADO }}>
           Bem-vindo(a) ao movimento IUB MAIS. Juntos vamos fortalecer o comércio da nossa cidade!
         </p>

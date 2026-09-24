@@ -5,6 +5,7 @@ import { Wine, Plus, Pencil, Trash2, Upload, Loader2, Star, Zap, X, Clock, Alert
 import apiParceiro from '../../services/apiParceiro';
 import CampoPreco from '../../components/ui/CampoPreco';
 import TermoDiskBebidas from '../../components/beer/TermoDiskBebidas';
+import EditorHorario from '../../components/beer/EditorHorario';
 import { DIAS, TIPOS_ESTABELECIMENTO, textoDias } from '../beer/beerConfig';
 import { formatarBRL } from '../../utils/iubFood';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
@@ -488,10 +489,6 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
     setBairroNovo('');
   }
 
-  function setDia(chave, campo, valor) {
-    setHorario(h => ({ ...h, [chave]: { aberto: false, abre: '18:00', fecha: '23:00', ...h[chave], [campo]: valor } }));
-  }
-
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
@@ -584,26 +581,7 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 mb-2">Horário de funcionamento *</label>
-          <div className="space-y-1.5">
-            {DIAS.map(d => {
-              const h = horario[d.chave] || {};
-              return (
-                <div key={d.chave} className="flex items-center gap-2 text-sm">
-                  <label className="flex items-center gap-2 w-28 cursor-pointer">
-                    <input type="checkbox" checked={Boolean(h.aberto)} onChange={e => setDia(d.chave, 'aberto', e.target.checked)} className="w-4 h-4 accent-violet-700" />
-                    <span className="text-slate-700">{d.label}</span>
-                  </label>
-                  {h.aberto ? (
-                    <>
-                      <input type="time" value={h.abre || '18:00'} onChange={e => setDia(d.chave, 'abre', e.target.value)} className="px-2 py-1 border border-slate-200 rounded-md text-sm" />
-                      <span className="text-slate-400">às</span>
-                      <input type="time" value={h.fecha || '23:00'} onChange={e => setDia(d.chave, 'fecha', e.target.value)} className="px-2 py-1 border border-slate-200 rounded-md text-sm" />
-                    </>
-                  ) : <span className="text-slate-400 text-xs">fechado</span>}
-                </div>
-              );
-            })}
-          </div>
+          <EditorHorario horario={horario} onChange={setHorario} />
           <p className="text-[11px] text-slate-400 mt-1.5">Obrigatório (pelo menos um dia). O botão “Aberto agora” só liga dentro desse horário e desliga sozinho quando o turno acaba — assim ninguém aparece aberto de madrugada por esquecimento.</p>
         </div>
       </div>
