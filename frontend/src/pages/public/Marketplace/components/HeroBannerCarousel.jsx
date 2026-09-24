@@ -10,6 +10,7 @@ import SlideCategoriaFitness from './heroSlides/SlideCategoriaFitness';
 import SlideFechaMes from './heroSlides/SlideFechaMes';
 import SlideFood from './heroSlides/SlideFood';
 import SlideBeer from './heroSlides/SlideBeer';
+import SlideEntregador from './heroSlides/SlideEntregador';
 import { DOURADO } from '../theme';
 
 const INTERVALO_MS = 5000;
@@ -27,7 +28,7 @@ const LIMIAR_SWIPE_PX = 40;
 // (320/375/414px): 84%/99%/100% (corta só ~17px de cada lado em 414px,
 // imperceptível) — o melhor equilíbrio dentro da faixa 380-420 pedida.
 // Os slides de categoria usam a altura do redesign (280-300 mobile
-// / 400-450 desktop), sem relação com o Fecha Mês. Hero/Jogos/Serviços/Food/Beer
+// / 400-450 desktop), sem relação com o Fecha Mês. Hero/Jogos/Serviços/Food/Beer/Entregador
 // são arte pronta (ver SlideBannerArteBase): a altura acompanha a proporção da
 // peça — 1:1 no mobile, 3:1 do sm pra cima — pra arte aparecer inteira.
 // Em vw (não aspect-ratio) pra continuar animando a troca de altura; a
@@ -45,7 +46,7 @@ const ALTURA_BANNER_ARTE = 'h-[100vw] sm:h-[33.34vw]';
 
 // Banner hero full-width — orquestra só a mecânica do carrossel (autoplay,
 // setas, dots, play/pause, swipe, contador); cada slide é um componente
-// próprio em ./heroSlides. Ordem: Hero, Jogos, Serviços, Food, Beer, Fecha Mês,
+// próprio em ./heroSlides. Ordem: Hero, Jogos, Serviços, Food, Beer, Entregador, Fecha Mês,
 // 3x Lojas Oficiais por categoria. Slides de categoria só entram se
 // tiverem dado de verdade pra mostrar (ver `slides`). Cupons saiu do
 // carrossel (destoava) — continua no sistema, só não é mais slide.
@@ -63,7 +64,7 @@ export default function HeroBannerCarousel({ fechaMesInfo }) {
   // Fecha Mês entra no carrossel só faltando <= 20 dias (nunca no dia em
   // si — aí quem assume é o banner full-width do topo, ver
   // FechaMesBanner/Marketplace.jsx). Nos últimos 3 dias vira o slide
-  // principal (posição 1); antes disso fica na posição 6 (depois do Beer).
+  // principal (posição 1); antes disso fica na posição 7 (depois do Entregador).
   const diasRestantes = fechaMesInfo?.dias_restantes;
   const mostrarFechaMes = fechaMesInfo?.habilitado_globalmente && !fechaMesInfo?.ativo_hoje
     && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 20;
@@ -79,6 +80,7 @@ export default function HeroBannerCarousel({ fechaMesInfo }) {
       { id: 'servicos', Componente: SlideServicos, props: {}, cor: '#FFB800', altura: ALTURA_BANNER_ARTE },
       { id: 'food', Componente: SlideFood, props: {}, cor: '#FFB800', altura: ALTURA_BANNER_ARTE },
       { id: 'beer', Componente: SlideBeer, props: {}, cor: '#A78BFA', altura: ALTURA_BANNER_ARTE },
+      { id: 'entregador', Componente: SlideEntregador, props: {}, cor: DOURADO, altura: ALTURA_BANNER_ARTE },
       !fechaMesEhPrincipal && slideFechaMes,
       masterPorCategoria.beleza.length > 0 && { id: 'categoria-beleza', Componente: SlideCategoriaBeleza, props: { lojas: masterPorCategoria.beleza }, cor: '#EC4899' },
       masterPorCategoria.saude.length > 0 && { id: 'categoria-saude', Componente: SlideCategoriaSaude, props: { lojas: masterPorCategoria.saude }, cor: '#10B981' },

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
-  Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck, Crown, Wine,
+  Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck, Crown, Wine, Bike,
 } from 'lucide-react';
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
@@ -101,6 +101,7 @@ const MASTER_MENU = [
       { label: 'Interessados em Planos', icon: Bell, to: '/sindicato/parceiro-interessados', roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Planos IUB MAIS', icon: Crown, to: '/sindicato/planos', roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Moderação Disk Bebidas', icon: Wine, to: '/sindicato/beer-moderacao', roles: ['admin'] },
+      { label: 'Pré-cadastro Entregadores', icon: Bike, to: '/sindicato/entregadores', roles: ['admin'] },
     ],
   },
   {

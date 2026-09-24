@@ -5,6 +5,7 @@ import { ShoppingCart } from '@phosphor-icons/react';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import ModalEntrar from './ModalEntrar';
 import MenuHorizontalMobile from './MenuHorizontalMobile';
+import BadgeMenu from './BadgeMenu';
 import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 import InstallAppButton from '../../../../components/InstallAppButton';
@@ -25,6 +26,7 @@ const MENU_SECUNDARIO = [
   { label: '🎯 Serviços', rota: '/marketplace/servicos' },
   { label: '🍔 IUB Food', rota: '/marketplace/food' },
   { label: '🍻 Disk Bebidas', rota: '/beer' },
+  { label: '🛵 Entregadores', rota: '/entregadores', badge: 'EM BREVE' },
   { label: '💡 Curiosidades', rota: '/curiosidades' },
   { label: '🔥 Ofertas', href: '#ofertas' },
   { label: '✨ Novidades', href: '#novidades' },
@@ -291,9 +293,10 @@ export default function TopNav({
             <Link
               key={item.label}
               to={item.rota}
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
             >
               {item.label}
+              {item.badge && <BadgeMenu texto={item.badge} />}
             </Link>
           ) : (
             <a

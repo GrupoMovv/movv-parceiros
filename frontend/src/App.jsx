@@ -48,6 +48,7 @@ import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitac
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
 import SindicatoPlanos from './pages/sindicato/Planos/SindicatoPlanos';
 import SindicatoBeerModeracao from './pages/sindicato/Beer/SindicatoBeerModeracao';
+import SindicatoEntregadores from './pages/sindicato/Entregadores/SindicatoEntregadores';
 import Carteirinha from './pages/public/Carteirinha';
 import Curiosidades from './pages/public/Curiosidades';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
@@ -65,6 +66,7 @@ const BeerEstabelecimentoDetail = lazy(() => import('./pages/beer/Estabeleciment
 const BeerBuscaResultado = lazy(() => import('./pages/beer/BuscaResultado'));
 const BeerTodasCategorias = lazy(() => import('./pages/beer/TodasCategoriasPage'));
 const Favoritos = lazy(() => import('./pages/public/Marketplace/Favoritos'));
+const Entregadores = lazy(() => import('./pages/public/Marketplace/Entregadores'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
@@ -238,6 +240,7 @@ export default function App() {
           <Route path="busca" element={<BeerBuscaResultado />} />
         </Route>
         <Route path="/favoritos"                  element={<MarketplaceFallback><Favoritos /></MarketplaceFallback>} />
+        <Route path="/entregadores"               element={<MarketplaceFallback><Entregadores /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
@@ -342,6 +345,7 @@ export default function App() {
           <Route path="sindicato/parceiro-interessados" element={<RequireSindicatoEmpresas><SindicatoParceiroInteressados /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/planos" element={<RequireSindicatoEmpresas><SindicatoPlanos /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beer-moderacao" element={<RequireAdmin><SindicatoBeerModeracao /></RequireAdmin>} />
+          <Route path="sindicato/entregadores" element={<RequireAdmin><SindicatoEntregadores /></RequireAdmin>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />

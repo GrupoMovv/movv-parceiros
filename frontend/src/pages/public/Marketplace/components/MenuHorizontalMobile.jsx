@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ROXO } from '../theme';
+import BadgeMenu from './BadgeMenu';
 
 // Menu de categorias em pills horizontais roláveis, só mobile — estilo
 // iFood/Mercado Livre. Antes esse menu só existia escondido atrás do
@@ -32,7 +33,7 @@ export default function MenuHorizontalMobile({ itens, onAncoraClick }) {
     >
       {itens.map(item => {
         const ativo = Boolean(item.rota) && location.pathname === item.rota;
-        const classeBase = `flex-shrink-0 h-11 flex items-center text-xs font-semibold px-3.5 rounded-full whitespace-nowrap transition-colors duration-200 ${
+        const classeBase = `flex-shrink-0 h-11 flex items-center gap-1.5 text-xs font-semibold px-3.5 rounded-full whitespace-nowrap transition-colors duration-200 ${
           ativo ? 'text-white' : 'bg-slate-50 text-slate-600 active:bg-slate-100'
         }`;
         const estiloAtivo = ativo ? { backgroundColor: ROXO } : undefined;
@@ -40,6 +41,7 @@ export default function MenuHorizontalMobile({ itens, onAncoraClick }) {
         return item.rota ? (
           <Link key={item.label} to={item.rota} className={classeBase} style={estiloAtivo}>
             {item.label}
+            {item.badge && <BadgeMenu texto={item.badge} />}
           </Link>
         ) : (
           <a key={item.label} href={item.href} onClick={(e) => onAncoraClick(e, item.href)} className={classeBase}>

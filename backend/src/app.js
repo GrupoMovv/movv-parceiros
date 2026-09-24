@@ -44,6 +44,8 @@ app.use('/api/internal-collaborators', require('./routes/internalCollaborators')
 app.use('/api/indicators',             require('./routes/indicators'));
 app.use('/api/direta',                 require('./routes/direta'));
 app.use('/api/contabilidades-precos',  require('./routes/contabilidadesPrecos'));
+// Antes de /api/sindicato: prefixo mais específico precisa vir primeiro.
+app.use('/api/sindicato/entregadores', require('./routes/sindicatoEntregadores'));
 app.use('/api/sindicato',              require('./routes/sindicato'));
 app.use('/api/sindicato-empresas',     require('./routes/sindicatoEmpresas'));
 app.use('/api/sindicato-beneficios',   require('./routes/sindicatoBeneficios'));
@@ -83,6 +85,7 @@ app.use('/api/sindicato-beer',         require('./routes/sindicatoBeer'));
 app.use('/api/parceiro',               require('./routes/parceiroConta'));
 app.use('/api/public/parceiro',        require('./routes/publicParceiroConta'));
 app.use('/api/public/beer',            require('./routes/beer'));
+app.use('/api/public/entregadores',    require('./routes/entregadores'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 app.use('/',                           require('./routes/produtoPublico'));
