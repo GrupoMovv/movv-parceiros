@@ -75,9 +75,8 @@ async function alterarPlano(req, res) {
       precoCobrado = precoPlano(plano_novo, sindicalizada);
     }
 
-    await db.query('BEGIN');
-    try {
-      await db.query(
+    await db.transacao(async (client) => {
+      await client.query(
         `UPDATE sindicato_parceiros
          SET plano = $1, plano_ativo_desde = NOW(), plano_expira_em = $2,
              observacoes_plano = COALESCE($3, observacoes_plano),
@@ -86,16 +85,12 @@ async function alterarPlano(req, res) {
          WHERE id = $7`,
         [plano_novo, plano_expira_em || null, observacoes?.trim() || null, virouPioneiro, precoCobrado, eraSindicalizada, id]
       );
-      await db.query(
+      await client.query(
         `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por, preco_cobrado, era_sindicalizada)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [id, planoAnterior, plano_novo, motivo, observacoes?.trim() || null, quemAlterou(req), precoCobrado, eraSindicalizada]
       );
-      await db.query('COMMIT');
-    } catch (txErr) {
-      await db.query('ROLLBACK');
-      throw txErr;
-    }
+    });
 
     // Preparado, não disparado ainda (ver emailService) — troca manual de
     // plano não manda email sozinha até decidirmos ativar de verdade.
@@ -116,19 +111,14 @@ async function alterarStatusPlano(req, res) {
     const atual = await db.query('SELECT plano, plano_status FROM sindicato_parceiros WHERE id = $1', [id]);
     if (!atual.rows[0]) return res.status(404).json({ error: 'Parceiro não encontrado' });
 
-    await db.query('BEGIN');
-    try {
-      await db.query('UPDATE sindicato_parceiros SET plano_status = $1 WHERE id = $2', [status, id]);
-      await db.query(
+    await db.transacao(async (client) => {
+      await client.query('UPDATE sindicato_parceiros SET plano_status = $1 WHERE id = $2', [status, id]);
+      await client.query(
         `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por)
          VALUES ($1, $2, $2, $3, $4, $5)`,
         [id, atual.rows[0].plano, status === 'suspenso' ? 'suspensao' : 'reativacao', motivo?.trim() || null, quemAlterou(req)]
       );
-      await db.query('COMMIT');
-    } catch (txErr) {
-      await db.query('ROLLBACK');
-      throw txErr;
-    }
+    });
 
     return res.json({ ok: true, plano_status: status });
   } catch (err) {

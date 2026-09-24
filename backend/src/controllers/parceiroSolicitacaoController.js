@@ -283,13 +283,9 @@ async function aprovarSolicitacao(req, res) {
     const senhaHash = await bcrypt.hash(senha, 10);
     const aprovadoPor = req.user?.email || req.user?.name || 'admin';
 
-    let parceiro;
-    // Conexão dedicada: db.query vai pro pool e cada chamada pode cair numa
-    // conexão diferente — BEGIN/COMMIT por lá não formam transação nenhuma.
-    const client = await db.pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    // Parceiro + login + (Bebidas) extensão do Beer + solicitação aprovada:
+    // tudo ou nada (db.transacao usa uma conexão só — ver config/database.js).
+    const parceiro = await db.transacao(async (client) => {
       const parceiroResult = await client.query(
         `INSERT INTO sindicato_parceiros
           (slug, nome, razao_social, cnpj, categorias, categoria_principal, icone, cor_icone,
@@ -302,12 +298,12 @@ async function aprovarSolicitacao(req, res) {
           sol.whatsapp, sol.instagram,
         ]
       );
-      parceiro = parceiroResult.rows[0];
+      const novo = parceiroResult.rows[0];
 
       await client.query(
         `INSERT INTO sindicato_parceiro_usuarios (parceiro_id, email, senha_hash, cargo, ativo)
          VALUES ($1,$2,$3,$4,true)`,
-        [parceiro.id, sol.email, senhaHash, sol.responsavel_cargo || 'dono']
+        [novo.id, sol.email, senhaHash, sol.responsavel_cargo || 'dono']
       );
 
       // Segmento Bebidas: já entra no IUB Disk Bebidas (extensão ativa). O
@@ -322,7 +318,7 @@ async function aprovarSolicitacao(req, res) {
               termo_versao, termo_aceito_em, termo_aceito_ip)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
-            parceiro.id, beer.tipo, beer.whatsapp, JSON.stringify(beer.horario_funcionamento || {}),
+            novo.id, beer.tipo, beer.whatsapp, JSON.stringify(beer.horario_funcionamento || {}),
             beer.bairros_entrega || [], beer.termo_versao, beer.termo_aceito_em, beer.termo_aceito_ip,
           ]
         );
@@ -332,16 +328,11 @@ async function aprovarSolicitacao(req, res) {
         `UPDATE sindicato_parceiros_solicitacoes
          SET status = 'aprovado', aprovado_em = NOW(), aprovado_por = $1, parceiro_id = $2, updated_at = NOW()
          WHERE id = $3`,
-        [aprovadoPor, parceiro.id, sol.id]
+        [aprovadoPor, novo.id, sol.id]
       );
 
-      await client.query('COMMIT');
-    } catch (txErr) {
-      await client.query('ROLLBACK');
-      throw txErr;
-    } finally {
-      client.release();
-    }
+      return novo;
+    });
 
     const { sindicalizada } = await verificarSindicalizacao(sol.cnpj).catch(() => ({ sindicalizada: null }));
     emailService.enviarAprovacaoParceiro({

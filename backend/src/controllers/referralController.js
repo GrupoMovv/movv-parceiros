@@ -119,23 +119,23 @@ async function confirmSale(req, res) {
 
     const currentMonth = new Date().toISOString().slice(0, 7);
 
-    await db.query('BEGIN');
-    await db.query(
-      'UPDATE referrals SET status=$1, operated_value=$2 WHERE id=$3',
-      ['converted', operated_value, referral.id]
-    );
-    for (const comm of commissions) {
-      await db.query(
-        `INSERT INTO commissions (referral_id, partner_id, amount, type, reference_month)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [referral.id, comm.partner_id, comm.amount, comm.type, currentMonth]
+    // Indicação convertida + comissões: tudo ou nada.
+    await db.transacao(async (client) => {
+      await client.query(
+        'UPDATE referrals SET status=$1, operated_value=$2 WHERE id=$3',
+        ['converted', operated_value, referral.id]
       );
-    }
-    await db.query('COMMIT');
+      for (const comm of commissions) {
+        await client.query(
+          `INSERT INTO commissions (referral_id, partner_id, amount, type, reference_month)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [referral.id, comm.partner_id, comm.amount, comm.type, currentMonth]
+        );
+      }
+    });
 
     return res.json({ message: 'Venda confirmada e comissões calculadas', commissions });
   } catch (err) {
-    await db.query('ROLLBACK');
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }

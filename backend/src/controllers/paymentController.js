@@ -51,28 +51,29 @@ async function registerPayment(req, res) {
   }
 
   try {
-    await db.query('BEGIN');
-    const payResult = await db.query(
-      `INSERT INTO payments (partner_id, amount, payment_date, reference_month, commission_ids, pix_receipt)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [
-        partner_id,
-        amount,
-        payment_date || new Date().toISOString().slice(0, 10),
-        reference_month,
-        ids,
-        receiptFile,
-      ]
-    );
-
-    if (ids?.length) {
-      await db.query(
-        `UPDATE commissions SET status='paid' WHERE id = ANY($1) AND partner_id = $2`,
-        [ids, partner_id]
+    // Pagamento + comissões marcadas como pagas: tudo ou nada.
+    const payment = await db.transacao(async (client) => {
+      const payResult = await client.query(
+        `INSERT INTO payments (partner_id, amount, payment_date, reference_month, commission_ids, pix_receipt)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [
+          partner_id,
+          amount,
+          payment_date || new Date().toISOString().slice(0, 10),
+          reference_month,
+          ids,
+          receiptFile,
+        ]
       );
-    }
-    await db.query('COMMIT');
-    const payment = payResult.rows[0];
+
+      if (ids?.length) {
+        await client.query(
+          `UPDATE commissions SET status='paid' WHERE id = ANY($1) AND partner_id = $2`,
+          [ids, partner_id]
+        );
+      }
+      return payResult.rows[0];
+    });
 
     db.query('SELECT name, email FROM partners WHERE id = $1', [partner_id])
       .then(({ rows }) => {
@@ -90,7 +91,6 @@ async function registerPayment(req, res) {
 
     return res.status(201).json(payment);
   } catch (err) {
-    await db.query('ROLLBACK');
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
