@@ -9,7 +9,7 @@ import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Mar
 import ModalPix from '../../components/parceiro/assinatura/ModalPix';
 import ModalCartao from '../../components/parceiro/assinatura/ModalCartao';
 import { formatarBRL, dataBR } from '../../components/parceiro/assinatura/assinaturaUtils';
-import { CONTATO_IUBMAIS, SEM_CANAL_AINDA, linkWhatsapp } from '../../config/contato';
+import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config/contato';
 import { precosDoPlano, economiaMensal } from '../../utils/precoPlanos';
 
 // Mesma foto do slide institucional da home do marketplace (comércio local,
@@ -615,9 +615,7 @@ function BannerSindicalizacao({ eSindicalizada, razaoSocial, economiaMax }) {
         <p className="font-bold text-sm text-amber-800">⚠️ {razaoSocial ? `${razaoSocial} não está` : 'Sua empresa não está'} contribuindo com o SECI.</p>
         <p className="text-amber-700 text-xs mt-1">
           Sindicalize-se e economize até {formatarBRL(economiaMax)}/mês nos planos pagos do IUB MAIS.{' '}
-          {CONTATO_IUBMAIS.whatsapp
-            ? <a href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Quero saber como sindicalizar minha empresa ao SECI e pagar menos no IUB MAIS+')} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: '#92700C' }}>Fale com o IUB MAIS+ pra saber como.</a>
-            : SEM_CANAL_AINDA}
+          <a href={linkWhatsappIub('Olá! Quero saber como sindicalizar minha empresa ao SECI e pagar menos no IUB MAIS+')} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: '#92700C' }}>Fale com o IUB MAIS+ pra saber como.</a>
         </p>
       </div>
     </div>
@@ -1006,28 +1004,24 @@ function ModalComoSindicalizar({ economiaAnual, onVoltar, onFechar }) {
         ))}
       </ol>
 
-      {CONTATO_IUBMAIS.whatsapp ? (
-        <div className="rounded-2xl p-4 mt-5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Ficou com dúvida?</p>
-          <div className="flex flex-col gap-2 mt-2">
-            <a href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp)} target="_blank" rel="noreferrer" className="text-sm font-bold" style={{ color: ROXO }}>
-              💬 Falar com IUB MAIS+
-            </a>
-            {CONTATO_IUBMAIS.site && (
-              <a href={CONTATO_IUBMAIS.site} target="_blank" rel="noreferrer" className="text-sm font-bold" style={{ color: ROXO }}>
-                🔗 {CONTATO_IUBMAIS.site.replace(/^https?:\/\//, '')}
-              </a>
-            )}
-          </div>
-        </div>
-      ) : (
-        <p className="text-center text-slate-400 text-xs mt-5">{SEM_CANAL_AINDA}</p>
-      )}
+      <div className="rounded-2xl p-4 mt-5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Ficou com dúvida?</p>
+        <a href={linkWhatsappIub(MSG_WHATSAPP_SUPORTE)} target="_blank" rel="noreferrer" className="inline-block text-sm font-bold mt-2" style={{ color: ROXO }}>
+          💬 Falar com IUB MAIS+ — {CONTATO_IUB.whatsappExibicao}
+        </a>
+      </div>
 
       <div className="rounded-2xl p-4 mt-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
         <p className="text-xs" style={{ color: '#92700C' }}>
           <strong>Já é sindicalizada e aparece que não?</strong> Pode ser que seu CNPJ ainda não esteja na base que o IUB MAIS recebe do SECI
-          {CONTATO_IUBMAIS.whatsapp ? ' — fale com a gente que regularizamos.' : '. Assim que o nosso canal de atendimento abrir, a gente regulariza pra você.'}
+          {' — '}
+          <a
+            href={linkWhatsappIub('Olá! Minha empresa é sindicalizada ao SECI, mas o IUB MAIS+ não está reconhecendo meu CNPJ.')}
+            target="_blank" rel="noreferrer" className="font-bold underline"
+          >
+            fale com a gente
+          </a>{' '}
+          que regularizamos.
         </p>
       </div>
 
@@ -1071,14 +1065,13 @@ function ModalPrecoNormal({ planoNome, metodo, valorCobrado, onContinuar, onCanc
 
         <p className="text-slate-400 text-[11px] mt-4">
           Já é sindicalizada?{' '}
-          {CONTATO_IUBMAIS.whatsapp ? (
-            <a
-              href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Minha empresa é sindicalizada ao SECI, mas o IUB MAIS+ não está reconhecendo meu CNPJ.')}
-              target="_blank" rel="noreferrer" className="font-bold" style={{ color: ROXO }}
-            >
-              Fale com o IUB MAIS+
-            </a>
-          ) : 'Assim que o nosso canal de atendimento abrir, a gente regulariza'} o cadastro do seu CNPJ.
+          <a
+            href={linkWhatsappIub('Olá! Minha empresa é sindicalizada ao SECI, mas o IUB MAIS+ não está reconhecendo meu CNPJ.')}
+            target="_blank" rel="noreferrer" className="font-bold" style={{ color: ROXO }}
+          >
+            Fale com o IUB MAIS+
+          </a>{' '}
+          que a gente regulariza o cadastro do seu CNPJ.
         </p>
       </div>
     </div>

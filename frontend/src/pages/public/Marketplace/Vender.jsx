@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown, Search } from 'lucide-react';
 import api from '../../../services/api';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
-import { CONTATO_IUBMAIS, linkWhatsapp } from '../../../config/contato';
+import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../../config/contato';
 import { descontoMaxPct } from '../../../utils/precoPlanos';
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
@@ -763,17 +763,15 @@ function StatusConsultaReceita({ status, onConsultarNovamente }) {
 function AvisoSindicalizacao({ sindicalizacao }) {
   if (!sindicalizacao) return null;
   const { eSindicalizada, offPct } = sindicalizacao;
-  const cta = CONTATO_IUBMAIS.whatsapp
-    ? (
-      <a
-        href={linkWhatsapp(CONTATO_IUBMAIS.whatsapp, 'Olá! Quero saber mais sobre o desconto de empresa sindicalizada nos planos do IUB MAIS+')}
-        target="_blank" rel="noreferrer" className="font-bold underline"
-        style={{ color: eSindicalizada ? '#166534' : '#92700C' }}
-      >
-        Fale conosco pelo WhatsApp pra saber mais.
-      </a>
-    )
-    : null;
+  const cta = (
+    <a
+      href={linkWhatsappIub('Olá! Quero saber mais sobre o desconto de empresa sindicalizada nos planos do IUB MAIS+')}
+      target="_blank" rel="noreferrer" className="font-bold underline"
+      style={{ color: eSindicalizada ? '#166534' : '#92700C' }}
+    >
+      Fale conosco pelo WhatsApp pra saber mais.
+    </a>
+  );
 
   if (eSindicalizada) {
     return (
@@ -804,6 +802,12 @@ function TelaConfirmacao({ onVoltar }) {
         </p>
         <p className="font-semibold text-sm sm:text-base mt-5" style={{ color: DOURADO }}>
           Bem-vindo(a) ao movimento IUB MAIS. Juntos vamos fortalecer o comércio da nossa cidade!
+        </p>
+        <p className="text-white/70 text-xs sm:text-sm mt-5">
+          Dúvidas?{' '}
+          <a href={linkWhatsappIub(MSG_WHATSAPP_SUPORTE)} target="_blank" rel="noreferrer" className="font-bold underline text-white">
+            Fale conosco no WhatsApp {CONTATO_IUB.whatsappExibicao}
+          </a>
         </p>
         <button
           onClick={onVoltar}

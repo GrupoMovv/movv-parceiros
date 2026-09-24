@@ -9,6 +9,10 @@ import { useAssociadoSessao } from './useAssociadoSessao';
 import { IMAGEM_ENTREGADOR_DESKTOP, IMAGEM_ENTREGADOR_MOBILE } from './components/heroSlides/SlideEntregador';
 import { otimizarCloudinary } from '../../../utils/cloudinary';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
+import { WhatsappLogo } from '@phosphor-icons/react';
+import { CONTATO_IUB, linkWhatsappIub } from '../../../config/contato';
+
+const MSG_WHATSAPP_ENTREGADOR = 'Olá! Vim pelo site IUB MAIS+ e quero saber mais sobre o IUB+ Entregadores. 🛵';
 
 // IUB+ ENTREGADORES — página "em breve" com pré-cadastro de motoboys
 // (lista de espera, salva em pre_cadastro_entregadores). Mobile-first: tudo
@@ -240,6 +244,12 @@ function ModalSucesso({ onFechar }) {
         >
           Beleza!
         </button>
+        <p className="text-xs text-slate-500 mt-4">
+          Dúvidas?{' '}
+          <a href={linkWhatsappIub(MSG_WHATSAPP_ENTREGADOR)} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: ROXO }}>
+            Chame no WhatsApp {CONTATO_IUB.whatsappExibicao}
+          </a>
+        </p>
       </div>
     </div>
   );
@@ -390,6 +400,12 @@ export default function Entregadores() {
           <p className="text-xl sm:text-3xl font-black tracking-tight" style={{ color: DOURADO, fontFamily: 'Poppins, sans-serif' }}>
             🚀 LANÇAMENTO OFICIAL: EM BREVE
           </p>
+          <a
+            href={linkWhatsappIub(MSG_WHATSAPP_ENTREGADOR)} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-white/80 hover:text-white"
+          >
+            <WhatsappLogo size={18} weight="fill" color="#25D366" /> Dúvidas? {CONTATO_IUB.whatsappExibicao}
+          </a>
         </section>
       </main>
 

@@ -7,6 +7,8 @@ import { ROXO, PRETO } from '../public/Marketplace/theme';
 import InstallPWABanner from '../../components/InstallPWABanner';
 import InstallAppButton from '../../components/InstallAppButton';
 import MenuPills from '../../components/ui/MenuPills';
+import { WhatsappLogo } from '@phosphor-icons/react';
+import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config/contato';
 
 // Ordem por frequência de uso: o dia a dia (produtos/promoções/entrega)
 // primeiro, conta (perfil/configurações/planos) no meio, e o que é
@@ -147,6 +149,14 @@ export default function ParceiroPainelLayout() {
       <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
         <Outlet context={{ parceiro, usuario }} />
       </main>
+
+      {/* Rodapé discreto com o suporte do IUB MAIS+ (número em config/contato.js) */}
+      <footer className="max-w-6xl mx-auto px-4 sm:px-8 pb-8 pt-2 text-center text-xs text-slate-400">
+        Precisa de suporte?{' '}
+        <a href={linkWhatsappIub(MSG_WHATSAPP_SUPORTE)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold hover:underline" style={{ color: ROXO }}>
+          <WhatsappLogo size={14} weight="fill" color="#25D366" /> {CONTATO_IUB.whatsappExibicao}
+        </a>
+      </footer>
 
       <InstallPWABanner variante="parceiro" />
     </div>

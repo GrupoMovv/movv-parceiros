@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { PRETO } from '../theme';
 import { CATEGORIAS_HOME_FOOTER } from '../parceirosData';
 import MascoteIubMais from '../../../../components/MascoteIubMais';
+import { WhatsappLogo } from '@phosphor-icons/react';
+import { CONTATO_IUB, MSG_WHATSAPP_SITE, linkWhatsappIub } from '../../../../config/contato';
 
 export default function Footer() {
   return (
@@ -38,14 +40,27 @@ export default function Footer() {
             <Link to="/cadastrar-associado" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Sou associado SECI</Link>
             <Link to="/parceiro/login" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Já sou parceiro — Entrar</Link>
             <Link to="/vender" className="text-white/40 hover:text-white/70 text-xs transition-colors w-fit mt-1">Cadastrar minha empresa</Link>
+            <a
+              href={linkWhatsappIub(MSG_WHATSAPP_SITE)}
+              target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors w-fit mt-2 hover:opacity-80"
+              style={{ color: '#25D366' }}
+            >
+              <WhatsappLogo size={18} weight="fill" /> {CONTATO_IUB.whatsappExibicao}
+            </a>
+            {CONTATO_IUB.emailAtivo && (
+              <a href={`mailto:${CONTATO_IUB.email}`} className="text-white/60 hover:text-white text-sm transition-colors w-fit">
+                {CONTATO_IUB.email}
+              </a>
+            )}
           </div>
         </div>
       </div>
 
       <div className="border-t border-white/10 py-4 flex flex-col items-center justify-center gap-2">
         <MascoteIubMais tamanho="small" />
-        <p className="text-white/30 text-xs">
-          IUB MAIS {new Date().getFullYear()} — Feito com carinho em Itumbiara/GO
+        <p className="text-white/30 text-xs text-center px-4">
+          {CONTATO_IUB.razaoSocial} {new Date().getFullYear()} — Feito com carinho em {CONTATO_IUB.cidade}
         </p>
       </div>
     </footer>

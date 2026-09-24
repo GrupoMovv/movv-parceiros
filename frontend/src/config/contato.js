@@ -1,24 +1,36 @@
-// Canal de atendimento do PRÓPRIO IUB MAIS+ (não do SECI). Fica aqui, e não
-// dentro de uma tela, porque mais de uma página promete atendimento — painel
-// do parceiro (Planos.jsx) e a pública /vender (Vender.jsx). Um lugar só pra
-// ligar o canal evita que uma delas continue prometendo WhatsApp depois.
+// Canal de atendimento do PRÓPRIO IUB MAIS+ como empresa/plataforma (não do
+// SECI, não dos parceiros). Única fonte do número institucional: rodapé,
+// 404, painel do parceiro, /vender, /entregadores leem daqui.
 //
-// Enquanto `whatsapp` for null, NENHUMA tela mostra botão/link de contato:
-// cada uma cai num texto neutro. Pra ligar, preencha o número aqui — com ou
-// sem o DDI 55, `linkWhatsapp` normaliza.
-export const CONTATO_IUBMAIS = {
-  whatsapp: null, // ex.: '5564999999999' ou '64999999999'
-  site: null,     // ex.: 'https://iubmais.com.br'
+// NÃO usar pra pedido/contato de parceiro (Food, Disk Bebidas, vitrine):
+// esses vão pro WhatsApp do PRÓPRIO parceiro, que tem o chip dele.
+//
+// Links em api.whatsapp.com (não wa.me): o redirecionamento do wa.me
+// corrompe emoji no texto pré-preenchido.
+export const CONTATO_IUB = {
+  whatsapp: '5564992359408',
+  whatsappExibicao: '(64) 99235-9408',
+  whatsappLink: 'https://api.whatsapp.com/send?phone=5564992359408',
+  // Escondido de propósito até o domínio iubmais.com.br estar no ar — melhor
+  // sem e-mail do que e-mail que volta. Pra mostrar, é só ligar a flag.
+  email: 'contato@iubmais.com.br',
+  emailAtivo: false,
+  cidade: 'Itumbiara/GO',
+  razaoSocial: 'Grupo Movv - IUB MAIS+',
 };
 
-export const MSG_WHATSAPP_PADRAO = 'Olá! Quero saber mais sobre os planos do IUB MAIS+';
+// Mensagens padrão: contato geral (rodapé, páginas) e suporte (Fale Conosco).
+export const MSG_WHATSAPP_SITE = 'Olá! Vim pelo site IUB MAIS+.';
+export const MSG_WHATSAPP_SUPORTE = 'Olá! Preciso de suporte no IUB MAIS+.';
 
-// Texto usado quando ainda não existe canal, pra todas as telas falarem igual.
-export const SEM_CANAL_AINDA = 'Em breve teremos canal dedicado pra tirar dúvidas.';
-
-export function linkWhatsapp(numero, mensagem = MSG_WHATSAPP_PADRAO) {
+export function linkWhatsapp(numero, mensagem = MSG_WHATSAPP_SITE) {
   const digitos = String(numero || '').replace(/\D/g, '');
   if (!digitos) return null;
   const comDdi = digitos.startsWith('55') ? digitos : `55${digitos}`;
-  return `https://wa.me/${comDdi}?text=${encodeURIComponent(mensagem)}`;
+  return `https://api.whatsapp.com/send?phone=${comDdi}&text=${encodeURIComponent(mensagem)}`;
+}
+
+// Atalho pro WhatsApp do IUB MAIS+ com a mensagem que o contexto pedir.
+export function linkWhatsappIub(mensagem = MSG_WHATSAPP_SITE) {
+  return linkWhatsapp(CONTATO_IUB.whatsapp, mensagem);
 }

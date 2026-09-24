@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import MascoteIubMais from '../../components/MascoteIubMais';
+import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config/contato';
 
 export default function NotFound() {
   return (
@@ -12,6 +13,12 @@ export default function NotFound() {
       <Link to="/marketplace" className="btn-iub-dourado mt-6">
         Voltar pro início
       </Link>
+      <p className="text-sm text-iub-cinza mt-6">
+        Precisa de ajuda?{' '}
+        <a href={linkWhatsappIub(MSG_WHATSAPP_SUPORTE)} target="_blank" rel="noreferrer" className="font-bold text-iub-roxo underline">
+          Fale com a gente no WhatsApp {CONTATO_IUB.whatsappExibicao}
+        </a>
+      </p>
     </div>
   );
 }
