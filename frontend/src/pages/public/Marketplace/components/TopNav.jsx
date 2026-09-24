@@ -288,12 +288,12 @@ export default function TopNav({
 
       {/* menu secundário desktop — claro, colado embaixo do roxo */}
       <div className="hidden sm:block bg-white border-b border-slate-100">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 flex items-center gap-1 h-10">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 flex items-center gap-0.5 h-10 overflow-x-auto scrollbar-none">
           {MENU_SECUNDARIO.map(item => item.rota ? (
             <Link
               key={item.label}
               to={item.rota}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
+              className="flex-shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
             >
               {item.label}
               {item.badge && <BadgeMenu texto={item.badge} />}
@@ -303,15 +303,15 @@ export default function TopNav({
               key={item.label}
               href={item.href}
               onClick={(e) => irParaAncora(e, item.href)}
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
+              className="flex-shrink-0 whitespace-nowrap text-xs font-semibold text-slate-600 hover:text-slate-900 px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
             >
               {item.label}
             </a>
           ))}
-          <Link to="/cadastrar-associado" className="text-xs font-bold px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors" style={{ color: ROXO_ESCURO }}>
+          <Link to="/cadastrar-associado" className="flex-shrink-0 whitespace-nowrap text-xs font-bold px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors" style={{ color: ROXO_ESCURO }}>
             Sou SECI 💎
           </Link>
-          <Link to="/vender" className="text-xs font-semibold px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-slate-600 hover:text-slate-900 ml-auto">
+          <Link to="/vender" className="flex-shrink-0 whitespace-nowrap text-xs font-semibold px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-slate-600 hover:text-slate-900 ml-auto">
             Vender no IUB MAIS
           </Link>
         </nav>
