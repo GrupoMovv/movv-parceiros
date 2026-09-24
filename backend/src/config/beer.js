@@ -103,6 +103,19 @@ function diaDeHoje(agora = new Date()) {
   return { Mon: 'seg', Tue: 'ter', Wed: 'qua', Thu: 'qui', Fri: 'sex', Sat: 'sab', Sun: 'dom' }[curto];
 }
 
+// Faixas do filtro "Volume/tamanho" da tela de categoria (volume_ml do
+// produto, migration 059). Produto sem volume não entra em faixa nenhuma.
+const FAIXAS_VOLUME = [
+  { chave: 'ate_355', label: 'Lata / long neck (até 355 ml)', min: 0, max: 355 },
+  { chave: 'ate_750', label: 'Garrafa (356 a 750 ml)', min: 356, max: 750 },
+  { chave: 'ate_1500', label: 'Litro (751 ml a 1,5 L)', min: 751, max: 1500 },
+  { chave: 'acima_1500', label: 'Grande (mais de 1,5 L)', min: 1501, max: Infinity },
+];
+function faixaVolume(ml) {
+  if (!Number.isFinite(ml) || ml <= 0) return null;
+  return FAIXAS_VOLUME.find(f => ml >= f.min && ml <= f.max)?.chave || null;
+}
+
 // ---------------------------------------------------------------------
 // "Aberto agora" preso ao horário de funcionamento (evita loja "aberta
 // 24h" porque o parceiro esqueceu o botão ligado):
@@ -196,4 +209,5 @@ module.exports = {
   TERMOS_BLOQUEADOS, TERMOS_CONTEXTO, MENSAGEM_TERMO_PROIBIDO,
   verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias,
   horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
+  FAIXAS_VOLUME, faixaVolume,
 };

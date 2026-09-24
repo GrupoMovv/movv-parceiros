@@ -1,4 +1,3 @@
-import { linkWhatsapp } from '../../config/contato';
 import { formatarBRL } from '../../utils/iubFood';
 
 // IUB DISK BEBIDAS — rótulos e paleta da área. As listas fechadas moram no
@@ -64,12 +63,31 @@ export function textoDias(dias) {
   return marcados.map(d => d.curto).join(', ').replace(/, ([^,]*)$/, ' e $1');
 }
 
-// Pedido pronto no WhatsApp do estabelecimento (sem emoji de propósito:
-// wa.me corrompe emoji no redirect, ver utils/carteirinhaWhatsapp.js).
+// Pedido pronto no WhatsApp do estabelecimento. A mensagem tem emoji (ícone
+// da categoria + 💰), então vai por api.whatsapp.com e NÃO por wa.me: o
+// redirect do wa.me corrompe emoji (vira "�"), ver utils/carteirinhaWhatsapp.js.
 export function linkPedido(produto, { agora = false } = {}) {
-  const item = `- ${produto.nome} - ${formatarBRL(produto.preco)}`;
-  const msg = agora
-    ? `Olá! Quero AGORA:\n${item}\nMeu endereço: \nAguardo confirmação!`
-    : `Olá! Vi seu estabelecimento no IUB DISK BEBIDAS.\nGostaria de pedir:\n${item}\n\nMeu endereço: \n\nAguardo confirmação!`;
-  return linkWhatsapp(produto.estabelecimento?.whatsapp, msg);
+  const digitos = String(produto.estabelecimento?.whatsapp || '').replace(/\D/g, '');
+  if (!digitos) return null;
+  const comDdi = digitos.startsWith('55') && digitos.length > 11 ? digitos : `55${digitos}`;
+  const icone = produto.categoria?.icone || '🍻';
+  const msg = `${agora ? 'Olá! Quero AGORA do IUB DISK BEBIDAS:' : 'Olá! Quero pedir do IUB DISK BEBIDAS:'}\n\n`
+    + `${icone} ${produto.nome}\n💰 ${formatarBRL(produto.preco)}\n\n`
+    + 'Meu endereço: \n\nAguardo confirmação!';
+  return `https://api.whatsapp.com/send?phone=${comDdi}&text=${encodeURIComponent(msg)}`;
 }
+
+// % de desconto arredondado ("-22%") — só com oferta ativa.
+export function percentualDesconto(produto) {
+  if (!produto.em_oferta || !produto.preco_original) return null;
+  const pct = Math.round((1 - Number(produto.preco) / Number(produto.preco_original)) * 100);
+  return pct > 0 ? pct : null;
+}
+
+export const ORDENACOES = [
+  { valor: 'relevancia', label: 'Relevância' },
+  { valor: 'menor_preco', label: 'Menor preço' },
+  { valor: 'maior_preco', label: 'Maior preço' },
+  { valor: 'estabelecimento', label: 'Estabelecimento (A-Z)' },
+  { valor: 'rapido', label: 'Mais rápido (entrega)' },
+];

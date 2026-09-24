@@ -27,6 +27,7 @@ router.post('/produtos', ctrl.exigirExtensaoAtiva, upload.single('foto'), ctrl.c
 router.put('/produtos/:id', ctrl.exigirExtensaoAtiva, upload.single('foto'), ctrl.editarProduto);
 router.delete('/produtos/:id', ctrl.exigirExtensaoAtiva, ctrl.excluirProduto);
 router.post('/produtos/:id/disponibilidade', ctrl.exigirExtensaoAtiva, ctrl.atualizarDisponibilidade);
+router.post('/produtos/:id/oferta', ctrl.exigirExtensaoAtiva, ctrl.salvarOferta);
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {

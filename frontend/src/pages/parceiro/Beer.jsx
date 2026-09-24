@@ -32,6 +32,7 @@ export default function ParceiroBeer() {
   const [categorias, setCategorias] = useState([]);
   const [editandoCadastro, setEditandoCadastro] = useState(false);
   const [modalProduto, setModalProduto] = useState(null); // null | 'novo' | produto
+  const [aba, setAba] = useState('produtos'); // 'produtos' | 'ofertas'
   const [mudandoStatus, setMudandoStatus] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -152,6 +153,18 @@ export default function ParceiroBeer() {
         </span>
       </button>
 
+      <div className="flex gap-1 border-b border-slate-200">
+        {[['produtos', '📦 Produtos'], ['ofertas', '🔥 Ofertas']].map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setAba(id)}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${aba === id ? 'border-purple-700 text-purple-800' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+            {label}{id === 'ofertas' && produtos.some(ofertaAtiva) ? ` (${produtos.filter(ofertaAtiva).length})` : ''}
+          </button>
+        ))}
+      </div>
+
+      {aba === 'ofertas' ? (
+        <AbaOfertas produtos={produtos} onAtualizado={novo => setProdutos(lista => lista.map(x => (x.id === novo.id ? { ...x, ...novo } : x)))} />
+      ) : (
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <div>
@@ -188,6 +201,7 @@ export default function ParceiroBeer() {
           </div>
         )}
       </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 flex items-center justify-between gap-3 flex-wrap">
         <div>
@@ -261,7 +275,9 @@ function LinhaProduto({ produto: p, onEditar, onAtualizado, onExcluido }) {
             <p className="text-sm font-bold truncate" style={{ color: PRETO }}>{p.nome}</p>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: st.cor, backgroundColor: st.fundo }}>{st.label}</span>
           </div>
-          <p className="text-xs text-slate-500">{p.categoria_nome} · <strong>{formatarBRL(p.preco)}</strong>{textoDias(p.dias_disponiveis) ? ` · ${textoDias(p.dias_disponiveis)}` : ''}</p>
+          <p className="text-xs text-slate-500">{p.categoria_nome} · {ofertaAtiva(p)
+            ? <><strong className="text-red-600">{formatarBRL(p.preco)}</strong> <span className="line-through">{formatarBRL(p.preco_original)}</span> 🔥</>
+            : <strong>{formatarBRL(precoNormal(p))}</strong>}{textoDias(p.dias_disponiveis) ? ` · ${textoDias(p.dias_disponiveis)}` : ''}</p>
           {p.status === 'rejeitado' && p.motivo_rejeicao && (
             <p className="text-xs text-red-700 mt-1 flex items-start gap-1"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {p.motivo_rejeicao} — edite e envie de novo.</p>
           )}
@@ -315,7 +331,11 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
   const [nome, setNome] = useState(produto?.nome || '');
   const [descricao, setDescricao] = useState(produto?.descricao || '');
   const [categoria, setCategoria] = useState(produto?.categoria_codigo || '');
-  const [preco, setPreco] = useState(produto ? String(produto.preco) : '');
+  // o preço do formulário é sempre o NORMAL (com oferta no ar, o backend
+  // guarda ele em preco_original e mantém o desconto)
+  const [preco, setPreco] = useState(produto ? String(precoNormal(produto)) : '');
+  const [volume, setVolume] = useState(produto?.volume_ml ? String(produto.volume_ml) : '');
+  const [origem, setOrigem] = useState(produto?.origem || '');
   const [dias, setDias] = useState(produto?.dias_disponiveis && !produto.dias_disponiveis.todos ? produto.dias_disponiveis : { todos: true });
   const [agora, setAgora] = useState(Boolean(produto?.disponivel_agora));
   const [foto, setFoto] = useState(null);
@@ -341,6 +361,8 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
       fd.append('descricao', descricao.trim());
       fd.append('categoria_codigo', categoria);
       fd.append('preco', preco);
+      fd.append('volume_ml', volume);
+      fd.append('origem', origem.trim());
       fd.append('dias_disponiveis', JSON.stringify(dias));
       fd.append('disponivel_agora', String(agora));
       if (foto) fd.append('foto', foto);
@@ -392,10 +414,21 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Preço *</label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Preço *{ofertaAtiva(produto || {}) && <span className="font-normal text-slate-400"> (normal — a oferta continua na aba Ofertas)</span>}</label>
             <CampoPreco value={preco} onChange={setPreco} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
           </div>
           <div>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Volume (ml)</label>
+                <input type="number" min="1" value={volume} onChange={e => setVolume(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" placeholder="Ex: 350" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Origem</label>
+                <input value={origem} onChange={e => setOrigem(e.target.value)} maxLength={60} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" placeholder="Ex: Chile" />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 -mt-2 mb-3">Opcionais — usados nos filtros da categoria (volume, origem).</p>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Foto</label>
             <div onClick={() => fileRef.current?.click()} className="w-full h-28 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center cursor-pointer hover:border-slate-300 overflow-hidden bg-slate-50">
               {preview ? <img src={preview} alt="" className="w-full h-full object-contain" /> : (
@@ -584,5 +617,106 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
         </button>
       </div>
     </form>
+  );
+}
+
+// Oferta vale só no prazo (o backend desfaz a vencida quando a lista abre).
+function ofertaAtiva(p) {
+  return Boolean(p?.em_oferta && p.preco_original && p.oferta_ate && new Date(p.oferta_ate) > new Date());
+}
+function precoNormal(p) {
+  return p?.em_oferta && p.preco_original ? p.preco_original : p?.preco;
+}
+// "YYYY-MM-DDTHH:mm" no fuso do aparelho (o que o <input type=datetime-local> usa)
+function paraInputDataHora(d) {
+  const x = new Date(d);
+  const z = n => String(n).padStart(2, '0');
+  return `${x.getFullYear()}-${z(x.getMonth() + 1)}-${z(x.getDate())}T${z(x.getHours())}:${z(x.getMinutes())}`;
+}
+
+// Aba "🔥 Ofertas": liga/desliga oferta por produto. Ao ligar, o preço
+// normal vira o "de" (preco_original) e o com desconto vira o "por" até a
+// data escolhida (máx. 30 dias). Só produto aprovado aparece pro cliente.
+function AbaOfertas({ produtos, onAtualizado }) {
+  if (!produtos.length) return <p className="text-slate-400 text-sm text-center py-10">Cadastre produtos na aba Produtos pra poder fazer oferta.</p>;
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 space-y-2">
+      <p className="text-slate-400 text-xs mb-2">Produto em oferta aparece em "🔥 Ofertas do dia" na página da categoria, com o preço antigo riscado. Vale até a data que você escolher — depois volta sozinho pro preço normal.</p>
+      {produtos.map(p => <LinhaOferta key={p.id} produto={p} onAtualizado={onAtualizado} />)}
+    </div>
+  );
+}
+
+function LinhaOferta({ produto: p, onAtualizado }) {
+  const ativa = ofertaAtiva(p);
+  const [ligada, setLigada] = useState(ativa);
+  const [precoOferta, setPrecoOferta] = useState(ativa ? String(p.preco) : '');
+  const amanha = new Date(Date.now() + 86400000); amanha.setHours(23, 59, 0, 0);
+  const [ate, setAte] = useState(ativa ? paraInputDataHora(p.oferta_ate) : paraInputDataHora(amanha));
+  const [salvando, setSalvando] = useState(false);
+  const normal = Number(precoNormal(p));
+  const pct = precoOferta && Number(precoOferta) < normal ? Math.round((1 - Number(precoOferta) / normal) * 100) : null;
+
+  async function salvar(emOferta) {
+    setSalvando(true);
+    try {
+      const res = await apiParceiro.post(`/parceiro/beer/produtos/${p.id}/oferta`, emOferta
+        ? { em_oferta: true, preco_oferta: precoOferta, oferta_ate: new Date(ate).toISOString() }
+        : { em_oferta: false });
+      onAtualizado(res.data.produto);
+      if (!emOferta) { setLigada(false); setPrecoOferta(''); }
+      toast.success(emOferta ? 'Oferta no ar!' : 'Oferta encerrada — voltou pro preço normal');
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Erro ao salvar oferta'));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className={`rounded-xl border p-3 ${ativa ? 'border-red-200 bg-red-50/40' : 'border-slate-100'}`}>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0 text-xl">
+          {p.imagem ? <img src={p.imagem} alt="" className="w-full h-full object-cover" /> : <span aria-hidden="true">{p.categoria_icone}</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate" style={{ color: PRETO }}>{p.nome}</p>
+          <p className="text-xs text-slate-500">
+            {ativa ? <>🔥 {formatarBRL(p.preco)} até {new Date(p.oferta_ate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</> : <>Normal: {formatarBRL(normal)}</>}
+            {p.status !== 'aprovado' && <span className="text-amber-700"> · aparece depois da aprovação</span>}
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer flex-shrink-0">
+          <span className="text-slate-500">Em oferta</span>
+          <input type="checkbox" checked={ligada} disabled={salvando}
+            onChange={e => { if (!e.target.checked && ativa) salvar(false); else setLigada(e.target.checked); }}
+            className="w-5 h-5 accent-red-600" />
+        </label>
+      </div>
+
+      {ligada && (
+        <div className="mt-3 grid sm:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Preço original</label>
+            <input value={formatarBRL(normal)} readOnly className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-500" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Preço com desconto{pct ? <span className="text-red-600"> (-{pct}%)</span> : ''}</label>
+            <CampoPreco value={precoOferta} onChange={setPrecoOferta} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Oferta até</label>
+            <input type="datetime-local" value={ate} onChange={e => setAte(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => salvar(true)} disabled={salvando || !pct || !ate}
+              className="flex-1 text-sm font-bold py-2 rounded-lg text-white disabled:opacity-40" style={{ backgroundColor: '#DC2626' }}>
+              {salvando ? 'Salvando…' : ativa ? 'Atualizar' : 'Salvar oferta'}
+            </button>
+            {ativa && <button type="button" onClick={() => salvar(false)} disabled={salvando} className="px-3 text-xs font-semibold rounded-lg border border-slate-200">Encerrar</button>}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

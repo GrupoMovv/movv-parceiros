@@ -1,6 +1,6 @@
 const db = require('../config/database');
-const { PLANOS, planoEfetivo, sqlPlanoVigente } = require('../config/planos');
-const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto, abertoEfetivo } = require('../config/beer');
+const { PLANOS, planoEfetivo, sqlPlanoVigente, limiteDestaquesBeer } = require('../config/planos');
+const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto, abertoEfetivo, FAIXAS_VOLUME, faixaVolume } = require('../config/beer');
 const { onlyDigits, isValidCPF } = require('../utils/validators');
 
 // IUB DISK BEBIDAS — rotas públicas (/api/public/beer). Modelo híbrido
@@ -52,19 +52,32 @@ function ordenarAbertosPrimeiro(lista) {
   return [...lista].sort((a, b) => (peso(b) - peso(a)) || (Number(b.status_aberto) - Number(a.status_aberto)));
 }
 
+// Oferta vale só dentro do prazo. Vencida (sem cron pra desfazer) = volta
+// o preço normal NA LEITURA: preco_original guarda o normal enquanto a
+// oferta existe (migration 059).
+const SQL_OFERTA_ATIVA = `(bp.em_oferta AND bp.preco_original IS NOT NULL AND bp.oferta_ate > NOW())`;
+const SQL_PRECO_VIGENTE = `(CASE WHEN ${SQL_OFERTA_ATIVA} THEN bp.preco ELSE COALESCE(bp.preco_original, bp.preco) END)`;
+
 function publicoProduto(r) {
+  const estabelecimento = publicoEstabelecimento(r);
   return {
-    id: r.produto_id, nome: r.produto_nome, descricao: r.descricao, preco: r.preco, imagem: r.imagem,
-    disponivel_agora: r.disponivel_agora, dias_disponiveis: r.dias_disponiveis, destaque: r.destaque,
-    categoria: { codigo: r.categoria_codigo, nome: r.categoria_nome, icone: r.categoria_icone, regulamentada: r.regulamentada },
-    estabelecimento: publicoEstabelecimento(r),
+    id: r.produto_id, nome: r.produto_nome, descricao: r.descricao, preco: r.preco_vigente, imagem: r.imagem,
+    em_oferta: r.oferta_ativa, preco_original: r.oferta_ativa ? r.preco_original : null, oferta_ate: r.oferta_ativa ? r.oferta_ate : null,
+    volume_ml: r.volume_ml, origem: r.origem,
+    disponivel_agora: r.disponivel_agora, dias_disponiveis: r.dias_disponiveis,
+    // destaque só vale se o plano que vale AGORA dá direito (Grátis = 0 —
+    // plano pago venceu, a estrela some sem precisar editar o produto)
+    destaque: Boolean(r.destaque) && limiteDestaquesBeer(estabelecimento.plano) > 0,
+    categoria: { codigo: r.categoria_codigo, nome: r.categoria_nome, icone: r.categoria_icone, regulamentada: r.regulamentada, pai: r.categoria_pai },
+    estabelecimento,
   };
 }
 
 const SELECT_PRODUTO = `
-  bp.id AS produto_id, bp.nome AS produto_nome, bp.descricao, bp.preco, bp.imagem, bp.disponivel_agora,
-  bp.dias_disponiveis, bp.destaque, bp.categoria_codigo,
-  bc.nome_exibicao AS categoria_nome, bc.icone AS categoria_icone, bc.regulamentada,
+  bp.id AS produto_id, bp.nome AS produto_nome, bp.descricao, bp.imagem, bp.disponivel_agora,
+  bp.dias_disponiveis, bp.destaque, bp.categoria_codigo, bp.volume_ml, bp.origem, bp.created_at AS produto_criado_em,
+  ${SQL_PRECO_VIGENTE} AS preco_vigente, ${SQL_OFERTA_ATIVA} AS oferta_ativa, bp.preco_original, bp.oferta_ate,
+  bc.nome_exibicao AS categoria_nome, bc.icone AS categoria_icone, bc.regulamentada, bc.categoria_pai,
   ${SELECT_ESTABELECIMENTO}
 `;
 
@@ -350,7 +363,171 @@ async function registrarAcesso(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------
+// GET /categoria/:codigo — tela de categoria inteira numa chamada:
+// seções (Ofertas do dia, Adegas abertas agora, Destaques — só na página
+// 1), a página de "Todos os produtos" (20 por vez), o total pro contador e
+// as facetas dos filtros avançados (faixa de preço, estabelecimentos,
+// volumes, origens que EXISTEM nessa categoria).
+//   ?sub=vinho_tinto            subcategoria (quando :codigo é grupo)
+//   ?abertos=true               só estabelecimento aberto de verdade agora
+//   ?preco_min=10&preco_max=80  no preço que vale agora (oferta incluída)
+//   ?est=3,7   ?vol=ate_355,ate_750   ?origem=Chile,Argentina
+//   ?ordem=relevancia|menor_preco|maior_preco|estabelecimento|rapido
+//   ?pagina=2
+// Filtra em JS de propósito: "aberto" depende do turno do horário (só dá
+// pra saber em JS) e o catálogo de uma categoria numa cidade cabe na
+// memória — teto de 2000 linhas por segurança.
+const POR_PAGINA = 20;
+const ORDENS = ['relevancia', 'menor_preco', 'maior_preco', 'estabelecimento', 'rapido'];
+const pesoPlano = e => PLANOS[e.plano]?.boost_busca || 0;
+const num = v => (v === undefined || v === '' || v === null ? null : Number(v));
+const lista = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+
+function ordenar(produtos, ordem) {
+  const precoDe = p => Number(p.preco);
+  const porRelevancia = (a, b) => (Number(b.destaque) - Number(a.destaque))
+    || (pesoPlano(b.estabelecimento) - pesoPlano(a.estabelecimento))
+    || (Number(b.estabelecimento.status_aberto) - Number(a.estabelecimento.status_aberto))
+    || (Number(b.disponivel_agora) - Number(a.disponivel_agora))
+    || (b.id - a.id);
+  const cmp = {
+    relevancia: porRelevancia,
+    menor_preco: (a, b) => (precoDe(a) - precoDe(b)) || porRelevancia(a, b),
+    maior_preco: (a, b) => (precoDe(b) - precoDe(a)) || porRelevancia(a, b),
+    estabelecimento: (a, b) => a.estabelecimento.nome.localeCompare(b.estabelecimento.nome, 'pt-BR') || (precoDe(a) - precoDe(b)),
+    // sem tempo informado vai pro fim; empate = relevância
+    rapido: (a, b) => ((a.estabelecimento.tempo_entrega_min ?? 9999) - (b.estabelecimento.tempo_entrega_min ?? 9999)) || porRelevancia(a, b),
+  }[ordem];
+  return [...produtos].sort(cmp);
+}
+
+function contarPor(itens, chaveDe) {
+  const m = new Map();
+  itens.forEach(i => {
+    const { chave, ...dados } = chaveDe(i) || {};
+    if (chave === undefined) return;
+    m.set(chave, { ...dados, total: (m.get(chave)?.total || 0) + 1 });
+  });
+  return [...m.values()];
+}
+
+async function getCategoria(req, res) {
+  try {
+    const cats = (await db.query(
+      'SELECT codigo, nome_exibicao AS nome, categoria_pai, icone, ordem, regulamentada FROM beer_categorias WHERE ativo = true ORDER BY ordem'
+    )).rows;
+    const cat = cats.find(c => c.codigo === req.params.codigo);
+    if (!cat) return res.status(404).json({ error: 'Categoria não encontrada' });
+    const grupo = cat.categoria_pai ? cats.find(c => c.codigo === cat.categoria_pai) : cat;
+    const ehGrupo = !cat.categoria_pai;
+
+    const q = req.query;
+    const sub = ehGrupo && q.sub && cats.some(c => c.codigo === q.sub && c.categoria_pai === cat.codigo) ? q.sub : null;
+    const ordem = ORDENS.includes(q.ordem) ? q.ordem : 'relevancia';
+    const pagina = Math.max(1, parseInt(q.pagina, 10) || 1);
+    const precoMin = num(q.preco_min);
+    const precoMax = num(q.preco_max);
+    const ests = new Set(lista(q.est).map(Number).filter(Number.isInteger));
+    const vols = new Set(lista(q.vol).filter(v => FAIXAS_VOLUME.some(fx => fx.chave === v)));
+    const origens = new Set(lista(q.origem).map(normalizarTexto));
+
+    const r = await db.query(
+      `SELECT ${SELECT_PRODUTO} ${FROM_PRODUTO}
+       WHERE ${WHERE_PRODUTO_VISIVEL} AND (bp.categoria_codigo = $1 OR bc.categoria_pai = $1)
+       LIMIT 2000`,
+      [cat.codigo]
+    );
+    const daCategoria = r.rows.map(publicoProduto);
+
+    // Chips de subcategoria com contagem (categoria inteira, antes do sub)
+    const subcategorias = ehGrupo
+      ? cats.filter(c => c.categoria_pai === cat.codigo)
+        .map(c => ({ codigo: c.codigo, nome: c.nome, total: daCategoria.filter(p => p.categoria.codigo === c.codigo).length }))
+      : [];
+
+    // Facetas: o que existe DEPOIS do sub e ANTES dos filtros avançados —
+    // o painel de filtros só oferece opção que tem resultado.
+    const base = sub ? daCategoria.filter(p => p.categoria.codigo === sub) : daCategoria;
+    const precos = base.map(p => Number(p.preco));
+    const facetas = {
+      preco_min: precos.length ? Math.floor(Math.min(...precos)) : 0,
+      preco_max: precos.length ? Math.ceil(Math.max(...precos)) : 0,
+      estabelecimentos: contarPor(base, p => ({ chave: p.estabelecimento.id, id: p.estabelecimento.id, nome: p.estabelecimento.nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      volumes: FAIXAS_VOLUME.map(fx => ({ chave: fx.chave, label: fx.label, total: base.filter(p => faixaVolume(p.volume_ml) === fx.chave).length }))
+        .filter(fx => fx.total > 0),
+      origens: contarPor(base.filter(p => p.origem), p => ({ chave: normalizarTexto(p.origem), valor: p.origem.trim() }))
+        .sort((a, b) => a.valor.localeCompare(b.valor, 'pt-BR')),
+    };
+
+    const filtrados = base.filter(p => {
+      const preco = Number(p.preco);
+      if (q.abertos === 'true' && !p.estabelecimento.status_aberto) return false;
+      if (precoMin !== null && preco < precoMin) return false;
+      if (precoMax !== null && preco > precoMax) return false;
+      if (ests.size && !ests.has(p.estabelecimento.id)) return false;
+      if (vols.size && !vols.has(faixaVolume(p.volume_ml))) return false;
+      if (origens.size && !(p.origem && origens.has(normalizarTexto(p.origem)))) return false;
+      return true;
+    });
+
+    const todos = ordenar(filtrados, ordem);
+    let secoes = null;
+    if (pagina === 1) {
+      const desconto = p => 1 - Number(p.preco) / Number(p.preco_original);
+      const adegas = new Map();
+      filtrados.filter(p => p.estabelecimento.status_aberto).forEach(p => {
+        const atual = adegas.get(p.estabelecimento.id) || { ...p.estabelecimento, total_na_categoria: 0 };
+        atual.total_na_categoria += 1;
+        adegas.set(p.estabelecimento.id, atual);
+      });
+      secoes = {
+        ofertas: filtrados.filter(p => p.em_oferta).sort((a, b) => desconto(b) - desconto(a)).slice(0, 12),
+        // Master > Premium > Oficial (Grátis não tem destaque, ver publicoProduto)
+        destaques: filtrados.filter(p => p.destaque)
+          .sort((a, b) => (pesoPlano(b.estabelecimento) - pesoPlano(a.estabelecimento))
+            || (Number(b.estabelecimento.status_aberto) - Number(a.estabelecimento.status_aberto)))
+          .slice(0, 24),
+        adegas_abertas: [...adegas.values()].sort((a, b) => (pesoPlano(b) - pesoPlano(a)) || (b.total_na_categoria - a.total_na_categoria)),
+      };
+    }
+
+    return res.json({
+      categoria: { codigo: cat.codigo, nome: cat.nome, icone: cat.icone, regulamentada: cat.regulamentada, eh_grupo: ehGrupo },
+      grupo: { codigo: grupo.codigo, nome: grupo.nome, icone: grupo.icone },
+      subcategorias,
+      sub,
+      total: filtrados.length,
+      pagina,
+      por_pagina: POR_PAGINA,
+      tem_mais: pagina * POR_PAGINA < todos.length,
+      produtos: todos.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA),
+      secoes,
+      facetas,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar categoria' });
+  }
+}
+
+// GET /produtos/:id — um produto visível (modal aberto por link ?p=ID).
+async function getProduto(req, res) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.status(404).json({ error: 'Produto não encontrado' });
+    const r = await db.query(`SELECT ${SELECT_PRODUTO} ${FROM_PRODUTO} WHERE ${WHERE_PRODUTO_VISIVEL} AND bp.id = $1`, [id]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
+    return res.json(publicoProduto(r.rows[0]));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar produto' });
+  }
+}
+
 module.exports = {
+  getCategoria, getProduto,
   getCategorias, getResumo, getEstabelecimentos, getEstabelecimento, getProdutosEstabelecimento,
   getProdutos, getQueroAgora, verificarIdade, registrarAcesso,
 };

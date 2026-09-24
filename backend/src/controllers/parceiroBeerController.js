@@ -197,8 +197,20 @@ async function atualizarStatus(req, res) {
 }
 
 // GET /produtos — todos os meus, qualquer status (pendente/aprovado/rejeitado).
+// Oferta vencida (oferta_ate no passado) volta pro preço normal. Sem cron:
+// roda quando o parceiro abre a lista ou mexe em oferta. O público nunca
+// depende disso — lá o preço vigente já é calculado na leitura.
+async function desfazerOfertasVencidas(estabelecimentoId) {
+  await db.query(
+    `UPDATE beer_produtos SET preco = preco_original, preco_original = NULL, em_oferta = false, oferta_ate = NULL, updated_at = NOW()
+     WHERE estabelecimento_id = $1 AND em_oferta = true AND (oferta_ate IS NULL OR oferta_ate <= NOW()) AND preco_original IS NOT NULL`,
+    [estabelecimentoId]
+  );
+}
+
 async function listarProdutos(req, res) {
   try {
+    await desfazerOfertasVencidas(req.beer.id);
     const r = await db.query(
       `SELECT bp.*, bc.nome_exibicao AS categoria_nome, bc.icone AS categoria_icone, bc.regulamentada
        FROM beer_produtos bp JOIN beer_categorias bc ON bc.codigo = bp.categoria_codigo
@@ -239,7 +251,13 @@ async function validarProduto(req, b) {
   const preco = Number(String(b.preco ?? '').replace(',', '.'));
   if (!Number.isFinite(preco) || preco <= 0 || preco > 100000) return { erro: 'Preço inválido', status: 400 };
 
-  const { bloqueado, sinalizados } = verificarTermos(nome, descricao);
+  // Volume e origem (migration 059) alimentam os filtros avançados. Origem
+  // é texto livre, então passa pelo mesmo filtro de termos.
+  const volumeMl = b.volume_ml === undefined || b.volume_ml === '' || b.volume_ml === null ? null : Number(b.volume_ml);
+  if (volumeMl !== null && !(Number.isInteger(volumeMl) && volumeMl > 0 && volumeMl <= 50000)) return { erro: 'Volume deve ser em ml (ex.: 350, 600, 1000)', status: 400 };
+  const origem = String(b.origem || '').trim().slice(0, 60) || null;
+
+  const { bloqueado, sinalizados } = verificarTermos(nome, descricao, origem);
   if (bloqueado) {
     await logTentativaProibida(req, { nome, descricao, palavra: bloqueado });
     return { erro: MENSAGEM_TERMO_PROIBIDO, status: 422 };
@@ -252,6 +270,7 @@ async function validarProduto(req, b) {
     dados: {
       nome, descricao, categoria_codigo: b.categoria_codigo, preco: Math.round(preco * 100) / 100,
       dias_disponiveis: normalizarDias(dias), disponivel_agora: bool(b.disponivel_agora),
+      volume_ml: volumeMl, origem,
     },
     sinalizados,
   };
@@ -282,10 +301,10 @@ async function criarProduto(req, res) {
     const r = await db.query(
       `INSERT INTO beer_produtos
          (estabelecimento_id, categoria_codigo, nome, descricao, preco, imagem, imagem_public_id,
-          dias_disponiveis, disponivel_agora, termos_sinalizados)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          dias_disponiveis, disponivel_agora, termos_sinalizados, volume_ml, origem)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [req.beer.id, d.categoria_codigo, d.nome, d.descricao, d.preco, foto?.url || null, foto?.publicId || null,
-        JSON.stringify(d.dias_disponiveis), d.disponivel_agora, v.sinalizados]
+        JSON.stringify(d.dias_disponiveis), d.disponivel_agora, v.sinalizados, d.volume_ml, d.origem]
     );
     return res.status(201).json({ produto: r.rows[0] });
   } catch (err) {
@@ -313,13 +332,27 @@ async function editarProduto(req, res) {
     const d = v.dados;
     const foto = await subirFoto(req);
     const mudouConteudo = d.nome !== atual.nome || (d.descricao || null) !== (atual.descricao || null)
-      || d.categoria_codigo !== atual.categoria_codigo || Boolean(foto);
+      || d.categoria_codigo !== atual.categoria_codigo || (d.origem || null) !== (atual.origem || null) || Boolean(foto);
+
+    // O preço do formulário é sempre o NORMAL. Com oferta no ar, ele vai
+    // pro preco_original e o desconto continua; se o novo normal ficou
+    // menor ou igual ao preço da oferta, a oferta perde o sentido e acaba.
+    const ofertaAtiva = atual.em_oferta && atual.preco_original !== null && new Date(atual.oferta_ate) > new Date();
+    let precoCol = d.preco;
+    let precoOriginal = null;
+    let manterOferta = false;
+    if (ofertaAtiva && d.preco > Number(atual.preco)) {
+      precoCol = Number(atual.preco);
+      precoOriginal = d.preco;
+      manterOferta = true;
+    }
     const voltaPendente = mudouConteudo || atual.status === 'rejeitado';
 
     const r = await db.query(
       `UPDATE beer_produtos SET
          nome = $1, descricao = $2, categoria_codigo = $3, preco = $4, dias_disponiveis = $5, disponivel_agora = $6,
-         termos_sinalizados = $7,
+         termos_sinalizados = $7, volume_ml = $12, origem = $13,
+         preco_original = $14, em_oferta = $15, oferta_ate = CASE WHEN $15 THEN oferta_ate ELSE NULL END,
          imagem = COALESCE($8, imagem), imagem_public_id = COALESCE($9, imagem_public_id),
          status = CASE WHEN $10 THEN 'pendente' ELSE status END,
          motivo_rejeicao = CASE WHEN $10 THEN NULL ELSE motivo_rejeicao END,
@@ -327,8 +360,9 @@ async function editarProduto(req, res) {
          aprovado_em = CASE WHEN $10 THEN NULL ELSE aprovado_em END,
          updated_at = NOW()
        WHERE id = $11 RETURNING *`,
-      [d.nome, d.descricao, d.categoria_codigo, d.preco, JSON.stringify(d.dias_disponiveis), d.disponivel_agora,
-        v.sinalizados, foto?.url || null, foto?.publicId || null, voltaPendente, atual.id]
+      [d.nome, d.descricao, d.categoria_codigo, precoCol, JSON.stringify(d.dias_disponiveis), d.disponivel_agora,
+        v.sinalizados, foto?.url || null, foto?.publicId || null, voltaPendente, atual.id,
+        d.volume_ml, d.origem, precoOriginal, manterOferta]
     );
     if (foto && atual.imagem_public_id) cloudinaryService.deletarFoto(atual.imagem_public_id).catch(() => {});
     return res.json({ produto: r.rows[0], voltou_moderacao: voltaPendente && atual.status !== 'pendente' });
@@ -388,7 +422,49 @@ async function atualizarDisponibilidade(req, res) {
   }
 }
 
+// POST /produtos/:id/oferta { em_oferta, preco_oferta?, oferta_ate? }
+// Liga: preco_original = preço normal, preco = preço com desconto, até a
+// data escolhida (obrigatória, no futuro, no máximo 30 dias). Desliga:
+// volta o preço normal. Não reabre moderação (é só preço).
+const MAX_DIAS_OFERTA = 30;
+async function salvarOferta(req, res) {
+  try {
+    await desfazerOfertasVencidas(req.beer.id);
+    const atual = await buscarMeuProduto(req);
+    if (!atual) return res.status(404).json({ error: 'Produto não encontrado' });
+    const b = req.body || {};
+    const precoNormal = atual.em_oferta && atual.preco_original !== null ? Number(atual.preco_original) : Number(atual.preco);
+
+    if (b.em_oferta !== true) {
+      const r = await db.query(
+        `UPDATE beer_produtos SET preco = $1, preco_original = NULL, em_oferta = false, oferta_ate = NULL, updated_at = NOW()
+         WHERE id = $2 RETURNING *`,
+        [precoNormal, atual.id]
+      );
+      return res.json({ produto: r.rows[0] });
+    }
+
+    const precoOferta = Math.round(Number(String(b.preco_oferta ?? '').replace(',', '.')) * 100) / 100;
+    if (!Number.isFinite(precoOferta) || precoOferta <= 0) return res.status(400).json({ error: 'Informe o preço com desconto' });
+    if (precoOferta >= precoNormal) return res.status(400).json({ error: `O preço da oferta precisa ser menor que o normal (${precoNormal.toFixed(2).replace('.', ',')})` });
+    const ate = new Date(b.oferta_ate);
+    if (Number.isNaN(ate.getTime()) || ate <= new Date()) return res.status(400).json({ error: 'Escolha até quando a oferta vale (data no futuro)' });
+    if (ate.getTime() - Date.now() > MAX_DIAS_OFERTA * 86400000) return res.status(400).json({ error: `A oferta pode durar no máximo ${MAX_DIAS_OFERTA} dias` });
+
+    const r = await db.query(
+      `UPDATE beer_produtos SET preco_original = $1, preco = $2, em_oferta = true, oferta_ate = $3, updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [precoNormal, precoOferta, ate.toISOString(), atual.id]
+    );
+    return res.json({ produto: r.rows[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao salvar oferta' });
+  }
+}
+
 module.exports = {
+  salvarOferta,
   exigirExtensaoAtiva, getMeu, salvarMeu, desativar, atualizarStatus,
   listarProdutos, criarProduto, editarProduto, excluirProduto, atualizarDisponibilidade,
 };

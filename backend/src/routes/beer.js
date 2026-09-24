@@ -15,6 +15,8 @@ router.get('/estabelecimentos/:slug/produtos', ctrl.getProdutosEstabelecimento);
 // /produtos/quero-agora ANTES de qualquer /produtos/:algo futuro
 router.get('/produtos/quero-agora', ctrl.getQueroAgora);
 router.get('/produtos', ctrl.getProdutos);
+router.get('/produtos/:id', ctrl.getProduto);
+router.get('/categoria/:codigo', ctrl.getCategoria);
 
 // Escritas do +18 gravam log — limite contra spam de INSERT.
 const limiteIdade = simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 30 });

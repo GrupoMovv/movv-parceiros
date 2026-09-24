@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { assetUrl } from '../../services/api';
 import TopNav from '../public/Marketplace/components/TopNav';
 import Footer from '../public/Marketplace/components/Footer';
@@ -7,6 +7,8 @@ import MobileBottomNav from '../public/Marketplace/components/MobileBottomNav';
 import { useAssociadoSessao } from '../public/Marketplace/useAssociadoSessao';
 import ModalMaiorIdade from '../../components/beer/ModalMaiorIdade';
 import CardProduto from '../../components/beer/CardProduto';
+import ModalProduto from '../../components/beer/ModalProduto';
+import { ProdutoModalContext } from './produtoModalContext';
 import { useAcessoBeer } from './useAcessoBeer';
 import { AVISO_VITRINE, BEER } from './beerConfig';
 
@@ -22,6 +24,30 @@ export default function BeerLayout() {
   const [busca, setBusca] = useState('');
   const [categorias, setCategorias] = useState(null);
   const [resumo, setResumo] = useState(null);
+
+  // Modal de produto na URL (?p=ID): link compartilhável e o "voltar" do
+  // celular fecha. Aberto por clique = já temos o objeto (sem request);
+  // aberto por link direto = busca /produtos/:id.
+  const [params, setParams] = useSearchParams();
+  const idAberto = params.get('p');
+  const [produtoAberto, setProdutoAberto] = useState(null);
+  const abertoPorClique = useRef(false);
+  const abrirProduto = useCallback(p => {
+    setProdutoAberto(p);
+    abertoPorClique.current = true;
+    setParams(prev => { const n = new URLSearchParams(prev); n.set('p', String(p.id)); return n; });
+  }, [setParams]);
+  const fecharProduto = useCallback(() => {
+    if (abertoPorClique.current) { abertoPorClique.current = false; navigate(-1); return; }
+    setParams(prev => { const n = new URLSearchParams(prev); n.delete('p'); return n; }, { replace: true });
+  }, [navigate, setParams]);
+  useEffect(() => {
+    if (!idAberto) { abertoPorClique.current = false; return; }
+    if (produtoAberto && String(produtoAberto.id) === idAberto) return;
+    setProdutoAberto(null);
+    api.get(`/public/beer/produtos/${idAberto}`).then(res => setProdutoAberto(res.data)).catch(() => fecharProduto());
+  }, [idAberto]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ctxModal = useMemo(() => ({ abrirProduto }), [abrirProduto]);
 
   useEffect(() => {
     if (estado !== 'liberado') return;
@@ -59,9 +85,12 @@ export default function BeerLayout() {
 
       {estado === 'liberado' && (
         <>
-          <div className="flex-1">
-            <Outlet context={{ categorias, resumo }} />
-          </div>
+          <ProdutoModalContext.Provider value={ctxModal}>
+            <div className="flex-1">
+              <Outlet context={{ categorias, resumo }} />
+            </div>
+            {idAberto && <ModalProduto produto={produtoAberto && String(produtoAberto.id) === idAberto ? produtoAberto : null} onFechar={fecharProduto} />}
+          </ProdutoModalContext.Provider>
           <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pb-10 pt-4 text-center space-y-2">
             <p className="text-[11px] leading-relaxed max-w-2xl mx-auto" style={{ color: BEER.lavandaFraca }}>{AVISO_VITRINE}</p>
             <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(196,181,253,0.45)' }}>

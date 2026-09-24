@@ -13,6 +13,13 @@
   solto em `beer_estabelecimentos.bairros_entrega`; o filtro `?bairro=`
   compara sem acento/maiúscula, mas "Jd. Europa" ≠ "Jardim Europa").
   Com a lista: trocar por multi-select e normalizar o que já existir.
+- **Fase 2: avaliações** — por produto e por estabelecimento, média de
+  estrelas e comentários. Só implementar quando tiver volume (100+
+  pedidos); antes disso uma nota com 2 avaliações engana mais que ajuda.
+- **Ordenação "Mais próximo" na tela de categoria** ficou de fora: não
+  existe localização do cliente nem do estabelecimento (só bairros de
+  entrega em texto livre). Depende da lista oficial de bairros (item acima)
+  ou de lat/lng no cadastro + permissão de localização no navegador.
 - Roadmap fase 2/3 do spec (combos, "Para quem é?", kits, vitrine premium,
   ofertas dinâmicas, busca inteligente, Monte seu Drink ativo, avaliações)
   — nada implementado.
