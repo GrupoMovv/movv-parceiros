@@ -103,7 +103,7 @@ router.get('/beneficios/catalogo.pdf', (req, res) => {
 router.get('/marketplace/stats', async (req, res) => {
   try {
     const [associadosResult, produtosResult, parceirosResult] = await Promise.all([
-      db.query('SELECT COUNT(*)::int AS total FROM sindicato_associados WHERE ativo = true'),
+      db.query("SELECT COUNT(*)::int AS total FROM sindicato_associados WHERE ativo = true AND tipo_acesso = 'seci'"),
       db.query(
         `SELECT COUNT(*)::int AS total FROM sindicato_parceiro_produtos pr
          JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id

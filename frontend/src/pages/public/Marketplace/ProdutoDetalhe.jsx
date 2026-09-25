@@ -18,7 +18,7 @@ function formatarPreco(v) {
 
 export default function ProdutoDetalhe() {
   const { id } = useParams();
-  const { associado, recarregar: recarregarAssociado } = useAssociadoSessao();
+  const { associado, ehAssociadoSeci, recarregar: recarregarAssociado } = useAssociadoSessao();
   const associadoHash = associado?.carteirinha_hash || null;
 
   const [produto, setProduto] = useState(null);
@@ -32,7 +32,7 @@ export default function ProdutoDetalhe() {
   const { alternar: alternarFavorito, ehFavorito } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
   const { adicionar: adicionarCarrinho, remover: removerCarrinho, estaNoCarrinho } = useCarrinho();
 
-  const ehAssociado = Boolean(associado);
+  const ehAssociado = ehAssociadoSeci;
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
   function carregarProduto() {

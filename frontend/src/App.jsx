@@ -82,6 +82,8 @@ import JogosHub from './pages/public/Jogos/JogosHub';
 import Entrar from './pages/public/Entrar';
 import Acesso from './pages/public/Acesso/Acesso';
 import AcessoSeci from './pages/public/Acesso/AcessoSeci';
+import AcessoComercio from './pages/public/Acesso/AcessoComercio';
+import AcessoBasico from './pages/public/Acesso/AcessoBasico';
 import RoletaLogin from './pages/public/Jogos/RoletaLogin';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuCupons from './pages/public/Cadastro/MeuCupons';
@@ -251,6 +253,8 @@ export default function App() {
         <Route path="/entrar"             element={<Entrar />} />
         <Route path="/acesso"             element={<Acesso />} />
         <Route path="/acesso/associado"   element={<AcessoSeci />} />
+        <Route path="/acesso/comercio"    element={<AcessoComercio />} />
+        <Route path="/acesso/basico"      element={<AcessoBasico />} />
         <Route path="/jogar/login"        element={<RoletaLogin />} />
         <Route path="/jogar"              element={<JogosHub />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />

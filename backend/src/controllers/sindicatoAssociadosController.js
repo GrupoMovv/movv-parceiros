@@ -55,7 +55,9 @@ async function listAssociados(req, res) {
     const offset = (page - 1) * limit;
     const { search, categoria, status, whatsapp, empresa_id, carteirinha } = req.query;
 
-    const where = [];
+    // Contas 'cliente'/'pendente_seci' do /acesso moram na mesma tabela mas
+    // não são associados — ficam fora da lista do Sindicato.
+    const where = ["a.tipo_acesso = 'seci'"];
     const params = [];
 
     if (search) {
@@ -117,7 +119,8 @@ async function stats(req, res) {
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NULL)::int AS carteirinha_nao_gerada,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS carteirinha_vencendo,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_valida_ate < CURRENT_DATE)::int AS carteirinha_vencida
-       FROM sindicato_associados`
+       FROM sindicato_associados
+       WHERE tipo_acesso = 'seci'`
     );
     return res.json(result.rows[0]);
   } catch (err) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X, Gift } from 'lucide-react';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
@@ -9,16 +9,23 @@ import { assetUrl } from '../../../services/api';
 const NAVY = '#0B1F3A';
 const GOLD = '#D4AF37';
 
+// Conta 'cliente' / 'pendente_seci' (do /acesso) não tem carteirinha nem
+// dependentes — esses itens somem do menu e a rota volta pro painel.
+export function ehContaAssociado(dados) {
+  return (dados?.tipo_acesso ?? 'seci') === 'seci';
+}
+
 const LINKS = [
   { to: '/meu', end: true, label: 'Painel', icon: Home },
   { to: '/meu/dados', label: 'Meus Dados', icon: User },
-  { to: '/meu/dependentes', label: 'Dependentes', icon: Users2 },
-  { to: '/meu/carteirinhas', label: 'Carteirinhas', icon: CreditCard },
+  { to: '/meu/dependentes', label: 'Dependentes', icon: Users2, soAssociado: true },
+  { to: '/meu/carteirinhas', label: 'Carteirinhas', icon: CreditCard, soAssociado: true },
   { to: '/meu/cupons', label: '🎁 Meus Cupons', icon: Gift },
 ];
 
 export default function MeuPainelLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -89,7 +96,9 @@ export default function MeuPainelLayout() {
       </div>
 
       <main className="flex-1 min-w-0 pt-14 md:pt-0 px-4 sm:px-8 py-6 sm:py-10 max-w-3xl mx-auto w-full">
-        <Outlet context={{ dados, setDados, recarregar }} />
+        {!ehContaAssociado(dados) && LINKS.some(l => l.soAssociado && location.pathname.startsWith(l.to))
+          ? <Navigate to="/meu" replace />
+          : <Outlet context={{ dados, setDados, recarregar }} />}
       </main>
     </div>
   );
@@ -111,7 +120,7 @@ function Sidebar({ dados, onSair, onNavegar }) {
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
-        {LINKS.map(({ to, end, label, icon: Icon }) => (
+        {LINKS.filter(l => !l.soAssociado || ehContaAssociado(dados)).map(({ to, end, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -128,7 +137,7 @@ function Sidebar({ dados, onSair, onNavegar }) {
           </NavLink>
         ))}
         <a
-          href={`/marketplace?associado=${dados.carteirinha_hash}`}
+          href={dados.carteirinha_hash ? `/marketplace?associado=${dados.carteirinha_hash}` : '/marketplace'}
           className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
         >
           <ShoppingBag className="w-4 h-4" /> Marketplace

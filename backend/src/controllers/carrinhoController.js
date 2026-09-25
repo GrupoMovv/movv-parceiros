@@ -8,8 +8,8 @@ function formatarPrecoBRL(v) {
 async function buscarAssociadoAtivoPorHash(hash) {
   if (!hash) return null;
   const r = await db.query(
-    `SELECT nome_completo, carteirinha_hash FROM sindicato_associados
-     WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE`,
+    `SELECT nome_completo, carteirinha_hash, tipo_acesso FROM sindicato_associados
+     WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE AND tipo_acesso = 'seci'`,
     [hash]
   );
   return r.rows[0] || null;
@@ -17,17 +17,22 @@ async function buscarAssociadoAtivoPorHash(hash) {
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
 
+// Conta logada que NÃO é associado SECI (cliente / pendente_seci) paga o
+// preço normal e não se apresenta como associado pro parceiro. Visitante sem
+// login segue como antes (a mensagem já saía com o preço de associado).
 function montarMensagemGrupo(produtos, associado) {
+  const ehAssociadoSeci = associado?.tipo_acesso === 'seci' && Boolean(associado.carteirinha_hash);
+  const usaPrecoAssociado = !associado || ehAssociadoSeci;
   const linhas = ['Olá! Vi seus produtos no IUB Marketplace e tenho interesse em:', ''];
   let total = 0;
   for (const p of produtos) {
-    const preco = p.preco_associado != null ? parseFloat(p.preco_associado) : parseFloat(p.preco);
+    const preco = usaPrecoAssociado && p.preco_associado != null ? parseFloat(p.preco_associado) : parseFloat(p.preco);
     total += preco;
     linhas.push(`🛍️ ${p.nome} — ${formatarPrecoBRL(preco)}`);
   }
   linhas.push('', `Total estimado: ${formatarPrecoBRL(total)}`);
 
-  if (associado) {
+  if (ehAssociadoSeci) {
     linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou associado SECI ativo', `🔗 Minha carteirinha: ${BACKEND_URL}/carteirinha/${associado.carteirinha_hash}`);
   }
 

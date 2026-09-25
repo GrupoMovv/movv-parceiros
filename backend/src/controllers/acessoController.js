@@ -131,4 +131,138 @@ async function cadastroSeci(req, res) {
   }
 }
 
-module.exports = { cadastroSeci, SENHA_MIN };
+const SEGMENTOS = [
+  'Posto de combustível', 'Restaurante, bar ou lanchonete', 'Hotel ou pousada', 'Indústria',
+  'Serviços', 'Saúde', 'Educação', 'Agronegócio', 'Transporte', 'Construção', 'Outro',
+];
+
+function limparTexto(v, max) {
+  const s = String(v || '').trim().replace(/\s+/g, ' ');
+  return s ? s.slice(0, max) : null;
+}
+
+function validarBasico({ nome_completo, whatsapp, senha }) {
+  const nome = limparTexto(nome_completo, 255) || '';
+  const zap = onlyDigits(whatsapp);
+  if (nome.length < 3 || !nome.includes(' ')) return { erro: { error: 'Digite seu nome completo (nome e sobrenome).', campo: 'nome_completo' } };
+  if (zap.length < 10 || zap.length > 11) return { erro: { error: 'WhatsApp inválido — use DDD + número.', campo: 'whatsapp' } };
+  if (String(senha || '').length < SENHA_MIN) return { erro: { error: `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`, campo: 'senha' } };
+  return { nome, zap };
+}
+
+// CPF informado que já existe: com senha = só fazer login; sem senha = é
+// associado antigo do Sindicato — tem que criar a senha pelo Fluxo 1, que
+// confere a data de nascimento. Nunca "adota" o cadastro por aqui.
+async function conflitoCpf(cpfDigits) {
+  const r = await db.query('SELECT senha_hash FROM sindicato_associados WHERE cpf = $1', [cpfDigits]);
+  if (!r.rows[0]) return null;
+  if (r.rows[0].senha_hash) return { status: 409, body: { error: 'Este CPF já tem conta no IUB MAIS+. É só fazer login.', code: 'JA_TEM_CONTA' } };
+  return { status: 409, body: { error: 'Você já tem cadastro no Sindicato! Crie sua senha pelo caminho "Sou associado SECI".', code: 'JA_E_ASSOCIADO' } };
+}
+
+// Fluxo 2: empresa do comércio que ainda não está na Base SECI e quer se
+// associar. Cria a conta já logada (usa o marketplace como cliente
+// enquanto espera — tipo 'pendente_seci') e a solicitação que o Sindicato
+// aprova em /sindicato/solicitacoes. Conta + solicitação na mesma transação.
+async function cadastroComercio(req, res) {
+  try {
+    const { cnpj, nome_empresa, cpf, aceite_comunicacao } = req.body || {};
+    const cnpjDigits = onlyDigits(cnpj);
+    if (cnpjDigits.length !== 14 || !isValidCNPJ(cnpjDigits)) return res.status(400).json({ error: 'CNPJ inválido.', campo: 'cnpj' });
+
+    if (await consultarDocumento(cnpjDigits)) {
+      return res.status(409).json({ error: 'Sua empresa já está na base do SECI!', code: 'JA_NA_BASE' });
+    }
+
+    const empresaNome = limparTexto(nome_empresa, 255);
+    if (!empresaNome || empresaNome.length < 2) return res.status(400).json({ error: 'Digite o nome da empresa.', campo: 'nome_empresa' });
+    const cpfDigits = onlyDigits(cpf);
+    if (!isValidCPF(cpfDigits)) return res.status(400).json({ error: 'CPF inválido.', campo: 'cpf' });
+    const { erro, nome, zap } = validarBasico(req.body || {});
+    if (erro) return res.status(400).json(erro);
+    if (aceite_comunicacao !== true) return res.status(400).json({ error: 'É preciso aceitar o contato do Sindicato pelo WhatsApp.', campo: 'aceite_comunicacao' });
+
+    const conflito = await conflitoCpf(cpfDigits);
+    if (conflito) return res.status(conflito.status).json(conflito.body);
+
+    const senhaHash = await bcrypt.hash(String(req.body.senha), 10);
+    const editToken = await gerarEditTokenUnico();
+    const ip = ipDe(req);
+
+    const a = await db.transacao(async (client) => {
+      const ins = await client.query(
+        `INSERT INTO sindicato_associados
+           (external_id, nome_completo, cpf, whatsapp, empresa_nome_livre, tipo_acesso,
+            senha_hash, senha_definida_em, edit_token, consent_at, consent_ip)
+         VALUES ($1, $2, $3, $4, $5, 'pendente_seci', $6, NOW(), $7, NOW(), $8)
+         RETURNING id, nome_completo`,
+        [`ACESSO-${Date.now()}-${cpfDigits.slice(-4)}`, nome, cpfDigits, zap, empresaNome, senhaHash, editToken, ip]
+      );
+      const conta = ins.rows[0];
+      await client.query(
+        `INSERT INTO sindicato_solicitacoes_empresa
+           (cnpj_digitado, nome_solicitante, whatsapp_solicitante, nome_empresa, mensagem,
+            associado_id, cpf_responsavel, origem)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'acesso')`,
+        [cnpjDigits, nome, zap, empresaNome, 'Quer associar a empresa ao SECI — cadastro feito pelo IUB MAIS+ (/acesso).', conta.id, cpfDigits]
+      );
+      return conta;
+    });
+
+    return res.status(201).json({ token: gerarTokenPainel(a.id), nome_curto: primeiroNome(a.nome_completo) });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Este CPF já tem conta no IUB MAIS+. É só fazer login.', code: 'JA_TEM_CONTA' });
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos concluir agora. Tente de novo em instantes.' });
+  }
+}
+
+// Fluxo 3: outros segmentos (posto, restaurante, hotel, indústria...) —
+// conta 'cliente', só usa o marketplace, sem carteirinha nem preço de
+// associado. Obrigatórios: nome, WhatsApp e senha; CPF é opcional.
+// Conta SEM CPF só é identificável pelo WhatsApp (login/recuperação na
+// parte 4), então o WhatsApp não pode já pertencer a outra conta com senha.
+async function cadastroBasico(req, res) {
+  try {
+    const { cpf, empresa, cargo, segmento, aceite_comunicacao } = req.body || {};
+    const { erro, nome, zap } = validarBasico(req.body || {});
+    if (erro) return res.status(400).json(erro);
+
+    const cpfDigits = onlyDigits(cpf) || null;
+    if (cpfDigits && !isValidCPF(cpfDigits)) return res.status(400).json({ error: 'CPF inválido — confira ou deixe em branco.', campo: 'cpf' });
+    if (segmento && !SEGMENTOS.includes(segmento)) return res.status(400).json({ error: 'Segmento inválido.', campo: 'segmento' });
+
+    if (cpfDigits) {
+      const conflito = await conflitoCpf(cpfDigits);
+      if (conflito) return res.status(conflito.status).json(conflito.body);
+    } else {
+      const zapEmUso = await db.query('SELECT 1 FROM sindicato_associados WHERE whatsapp = $1 AND senha_hash IS NOT NULL LIMIT 1', [zap]);
+      if (zapEmUso.rows[0]) {
+        return res.status(409).json({ error: 'Este WhatsApp já tem conta no IUB MAIS+. É só fazer login.', code: 'JA_TEM_CONTA', campo: 'whatsapp' });
+      }
+    }
+
+    const aceitou = aceite_comunicacao === true;
+    const ins = await db.query(
+      `INSERT INTO sindicato_associados
+         (external_id, nome_completo, cpf, whatsapp, empresa_nome_livre, cargo, segmento, tipo_acesso,
+          senha_hash, senha_definida_em, edit_token, receber_whatsapp, consent_at, consent_ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'cliente', $8, NOW(), $9, $10, $11, $12)
+       RETURNING id, nome_completo`,
+      [
+        `ACESSO-${Date.now()}-${zap.slice(-4)}`, nome, cpfDigits, zap,
+        limparTexto(empresa, 255), limparTexto(cargo, 100), segmento || null,
+        await bcrypt.hash(String(req.body.senha), 10), await gerarEditTokenUnico(),
+        aceitou, aceitou ? new Date() : null, aceitou ? ipDe(req) : null,
+      ]
+    );
+    const a = ins.rows[0];
+    return res.status(201).json({ token: gerarTokenPainel(a.id), nome_curto: primeiroNome(a.nome_completo) });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Este CPF já tem conta no IUB MAIS+. É só fazer login.', code: 'JA_TEM_CONTA' });
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos concluir agora. Tente de novo em instantes.' });
+  }
+}
+
+module.exports = { cadastroSeci, cadastroComercio, cadastroBasico, SENHA_MIN, SEGMENTOS };

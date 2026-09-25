@@ -262,7 +262,8 @@ async function stats(req, res) {
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS vencendo_15,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate < CURRENT_DATE)::int AS vencidas,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NULL)::int AS nao_geradas
-       FROM sindicato_associados`
+       FROM sindicato_associados
+       WHERE tipo_acesso = 'seci'`
     );
     const geral = geralResult.rows[0];
     const coberturaPct = geral.total_associados_ativos > 0
@@ -331,7 +332,7 @@ const TIPOS_ASSOCIADO = {
   ativas:      'a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE',
   vencendo:    "a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE AND a.carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days'",
   vencidas:    'a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate < CURRENT_DATE',
-  nao_geradas: 'a.ativo AND a.carteirinha_hash IS NULL',
+  nao_geradas: "a.ativo AND a.carteirinha_hash IS NULL AND a.tipo_acesso = 'seci'",
 };
 
 const TIPOS_DEPENDENTE = {

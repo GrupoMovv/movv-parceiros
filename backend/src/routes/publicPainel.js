@@ -18,16 +18,23 @@ const upload = multer({
 router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 80 }));
 router.use(authenticatePainelPublico);
 
+// Conta 'cliente' (outros segmentos) e 'pendente_seci' (empresa aguardando
+// o Sindicato) usam o painel, mas não têm carteirinha nem dependentes.
+const somenteAssociadoSeci = (req, res, next) => {
+  if (req.painelAssociado.tipo_acesso === 'seci') return next();
+  return res.status(403).json({ error: 'Disponível só para associados SECI.', code: 'SO_ASSOCIADO' });
+};
+
 router.get('/me',    ctrl.getMe);
 router.put('/me',    ctrl.updateMe);
 router.put('/perfil', ctrl.updateMe);
-router.post('/reenviar-carteirinha', ctrl.reenviarCarteirinha);
+router.post('/reenviar-carteirinha', somenteAssociadoSeci, ctrl.reenviarCarteirinha);
 router.post('/foto', upload.single('foto'), ctrl.uploadFoto);
-router.post('/dependentes',              ctrl.updateDependentes);
-router.post('/dependentes/adicionar',    ctrl.adicionarDependente);
-router.put('/dependentes/:id',           ctrl.editarDependente);
-router.delete('/dependentes/:id',        ctrl.removerDependente);
-router.post('/dependentes/:dependente_id/foto', upload.single('foto'), ctrl.uploadFotoDependente);
+router.post('/dependentes',              somenteAssociadoSeci, ctrl.updateDependentes);
+router.post('/dependentes/adicionar',    somenteAssociadoSeci, ctrl.adicionarDependente);
+router.put('/dependentes/:id',           somenteAssociadoSeci, ctrl.editarDependente);
+router.delete('/dependentes/:id',        somenteAssociadoSeci, ctrl.removerDependente);
+router.post('/dependentes/:dependente_id/foto', somenteAssociadoSeci, upload.single('foto'), ctrl.uploadFotoDependente);
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {

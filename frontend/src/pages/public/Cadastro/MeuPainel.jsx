@@ -11,6 +11,7 @@ import {
 } from '../../../utils/carteirinhaWhatsapp';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
 import MascoteIubMais from '../../../components/MascoteIubMais';
+import { ehContaAssociado } from './MeuPainelLayout';
 
 const GOLD = '#D4AF37';
 
@@ -49,6 +50,12 @@ export default function MeuPainel() {
   }
 
   const primeiroNome = dados.nome_completo?.trim().split(/\s+/)[0] || '';
+  const associado = ehContaAssociado(dados);
+  const selo = associado
+    ? { texto: dados.ativo ? 'ATIVO' : 'INATIVO', cls: dados.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' }
+    : dados.tipo_acesso === 'pendente_seci'
+      ? { texto: 'ASSOCIAÇÃO EM ANÁLISE', cls: 'bg-amber-100 text-amber-700' }
+      : { texto: 'CLIENTE IUB MAIS+', cls: 'bg-violet-100 text-violet-700' };
 
   return (
     <div className="space-y-5">
@@ -89,17 +96,32 @@ export default function MeuPainel() {
         <div className="min-w-0">
           <p className="font-bold text-slate-900 truncate">{dados.nome_completo}</p>
           <p className="text-slate-400 text-xs">{dados.empresa}</p>
-          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${dados.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-            <CheckCircle2 className="w-2.5 h-2.5" /> {dados.ativo ? 'ATIVO' : 'INATIVO'}
+          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${selo.cls}`}>
+            <CheckCircle2 className="w-2.5 h-2.5" /> {selo.texto}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-xl border border-slate-100 p-3.5 text-center">
-          <p className="text-xl font-black text-slate-900">{dados.dependentes.length}/5</p>
-          <p className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mt-0.5">Dependentes</p>
+      {dados.tipo_acesso === 'pendente_seci' && (
+        <div className="rounded-2xl p-4 bg-amber-50 border border-amber-200">
+          <p className="font-bold text-amber-900 text-sm">⏳ Sua associação ao SECI está em análise</p>
+          <p className="text-amber-800 text-xs mt-1">Assim que o Sindicato aprovar, sua carteirinha aparece aqui. Enquanto isso, aproveite o marketplace!</p>
         </div>
+      )}
+      {dados.tipo_acesso === 'cliente' && (
+        <Link to="/acesso/comercio" className="block rounded-2xl p-4 bg-violet-50 border border-violet-200">
+          <p className="font-bold text-violet-900 text-sm">🏪 Trabalha no comércio?</p>
+          <p className="text-violet-800 text-xs mt-1">Associe sua empresa ao SECI e ganhe carteirinha e preço de associado. Toque aqui.</p>
+        </Link>
+      )}
+
+      <div className={`grid gap-3 ${associado ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {associado && (
+          <div className="bg-white rounded-xl border border-slate-100 p-3.5 text-center">
+            <p className="text-xl font-black text-slate-900">{dados.dependentes.length}/5</p>
+            <p className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mt-0.5">Dependentes</p>
+          </div>
+        )}
         <div className="bg-white rounded-xl border border-slate-100 p-3.5 text-center">
           <p className="text-xl font-black text-slate-900">{qtdParceiros ?? '—'}</p>
           <p className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mt-0.5">Parceiros ativos</p>
@@ -107,7 +129,7 @@ export default function MeuPainel() {
       </div>
 
       <Link
-        to={`/marketplace?associado=${dados.carteirinha_hash}`}
+        to={dados.carteirinha_hash ? `/marketplace?associado=${dados.carteirinha_hash}` : '/marketplace'}
         className="block rounded-2xl p-4 text-white relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)' }}
       >
@@ -118,7 +140,7 @@ export default function MeuPainel() {
           <div className="min-w-0">
             <p className="font-black text-sm">🛍️ Marketplace IUB MAIS</p>
             <p className="text-white/85 text-xs mt-0.5">
-              Compre com desconto exclusivo{qtdParceiros ? ` em ${qtdParceiros} parceiros` : ''}!
+              {associado ? 'Compre com desconto exclusivo' : 'Ofertas'}{qtdParceiros ? ` em ${qtdParceiros} parceiros` : ''}!
             </p>
           </div>
         </div>
@@ -128,6 +150,7 @@ export default function MeuPainel() {
       </Link>
 
       <div className="space-y-2.5">
+        {associado && (<>
         <CardAcao icon={<CreditCard className="w-4 h-4" />} titulo="Minha Carteirinha" sub="Ver ou reenviar pelo WhatsApp">
           <div className="flex gap-2 mt-2">
             <a href={publicCarteirinhaUrl(dados.carteirinha_hash)} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
@@ -146,14 +169,17 @@ export default function MeuPainel() {
         <Link to="/meu/carteirinhas" className="block">
           <CardAcao icon={<CreditCard className="w-4 h-4" />} titulo="Minhas carteirinhas" sub="Suas e as dos dependentes, num só lugar" />
         </Link>
+        </>)}
 
         <Link to="/meu/dados" className="block">
           <CardAcao icon={<User className="w-4 h-4" />} titulo="Meus dados" sub="Contato, endereço, foto e preferências" />
         </Link>
 
-        <a href={publicBeneficiosPdfUrl()} target="_blank" rel="noreferrer" className="block">
-          <CardAcao icon={<Gift className="w-4 h-4" />} titulo="Ver benefícios" sub="Catálogo completo em PDF" />
-        </a>
+        {associado && (
+          <a href={publicBeneficiosPdfUrl()} target="_blank" rel="noreferrer" className="block">
+            <CardAcao icon={<Gift className="w-4 h-4" />} titulo="Ver benefícios" sub="Catálogo completo em PDF" />
+          </a>
+        )}
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ function useContagemDetalhada(dataFim) {
 
 export default function PromocaoDetalhe() {
   const { id } = useParams();
-  const { associado, recarregar: recarregarAssociado } = useAssociadoSessao();
+  const { associado, ehAssociadoSeci, recarregar: recarregarAssociado } = useAssociadoSessao();
   const associadoHash = associado?.carteirinha_hash || null;
 
   const [promocao, setPromocao] = useState(null);
@@ -49,7 +49,7 @@ export default function PromocaoDetalhe() {
   const [carregandoWhatsapp, setCarregandoWhatsapp] = useState(false);
   const [modalLoginAberto, setModalLoginAberto] = useState(false);
 
-  const ehAssociado = Boolean(associado);
+  const ehAssociado = ehAssociadoSeci;
 
   function carregarPromocao() {
     setErroRede(false);
@@ -233,13 +233,15 @@ export default function PromocaoDetalhe() {
                 </p>
                 {!ehAssociado && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <button
-                      type="button" onClick={() => setModalLoginAberto(true)}
-                      className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
-                    >
-                      Sou associado — Fazer login
-                    </button>
-                    <Link to="/cadastrar" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
+                    {!associado && (
+                      <button
+                        type="button" onClick={() => setModalLoginAberto(true)}
+                        className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
+                      >
+                        Sou associado — Fazer login
+                      </button>
+                    )}
+                    <Link to={associado ? '/acesso' : '/cadastrar'} className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
                       Quero ser associado
                     </Link>
                   </div>

@@ -64,5 +64,11 @@ export function useAssociadoSessao() {
     setAssociado(null);
   }, []);
 
-  return { associado, carregando, logout, recarregar: carregarDoToken };
+  // `associado` = qualquer conta logada (mostra nome, sair, carrinho).
+  // Preço/benefício de associado só vale pra conta 'seci' — conta 'cliente'
+  // ou 'pendente_seci' do /acesso é logada mas NÃO é associado. Sem o campo
+  // (backend antigo) conta como associado, que era o único tipo.
+  const ehAssociadoSeci = Boolean(associado) && (associado.tipo_acesso ?? 'seci') === 'seci';
+
+  return { associado, ehAssociadoSeci, carregando, logout, recarregar: carregarDoToken };
 }

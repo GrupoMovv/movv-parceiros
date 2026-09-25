@@ -14,7 +14,7 @@ async function buscarAssociadoAtivoPorHash(hash) {
   const r = await db.query(
     `SELECT nome_completo, codigo_filiado, carteirinha_hash
      FROM sindicato_associados
-     WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE`,
+     WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE AND tipo_acesso = 'seci'`,
     [hash]
   );
   return r.rows[0] || null;
