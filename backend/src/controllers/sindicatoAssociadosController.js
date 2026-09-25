@@ -55,8 +55,8 @@ async function listAssociados(req, res) {
     const offset = (page - 1) * limit;
     const { search, categoria, status, whatsapp, empresa_id, carteirinha } = req.query;
 
-    // Contas 'cliente'/'pendente_seci' do /acesso moram na mesma tabela mas
-    // não são associados — ficam fora da lista do Sindicato.
+    // Contas 'cliente' (consumidor comum) moram na mesma tabela mas não são
+    // associados — ficam fora da lista do Sindicato.
     const where = ["a.tipo_acesso = 'seci'"];
     const params = [];
 

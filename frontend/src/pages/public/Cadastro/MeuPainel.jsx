@@ -53,9 +53,7 @@ export default function MeuPainel() {
   const associado = ehContaAssociado(dados);
   const selo = associado
     ? { texto: dados.ativo ? 'ATIVO' : 'INATIVO', cls: dados.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' }
-    : dados.tipo_acesso === 'pendente_seci'
-      ? { texto: 'ASSOCIAÇÃO EM ANÁLISE', cls: 'bg-amber-100 text-amber-700' }
-      : { texto: 'CLIENTE IUB MAIS+', cls: 'bg-violet-100 text-violet-700' };
+    : { texto: 'CLIENTE IUB MAIS+', cls: 'bg-violet-100 text-violet-700' };
 
   return (
     <div className="space-y-5">
@@ -101,19 +99,6 @@ export default function MeuPainel() {
           </span>
         </div>
       </div>
-
-      {dados.tipo_acesso === 'pendente_seci' && (
-        <div className="rounded-2xl p-4 bg-amber-50 border border-amber-200">
-          <p className="font-bold text-amber-900 text-sm">⏳ Sua associação ao SECI está em análise</p>
-          <p className="text-amber-800 text-xs mt-1">Assim que o Sindicato aprovar, sua carteirinha aparece aqui. Enquanto isso, aproveite o marketplace!</p>
-        </div>
-      )}
-      {dados.tipo_acesso === 'cliente' && (
-        <Link to="/acesso/comercio" className="block rounded-2xl p-4 bg-violet-50 border border-violet-200">
-          <p className="font-bold text-violet-900 text-sm">🏪 Trabalha no comércio?</p>
-          <p className="text-violet-800 text-xs mt-1">Associe sua empresa ao SECI e ganhe carteirinha e preço de associado. Toque aqui.</p>
-        </Link>
-      )}
 
       <div className={`grid gap-3 ${associado ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {associado && (

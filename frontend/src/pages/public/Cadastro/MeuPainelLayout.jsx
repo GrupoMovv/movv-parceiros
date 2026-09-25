@@ -9,7 +9,7 @@ import { assetUrl } from '../../../services/api';
 const NAVY = '#0B1F3A';
 const GOLD = '#D4AF37';
 
-// Conta 'cliente' / 'pendente_seci' (do /acesso) não tem carteirinha nem
+// Conta 'cliente' (consumidor comum) não tem carteirinha nem
 // dependentes — esses itens somem do menu e a rota volta pro painel.
 export function ehContaAssociado(dados) {
   return (dados?.tipo_acesso ?? 'seci') === 'seci';

@@ -7,22 +7,22 @@ import apiPainel, { setPainelToken } from '../services/apiPainel';
 // checagem barra ANTES de mostrar o painel/jogo de outra pessoa, em vez de
 // confiar cegamente que "o token que acabei de setar é o certo".
 // Extraído de CadastroPublico.jsx pra ser reusado por qualquer outra tela
-// de login (RoletaLogin.jsx, /acesso).
+// de login (RoletaLogin.jsx, /entrar).
 function cpfParcialEsperado(cpfDigits) {
   return `${cpfDigits.slice(0, 3)}.***.***-${cpfDigits.slice(9, 11)}`;
 }
 
-// `identificador`: o CPF (string, como sempre foi) ou { cpf, whatsapp } —
-// conta 'cliente' do /acesso pode não ter CPF, aí confere pelo WhatsApp.
+// `identificador`: o CPF digitado (string, como sempre foi) ou
+// { cpfParcial } devolvido pelo login do /entrar — lá a pessoa pode ter
+// entrado pelo WhatsApp, então quem diz qual conta autenticou é o servidor.
 export async function entrarNoPainelSeguro(token, identificador) {
-  const { cpf, whatsapp } = typeof identificador === 'string' ? { cpf: identificador } : (identificador || {});
+  const esperado = typeof identificador === 'string'
+    ? cpfParcialEsperado(identificador)
+    : identificador?.cpfParcial || null;
   setPainelToken(token);
   try {
     const res = await apiPainel.get('/public/painel/me');
-    const confere = cpf
-      ? res.data.cpf_parcial === cpfParcialEsperado(cpf)
-      : Boolean(whatsapp) && String(res.data.whatsapp || '').replace(/\D/g, '') === whatsapp;
-    if (!confere) {
+    if (!esperado || res.data.cpf_parcial !== esperado) {
       console.error('[seguranca] a sessão do painel não bate com quem acabou de autenticar — sessão abortada');
       setPainelToken(null);
       return false;

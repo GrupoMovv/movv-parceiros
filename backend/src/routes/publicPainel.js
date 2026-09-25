@@ -18,8 +18,8 @@ const upload = multer({
 router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 80 }));
 router.use(authenticatePainelPublico);
 
-// Conta 'cliente' (outros segmentos) e 'pendente_seci' (empresa aguardando
-// o Sindicato) usam o painel, mas não têm carteirinha nem dependentes.
+// Conta 'cliente' (consumidor comum) usa o painel, mas não tem carteirinha
+// nem dependentes.
 const somenteAssociadoSeci = (req, res, next) => {
   if (req.painelAssociado.tipo_acesso === 'seci') return next();
   return res.status(403).json({ error: 'Disponível só para associados SECI.', code: 'SO_ASSOCIADO' });

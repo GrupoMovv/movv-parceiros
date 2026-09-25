@@ -50,7 +50,7 @@ async function montarViewAssociado(associado) {
     numero_associado: associado.codigo_filiado,
     carteirinha_valida_ate: associado.carteirinha_valida_ate,
     ativo: associado.ativo,
-    // 'seci' | 'cliente' | 'pendente_seci' — só 'seci' tem carteirinha,
+    // 'seci' | 'cliente' — só 'seci' tem carteirinha,
     // dependentes e preço de associado (ver useAssociadoSessao no front).
     tipo_acesso: associado.tipo_acesso,
     dependentes: depResult.rows,

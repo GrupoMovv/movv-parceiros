@@ -17,7 +17,7 @@ async function buscarAssociadoAtivoPorHash(hash) {
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
 
-// Conta logada que NÃO é associado SECI (cliente / pendente_seci) paga o
+// Conta logada que NÃO é associado SECI (conta 'cliente') paga o
 // preço normal e não se apresenta como associado pro parceiro. Visitante sem
 // login segue como antes (a mensagem já saía com o preço de associado).
 function montarMensagemGrupo(produtos, associado) {

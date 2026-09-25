@@ -79,11 +79,9 @@ import Roleta from './pages/public/Jogos/Roleta';
 import Memoria from './pages/public/Jogos/Memoria';
 import MemoriaNiveis from './pages/public/Jogos/MemoriaNiveis';
 import JogosHub from './pages/public/Jogos/JogosHub';
-import Entrar from './pages/public/Entrar';
 import Acesso from './pages/public/Acesso/Acesso';
-import AcessoSeci from './pages/public/Acesso/AcessoSeci';
-import AcessoComercio from './pages/public/Acesso/AcessoComercio';
-import AcessoBasico from './pages/public/Acesso/AcessoBasico';
+import Entrar from './pages/public/Acesso/Entrar';
+import PrimeiroAcesso from './pages/public/Acesso/PrimeiroAcesso';
 import RoletaLogin from './pages/public/Jogos/RoletaLogin';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuCupons from './pages/public/Cadastro/MeuCupons';
@@ -252,9 +250,7 @@ export default function App() {
         <Route path="/vender"             element={<MarketplaceFallback><MarketplaceVender /></MarketplaceFallback>} />
         <Route path="/entrar"             element={<Entrar />} />
         <Route path="/acesso"             element={<Acesso />} />
-        <Route path="/acesso/associado"   element={<AcessoSeci />} />
-        <Route path="/acesso/comercio"    element={<AcessoComercio />} />
-        <Route path="/acesso/basico"      element={<AcessoBasico />} />
+        <Route path="/entrar/primeiro-acesso" element={<PrimeiroAcesso />} />
         <Route path="/jogar/login"        element={<RoletaLogin />} />
         <Route path="/jogar"              element={<JogosHub />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />

@@ -110,14 +110,6 @@ export default function SindicatoSolicitacoes() {
                     {s.cargo && ` · ${s.cargo}`}
                   </p>
                   {s.mensagem && <p className="text-slate-400 text-xs mt-1 italic">"{s.mensagem}"</p>}
-                  {s.associado_id && (
-                    <p className="text-violet-700 text-xs mt-1.5 font-medium">
-                      📱 Já tem conta no IUB MAIS+
-                      {s.conta_tipo_acesso === 'pendente_seci' && ' — ao marcar "Convertido", vira associado SECI com carteirinha; "Rejeitado" mantém como cliente.'}
-                      {s.conta_tipo_acesso === 'seci' && ' — já é associado SECI.'}
-                      {s.conta_tipo_acesso === 'cliente' && ' — ficou como cliente.'}
-                    </p>
-                  )}
                   <p className="text-slate-400 text-xs mt-1">
                     {fmtDataHora(s.created_at)}
                     {s.atendido_por_nome && ` · atendido por ${s.atendido_por_nome}`}
