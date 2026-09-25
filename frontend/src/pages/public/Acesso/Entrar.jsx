@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { SignIn } from '@phosphor-icons/react';
+import { SignIn, User, Storefront } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import { getPainelToken } from '../../../services/apiPainel';
-import { entrarNoPainelSeguro } from '../../../utils/entrarNoPainelSeguro';
 import { soDigitos } from '../../../utils/documentos';
+import { abrirSessao } from './abrirSessao';
 import { CascaAcesso, Cartao, Campo, InputSenha, BotaoPrimario, BotaoWhatsapp, Aviso } from './AcessoUi';
 
 // Só aceita voltar pra uma rota interna (nada de ?voltar=https://outro-site).
@@ -13,9 +12,16 @@ export function destinoSeguro(voltar) {
   return typeof voltar === 'string' && voltar.startsWith('/') && !voltar.startsWith('//') ? voltar : '/marketplace';
 }
 
-// Login do consumidor/associado: um campo "CPF ou WhatsApp" (o servidor
-// descobre qual é) + senha. Associado antigo sem senha é mandado pro
-// primeiro acesso.
+function identificadorValido(v) {
+  if (v.includes('@')) return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+  const n = soDigitos(v).length;
+  return n >= 10 && n <= 14;
+}
+
+// Login único do IUB MAIS+: pessoa (CPF ou WhatsApp -> /meu) e empresa
+// parceira (CNPJ, e-mail ou WhatsApp pessoal -> /parceiro/painel). O
+// servidor descobre quem é; se a mesma senha abre as duas contas, a pessoa
+// escolhe. Associado antigo sem senha vai pro primeiro acesso.
 export default function Entrar() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -26,36 +32,36 @@ export default function Entrar() {
   const [erros, setErros] = useState({});
   const [falha, setFalha] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  const [opcoes, setOpcoes] = useState(null); // senha abriu pessoa E empresa
 
-  // Já logado (favorito antigo, botão voltar): não mostra o formulário de novo.
+  // Já logado como pessoa (favorito antigo, botão voltar): não mostra o formulário de novo.
   useEffect(() => {
-    if (getPainelToken()) navigate(voltar, { replace: true });
+    if (getPainelToken() && !voltar.startsWith('/parceiro/')) navigate(voltar, { replace: true });
   }, [navigate, voltar]);
+
+  async function abrir(sessao) {
+    if (!(await abrirSessao(sessao, navigate, voltar))) setFalha({ error: 'Não conseguimos abrir sua sessão agora. Tente de novo.' });
+  }
 
   async function entrar(e) {
     e.preventDefault();
     setFalha(null);
-    const d = soDigitos(login);
     const novos = {};
-    if (d.length !== 10 && d.length !== 11) novos.login = 'Digite seu CPF ou seu WhatsApp com DDD.';
+    if (!identificadorValido(login)) novos.login = 'Digite seu CPF, CNPJ, e-mail ou WhatsApp com DDD.';
     if (!senha) novos.senha = 'Digite sua senha.';
     setErros(novos);
     if (Object.keys(novos).length) return;
 
     setEnviando(true);
     try {
-      const res = await api.post('/public/conta/login', { login: d, senha });
-      const ok = await entrarNoPainelSeguro(res.data.token, { cpfParcial: res.data.cpf_parcial });
-      if (!ok) {
-        setFalha({ error: 'Não conseguimos abrir sua sessão agora. Tente de novo.' });
-        return;
-      }
-      toast.success(`Olá, ${res.data.nome_curto}! 👋`);
-      navigate(voltar, { replace: true });
+      const identificador = login.includes('@') ? login.trim() : soDigitos(login);
+      const res = await api.post('/public/conta/login', { login: identificador, senha });
+      if (res.data.escolher) setOpcoes(res.data.opcoes);
+      else await abrir(res.data);
     } catch (err) {
       const r = err.response?.data || {};
       if (r.code === 'PRIMEIRO_ACESSO') {
-        navigate(`/entrar/primeiro-acesso?voltar=${encodeURIComponent(voltar)}`, { state: { cpf: r.via === 'cpf' ? d : '' } });
+        navigate(`/entrar/primeiro-acesso?voltar=${encodeURIComponent(voltar)}`, { state: { cpf: r.via === 'cpf' ? soDigitos(login) : '' } });
       } else if (r.campo) {
         setErros({ [r.campo]: r.tentativas_restantes ? `${r.error} Restam ${r.tentativas_restantes} tentativa(s).` : r.error });
       } else {
@@ -66,15 +72,38 @@ export default function Entrar() {
     }
   }
 
+  if (opcoes) {
+    return (
+      <CascaAcesso titulo="Como você quer entrar?" subtitulo="Essa senha é da sua conta pessoal e da sua empresa." onVoltar={() => setOpcoes(null)} mensagemWhatsapp="Olá! Não estou conseguindo entrar no IUB MAIS+.">
+        <Cartao className="space-y-3">
+          {opcoes.map(o => (
+            <button
+              key={o.tipo} type="button" onClick={() => abrir(o)}
+              className="w-full min-h-[64px] flex items-center gap-3 px-4 rounded-2xl border-2 text-left font-bold"
+              style={{ borderColor: '#4C1D95', color: '#4C1D95' }}
+            >
+              {o.tipo === 'empresa' ? <Storefront size={26} weight="duotone" /> : <User size={26} weight="duotone" />}
+              <span>
+                {o.tipo === 'empresa' ? 'Entrar como empresa' : 'Entrar como pessoa'}
+                <span className="block text-sm font-medium text-slate-500">{o.tipo === 'empresa' ? o.parceiro?.nome : `Olá, ${o.nome_curto}`}</span>
+              </span>
+            </button>
+          ))}
+          {falha && <Aviso tipo="erro" titulo={falha.error} />}
+        </Cartao>
+      </CascaAcesso>
+    );
+  }
+
   return (
-    <CascaAcesso titulo="Entrar no IUB MAIS+" voltarPara="/acesso" mensagemWhatsapp="Olá! Não estou conseguindo entrar no IUB MAIS+.">
+    <CascaAcesso titulo="Entrar" voltarPara="/acesso" mensagemWhatsapp="Olá! Não estou conseguindo entrar no IUB MAIS+.">
       <Cartao>
         <form onSubmit={entrar} className="space-y-4" noValidate>
-          <Campo label="CPF ou WhatsApp" erro={erros.login}>
+          <Campo label="CPF, CNPJ, e-mail ou WhatsApp" erro={erros.login} dica="Empresa parceira também entra por aqui.">
             <input
-              className="input text-lg" inputMode="numeric" autoComplete="username" autoFocus
-              value={login} onChange={e => { setLogin(e.target.value.replace(/[^\d.\-()/\s]/g, '')); setErros(x => ({ ...x, login: null })); }}
-              placeholder="Seu CPF ou WhatsApp com DDD"
+              className="input text-lg" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoFocus
+              value={login} onChange={e => { setLogin(e.target.value); setErros(x => ({ ...x, login: null })); }}
+              placeholder="CPF, CNPJ, e-mail ou WhatsApp"
             />
           </Campo>
           <Campo label="Senha" erro={erros.senha}>
@@ -89,7 +118,7 @@ export default function Entrar() {
                   CRIAR MINHA CONTA
                 </Link>
               )}
-              {falha.code === 'INATIVO' && <BotaoWhatsapp mensagem="Olá! Meu cadastro no IUB MAIS+ aparece como desativado." />}
+              {['INATIVO', 'LOJA_INATIVA'].includes(falha.code) && <BotaoWhatsapp mensagem="Olá! Meu acesso ao IUB MAIS+ aparece como desativado." />}
             </div>
           )}
 
@@ -105,6 +134,9 @@ export default function Entrar() {
 
       <p className="text-center text-white/80 text-sm mt-6">
         Não tem conta? <Link to="/criar-conta" className="font-bold text-white underline underline-offset-4">Criar conta grátis</Link>
+      </p>
+      <p className="text-center text-white/60 text-xs mt-2">
+        Empresa sem cadastro? <Link to="/vender" className="font-semibold text-white/80 underline underline-offset-2">Cadastre grátis no IUB MAIS+</Link>
       </p>
     </CascaAcesso>
   );

@@ -38,7 +38,7 @@ export default function Footer() {
           <p className="font-semibold text-xs uppercase tracking-wide mb-3 text-white/40">Ajuda</p>
           <div className="flex flex-col gap-1.5">
             <Link to="/cadastrar-associado" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Sou associado SECI</Link>
-            <Link to="/parceiro/login" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Já sou parceiro — Entrar</Link>
+            <Link to="/entrar" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Já sou parceiro — Entrar</Link>
             <Link to="/vender" className="text-white/40 hover:text-white/70 text-xs transition-colors w-fit mt-1">Cadastrar minha empresa</Link>
             <a
               href={linkWhatsappIub(MSG_WHATSAPP_SITE)}

@@ -45,12 +45,12 @@ export default function ParceiroPainelLayout() {
 
   useEffect(() => {
     if (!getParceiroToken()) {
-      navigate('/parceiro/login', { replace: true });
+      navigate('/entrar?voltar=/parceiro/painel', { replace: true });
       return;
     }
     apiParceiro.get('/parceiro/auth/me')
       .then(res => { setParceiro(res.data.parceiro); setUsuario(res.data.usuario); })
-      .catch(() => navigate('/parceiro/login', { replace: true }))
+      .catch(() => navigate('/entrar?voltar=/parceiro/painel', { replace: true }))
       .finally(() => setCarregando(false));
   }, [navigate]);
 
@@ -79,7 +79,7 @@ export default function ParceiroPainelLayout() {
     try { await apiParceiro.post('/parceiro/auth/logout'); } catch { /* stateless, ignora falha */ }
     setParceiroToken(null);
     toast.success('Sessão encerrada');
-    navigate('/parceiro/login', { replace: true });
+    navigate('/entrar?voltar=/parceiro/painel', { replace: true });
   }
 
   if (carregando) {

@@ -12,59 +12,37 @@ const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaCon
 const { gerarEditTokenUnico } = require('./publicCadastroController');
 const { maskCpfParcial } = require('../services/associadoPublicoView');
 const { ipCliente } = require('../utils/ipCliente');
+const {
+  MAX_TENTATIVAS, BLOQUEIO_MIN, buscarContasLogin, bloqueadaAte, registrarFalha, zerarTentativas, impedimento, sessao,
+} = require('../services/contasLogin');
 
 const SENHA_MIN = 6;
-const MAX_TENTATIVAS_SENHA = 5;
-const BLOQUEIO_SENHA_MIN = 15;
 
 function primeiroNome(nome) {
   return String(nome || '').trim().split(/\s+/)[0] || null;
-}
-
-// WhatsApp antigo às vezes está sem o 9 (10 dígitos) e a pessoa digita com
-// o 9 (11), ou o contrário — procura as duas formas.
-function variantesWhatsapp(d) {
-  const v = new Set([d]);
-  if (d.length === 11 && d[2] === '9') v.add(d.slice(0, 2) + d.slice(3));
-  if (d.length === 10) v.add(`${d.slice(0, 2)}9${d.slice(2)}`);
-  return [...v];
-}
-
-// "CPF ou WhatsApp" num campo só. 11 dígitos pode ser as duas coisas (CPF ou
-// celular com DDD), então procura nos dois campos; 10 dígitos só pode ser
-// WhatsApp. Devolve as contas encontradas e por qual campo cada uma bateu.
-async function buscarContas(login) {
-  const d = onlyDigits(login);
-  if (d.length !== 10 && d.length !== 11) return null;
-  const cpf = d.length === 11 && isValidCPF(d) ? d : null;
-  const zaps = variantesWhatsapp(d);
-  const r = await db.query(
-    `SELECT id, nome_completo, cpf, whatsapp, ativo, senha_hash, senha_tentativas, senha_bloqueada_ate
-     FROM sindicato_associados
-     WHERE ($1::varchar IS NOT NULL AND cpf = $1) OR whatsapp = ANY($2::varchar[])`,
-    [cpf, zaps]
-  );
-  return r.rows.map(c => ({ ...c, via: cpf && c.cpf === cpf ? 'cpf' : 'whatsapp' }));
 }
 
 function minutosAte(data) {
   return Math.max(1, Math.ceil((new Date(data).getTime() - Date.now()) / 60000));
 }
 
-// POST /api/public/conta/login  { login: CPF ou WhatsApp, senha }
+// POST /api/public/conta/login  { login: CPF, CNPJ, e-mail ou WhatsApp, senha }
+// Porta única pra pessoa (-> /meu) e empresa parceira (-> /parceiro/painel).
+// Resposta: { tipo: 'pessoa'|'empresa', token, ... } — ou, quando a mesma
+// senha abre as duas, { escolher: true, opcoes: [sessao, sessao] }.
 async function login(req, res) {
   try {
     const { login: identificador, senha } = req.body || {};
-    const contas = await buscarContas(identificador);
-    if (!contas) return res.status(400).json({ error: 'Digite seu CPF ou seu WhatsApp com DDD.', campo: 'login' });
+    const contas = await buscarContasLogin(identificador);
+    if (!contas) return res.status(400).json({ error: 'Digite seu CPF, CNPJ, e-mail ou WhatsApp com DDD.', campo: 'login' });
     if (!String(senha || '')) return res.status(400).json({ error: 'Digite sua senha.', campo: 'senha' });
     if (contas.length === 0) {
-      return res.status(404).json({ error: 'Não encontramos conta com esse CPF ou WhatsApp.', code: 'NAO_ENCONTRADO' });
+      return res.status(404).json({ error: 'Não encontramos conta com esse CPF, CNPJ, e-mail ou WhatsApp.', code: 'NAO_ENCONTRADO' });
     }
 
     const comSenha = contas.filter(c => c.senha_hash);
-    // Associado antigo (importado do Higestor / cadastro antigo) ainda sem
-    // senha: vai pro primeiro acesso, que confere a data de nascimento.
+    // Só associado antigo (Higestor / cadastro antigo) fica sem senha: vai
+    // pro primeiro acesso, que confere a data de nascimento.
     if (comSenha.length === 0) {
       return res.status(409).json({
         error: 'Você ainda não criou sua senha. Vamos fazer seu primeiro acesso!',
@@ -73,43 +51,35 @@ async function login(req, res) {
       });
     }
 
-    const liberadas = comSenha.filter(c => !c.senha_bloqueada_ate || new Date(c.senha_bloqueada_ate) <= new Date());
+    const liberadas = comSenha.filter(c => !bloqueadaAte(c));
     if (liberadas.length === 0) {
       return res.status(429).json({
-        error: `Muitas tentativas com senha errada. Tente de novo em ${minutosAte(comSenha[0].senha_bloqueada_ate)} min ou use "Esqueci minha senha".`,
+        error: `Muitas tentativas com senha errada. Tente de novo em ${minutosAte(bloqueadaAte(comSenha[0]))} min ou use "Esqueci minha senha".`,
         bloqueado: true,
       });
     }
 
+    const acertos = [];
     for (const c of liberadas) {
-      if (await bcrypt.compare(String(senha), c.senha_hash)) {
-        if (!c.ativo) return res.status(403).json({ error: 'Seu cadastro está desativado. Fale com o Sindicato pelo WhatsApp.', code: 'INATIVO' });
-        if (c.senha_tentativas > 0 || c.senha_bloqueada_ate) {
-          await db.query('UPDATE sindicato_associados SET senha_tentativas = 0, senha_bloqueada_ate = NULL WHERE id = $1', [c.id]);
-        }
-        // cpf_parcial: o front confere que a sessão aberta é mesmo desta conta (entrarNoPainelSeguro)
-        return res.json({ token: gerarTokenPainel(c.id), nome_curto: primeiroNome(c.nome_completo), cpf_parcial: maskCpfParcial(c.cpf) });
-      }
+      if (await bcrypt.compare(String(senha), c.senha_hash)) acertos.push(c);
     }
 
-    // Errou: conta a tentativa em cada conta conferida; na 5ª, bloqueia 15 min.
-    const r = await db.query(
-      `UPDATE sindicato_associados
-       SET senha_tentativas = senha_tentativas + 1,
-           senha_bloqueada_ate = CASE WHEN senha_tentativas + 1 >= $2 THEN NOW() + ($3 || ' minutes')::interval ELSE NULL END
-       WHERE id = ANY($1::int[])
-       RETURNING senha_tentativas`,
-      [liberadas.map(c => c.id), MAX_TENTATIVAS_SENHA, String(BLOQUEIO_SENHA_MIN)]
-    );
-    const tentativas = Math.max(...r.rows.map(x => x.senha_tentativas));
-    if (tentativas >= MAX_TENTATIVAS_SENHA) {
-      return res.status(429).json({ error: `Muitas tentativas com senha errada. Tente de novo em ${BLOQUEIO_SENHA_MIN} min ou use "Esqueci minha senha".`, bloqueado: true });
+    if (acertos.length === 0) {
+      const tentativas = await registrarFalha(liberadas);
+      if (tentativas >= MAX_TENTATIVAS) {
+        return res.status(429).json({ error: `Muitas tentativas com senha errada. Tente de novo em ${BLOQUEIO_MIN} min ou use "Esqueci minha senha".`, bloqueado: true });
+      }
+      return res.status(401).json({ error: 'Senha incorreta.', campo: 'senha', tentativas_restantes: MAX_TENTATIVAS - tentativas });
     }
-    return res.status(401).json({
-      error: 'Senha incorreta.',
-      campo: 'senha',
-      tentativas_restantes: MAX_TENTATIVAS_SENHA - tentativas,
-    });
+
+    const validas = acertos.filter(c => !impedimento(c));
+    if (validas.length === 0) {
+      const imp = impedimento(acertos[0]);
+      return res.status(imp.status).json(imp.body);
+    }
+    await Promise.all(validas.map(zerarTentativas));
+    if (validas.length === 1) return res.json(sessao(validas[0]));
+    return res.json({ escolher: true, opcoes: validas.map(sessao) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Não conseguimos entrar agora. Tente de novo em instantes.' });
@@ -416,48 +386,63 @@ function mascararWhatsapp(d) {
   return s.length >= 10 ? `(${s.slice(0, 2)}) *****-${s.slice(-4)}` : '*****';
 }
 
-// Contas cujo WhatsApp é esse número (com e sem o 9 — ver variantesWhatsapp).
-async function buscarContasPorWhatsapp(numero) {
-  const d = onlyDigits(numero);
-  if (d.length !== 10 && d.length !== 11) return null;
-  const r = await db.query(
-    `SELECT id, nome_completo, cpf, whatsapp, ativo, senha_hash
-     FROM sindicato_associados WHERE whatsapp = ANY($1::varchar[])`,
-    [variantesWhatsapp(d)]
-  );
-  return r.rows.map(c => ({ ...c, via: 'whatsapp' }));
+// Dono do código: pessoa (associado_id) ou usuário de empresa (parceiro_usuario_id).
+function colunaDono(c) {
+  return c.tipo === 'pessoa' ? 'associado_id' : 'parceiro_usuario_id';
 }
 
-// POST /api/public/conta/esqueci-senha  { whatsapp, cpf? }
-// Só pelo WhatsApp: é pra lá que o código vai, então a pessoa digita o
-// número em que vai receber. Se o número é de mais de uma conta (família no
-// mesmo celular), pede o CPF. (`login` aceito por compatibilidade.)
+function whatsappDaConta(c) {
+  return onlyDigits(c.tipo === 'pessoa' ? c.whatsapp : c.whatsapp_pessoal).replace(/^55(?=\d{10,11}$)/, '');
+}
+
+// POST /api/public/conta/esqueci-senha  { whatsapp, cpf?, tipo? }
+// Só pelo WhatsApp (é lá que o código chega): da pessoa, ou o WhatsApp
+// pessoal do usuário da empresa. Se o número é de uma pessoa E de uma
+// empresa, pergunta qual (tipo); se é de mais de uma pessoa (família no mesmo
+// celular), pede o CPF. Empresa sem WhatsApp pessoal usa o link por e-mail
+// (/api/parceiro/auth/esqueci-senha). `login` aceito por compatibilidade.
 async function esqueciSenha(req, res) {
   try {
-    const contas = await buscarContasPorWhatsapp(req.body?.whatsapp ?? req.body?.login);
+    const contas = await buscarContasLogin(req.body?.whatsapp ?? req.body?.login, { soWhatsapp: true });
     if (!contas) return res.status(400).json({ error: 'Digite seu WhatsApp com DDD.', campo: 'whatsapp' });
     if (contas.length === 0) {
-      return res.status(404).json({ error: 'Não encontramos conta com esse WhatsApp. Se você já é associado e nunca entrou com senha, faça o primeiro acesso.', code: 'NAO_ENCONTRADO' });
+      return res.status(404).json({ error: 'Não encontramos conta com esse WhatsApp. Se você já é associado e nunca entrou com senha, faça o primeiro acesso. Empresa: use o link por e-mail.', code: 'NAO_ENCONTRADO' });
     }
 
     let alvo = contas.filter(c => c.senha_hash);
     if (alvo.length === 0) {
       return res.status(409).json({ error: 'Você ainda não criou sua senha. Vamos fazer seu primeiro acesso!', code: 'PRIMEIRO_ACESSO', via: contas[0].via });
     }
-    if (alvo.length > 1) {
+    const tipo = req.body?.tipo;
+    if (tipo === 'pessoa' || tipo === 'empresa') alvo = alvo.filter(c => c.tipo === tipo);
+    const tipos = [...new Set(alvo.map(c => c.tipo))];
+    if (tipos.length > 1) {
+      // Nome da loja é público; o nome da pessoa não é exposto.
+      return res.status(409).json({
+        error: 'Esse WhatsApp está numa conta pessoal e numa empresa. Qual senha você quer trocar?',
+        code: 'ESCOLHER_TIPO',
+        opcoes: [{ tipo: 'pessoa', rotulo: 'Minha conta pessoal' },
+          ...alvo.filter(c => c.tipo === 'empresa').slice(0, 1).map(c => ({ tipo: 'empresa', rotulo: `Minha empresa: ${c.parceiro.nome}` }))],
+      });
+    }
+    if (alvo.length === 0) return res.status(404).json({ error: 'Não encontramos essa conta.', code: 'NAO_ENCONTRADO' });
+    if (alvo.length > 1 && alvo[0].tipo === 'pessoa') {
       const cpf = onlyDigits(req.body?.cpf);
       if (!cpf) return res.status(409).json({ error: 'Esse WhatsApp está em mais de uma conta. Digite também o seu CPF.', code: 'INFORME_CPF' });
       alvo = alvo.filter(c => c.cpf === cpf);
       if (alvo.length === 0) return res.status(404).json({ error: 'Esse CPF não bate com a conta desse WhatsApp.', code: 'NAO_ENCONTRADO', campo: 'cpf' });
     }
     const c = alvo[0];
-    if (!c.ativo) return res.status(403).json({ error: 'Seu cadastro está desativado. Fale com o Sindicato pelo WhatsApp.', code: 'INATIVO' });
-    if (!c.whatsapp) return res.status(409).json({ error: 'Sua conta está sem WhatsApp cadastrado. Fale com o suporte que a gente te ajuda.', code: 'SEM_WHATSAPP' });
+    const imp = impedimento(c);
+    if (imp) return res.status(imp.status).json(imp.body);
+    const destino = whatsappDaConta(c);
+    if (!destino) return res.status(409).json({ error: 'Sua conta está sem WhatsApp cadastrado. Fale com o suporte que a gente te ajuda.', code: 'SEM_WHATSAPP' });
 
+    const dono = colunaDono(c);
     const hist = (await db.query(
       `SELECT COUNT(*) FILTER (WHERE criado_em > NOW() - interval '1 hour')::int AS na_hora,
               EXTRACT(EPOCH FROM (NOW() - MAX(criado_em)))::int AS seg_desde_ultimo
-       FROM senha_codigos WHERE associado_id = $1`,
+       FROM senha_codigos WHERE ${dono} = $1`,
       [c.id]
     )).rows[0];
     if (hist.seg_desde_ultimo !== null && hist.seg_desde_ultimo < CODIGO_REENVIO_SEG) {
@@ -470,21 +455,21 @@ async function esqueciSenha(req, res) {
 
     const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     // Pedido novo invalida os anteriores ainda abertos.
-    await db.query('UPDATE senha_codigos SET expira_em = NOW() WHERE associado_id = $1 AND usado_em IS NULL AND expira_em > NOW()', [c.id]);
+    await db.query(`UPDATE senha_codigos SET expira_em = NOW() WHERE ${dono} = $1 AND usado_em IS NULL AND expira_em > NOW()`, [c.id]);
     const pedido = (await db.query(
-      `INSERT INTO senha_codigos (associado_id, codigo_hash, expira_em, ip)
+      `INSERT INTO senha_codigos (${dono}, codigo_hash, expira_em, ip)
        VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval, $4) RETURNING id`,
       [c.id, await bcrypt.hash(codigo, 8), String(CODIGO_VALIDADE_MIN), ipDe(req)]
     )).rows[0].id;
 
-    const envio = await sendWhatsAppMessage(c.whatsapp,
-      `🔐 *IUB MAIS+*\n\nSeu código pra criar uma nova senha é: *${codigo}*\n\nVale por ${CODIGO_VALIDADE_MIN} minutos. Não passe esse código pra ninguém — nem pra quem disser que é do IUB MAIS+.\n\nNão pediu? É só ignorar esta mensagem.`);
+    const envio = await sendWhatsAppMessage(destino,
+      `🔐 *IUB MAIS+*\n\nSeu código pra criar uma nova senha${c.tipo === 'empresa' ? ` da empresa *${c.parceiro.nome}*` : ''} é: *${codigo}*\n\nVale por ${CODIGO_VALIDADE_MIN} minutos. Não passe esse código pra ninguém — nem pra quem disser que é do IUB MAIS+.\n\nNão pediu? É só ignorar esta mensagem.`);
     if (!envio.success) {
       await db.query('DELETE FROM senha_codigos WHERE id = $1', [pedido]);
       return res.status(503).json({ error: 'Não conseguimos enviar o código pelo WhatsApp agora. Tente de novo em alguns minutos ou fale com o suporte.', code: 'ENVIO_FALHOU' });
     }
 
-    return res.json({ pedido, whatsapp_mascarado: mascararWhatsapp(c.whatsapp), validade_min: CODIGO_VALIDADE_MIN, reenvio_seg: CODIGO_REENVIO_SEG });
+    return res.json({ pedido, tipo: c.tipo, whatsapp_mascarado: mascararWhatsapp(destino), validade_min: CODIGO_VALIDADE_MIN, reenvio_seg: CODIGO_REENVIO_SEG });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Não conseguimos enviar o código agora. Tente de novo em instantes.' });
@@ -492,8 +477,8 @@ async function esqueciSenha(req, res) {
 }
 
 // POST /api/public/conta/redefinir-senha  { pedido, codigo, senha }
-// Código certo = senha nova + já entra logado. 5 códigos errados queimam o
-// pedido (precisa pedir outro).
+// Código certo = senha nova + já entra logado (na conta de pessoa ou de
+// empresa, conforme o dono do código). 5 códigos errados queimam o pedido.
 async function redefinirSenha(req, res) {
   try {
     const { pedido, senha } = req.body || {};
@@ -516,22 +501,39 @@ async function redefinirSenha(req, res) {
       return res.status(401).json({ error: `Código incorreto. Restam ${CODIGO_MAX_TENTATIVAS - t} tentativa(s).`, campo: 'codigo' });
     }
 
-    const conta = await db.transacao(async (client) => {
+    const ehEmpresa = Boolean(p.parceiro_usuario_id);
+    const dono = ehEmpresa ? 'parceiro_usuario_id' : 'associado_id';
+    const donoId = ehEmpresa ? p.parceiro_usuario_id : p.associado_id;
+    const hash = await bcrypt.hash(String(senha), 10);
+    const trocou = await db.transacao(async (client) => {
       // "usado_em IS NULL" no WHERE: o mesmo código não troca a senha duas vezes.
-      const uso = await client.query('UPDATE senha_codigos SET usado_em = NOW() WHERE id = $1 AND usado_em IS NULL RETURNING associado_id', [p.id]);
-      if (!uso.rows[0]) return null;
-      await client.query('UPDATE senha_codigos SET expira_em = NOW() WHERE associado_id = $1 AND usado_em IS NULL', [p.associado_id]);
-      const r = await client.query(
-        `UPDATE sindicato_associados
-         SET senha_hash = $1, senha_definida_em = NOW(), senha_tentativas = 0, senha_bloqueada_ate = NULL, updated_at = NOW()
-         WHERE id = $2 RETURNING id, nome_completo, cpf`,
-        [await bcrypt.hash(String(senha), 10), p.associado_id]
-      );
-      return r.rows[0];
+      const uso = await client.query('UPDATE senha_codigos SET usado_em = NOW() WHERE id = $1 AND usado_em IS NULL RETURNING id', [p.id]);
+      if (!uso.rows[0]) return false;
+      await client.query(`UPDATE senha_codigos SET expira_em = NOW() WHERE ${dono} = $1 AND usado_em IS NULL`, [donoId]);
+      if (ehEmpresa) {
+        await client.query('UPDATE sindicato_parceiro_usuarios SET senha_hash = $1, tentativas_login = 0, ultima_tentativa_em = NULL WHERE id = $2', [hash, donoId]);
+      } else {
+        await client.query(
+          `UPDATE sindicato_associados
+           SET senha_hash = $1, senha_definida_em = NOW(), senha_tentativas = 0, senha_bloqueada_ate = NULL, updated_at = NOW()
+           WHERE id = $2`,
+          [hash, donoId]
+        );
+      }
+      return true;
     });
-    if (!conta) return res.status(410).json({ error: 'Esse código já foi usado. Peça um novo.', code: 'CODIGO_EXPIRADO' });
+    if (!trocou) return res.status(410).json({ error: 'Esse código já foi usado. Peça um novo.', code: 'CODIGO_EXPIRADO' });
 
-    return res.json({ token: gerarTokenPainel(conta.id), nome_curto: primeiroNome(conta.nome_completo), cpf_parcial: maskCpfParcial(conta.cpf) });
+    // Abre a sessão certa (mesma montagem do login).
+    const contas = ehEmpresa
+      ? (await db.query(
+        `SELECT u.id, u.email, u.ativo, u.cargo, row_to_json(p) AS parceiro
+         FROM sindicato_parceiro_usuarios u JOIN sindicato_parceiros p ON p.id = u.parceiro_id WHERE u.id = $1`, [donoId]
+      )).rows.map(c => ({ ...c, tipo: 'empresa' }))
+      : (await db.query('SELECT id, nome_completo, cpf, ativo FROM sindicato_associados WHERE id = $1', [donoId])).rows.map(c => ({ ...c, tipo: 'pessoa' }));
+    const imp = impedimento(contas[0]);
+    if (imp) return res.status(imp.status).json(imp.body);
+    return res.json(sessao(contas[0]));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Não conseguimos trocar a senha agora. Tente de novo em instantes.' });

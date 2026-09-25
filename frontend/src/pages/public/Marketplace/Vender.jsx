@@ -517,7 +517,7 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
           </button>
           <p className="text-white/50 text-sm mt-4">
             Já é parceiro cadastrado?{' '}
-            <Link to="/parceiro/login" className="text-white/70 hover:text-white underline">Faça login</Link>
+            <Link to="/entrar" className="text-white/70 hover:text-white underline">Faça login</Link>
           </p>
         </div>
       </section>
@@ -558,7 +558,7 @@ function TelaSegmento({ onVoltar, onEscolher }) {
 
         <p className="text-center text-sm text-slate-500 mt-6">
           Já tem cadastro?{' '}
-          <Link to="/parceiro/login" className="font-semibold underline" style={{ color: ROXO }}>Fazer login como parceiro</Link>
+          <Link to="/entrar" className="font-semibold underline" style={{ color: ROXO }}>Fazer login como parceiro</Link>
         </p>
       </div>
     </div>
@@ -837,7 +837,7 @@ function StatusCnpj({ status }) {
   return (
     <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
       <XCircle className="w-3 h-3" /> {status.erro}
-      {jaCadastrado && <Link to="/parceiro/login" className="underline font-semibold">Fazer login?</Link>}
+      {jaCadastrado && <Link to="/entrar" className="underline font-semibold">Fazer login?</Link>}
     </p>
   );
 }

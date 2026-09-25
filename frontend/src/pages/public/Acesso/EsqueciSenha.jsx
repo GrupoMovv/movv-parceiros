@@ -1,28 +1,34 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { WhatsappLogo } from '@phosphor-icons/react';
+import { WhatsappLogo, EnvelopeSimple, User, Storefront } from '@phosphor-icons/react';
 import api from '../../../services/api';
-import { entrarNoPainelSeguro } from '../../../utils/entrarNoPainelSeguro';
+import apiParceiro from '../../../services/apiParceiro';
 import { soDigitos, maskCpf, maskTelefone, telefoneValido } from '../../../utils/documentos';
-import { CascaAcesso, Cartao, Campo, InputSenha, BotaoPrimario, BotaoWhatsapp, Aviso } from './AcessoUi';
+import { abrirSessao } from './abrirSessao';
+import { CascaAcesso, Cartao, Campo, InputSenha, BotaoPrimario, BotaoSecundario, BotaoWhatsapp, Aviso } from './AcessoUi';
 
 const SENHA_MIN = 6;
 const MSG_SUPORTE = 'Olá! Esqueci minha senha do IUB MAIS+ e não estou conseguindo receber o código.';
 
 // "Esqueci minha senha": WhatsApp -> código de 6 dígitos nesse WhatsApp ->
-// senha nova -> já entra logado. Pede só o WhatsApp (e não CPF) porque é
-// lá que o código chega.
+// senha nova -> já entra logado. Pede o WhatsApp (e não CPF) porque é lá que
+// o código chega — da pessoa, ou o WhatsApp pessoal do usuário da empresa.
+// Empresa que não cadastrou WhatsApp pessoal usa o link por e-mail (o fluxo
+// que o painel do parceiro sempre teve).
 export default function EsqueciSenha() {
   const navigate = useNavigate();
-  const [etapa, setEtapa] = useState(1);
+  const [etapa, setEtapa] = useState(1); // 1 = pedir código, 2 = digitar código, 'email' = link por e-mail
   const [whatsapp, setWhatsapp] = useState('');
   const [cpf, setCpf] = useState('');
   const [pedirCpf, setPedirCpf] = useState(false);
-  const [envio, setEnvio] = useState(null); // { pedido, whatsapp_mascarado, validade_min, reenvio_seg }
+  const [opcoesTipo, setOpcoesTipo] = useState(null);
+  const [envio, setEnvio] = useState(null); // { pedido, tipo, whatsapp_mascarado, validade_min, reenvio_seg }
   const [codigo, setCodigo] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmar, setConfirmar] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailEnviado, setEmailEnviado] = useState(false);
   const [erros, setErros] = useState({});
   const [falha, setFalha] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -34,15 +40,18 @@ export default function EsqueciSenha() {
     return () => clearTimeout(t);
   }, [aguarde]);
 
-  async function pedirCodigo(e) {
-    e?.preventDefault();
+  async function pedirCodigo(e, tipo) {
+    e?.preventDefault?.();
     setFalha(null); setErros({});
     const d = soDigitos(whatsapp);
     if (!telefoneValido(d)) { setErros({ whatsapp: 'Digite seu WhatsApp com DDD. Ex.: (64) 99999-9999' }); return; }
     setEnviando(true);
     try {
-      const res = await api.post('/public/conta/esqueci-senha', { whatsapp: d, cpf: pedirCpf ? soDigitos(cpf) : undefined });
+      const res = await api.post('/public/conta/esqueci-senha', {
+        whatsapp: d, cpf: pedirCpf ? soDigitos(cpf) : undefined, tipo: tipo || envio?.tipo || undefined,
+      });
       setEnvio(res.data);
+      setOpcoesTipo(null);
       setAguarde(res.data.reenvio_seg);
       setCodigo('');
       setEtapa(2);
@@ -50,6 +59,7 @@ export default function EsqueciSenha() {
     } catch (err) {
       const r = err.response?.data || {};
       if (r.code === 'PRIMEIRO_ACESSO') navigate('/entrar/primeiro-acesso');
+      else if (r.code === 'ESCOLHER_TIPO') setOpcoesTipo(r.opcoes);
       else if (r.code === 'INFORME_CPF') { setPedirCpf(true); setFalha({ error: r.error, code: r.code }); }
       else if (r.code === 'AGUARDE') { setAguarde(r.aguarde_seg); setFalha({ error: r.error, code: r.code }); }
       else if (r.campo) setErros({ [r.campo]: r.error });
@@ -71,13 +81,10 @@ export default function EsqueciSenha() {
     setEnviando(true);
     try {
       const res = await api.post('/public/conta/redefinir-senha', { pedido: envio.pedido, codigo: soDigitos(codigo), senha });
-      if (!(await entrarNoPainelSeguro(res.data.token, { cpfParcial: res.data.cpf_parcial }))) {
+      if (!(await abrirSessao(res.data, navigate))) {
         toast.success('Senha trocada! Entre com a senha nova.');
         navigate('/entrar', { replace: true });
-        return;
       }
-      toast.success(`Senha trocada, ${res.data.nome_curto}! 🎉`);
-      navigate('/marketplace', { replace: true });
     } catch (err) {
       const r = err.response?.data || {};
       if (r.campo) setErros({ [r.campo]: r.error });
@@ -87,7 +94,45 @@ export default function EsqueciSenha() {
     }
   }
 
-  const precisaSuporte = ['ENVIO_FALHOU', 'LIMITE_CODIGOS', 'SEM_WHATSAPP', 'INATIVO'].includes(falha?.code);
+  async function pedirLinkEmail(e) {
+    e.preventDefault();
+    setFalha(null);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) { setErros({ email: 'E-mail inválido.' }); return; }
+    setEnviando(true);
+    try {
+      await apiParceiro.post('/parceiro/auth/esqueci-senha', { email: email.trim() });
+      setEmailEnviado(true);
+    } catch {
+      setFalha({ error: 'Não conseguimos enviar agora. Tente de novo em instantes.' });
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  const precisaSuporte = ['ENVIO_FALHOU', 'LIMITE_CODIGOS', 'SEM_WHATSAPP', 'INATIVO', 'LOJA_INATIVA'].includes(falha?.code);
+
+  if (etapa === 'email') {
+    return (
+      <CascaAcesso titulo="Esqueci minha senha" subtitulo="Empresa parceira: a gente manda um link pro e-mail da sua loja." onVoltar={() => { setEtapa(1); setFalha(null); }} mensagemWhatsapp={MSG_SUPORTE}>
+        <Cartao>
+          {emailEnviado ? (
+            <Aviso tipo="ok" titulo="Pronto! Confira seu e-mail.">
+              Se esse e-mail for de uma empresa cadastrada, o link pra criar uma senha nova chega em instantes (vale por 1 hora). Olhe também a caixa de spam.
+            </Aviso>
+          ) : (
+            <form onSubmit={pedirLinkEmail} className="space-y-4" noValidate>
+              <Campo label="E-mail da empresa" erro={erros.email}>
+                <input className="input text-lg" type="email" inputMode="email" autoComplete="email" autoFocus value={email}
+                  onChange={e => { setEmail(e.target.value); setErros({}); }} placeholder="loja@email.com" />
+              </Campo>
+              {falha && <Aviso tipo="erro" titulo={falha.error} />}
+              <BotaoPrimario carregando={enviando}><EnvelopeSimple size={20} weight="bold" /> ENVIAR LINK</BotaoPrimario>
+            </form>
+          )}
+        </Cartao>
+      </CascaAcesso>
+    );
+  }
 
   return (
     <CascaAcesso
@@ -102,7 +147,7 @@ export default function EsqueciSenha() {
           <form onSubmit={pedirCodigo} className="space-y-4" noValidate>
             <Campo label="WhatsApp" erro={erros.whatsapp} dica="O mesmo número que está na sua conta.">
               <input className="input text-lg" inputMode="tel" autoComplete="tel" autoFocus value={whatsapp}
-                onChange={e => { setWhatsapp(maskTelefone(e.target.value)); setErros({}); }}
+                onChange={e => { setWhatsapp(maskTelefone(e.target.value)); setErros({}); setOpcoesTipo(null); }}
                 placeholder="(64) 99999-9999" />
             </Campo>
             {pedirCpf && (
@@ -110,21 +155,42 @@ export default function EsqueciSenha() {
                 <input className="input" inputMode="numeric" value={cpf} onChange={e => setCpf(maskCpf(e.target.value))} placeholder="000.000.000-00" />
               </Campo>
             )}
-            {falha && (
-              <div className="space-y-3">
-                <Aviso tipo={falha.code === 'INFORME_CPF' || falha.code === 'AGUARDE' ? 'info' : 'erro'} titulo={falha.error} />
-                {falha.code === 'NAO_ENCONTRADO' && (
-                  <>
-                    <Link to="/entrar/primeiro-acesso" className="w-full min-h-[52px] flex items-center justify-center rounded-2xl font-black text-white" style={{ backgroundColor: '#4C1D95' }}>SOU ASSOCIADO — PRIMEIRO ACESSO</Link>
-                    <Link to="/criar-conta" className="w-full min-h-[48px] flex items-center justify-center rounded-2xl font-bold border-2" style={{ borderColor: '#4C1D95', color: '#4C1D95' }}>CRIAR MINHA CONTA</Link>
-                  </>
-                )}
-                {precisaSuporte && <BotaoWhatsapp mensagem={MSG_SUPORTE} />}
+            {opcoesTipo ? (
+              <div className="space-y-2">
+                <Aviso tipo="info" titulo="Esse WhatsApp está na sua conta pessoal e na sua empresa. Qual senha você quer trocar?" />
+                {opcoesTipo.map(o => (
+                  <button key={o.tipo} type="button" disabled={enviando} onClick={() => pedirCodigo(null, o.tipo)}
+                    className="w-full min-h-[52px] flex items-center gap-3 px-4 rounded-2xl border-2 font-bold text-left disabled:opacity-50"
+                    style={{ borderColor: '#4C1D95', color: '#4C1D95' }}>
+                    {o.tipo === 'empresa' ? <Storefront size={22} weight="duotone" /> : <User size={22} weight="duotone" />} {o.rotulo}
+                  </button>
+                ))}
               </div>
+            ) : (
+              <>
+                {falha && (
+                  <div className="space-y-3">
+                    <Aviso tipo={falha.code === 'INFORME_CPF' || falha.code === 'AGUARDE' ? 'info' : 'erro'} titulo={falha.error} />
+                    {falha.code === 'NAO_ENCONTRADO' && (
+                      <>
+                        <Link to="/entrar/primeiro-acesso" className="w-full min-h-[52px] flex items-center justify-center rounded-2xl font-black text-white" style={{ backgroundColor: '#4C1D95' }}>SOU ASSOCIADO — PRIMEIRO ACESSO</Link>
+                        <Link to="/criar-conta" className="w-full min-h-[48px] flex items-center justify-center rounded-2xl font-bold border-2" style={{ borderColor: '#4C1D95', color: '#4C1D95' }}>CRIAR MINHA CONTA</Link>
+                      </>
+                    )}
+                    {precisaSuporte && <BotaoWhatsapp mensagem={MSG_SUPORTE} />}
+                  </div>
+                )}
+                <BotaoPrimario carregando={enviando} disabled={aguarde > 0}>
+                  <WhatsappLogo size={20} weight="fill" /> {aguarde > 0 ? `AGUARDE ${aguarde}s` : 'ENVIAR CÓDIGO'}
+                </BotaoPrimario>
+              </>
             )}
-            <BotaoPrimario carregando={enviando} disabled={aguarde > 0}>
-              <WhatsappLogo size={20} weight="fill" /> {aguarde > 0 ? `AGUARDE ${aguarde}s` : 'ENVIAR CÓDIGO'}
-            </BotaoPrimario>
+            <div className="pt-2 border-t border-slate-100">
+              <p className="text-center text-xs text-slate-500 mb-2">É empresa parceira e não cadastrou WhatsApp pessoal?</p>
+              <BotaoSecundario onClick={() => { setEtapa('email'); setFalha(null); setErros({}); }}>
+                <EnvelopeSimple size={20} weight="bold" /> Receber link por e-mail
+              </BotaoSecundario>
+            </div>
           </form>
         ) : (
           <form onSubmit={trocarSenha} className="space-y-4" noValidate>
@@ -148,7 +214,7 @@ export default function EsqueciSenha() {
               </div>
             )}
             <BotaoPrimario carregando={enviando}>TROCAR SENHA E ENTRAR</BotaoPrimario>
-            <button type="button" onClick={() => pedirCodigo()} disabled={aguarde > 0 || enviando}
+            <button type="button" onClick={() => pedirCodigo(null, envio?.tipo)} disabled={aguarde > 0 || enviando}
               className="w-full text-sm font-semibold text-violet-800 underline underline-offset-4 min-h-[44px] disabled:opacity-50 disabled:no-underline">
               {aguarde > 0 ? `Reenviar código em ${aguarde}s` : 'Reenviar código'}
             </button>

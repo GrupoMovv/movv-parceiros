@@ -90,7 +90,6 @@ import MeuPainel from './pages/public/Cadastro/MeuPainel';
 import MeuDados from './pages/public/Cadastro/MeuDados';
 import MeuDependentes from './pages/public/Cadastro/MeuDependentes';
 import MinhasCarteirinhas from './pages/public/Cadastro/MinhasCarteirinhas';
-import ParceiroLogin from './pages/parceiro/Login';
 import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
 import ParceiroPainelLayout from './pages/parceiro/PainelLayout';
 import ParceiroDashboard from './pages/parceiro/Dashboard';
@@ -281,7 +280,7 @@ export default function App() {
         </Route>
 
         {/* Portal do Parceiro IUB MAIS */}
-        <Route path="/parceiro/login"            element={<ParceiroLogin />} />
+        <Route path="/parceiro/login"            element={<Navigate to="/entrar?voltar=/parceiro/painel" replace />} />
         <Route path="/parceiro/redefinir-senha"  element={<ParceiroRedefinirSenha />} />
         <Route path="/parceiro/painel" element={<ParceiroPainelLayout />}>
           <Route index               element={<ParceiroDashboard />} />

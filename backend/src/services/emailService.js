@@ -247,7 +247,7 @@ async function enviarNovaSolicitacaoParceiroAdmin({ nomeFantasia, cnpj, segmento
 }
 
 async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindicalizada }) {
-  const link = `${PORTAL_URL}/parceiro/login`;
+  const link = `${PORTAL_URL}/entrar`;
 
   // Sindicalização vem de sindicalizacaoService (consultada na aprovação, ver
   // parceiroSolicitacaoController) — se por algum motivo não foi calculada,

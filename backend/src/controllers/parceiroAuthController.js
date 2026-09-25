@@ -145,4 +145,4 @@ async function redefinirSenha(req, res) {
   }
 }
 
-module.exports = { login, logout, me, esqueciSenha, redefinirSenha };
+module.exports = { login, logout, me, esqueciSenha, redefinirSenha, parceiroPublico, STATUS_PERMITEM_LOGIN };

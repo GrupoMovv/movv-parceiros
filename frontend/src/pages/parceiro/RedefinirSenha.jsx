@@ -41,7 +41,7 @@ export default function ParceiroRedefinirSenha() {
         <div className="w-full max-w-md bg-white rounded-3xl shadow-[0_4px_32px_rgba(15,15,20,0.08)] border border-slate-100 p-8 sm:p-10">
           {!token ? (
             <p className="text-center text-slate-500 text-sm">
-              Link inválido. <Link to="/parceiro/login" className="font-semibold underline">Voltar pro login</Link>
+              Link inválido. <Link to="/entrar" className="font-semibold underline">Voltar pro login</Link>
             </p>
           ) : sucesso ? (
             <div className="text-center">
@@ -49,7 +49,7 @@ export default function ParceiroRedefinirSenha() {
               <h1 className="text-xl font-extrabold mt-4" style={{ color: PRETO }}>Senha redefinida!</h1>
               <p className="text-slate-500 text-sm mt-2">Já pode entrar com sua nova senha.</p>
               <Link
-                to="/parceiro/login"
+                to="/entrar"
                 className="inline-block mt-6 text-white font-semibold text-sm px-6 py-3 rounded-xl"
                 style={{ backgroundColor: ROXO }}
               >
