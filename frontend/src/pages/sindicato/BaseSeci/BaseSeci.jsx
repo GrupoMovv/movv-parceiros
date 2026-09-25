@@ -118,6 +118,7 @@ export default function BaseSeci() {
         {isAdmin ? (
           <div className="flex gap-2 flex-wrap items-center">
             <StatusWhatsapp />
+            <IpDetectado />
             <button onClick={exportar} disabled={exportando} className="btn-secondary flex items-center gap-2 disabled:opacity-50">
               {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Exportar base atual
             </button>
@@ -550,6 +551,25 @@ function NovosAssociados() {
         </div>
       )}
     </div>
+  );
+}
+
+// Conferência do limite por IP em produção: tem que ser o IP de quem está
+// usando (o seu), não o do Render. Se não bater, ajustar TRUST_PROXY_HOPS
+// no Render (ver backend/src/utils/ipCliente.js).
+function IpDetectado() {
+  const [ip, setIp] = useState(null);
+  useEffect(() => {
+    api.get('/sindicato/base-seci/diagnostico-ip').then(r => setIp(r.data.ip_detectado)).catch(() => {});
+  }, []);
+  if (!ip) return null;
+  return (
+    <span
+      title="Deve ser o SEU IP (confira em meuip.com.br). Se aparecer outro, avise — é o IP usado nos limites de tentativas."
+      className="text-xs font-semibold rounded-full px-3 py-1.5 bg-slate-100 text-slate-600"
+    >
+      Seu IP visto pelo sistema: {ip}
+    </span>
   );
 }
 
