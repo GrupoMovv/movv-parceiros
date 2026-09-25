@@ -87,6 +87,7 @@ app.use('/api/public/parceiro',        require('./routes/publicParceiroConta'));
 app.use('/api/public/beer',            require('./routes/beer'));
 app.use('/api/public/entregadores',    require('./routes/entregadores'));
 app.use('/api/public/verificar-cnpj-seci', require('./routes/baseSeciPublico'));
+app.use('/api/public/acesso',          require('./routes/acesso'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 app.use('/',                           require('./routes/produtoPublico'));

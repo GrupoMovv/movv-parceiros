@@ -7,10 +7,7 @@ const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const fotoAssociadoService = require('../services/fotoAssociadoService');
 const emailService = require('../services/emailService');
 const { consultarDocumento } = require('../services/baseSeciService');
-
-const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
-const BLOQUEIO_MS = 30 * 60 * 1000;
-const MAX_TENTATIVAS = 3;
+const { conferirNascimento } = require('../services/segundoFatorNascimento');
 
 const SEXOS_VALIDOS = ['F', 'M', 'P'];
 const CATEGORIAS_VALIDAS = ['Empregado', 'Empregador patronal', 'Profissional liberal'];
@@ -88,9 +85,8 @@ async function verificarCpf(req, res) {
 }
 
 // "Login" público por CPF + data de nascimento pro Meu Painel — sem senha,
-// a data de nascimento é o segundo fator. 3 falhas consecutivas (janela de
-// 15min) bloqueiam por 30min; ultimo_login_publico guarda a última falha e
-// serve tanto pra resetar a janela quanto pra calcular o fim do bloqueio.
+// a data de nascimento é o segundo fator (bloqueio por tentativas em
+// segundoFatorNascimento.js, compartilhado com o /acesso).
 async function login(req, res) {
   try {
     const cpf = onlyDigits(req.body.cpf);
@@ -103,34 +99,8 @@ async function login(req, res) {
     if (!result.rows[0]) return res.status(404).json({ error: 'CPF não encontrado' });
 
     let associado = result.rows[0];
-    const agora = Date.now();
-    const ultimaFalha = associado.ultimo_login_publico ? new Date(associado.ultimo_login_publico).getTime() : null;
-    const bloqueadoAte = ultimaFalha ? ultimaFalha + BLOQUEIO_MS : null;
-
-    if (associado.tentativas_login_publico >= MAX_TENTATIVAS && bloqueadoAte && agora < bloqueadoAte) {
-      const minutosRestantes = Math.ceil((bloqueadoAte - agora) / 60000);
-      return res.status(429).json({ error: `Muitas tentativas incorretas. Tente novamente em ${minutosRestantes} min ou fale com o Sindicato.`, bloqueado: true });
-    }
-
-    const dataBanco = associado.data_nascimento ? new Date(associado.data_nascimento).toISOString().slice(0, 10) : null;
-    const dataConfere = dataBanco === dataNascimento;
-
-    if (!dataConfere) {
-      const dentroDaJanela = ultimaFalha && (agora - ultimaFalha) <= JANELA_TENTATIVAS_MS;
-      const novasTentativas = dentroDaJanela ? associado.tentativas_login_publico + 1 : 1;
-      await db.query(
-        'UPDATE sindicato_associados SET tentativas_login_publico = $1, ultimo_login_publico = NOW() WHERE id = $2',
-        [novasTentativas, associado.id]
-      );
-      if (novasTentativas >= MAX_TENTATIVAS) {
-        return res.status(429).json({ error: 'Muitas tentativas incorretas. Tente novamente em 30 min ou fale com o Sindicato.', bloqueado: true });
-      }
-      return res.status(401).json({ error: 'Data de nascimento não confere', tentativas_restantes: MAX_TENTATIVAS - novasTentativas });
-    }
-
-    if (associado.tentativas_login_publico > 0) {
-      await db.query('UPDATE sindicato_associados SET tentativas_login_publico = 0 WHERE id = $1', [associado.id]);
-    }
+    const conferencia = await conferirNascimento(associado, dataNascimento);
+    if (!conferencia.ok) return res.status(conferencia.status).json(conferencia.body);
 
     if (!associado.edit_token) {
       const editToken = await gerarEditTokenUnico();
@@ -455,4 +425,6 @@ module.exports = {
   // exportados pro publicMeuCadastroController reaproveitar (gera
   // carteirinha de dependente novo adicionado na tela de edição).
   gerarCarteirinhaDependentes,
+  // reaproveitado pelo acessoController (conta nova pelo /acesso).
+  gerarEditTokenUnico,
 };
