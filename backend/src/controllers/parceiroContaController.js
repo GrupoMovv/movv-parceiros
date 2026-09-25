@@ -3,6 +3,7 @@ const { nanoid } = require('nanoid');
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
 const emailService = require('../services/emailService');
+const { ipCliente } = require('../utils/ipCliente');
 
 const JANELA_RATE_LIMIT_SENHA_MS = 15 * 60 * 1000;
 const MAX_TENTATIVAS_SENHA = 3;
@@ -20,7 +21,7 @@ const PREFERENCIAS_PADRAO = {
 const CARGOS_VALIDOS = ['dono', 'gerente', 'socio', 'atendente', 'outro'];
 
 function getIp(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+  return ipCliente(req);
 }
 
 async function registrarAuditoria(parceiroId, usuarioId, acao, detalhes, req) {

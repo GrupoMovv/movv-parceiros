@@ -3,6 +3,7 @@ const multer = require('multer');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const ctrl = require('../controllers/baseSeciController');
 const { statusInstancia } = require('../services/zapApiService');
+const { ipCliente } = require('../utils/ipCliente');
 
 // Leitura: admin e Renan (colaborador interno, role sindicato_aprendiz).
 // Importar/exportar/sempre ativa: só admin — a base tem CPF de filiado
@@ -26,6 +27,7 @@ router.use(authenticate);
 
 router.get('/',                   podeLer,      ctrl.listar);
 router.get('/historico',          podeLer,      ctrl.historico);
+router.get('/novos-associados',   podeLer,      ctrl.novosAssociados);
 router.get('/exportar',           requireAdmin, ctrl.exportar);
 router.post('/importar/preview',  requireAdmin, upload.single('arquivo'), ctrl.previewImportacao);
 router.post('/importar',          requireAdmin, upload.single('arquivo'), ctrl.importar);
@@ -33,6 +35,15 @@ router.patch('/:id/sempre-ativa', requireAdmin, ctrl.setSempreAtiva);
 
 // Chip do WhatsApp (Z-API) conectado? Só consulta, não envia nada.
 router.get('/whatsapp-status', requireAdmin, async (req, res) => res.json(await statusInstancia()));
+
+// Confere, em produção, se o IP usado nos limites é o do visitante (tem que
+// bater com o seu IP real). Se vier IP do Render/Cloudflare, ajustar
+// TRUST_PROXY_HOPS. Ver utils/ipCliente.js.
+router.get('/diagnostico-ip', requireAdmin, (req, res) => res.json({
+  ip_detectado: ipCliente(req),
+  x_forwarded_for: req.headers['x-forwarded-for'] || null,
+  trust_proxy_hops: req.app.get('trust proxy'),
+}));
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {

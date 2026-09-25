@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { PLANOS, planoEfetivo, sqlPlanoVigente, limiteDestaquesBeer } = require('../config/planos');
 const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto, abertoEfetivo, FAIXAS_VOLUME, faixaVolume } = require('../config/beer');
 const { onlyDigits, isValidCPF } = require('../utils/validators');
+const { ipCliente } = require('../utils/ipCliente');
 
 // IUB DISK BEBIDAS — rotas públicas (/api/public/beer). Modelo híbrido
 // (migration 058): estabelecimento = parceiro ativo COM extensão
@@ -82,7 +83,7 @@ const SELECT_PRODUTO = `
 `;
 
 function getIp(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+  return ipCliente(req);
 }
 
 // Filtro de categoria que aceita FOLHA ("vodka") ou GRUPO ("destilados").

@@ -7,6 +7,7 @@ const { gerarCarteirinhaDependentes } = require('./publicCadastroController');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const emailService = require('../services/emailService');
 const fotoAssociadoService = require('../services/fotoAssociadoService');
+const { ipCliente } = require('../utils/ipCliente');
 
 async function gerarEditTokenUnico() {
   for (let tentativa = 0; tentativa < 5; tentativa++) {
@@ -91,7 +92,7 @@ async function completarCadastro(req, res) {
 
     const externalId = `LISTA-${registro.id}`;
     const editToken = await gerarEditTokenUnico();
-    const ipOrigem = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+    const ipOrigem = ipCliente(req);
 
     const insertResult = await db.query(
       `INSERT INTO sindicato_associados

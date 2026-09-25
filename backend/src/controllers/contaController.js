@@ -11,6 +11,7 @@ const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
 const { gerarEditTokenUnico } = require('./publicCadastroController');
 const { maskCpfParcial } = require('../services/associadoPublicoView');
+const { ipCliente } = require('../utils/ipCliente');
 
 const SENHA_MIN = 6;
 const MAX_TENTATIVAS_SENHA = 5;
@@ -231,7 +232,7 @@ async function sinalizarSindicato(client, { associadoId, nome, whatsapp, cenario
 }
 
 function ipDe(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+  return ipCliente(req);
 }
 
 function validarCadastro(b) {

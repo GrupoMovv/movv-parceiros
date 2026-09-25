@@ -6,6 +6,7 @@ const {
   horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo, validarHorario, normalizarBairros,
 } = require('../config/beer');
 const { onlyDigits, isValidCNPJ } = require('../utils/validators');
+const { ipCliente } = require('../utils/ipCliente');
 
 // Aba "Meu IUB Beer" do painel do parceiro (/api/parceiro/beer, sessão do
 // parceiro). Modelo híbrido (migration 058): a extensão
@@ -13,7 +14,7 @@ const { onlyDigits, isValidCNPJ } = require('../utils/validators');
 // o do parceiro — este controller só lê, nunca cobra nada.
 
 function getIp(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+  return ipCliente(req);
 }
 
 async function buscarExtensao(parceiroId) {

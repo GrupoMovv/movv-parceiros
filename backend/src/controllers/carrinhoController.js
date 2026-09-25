@@ -14,13 +14,14 @@ async function buscarAssociadoAtivoPorHash(hash) {
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
 
-// Conta logada SEM benefício ativo (cliente, carteirinha vencida, empresa
-// devendo) paga o preço normal e não se apresenta como associado pro
-// parceiro. Visitante sem login segue como antes (a mensagem já saía com o
-// preço de associado).
+// Preço de associado na mensagem pro parceiro SÓ com benefício ativo agora
+// (associado em dia, com carteirinha). Visitante sem login, cliente,
+// carteirinha vencida ou empresa devendo: preço normal e sem se apresentar
+// como associado — antes o visitante mandava o total com preço de associado
+// e o parceiro achava que era associado.
 function montarMensagemGrupo(produtos, associado) {
   const ehAssociadoSeci = Boolean(associado?.beneficio_ativo && associado.carteirinha_hash);
-  const usaPrecoAssociado = !associado || ehAssociadoSeci;
+  const usaPrecoAssociado = ehAssociadoSeci;
   const linhas = ['Olá! Vi seus produtos no IUB Marketplace e tenho interesse em:', ''];
   let total = 0;
   for (const p of produtos) {

@@ -1,10 +1,11 @@
 const db = require('../config/database');
+const { ipCliente } = require('../utils/ipCliente');
 
 const STATUS_VALIDOS = ['novo', 'contatado', 'aprovado', 'descartado'];
 const MAX_BAIRROS = 30;
 
 function ipDe(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+  return ipCliente(req);
 }
 
 // Aceita o que a máscara do front manda ("(64) 99999-8888") e também colado

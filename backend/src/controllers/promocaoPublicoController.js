@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
+const { ipCliente } = require('../utils/ipCliente');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_promocao', 'clique_whatsapp'];
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
@@ -65,7 +66,7 @@ async function registrarEvento(req, res) {
     if (!promocao.rows[0]) return res.status(404).json({ error: 'Promoção não encontrada' });
 
     const associadoId = await buscarAssociadoIdPorHash(req.body.associado_hash);
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+    const ip = ipCliente(req) || '';
 
     await db.query(
       `INSERT INTO sindicato_parceiro_cliques (parceiro_id, promocao_id, tipo, associado_id, ip_origem, user_agent)

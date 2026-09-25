@@ -3,6 +3,7 @@ const db = require('../config/database');
 const emailService = require('../services/emailService');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { verificarSindicalizacao } = require('../services/sindicalizacaoService');
+const { ipCliente } = require('../utils/ipCliente');
 const {
   TIPOS_ESTABELECIMENTO, TERMO_VERSAO, validarHorario, normalizarBairros, horarioConfigurado,
 } = require('../config/beer');
@@ -26,7 +27,7 @@ const SEGMENTOS = {
 };
 
 function getIp(req) {
-  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+  return ipCliente(req);
 }
 
 function normalizarEmail(v) {

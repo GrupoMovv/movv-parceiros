@@ -7,6 +7,7 @@ const produtoCtrl = require('../controllers/produtoPublicoController');
 const marketplaceHomeCtrl = require('../controllers/marketplaceHomeController');
 const promocaoCtrl = require('../controllers/promocaoPublicoController');
 const fechaMesCtrl = require('../controllers/fechaMesPublicoController');
+const { ipCliente } = require('../utils/ipCliente');
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
@@ -201,7 +202,7 @@ router.post('/carteirinha/:hash/registrar-uso', async (req, res) => {
     const dados = await buscarCarteirinhaPorHash(req.params.hash);
     if (!dados) return res.status(404).json({ error: 'Carteirinha não encontrada' });
 
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+    const ip = ipCliente(req) || '';
     await db.query(
       `INSERT INTO sindicato_uso_beneficios (associado_id, dependente_id, parceiro_nome, ip_origem, user_agent)
        VALUES ($1, $2, $3, $4, $5)`,

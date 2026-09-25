@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Edge (navegador padrão do Windows) põe o próprio "olho" de mostrar senha
+   dentro do input — ficava com dois olhos, porque o InputSenha já tem o
+   nosso. Some com o nativo (e o "x" de limpar do Edge). */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 @layer base {
   * { box-sizing: border-box; }
   body {

@@ -260,4 +260,42 @@ async function verificarPublico(req, res) {
   }
 }
 
-module.exports = { listar, historico, previewImportacao, importar, exportar, setSempreAtiva, verificarPublico };
+// Conferência pro Sindicato: quem virou associado (conta nova ou cliente
+// que ativou pelo /meu) por empresa num período. O CNPJ é público — qualquer
+// pessoa que digitar o CNPJ de uma empresa em dia vira associado (risco
+// aceito pelo Junior); aqui o Renan enxerga isso e confere com a empresa.
+// Empresa com muitos novos no período ganha o selo "conferir".
+const ALERTA_NOVOS_POR_EMPRESA = 5;
+
+async function novosAssociados(req, res) {
+  try {
+    const dias = [7, 30, 90].includes(Number(req.query.dias)) ? Number(req.query.dias) : 30;
+    const r = await db.query(
+      `SELECT es.id, es.documento_exibicao, es.tipo_documento, es.razao_social, es.nome_fantasia, es.em_dia,
+              COUNT(*)::int AS novos,
+              json_agg(json_build_object(
+                'id', a.id, 'nome', a.nome_completo, 'whatsapp', a.whatsapp,
+                'desde', COALESCE(a.carteirinha_gerada_em, a.created_at)
+              ) ORDER BY COALESCE(a.carteirinha_gerada_em, a.created_at) DESC) AS pessoas
+       FROM sindicato_associados a
+       JOIN empresas_seci es ON es.id = a.empresa_seci_id
+       WHERE a.tipo_acesso = 'seci' AND NOT a.legado
+         AND COALESCE(a.carteirinha_gerada_em, a.created_at) >= NOW() - ($1 || ' days')::interval
+       GROUP BY es.id
+       ORDER BY novos DESC, es.razao_social ASC
+       LIMIT 200`,
+      [String(dias)]
+    );
+    return res.json({
+      dias,
+      alerta_a_partir_de: ALERTA_NOVOS_POR_EMPRESA,
+      total_novos: r.rows.reduce((s, e) => s + e.novos, 0),
+      empresas: r.rows.map(e => ({ ...e, conferir: e.novos >= ALERTA_NOVOS_POR_EMPRESA })),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao listar novos associados' });
+  }
+}
+
+module.exports = { listar, historico, previewImportacao, importar, exportar, setSempreAtiva, verificarPublico, novosAssociados };

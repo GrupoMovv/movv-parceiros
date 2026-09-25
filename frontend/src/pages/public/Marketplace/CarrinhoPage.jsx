@@ -17,7 +17,7 @@ function formatarPreco(v) {
 export default function CarrinhoPage() {
   const navigate = useNavigate();
   const { grupos, totalItens, carregando, remover, limpar } = useCarrinho();
-  const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
+  const { associado, ehAssociadoSeci, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
   const totalParceiros = grupos.length;
@@ -96,11 +96,19 @@ export default function CarrinhoPage() {
                         </Link>
                         <div className="flex-1 min-w-0">
                           <Link to={`/marketplace/produto/${p.id}`} className="text-sm font-medium line-clamp-2 hover:underline" style={{ color: PRETO }}>{p.nome}</Link>
-                          {p.preco_associado ? (
+                          {p.preco_associado && ehAssociadoSeci ? (
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="text-slate-400 text-xs line-through">{formatarPreco(p.preco)}</span>
                               <span className="font-bold text-sm" style={{ color: ROXO }}>{formatarPreco(p.preco_associado)}</span>
                               <Diamond size={10} weight="fill" color="#FFB800" />
+                            </div>
+                          ) : p.preco_associado ? (
+                            // Sem benefício ativo: paga o normal; o de associado aparece só como convite.
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="font-bold text-sm text-slate-800">{formatarPreco(p.preco)}</span>
+                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold" style={{ color: '#92700C' }}>
+                                <Diamond size={9} weight="fill" color="#FFB800" /> associados {formatarPreco(p.preco_associado)}
+                              </span>
                             </div>
                           ) : (
                             <span className="font-bold text-sm text-slate-800">{formatarPreco(p.preco)}</span>

@@ -5,7 +5,7 @@ import Modal from '../../../components/ui/Modal';
 import { useAuth } from '../../../contexts/AuthContext';
 import {
   Landmark, Loader2, Search, Upload, Download, CheckCircle2, AlertTriangle,
-  ChevronLeft, ChevronRight, History, FileSpreadsheet, TrendingUp, TrendingDown, Pin, Eye,
+  ChevronLeft, ChevronRight, History, FileSpreadsheet, TrendingUp, TrendingDown, Pin, Eye, UserPlus,
 } from 'lucide-react';
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -184,6 +184,8 @@ export default function BaseSeci() {
           </div>
         )}
       </div>
+
+      <NovosAssociados />
 
       <div className="card">
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -484,6 +486,73 @@ function Amostra({ titulo, itens, total }) {
 }
 
 // Chip do WhatsApp (Z-API) que manda código de senha e avisos da carteirinha.
+// Conferência do Renan: quem virou associado por empresa no período. CNPJ é
+// público, então empresa com muitos novos ganha o selo "conferir".
+function NovosAssociados() {
+  const [dias, setDias] = useState(30);
+  const [dados, setDados] = useState(null);
+  const [aberta, setAberta] = useState(null);
+
+  useEffect(() => {
+    setDados(null);
+    api.get('/sindicato/base-seci/novos-associados', { params: { dias } }).then(r => setDados(r.data)).catch(() => setDados({ empresas: [], total_novos: 0, erro: true }));
+  }, [dias]);
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold text-slate-700 flex items-center gap-2"><UserPlus className="w-4 h-4" /> Novos associados por empresa</p>
+          <p className="text-slate-400 text-xs mt-0.5">
+            Quem virou associado pelo IUB MAIS+ (cadastro ou ativação no painel). Confira com a empresa as que tiverem o selo.
+          </p>
+        </div>
+        <select value={dias} onChange={e => setDias(Number(e.target.value))} className="input w-40">
+          <option value={7}>Últimos 7 dias</option>
+          <option value={30}>Últimos 30 dias</option>
+          <option value={90}>Últimos 90 dias</option>
+        </select>
+      </div>
+      {!dados ? (
+        <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-slate-300" /></div>
+      ) : dados.empresas.length === 0 ? (
+        <p className="text-slate-400 text-sm py-4">{dados.erro ? 'Não deu pra carregar agora.' : 'Nenhum associado novo no período.'}</p>
+      ) : (
+        <div className="mt-3 divide-y divide-slate-100">
+          <p className="text-xs text-slate-500 pb-2">{dados.total_novos} novo(s) em {dados.empresas.length} empresa(s)/filiado(s)</p>
+          {dados.empresas.map(e => (
+            <div key={e.id} className="py-2">
+              <button type="button" onClick={() => setAberta(aberta === e.id ? null : e.id)} className="w-full flex items-center justify-between gap-3 text-left">
+                <span className="min-w-0">
+                  <span className="text-sm font-medium text-slate-800">{e.nome_fantasia || e.razao_social}</span>
+                  <span className="text-xs text-slate-400 font-mono ml-2">{e.documento_exibicao}</span>
+                  {!e.em_dia && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-100 text-red-700">devendo</span>}
+                </span>
+                <span className="flex items-center gap-2 flex-shrink-0">
+                  {e.conferir && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⚠️ conferir</span>}
+                  <span className="text-sm font-bold text-slate-700">{e.novos}</span>
+                </span>
+              </button>
+              {aberta === e.id && (
+                <ul className="mt-2 ml-2 space-y-1">
+                  {e.pessoas.map(p => (
+                    <li key={p.id} className="text-xs text-slate-600 flex items-center justify-between gap-2">
+                      <span>{p.nome} <span className="text-slate-400">· desde {new Date(p.desde).toLocaleDateString('pt-BR')}</span></span>
+                      {p.whatsapp && (
+                        <a href={`https://api.whatsapp.com/send?phone=55${p.whatsapp}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-semibold">WhatsApp</a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusWhatsapp() {
   const [st, setSt] = useState(null);
   useEffect(() => {

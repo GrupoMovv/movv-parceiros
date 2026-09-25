@@ -5,6 +5,11 @@ require('dotenv').config();
 
 const app = express();
 
+// Quantos proxies ficam na frente do app (balanceador do Render = 1). Faz o
+// req.ip ser o IP de quem acessou, e não o que o visitante escreve no
+// X-Forwarded-For — base dos limites por IP (ver utils/ipCliente.js).
+app.set('trust proxy', Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10));
+
 const allowedOrigins = [
   'https://portal.grupomovv.com.br',
   'https://movv-parceiros.onrender.com',

@@ -8,6 +8,7 @@ const fotoAssociadoService = require('../services/fotoAssociadoService');
 const emailService = require('../services/emailService');
 const { consultarDocumento } = require('../services/baseSeciService');
 const { conferirNascimento } = require('../services/segundoFatorNascimento');
+const { ipCliente } = require('../utils/ipCliente');
 
 const SEXOS_VALIDOS = ['F', 'M', 'P'];
 const CATEGORIAS_VALIDAS = ['Empregado', 'Empregador patronal', 'Profissional liberal'];
@@ -275,7 +276,7 @@ async function finalizarCadastro(req, res) {
 
     const externalId = `PUBLICO-${Date.now()}`;
     const editToken = await gerarEditTokenUnico();
-    const ipOrigem = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+    const ipOrigem = ipCliente(req);
 
     const result = await db.query(
       `INSERT INTO sindicato_associados

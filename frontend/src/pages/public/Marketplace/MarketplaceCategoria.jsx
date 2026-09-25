@@ -8,6 +8,7 @@ import CardProduto from './components/CardProduto';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import { useAssociadoSessao } from './useAssociadoSessao';
+import BannerAtivarSeci from './components/BannerAtivarSeci';
 import { PRETO, ROXO } from './theme';
 
 const ORDENACOES = [
@@ -33,7 +34,7 @@ function SkeletonCard() {
 export default function MarketplaceCategoria() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
+  const { associado, ehAssociadoSeci, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,6 +97,8 @@ export default function MarketplaceCategoria() {
         onSearchChange={setSearchQuery}
         onSearchSubmit={() => navigate('/marketplace')}
       />
+
+      <BannerAtivarSeci associado={associado} ehAssociadoSeci={ehAssociadoSeci} carregando={carregandoAssociado} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full py-5 flex-1 flex gap-6">
         <FiltrosSidebar

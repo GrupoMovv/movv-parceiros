@@ -22,6 +22,7 @@ import Reveal from './components/Reveal';
 import OnboardingTour from './components/OnboardingTour';
 import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
+import BannerAtivarSeci from './components/BannerAtivarSeci';
 import { useProdutosSecao, useParceirosCompactos, useBusca } from './useSecaoData';
 import { useFechaMesProximo } from './useFechaMes';
 
@@ -31,7 +32,7 @@ export default function Marketplace() {
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const { alternar: alternarFavorito, ehFavorito } = useFavoritos();
-  const { associado, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
+  const { associado, ehAssociadoSeci, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
@@ -112,6 +113,8 @@ export default function Marketplace() {
         onSearchChange={setSearchQuery}
         onSearchSubmit={handleSearchSubmit}
       />
+
+      <BannerAtivarSeci associado={associado} ehAssociadoSeci={ehAssociadoSeci} carregando={carregandoAssociado} />
 
       <FechaMesBanner info={fechaMesInfo} />
 
