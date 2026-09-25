@@ -45,6 +45,43 @@ const PORTES_PET = [
   { codigo: 'grande', nome: 'Grande', faixa: 'acima de 25 kg' },
 ];
 
+// Raças em que o parceiro pode se dizer ESPECIALIZADO (opcional — sem
+// marcar nenhuma = "atende todas as raças"). Lista fechada pra o filtro do
+// marketplace casar certo (texto livre viraria "shitzu", "shih tzu"...).
+const RACAS_PET = [
+  { codigo: 'shih_tzu', nome: 'Shih-tzu', especie: 'cao' },
+  { codigo: 'yorkshire', nome: 'Yorkshire', especie: 'cao' },
+  { codigo: 'poodle', nome: 'Poodle', especie: 'cao' },
+  { codigo: 'lhasa_apso', nome: 'Lhasa Apso', especie: 'cao' },
+  { codigo: 'maltes', nome: 'Maltês', especie: 'cao' },
+  { codigo: 'spitz', nome: 'Spitz Alemão (Lulu)', especie: 'cao' },
+  { codigo: 'pinscher', nome: 'Pinscher', especie: 'cao' },
+  { codigo: 'chihuahua', nome: 'Chihuahua', especie: 'cao' },
+  { codigo: 'bichon_frise', nome: 'Bichon Frisé', especie: 'cao' },
+  { codigo: 'schnauzer', nome: 'Schnauzer', especie: 'cao' },
+  { codigo: 'cocker', nome: 'Cocker Spaniel', especie: 'cao' },
+  { codigo: 'dachshund', nome: 'Dachshund (Salsicha)', especie: 'cao' },
+  { codigo: 'buldogue_frances', nome: 'Buldogue Francês', especie: 'cao' },
+  { codigo: 'buldogue_ingles', nome: 'Buldogue Inglês', especie: 'cao' },
+  { codigo: 'pug', nome: 'Pug', especie: 'cao' },
+  { codigo: 'beagle', nome: 'Beagle', especie: 'cao' },
+  { codigo: 'border_collie', nome: 'Border Collie', especie: 'cao' },
+  { codigo: 'golden', nome: 'Golden Retriever', especie: 'cao' },
+  { codigo: 'labrador', nome: 'Labrador', especie: 'cao' },
+  { codigo: 'pastor_alemao', nome: 'Pastor Alemão', especie: 'cao' },
+  { codigo: 'husky', nome: 'Husky Siberiano', especie: 'cao' },
+  { codigo: 'chow_chow', nome: 'Chow Chow', especie: 'cao' },
+  { codigo: 'rottweiler', nome: 'Rottweiler', especie: 'cao' },
+  { codigo: 'pit_bull', nome: 'Pit Bull', especie: 'cao' },
+  { codigo: 'persa', nome: 'Persa', especie: 'gato' },
+  { codigo: 'siames', nome: 'Siamês', especie: 'gato' },
+  { codigo: 'maine_coon', nome: 'Maine Coon', especie: 'gato' },
+  { codigo: 'angora', nome: 'Angorá', especie: 'gato' },
+];
+
+const PRECO_MIN = 1;
+const PRECO_MAX = 10000;
+
 // Rótulo da categoria no marketplace (categorias[] do parceiro).
 const CATEGORIA_PET = 'Pet';
 
@@ -84,4 +121,43 @@ function validarPet({ servicos, portes }) {
   return { servicos: s, portes: p };
 }
 
-module.exports = { SERVICOS_PET, PORTES_PET, CATEGORIA_PET, validarPet, tipoNegocioPet, normalizarServicos, normalizarPortes };
+const CODIGOS_RACA = new Set(RACAS_PET.map(r => r.codigo));
+const normalizarRacas = v => normalizarLista(v ?? [], CODIGOS_RACA, RACAS_PET.map(r => r.codigo));
+
+// Tabela de preços: um preço por (serviço, porte), só pra serviço de
+// ATENDIMENTO que o parceiro marcou e porte que ele atende (ração não tem
+// "porte"). Linha vazia = sem preço (não aparece no filtro de faixa).
+// { erro } | { precos: [{ servico, porte, preco }] }
+// "1.234,56" / "80,5" / "80" → número (vírgula = decimal; ponto antes dela = milhar).
+function numeroBR(v) {
+  const t = String(v).trim();
+  return Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+}
+
+function validarPrecos(precos, { servicos, portes }) {
+  if (precos == null) return { precos: [] };
+  if (!Array.isArray(precos)) return { erro: 'Tabela de preços inválida' };
+  const vistos = new Set();
+  const saida = [];
+  for (const linha of precos) {
+    const servico = String(linha?.servico || '');
+    const porte = String(linha?.porte || '');
+    const def = SERVICOS_PET.find(s => s.codigo === servico);
+    if (!def || def.natureza !== 'servico' || !servicos.includes(servico) || !portes.includes(porte)) continue;
+    if (linha.preco === '' || linha.preco == null) continue;
+    const preco = Math.round(numeroBR(linha.preco) * 100) / 100;
+    if (!Number.isFinite(preco) || preco < PRECO_MIN || preco > PRECO_MAX) {
+      return { erro: `Preço inválido em ${def.nome} (${PORTES_PET.find(p => p.codigo === porte)?.nome}): use um valor entre R$ ${PRECO_MIN} e R$ ${PRECO_MAX}` };
+    }
+    const chave = `${servico}:${porte}`;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    saida.push({ servico, porte, preco });
+  }
+  return { precos: saida };
+}
+
+module.exports = {
+  SERVICOS_PET, PORTES_PET, RACAS_PET, CATEGORIA_PET, PRECO_MIN, PRECO_MAX,
+  validarPet, validarPrecos, tipoNegocioPet, normalizarServicos, normalizarPortes, normalizarRacas,
+};

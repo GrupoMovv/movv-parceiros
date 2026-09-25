@@ -54,6 +54,7 @@ import Curiosidades from './pages/public/Curiosidades';
 const Marketplace = lazy(() => import('./pages/public/Marketplace/Marketplace'));
 const MarketplaceCategoria = lazy(() => import('./pages/public/Marketplace/MarketplaceCategoria'));
 const MarketplaceServicos = lazy(() => import('./pages/public/Marketplace/MarketplaceServicos'));
+const MarketplacePet = lazy(() => import('./pages/public/Marketplace/MarketplacePet'));
 const ServicoDetalhe = lazy(() => import('./pages/public/Marketplace/ServicoDetalhe'));
 const MarketplaceFood = lazy(() => import('./pages/public/Marketplace/MarketplaceFood'));
 const FoodDetalhe = lazy(() => import('./pages/public/Marketplace/FoodDetalhe'));
@@ -229,6 +230,7 @@ export default function App() {
         <Route path="/marketplace"        element={<MarketplaceFallback><Marketplace /></MarketplaceFallback>} />
         <Route path="/marketplace/categoria/:slug" element={<MarketplaceFallback><MarketplaceCategoria /></MarketplaceFallback>} />
         <Route path="/marketplace/servicos"       element={<MarketplaceFallback><MarketplaceServicos /></MarketplaceFallback>} />
+        <Route path="/marketplace/pet"            element={<MarketplaceFallback><MarketplacePet /></MarketplaceFallback>} />
         <Route path="/servicos/:slug"             element={<MarketplaceFallback><ServicoDetalhe /></MarketplaceFallback>} />
         <Route path="/marketplace/food"           element={<MarketplaceFallback><MarketplaceFood /></MarketplaceFallback>} />
         <Route path="/food/:slug"                 element={<MarketplaceFallback><FoodDetalhe /></MarketplaceFallback>} />

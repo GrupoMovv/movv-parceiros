@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   ShoppingBag, Wrench, ForkKnife, TShirt, House, Car, Laptop, Sparkle, Gift,
-  GraduationCap, Barbell, Pill, Bed, Brain, Wine,
+  GraduationCap, Barbell, Pill, Bed, Brain, Wine, PawPrint,
 } from '@phosphor-icons/react';
 import { CATEGORIAS_FILTRO, normalizarCategoria } from '../parceirosData';
 import { ROXO } from '../theme';
@@ -9,7 +9,7 @@ import { ROXO } from '../theme';
 const ICONES = {
   Produtos: ShoppingBag, Serviços: Wrench, Alimentação: ForkKnife, Moda: TShirt, Casa: House,
   Automotivo: Car, Tecnologia: Laptop, Beleza: Sparkle, Presentes: Gift, Educação: GraduationCap,
-  Esportes: Barbell, Fitness: Barbell, Saúde: Pill, Hospedagem: Bed, 'Bem-estar': Brain, Bebidas: Wine,
+  Esportes: Barbell, Fitness: Barbell, Saúde: Pill, Hospedagem: Bed, 'Bem-estar': Brain, Bebidas: Wine, Pet: PawPrint,
 };
 
 // Só as categorias que já têm página de produtos de verdade no backend
@@ -27,6 +27,8 @@ const SLUG_POR_LABEL = {
 const ROTA_ESPECIAL_POR_LABEL = {
   Alimentação: '/marketplace/food',
   Bebidas: '/beer',
+  // Pet: página própria com filtros de serviço, porte, bairro, raça e preço.
+  Pet: '/marketplace/pet',
 };
 
 // Faixa única de categorias — TODAS as 15 (sem "Todas"), sem duplicar em

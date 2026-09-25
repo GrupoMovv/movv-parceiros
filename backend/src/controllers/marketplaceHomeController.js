@@ -473,13 +473,21 @@ async function getServicoPorSlug(req, res) {
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
               descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
               preco_medio, duracao_media, modalidades, horario_atendimento, fotos_estabelecimento,
-              pet_servicos, pet_portes
+              pet_servicos, pet_portes, pet_racas
        FROM sindicato_parceiros
-       WHERE slug = $1 AND status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')`,
+       WHERE slug = $1 AND status = 'ativo'
+         AND (tipo_negocio IN ('servico', 'hibrido') OR pet_servicos <> '{}')`,
       [req.params.slug]
     );
     const parceiro = result.rows[0];
     if (!parceiro) return res.status(404).json({ error: 'Serviço não encontrado' });
+
+    // Pet shop: tabela de preços por serviço/porte (Pet parte 2).
+    if (parceiro.pet_servicos?.length) {
+      parceiro.pet_precos = (await db.query(
+        'SELECT servico, porte, preco FROM pet_precos WHERE parceiro_id = $1 ORDER BY servico, porte', [parceiro.id]
+      )).rows.map(x => ({ ...x, preco: Number(x.preco) }));
+    }
 
     const itensResult = await db.query(
       `SELECT id, nome, preco, preco_associado
@@ -609,6 +617,8 @@ async function getFoodPorSlug(req, res) {
 }
 
 module.exports = {
+  // usado também pela busca do /marketplace/pet (petController)
+  sqlBoostBusca,
   getOfertasSemana,
   getExclusivosAssociados,
   getBannerExclusivos,

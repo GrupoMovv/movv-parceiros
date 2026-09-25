@@ -1,8 +1,9 @@
 const router = require('express').Router();
-const { SERVICOS_PET, PORTES_PET, CATEGORIA_PET } = require('../config/pet');
+const ctrl = require('../controllers/petController');
 
-// Catálogo do segmento Pet — o front (cadastro, painel, marketplace) não
-// repete a lista, lê daqui.
-router.get('/catalogo', (req, res) => res.json({ categoria: CATEGORIA_PET, servicos: SERVICOS_PET, portes: PORTES_PET }));
+// Catálogo do segmento Pet (serviços, portes, raças) e a busca do
+// /marketplace/pet — públicos.
+router.get('/catalogo',  ctrl.catalogo);
+router.get('/parceiros', ctrl.listarPublico);
 
 module.exports = router;

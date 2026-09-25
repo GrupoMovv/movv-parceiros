@@ -17,6 +17,8 @@ export default function ServicoDetalhe() {
   const [servico, setServico] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [naoEncontrado, setNaoEncontrado] = useState(false);
+  const [agendamento, setAgendamento] = useState({ servico: '', porte: '', raca: '', data: '' });
+  const petCatalogo = usePetCatalogo();
 
   useEffect(() => {
     setCarregando(true);
@@ -46,15 +48,19 @@ export default function ServicoDetalhe() {
   const temEndereco = Boolean(servico.endereco || servico.bairro);
   const enderecoCompleto = [servico.endereco, servico.bairro, servico.cidade].filter(Boolean).join(', ');
   const descricao = servico.descricao_completa || servico.descricao;
-  const mensagemWpp = `Olá! Vi o ${servico.nome} no IUB MAIS+ e gostaria de agendar um horário.`;
+  const ehPet = Boolean(servico.pet_servicos?.length);
+  const mensagemWpp = ehPet
+    ? mensagemAgendamentoPet(servico, agendamento, petCatalogo)
+    : `Olá! Vi o ${servico.nome} no IUB MAIS+ e gostaria de agendar um horário.`;
   const linkWpp = servico.whatsapp ? linkWhatsappComTexto(servico.whatsapp, mensagemWpp) : null;
+  const voltarPara = ehPet ? '/marketplace/pet' : '/marketplace/servicos';
   const foto = servico.fotos_estabelecimento?.[0]?.url || servico.logo_url;
 
   return (
     <div className="min-h-screen w-full bg-white pb-28">
       <div className="relative px-6 pt-8 pb-14 text-center overflow-hidden" style={{ background: `linear-gradient(150deg, ${ROXO_ESCURO} 0%, ${ROXO} 130%)` }}>
-        <Link to="/marketplace/servicos" className="relative inline-flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-medium mb-4 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> Voltar aos serviços
+        <Link to={voltarPara} className="relative inline-flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-medium mb-4 transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" /> {ehPet ? 'Voltar aos pet shops' : 'Voltar aos serviços'}
         </Link>
 
         <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
@@ -102,7 +108,11 @@ export default function ServicoDetalhe() {
           </div>
         )}
 
-        <BlocoPet servicos={servico.pet_servicos} portes={servico.pet_portes} />
+        <BlocoPet servico={servico} catalogo={petCatalogo} />
+
+        {ehPet && servico.whatsapp && (
+          <AgendarPet servico={servico} catalogo={petCatalogo} valor={agendamento} onChange={setAgendamento} link={linkWpp} />
+        )}
 
         {servico.modalidades && (
           <div className="flex items-start gap-2">
@@ -175,15 +185,33 @@ export default function ServicoDetalhe() {
   );
 }
 
-// 🐾 Pet shop: o que oferece e que portes atende (catálogo vem do backend).
-function BlocoPet({ servicos = [], portes = [] }) {
-  const catalogo = usePetCatalogo();
+const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const nomeDe = (lista, codigo) => lista?.find(x => x.codigo === codigo)?.nome || '';
+
+// Mensagem do "Agendar via WhatsApp" do pet shop — vai se completando com o
+// que a pessoa escolheu no card de agendamento (o que não escolheu, fica de fora).
+function mensagemAgendamentoPet(servico, a, catalogo) {
+  const servicoNome = nomeDe(catalogo?.servicos, a.servico);
+  const raca = a.raca === 'srd' ? 'vira-lata (sem raça definida)' : nomeDe(catalogo?.racas, a.raca);
+  const porte = nomeDe(catalogo?.portes, a.porte);
+  const data = a.data ? a.data.split('-').reverse().join('/') : '';
+  if (!servicoNome) return `Olá! Vi seu petshop no IUB MAIS+ 🐾\nGostaria de agendar um horário.`;
+  const pet = raca ? `meu ${raca}` : 'meu pet';
+  return `Olá! Vi seu petshop no IUB MAIS+ 🐾\nGostaria de agendar ${servicoNome} para ${pet}${porte ? ` (porte ${porte.toLowerCase()})` : ''}${data ? ` no dia ${data}` : ''}.`;
+}
+
+// 🐾 Pet shop: o que oferece, portes, raças e tabela de preços (catálogo vem do backend).
+function BlocoPet({ servico, catalogo }) {
+  const servicos = servico.pet_servicos || [];
   if (!catalogo || !servicos.length) return null;
   const itens = catalogo.servicos.filter(s => servicos.includes(s.codigo));
-  const portesTxt = catalogo.portes.filter(p => portes.includes(p.codigo)).map(p => p.nome).join(' · ');
+  const portesTxt = catalogo.portes.filter(p => (servico.pet_portes || []).includes(p.codigo)).map(p => p.nome).join(' · ');
+  const racas = catalogo.racas.filter(r => (servico.pet_racas || []).includes(r.codigo)).map(r => r.nome);
+  const precos = servico.pet_precos || [];
+  const servicosComPreco = catalogo.servicos.filter(s => precos.some(p => p.servico === s.codigo));
   return (
-    <div>
-      <h2 className="font-bold text-sm mb-2" style={{ color: GRAFITE }}>🐾 Serviços pet</h2>
+    <div className="space-y-3">
+      <h2 className="font-bold text-sm" style={{ color: GRAFITE }}>🐾 Serviços pet</h2>
       <div className="flex flex-wrap gap-2">
         {itens.map(s => (
           <span key={s.codigo} title={s.exemplos.join(', ')} className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
@@ -191,7 +219,67 @@ function BlocoPet({ servicos = [], portes = [] }) {
           </span>
         ))}
       </div>
-      {portesTxt && <p className="text-xs text-slate-500 mt-2">Atende portes: <span className="font-semibold text-slate-700">{portesTxt}</span></p>}
+      {portesTxt && <p className="text-xs text-slate-500">Atende portes: <span className="font-semibold text-slate-700">{portesTxt}</span></p>}
+      <p className="text-xs text-slate-500">
+        {racas.length ? <>Especialista em: <span className="font-semibold text-slate-700">{racas.join(', ')}</span></> : 'Atende todas as raças'}
+      </p>
+      {servicosComPreco.length > 0 && (
+        <div className="rounded-2xl border border-slate-100 overflow-hidden">
+          {servicosComPreco.map(s => (
+            <div key={s.codigo} className="px-3.5 py-2.5 border-b border-slate-100 last:border-0">
+              <p className="text-sm font-semibold" style={{ color: GRAFITE }}>{s.emoji} {s.nome}</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                {catalogo.portes.filter(p => precos.some(x => x.servico === s.codigo && x.porte === p.codigo)).map(p => (
+                  <span key={p.codigo} className="text-xs text-slate-500">
+                    {p.nome}: <span className="font-bold" style={{ color: ROXO_ESCURO }}>{brl(precos.find(x => x.servico === s.codigo && x.porte === p.codigo).preco)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card de agendamento: escolhe serviço, porte, raça e data -> a mensagem do
+// WhatsApp já vai pronta ("Gostaria de agendar Banho e Tosa para meu Poodle
+// no dia 12/10"). Tudo opcional; o botão de baixo usa a mesma mensagem.
+function AgendarPet({ servico, catalogo, valor, onChange, link }) {
+  if (!catalogo) return null;
+  const opcoesServico = catalogo.servicos.filter(s => s.natureza === 'servico' && servico.pet_servicos.includes(s.codigo));
+  if (!opcoesServico.length) return null;
+  const opcoesPorte = catalogo.portes.filter(p => (servico.pet_portes || []).includes(p.codigo));
+  const set = (campo, v) => onChange({ ...valor, [campo]: v });
+  const hoje = new Date().toISOString().slice(0, 10);
+  const precoEscolhido = (servico.pet_precos || []).find(p => p.servico === valor.servico && p.porte === valor.porte);
+  const sel = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm';
+  return (
+    <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: `${ROXO}08`, border: `1px solid ${ROXO}25` }}>
+      <h2 className="font-bold text-sm" style={{ color: GRAFITE }}>📅 Agendar pelo WhatsApp</h2>
+      <div className="grid grid-cols-2 gap-2">
+        <select className={sel} value={valor.servico} onChange={e => set('servico', e.target.value)} aria-label="Serviço">
+          <option value="">Serviço…</option>
+          {opcoesServico.map(s => <option key={s.codigo} value={s.codigo}>{s.nome}</option>)}
+        </select>
+        <select className={sel} value={valor.porte} onChange={e => set('porte', e.target.value)} aria-label="Porte">
+          <option value="">Porte…</option>
+          {opcoesPorte.map(p => <option key={p.codigo} value={p.codigo}>{p.nome} ({p.faixa})</option>)}
+        </select>
+        <select className={sel} value={valor.raca} onChange={e => set('raca', e.target.value)} aria-label="Raça">
+          <option value="">Raça…</option>
+          <option value="srd">Sem raça definida</option>
+          {catalogo.racas.map(r => <option key={r.codigo} value={r.codigo}>{r.nome}</option>)}
+        </select>
+        <input type="date" className={sel} min={hoje} value={valor.data} onChange={e => set('data', e.target.value)} aria-label="Data" />
+      </div>
+      {precoEscolhido && <p className="text-xs text-slate-600">Preço informado pelo pet shop: <span className="font-bold" style={{ color: ROXO_ESCURO }}>{brl(precoEscolhido.preco)}</span></p>}
+      <a href={link} target="_blank" rel="noreferrer"
+        className="flex items-center justify-center gap-2 w-full text-sm font-black px-4 py-3 rounded-xl text-white"
+        style={{ backgroundColor: '#25D366' }}>
+        <MessageCircle className="w-4 h-4" /> Enviar pelo WhatsApp
+      </a>
     </div>
   );
 }

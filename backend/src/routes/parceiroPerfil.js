@@ -2,6 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { authenticateParceiro } = require('../middleware/parceiroAuth');
 const ctrl = require('../controllers/parceiroPerfilController');
+const petCtrl = require('../controllers/petController');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -23,6 +24,9 @@ router.post('/logo',        upload.single('logo'), ctrl.uploadLogo);
 router.post('/fotos',       upload.array('fotos', 5), ctrl.uploadFotos);
 router.delete('/fotos/:index', ctrl.deleteFoto);
 router.put('/fotos/ordem',  ctrl.reordenarFotos);
+// 🐾 Pet: serviços, portes, raças e tabela de preços (petController)
+router.get('/pet',          petCtrl.meuPet);
+router.put('/pet',          petCtrl.salvarMeuPet);
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {
