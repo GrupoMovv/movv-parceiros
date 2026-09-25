@@ -6,6 +6,7 @@ const { substituirDependentes } = require('./sindicatoAssociadosController');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const fotoAssociadoService = require('../services/fotoAssociadoService');
 const emailService = require('../services/emailService');
+const { consultarDocumento } = require('../services/baseSeciService');
 
 const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
 const BLOQUEIO_MS = 30 * 60 * 1000;
@@ -19,18 +20,18 @@ async function validarCnpj(req, res) {
     const cnpj = onlyDigits(req.body.cnpj);
     if (!isValidCNPJ(cnpj)) return res.status(400).json({ error: 'CNPJ inválido' });
 
-    const result = await db.query('SELECT * FROM sindicato_empresas_contribuintes WHERE cnpj = $1', [cnpj]);
-    if (!result.rows[0]) return res.json({ status: 'nao_existe' });
+    const e = await consultarDocumento(cnpj);
+    if (!e) return res.json({ status: 'nao_existe' });
 
-    const e = result.rows[0];
+    // O wizard ainda fala a língua da base antiga (adimplente/atrasada).
     return res.json({
-      status: e.status,
+      status: e.em_dia ? 'adimplente' : 'atrasada',
       empresa: {
         id: e.id,
         razao_social: e.razao_social,
         nome_fantasia: e.nome_fantasia,
-        cidade: e.cidade,
-        estado: e.estado,
+        cidade: null,
+        estado: null,
       },
     });
   } catch (err) {
@@ -287,8 +288,8 @@ async function finalizarCadastro(req, res) {
     const cnpjDigits = onlyDigits(cnpj);
     if (!isValidCNPJ(cnpjDigits)) return res.status(400).json({ error: 'CNPJ inválido' });
 
-    const contribuinte = await db.query('SELECT * FROM sindicato_empresas_contribuintes WHERE cnpj = $1', [cnpjDigits]);
-    if (!contribuinte.rows[0] || contribuinte.rows[0].status !== 'adimplente') {
+    const emp = await consultarDocumento(cnpjDigits);
+    if (!emp || !emp.em_dia) {
       return res.status(403).json({ error: 'Empresa não está apta para autocadastro no momento' });
     }
 
@@ -302,7 +303,6 @@ async function finalizarCadastro(req, res) {
       try { dependentesArr = JSON.parse(dependentes); } catch { dependentesArr = []; }
     }
 
-    const emp = contribuinte.rows[0];
     const externalId = `PUBLICO-${Date.now()}`;
     const editToken = await gerarEditTokenUnico();
     const ipOrigem = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;

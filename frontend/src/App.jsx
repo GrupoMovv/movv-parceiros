@@ -28,7 +28,7 @@ import DiretaDashboardAdmin from './pages/admin/Direta/DiretaDashboard';
 import DiretaVendasAdmin from './pages/admin/Direta/DiretaVendas';
 import DiretaContabilidadesAdmin from './pages/admin/Direta/DiretaContabilidades';
 import SindicatoFaturamentoAdmin from './pages/admin/Sindicato/SindicatoFaturamento';
-import SindicatoContribuintesAdmin from './pages/admin/Sindicato/SindicatoContribuintes';
+import BaseSeci from './pages/sindicato/BaseSeci/BaseSeci';
 import MinhasComissoes from './pages/MinhasComissoes';
 import DiretaFernandoDashboard from './pages/direta/Dashboard';
 import DiretaFernandoMinhasVendas from './pages/direta/MinhasVendas';
@@ -324,7 +324,7 @@ export default function App() {
           <Route path="admin/direta/vendas"      element={<RequireAdmin><DiretaVendasAdmin /></RequireAdmin>} />
           <Route path="admin/direta/contabilidades" element={<RequireAdmin><DiretaContabilidadesAdmin /></RequireAdmin>} />
           <Route path="admin/sindicato"          element={<RequireAdmin><SindicatoFaturamentoAdmin /></RequireAdmin>} />
-          <Route path="admin/empresas-contribuintes" element={<RequireAdmin><SindicatoContribuintesAdmin /></RequireAdmin>} />
+          <Route path="admin/empresas-contribuintes" element={<Navigate to="/sindicato/base-seci" replace />} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />
           <Route path="direta/dashboard"         element={<RequireComercialFull><DiretaFernandoDashboard /></RequireComercialFull>} />
           <Route path="direta/minhas-vendas"     element={<RequireComercialFull><DiretaFernandoMinhasVendas /></RequireComercialFull>} />
@@ -335,6 +335,7 @@ export default function App() {
           <Route path="sindicato/empresas/contabilidade/:id" element={<RequireSindicatoEmpresas><SindicatoEmpresasDaContabilidade /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/empresas/detalhe/:id" element={<RequireSindicatoEmpresas><SindicatoEmpresaDetalhe /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beneficios" element={<RequireSindicatoEmpresas><SindicatoBeneficios /></RequireSindicatoEmpresas>} />
+          <Route path="sindicato/base-seci" element={<RequireSindicatoEmpresas><BaseSeci /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/associados" element={<RequireSindicatoEmpresas><SindicatoAssociados /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/carteirinhas" element={<RequireSindicatoEmpresas><SindicatoCarteirinhas /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/lista-aprovados" element={<RequireSindicatoEmpresas><SindicatoListaAprovadosTodasEmpresas /></RequireSindicatoEmpresas>} />

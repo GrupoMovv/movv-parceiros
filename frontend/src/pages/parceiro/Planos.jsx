@@ -976,9 +976,8 @@ function ModalSindicalizacao({ eSindicalizada, razaoSocial, planos, onVerPlanos,
   );
 }
 
-// Segundo modal. A regra de "em dia" é a do backend
-// (contribuintesImportService.classificarStatus): pagou pelo menos 1 das 3
-// guias mensais recentes.
+// Segundo modal. A regra de "em dia" é a do backend (baseSeciService):
+// último pagamento no mês do relatório mais recente ou nos 2 anteriores.
 function ModalComoSindicalizar({ economiaAnual, onVoltar, onFechar }) {
   const passos = [
     'Sua empresa precisa estar contribuindo com o SECI através da guia mensal do sindicato.',

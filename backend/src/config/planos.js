@@ -21,9 +21,8 @@
 // instagram_integrado, live_mensal, prioridade_melhorias...) são só o
 // contrato do que aquele plano promete — não disparam nada sozinhos.
 //
-// Preço diferenciado por sindicalização: empresa com CNPJ em dia em
-// sindicato_empresas_contribuintes (status 'adimplente', ver
-// sindicalizacaoService) paga `preco_sindicalizada` — o SECI subsidia a
+// Preço diferenciado por sindicalização: empresa com CNPJ em dia na Base
+// SECI (empresas_seci.em_dia, ver sindicalizacaoService) paga `preco_sindicalizada` — o SECI subsidia a
 // diferença pra incentivar a sindicalização. Quem não está em dia (ou nem
 // consta) paga `preco_nao_sindicalizada`. Ver publicPlanosController pro
 // endpoint que expõe essa conta pro front.

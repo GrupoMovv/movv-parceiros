@@ -1,19 +1,15 @@
-const db = require('../config/database');
+const { consultarDocumento } = require('./baseSeciService');
 
 // Fonte única de verdade pra saber se um CNPJ é de empresa sindicalizada
-// (em dia com o SECI) — usado tanto pro desconto de plano do parceiro
-// (publicPlanosController, sindicatoPlanosController) quanto já era usado
-// pelo autocadastro de associado (ver parceiroSolicitacaoController e
-// publicCadastroController, que consultam a mesma tabela direto).
+// (em dia com o SECI na Base SECI, empresas_seci) — usado pro preço de
+// plano do parceiro (publicPlanosController, sindicatoPlanosController,
+// assinaturaService, parceiroSolicitacaoController). O autocadastro de
+// associado consulta a mesma base via baseSeciService.
 async function verificarSindicalizacao(cnpj) {
-  const result = await db.query(
-    'SELECT razao_social, status FROM sindicato_empresas_contribuintes WHERE cnpj = $1',
-    [cnpj]
-  );
-  const row = result.rows[0];
+  const row = await consultarDocumento(String(cnpj || '').replace(/\D/g, ''));
   return {
     encontrada: Boolean(row),
-    sindicalizada: Boolean(row) && row.status === 'adimplente',
+    sindicalizada: Boolean(row) && row.em_dia,
     razaoSocial: row?.razao_social || null,
   };
 }
