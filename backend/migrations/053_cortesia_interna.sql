@@ -9,21 +9,8 @@
 ALTER TABLE sindicato_parceiros
   ADD COLUMN IF NOT EXISTS cortesia_interna BOOLEAN NOT NULL DEFAULT false;
 
--- Os 2 que eram "seed de demonstração" rodavam como Premium sem estar
--- gravados assim (plano = 'gratis' no banco + slug numa lista no código).
--- Agora o Premium fica gravado de verdade. WHERE plano = 'gratis' deixa
--- idempotente (migrations/run.js reroda tudo) e não sobrescreve se alguém
--- já tiver mudado o plano deles na mão.
-WITH marcados AS (
-  UPDATE sindicato_parceiros
-     SET cortesia_interna = true, plano = 'premium', plano_ativo_desde = NOW(), plano_expira_em = NULL
-   WHERE slug IN ('nossa-drogaria', 'azul-emprestimo') AND plano = 'gratis'
-  RETURNING id
-)
-INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por)
-SELECT id, 'gratis', 'premium', 'ativacao_seed', 'Cortesia interna (antigo seed de demonstração) — nunca cobrado', 'migration 053'
-  FROM marcados;
-
--- Idempotente de novo pro caso de já estarem premium: garante a flag.
-UPDATE sindicato_parceiros SET cortesia_interna = true
- WHERE slug IN ('nossa-drogaria', 'azul-emprestimo') AND cortesia_interna = false;
+-- (Removido em 25/09/2026) Aqui os 2 antigos "seed de demonstração"
+-- (nossa-drogaria, azul-emprestimo) viravam Premium com cortesia_interna e
+-- ganhavam uma linha em sindicato_plano_historico — já aplicado em
+-- produção. Com o `npm run migrate` rodando a CADA deploy, trocar o plano
+-- ou tirar a cortesia deles pelo painel seria desfeito no deploy seguinte.

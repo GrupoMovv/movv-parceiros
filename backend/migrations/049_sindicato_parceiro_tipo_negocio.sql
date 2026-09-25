@@ -23,18 +23,8 @@ ALTER TABLE sindicato_parceiros
   ADD COLUMN IF NOT EXISTS modalidades         TEXT,         -- "Presencial, Online"
   ADD COLUMN IF NOT EXISTS horario_atendimento TEXT;         -- "Seg-Sex 8h-18h"
 
--- Categorizacao dos 11 parceiros ja migrados (ver conversa/TODO.md sobre
--- o bootstrap da Roleta pra contexto de quem sao). Quem nao esta nessa
--- lista (parceiros futuros) fica no DEFAULT 'produto' ate alguem ajustar
--- pelo painel -- sistema nao quebra, so decide errado até corrigirem.
-UPDATE sindicato_parceiros SET tipo_negocio = 'produto' WHERE slug = 'nossa-drogaria';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'academia-atletica';
-UPDATE sindicato_parceiros SET tipo_negocio = 'hibrido' WHERE slug = 'diroma-fiori';
-UPDATE sindicato_parceiros SET tipo_negocio = 'produto' WHERE slug = 'oticas-diniz';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'ezequiel-nutricionista';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'plenitude-psicologia';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'nesplora-neuropsicologia';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'laura-clemente-estetica';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'studio-vip';
-UPDATE sindicato_parceiros SET tipo_negocio = 'produto' WHERE slug = 'imaginari-personalizados';
-UPDATE sindicato_parceiros SET tipo_negocio = 'servico' WHERE slug = 'azul-emprestimo';
+-- (Removido em 25/09/2026) Aqui havia 11 UPDATEs fixando tipo_negocio de
+-- parceiros por slug — dado de uma vez só, já aplicado em produção. Com o
+-- `npm run migrate` rodando a CADA deploy (Build Command do Render), eles
+-- sobrescreveriam o que o parceiro escolheu no painel. Numa base nova esses
+-- slugs nem existem (parceiro é dado de produção, não seed).
