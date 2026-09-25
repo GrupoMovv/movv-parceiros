@@ -4,6 +4,7 @@ import { ArrowLeft, MessageCircle, MapPin, Clock, Tag, CalendarCheck, ImageOff }
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import SeloPlano from './components/SeloPlano';
+import { usePetCatalogo } from '../../../components/PetServicosPicker';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 
 // Página individual de um serviço — 100% banco real (sindicato_parceiros
@@ -101,6 +102,8 @@ export default function ServicoDetalhe() {
           </div>
         )}
 
+        <BlocoPet servicos={servico.pet_servicos} portes={servico.pet_portes} />
+
         {servico.modalidades && (
           <div className="flex items-start gap-2">
             <Tag className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: ROXO }} />
@@ -168,6 +171,27 @@ export default function ServicoDetalhe() {
           <p className="text-center text-xs text-slate-400 py-3">WhatsApp em breve pra esse prestador.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+// 🐾 Pet shop: o que oferece e que portes atende (catálogo vem do backend).
+function BlocoPet({ servicos = [], portes = [] }) {
+  const catalogo = usePetCatalogo();
+  if (!catalogo || !servicos.length) return null;
+  const itens = catalogo.servicos.filter(s => servicos.includes(s.codigo));
+  const portesTxt = catalogo.portes.filter(p => portes.includes(p.codigo)).map(p => p.nome).join(' · ');
+  return (
+    <div>
+      <h2 className="font-bold text-sm mb-2" style={{ color: GRAFITE }}>🐾 Serviços pet</h2>
+      <div className="flex flex-wrap gap-2">
+        {itens.map(s => (
+          <span key={s.codigo} title={s.exemplos.join(', ')} className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+            {s.emoji} {s.nome}
+          </span>
+        ))}
+      </div>
+      {portesTxt && <p className="text-xs text-slate-500 mt-2">Atende portes: <span className="font-semibold text-slate-700">{portesTxt}</span></p>}
     </div>
   );
 }

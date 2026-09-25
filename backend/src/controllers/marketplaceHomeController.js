@@ -152,6 +152,7 @@ const CATEGORIAS_HOME = [
   { slug: 'casa', label: 'Casa', emoji: '🏠' },
   { slug: 'moda', label: 'Moda', emoji: '👕' },
   { slug: 'tecnologia', label: 'Tecnologia', emoji: '💻' },
+  { slug: 'pet', label: 'Pet', emoji: '🐾' },
 ];
 
 
@@ -471,7 +472,8 @@ async function getServicoPorSlug(req, res) {
     const result = await db.query(
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
               descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
-              preco_medio, duracao_media, modalidades, horario_atendimento, fotos_estabelecimento
+              preco_medio, duracao_media, modalidades, horario_atendimento, fotos_estabelecimento,
+              pet_servicos, pet_portes
        FROM sindicato_parceiros
        WHERE slug = $1 AND status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')`,
       [req.params.slug]

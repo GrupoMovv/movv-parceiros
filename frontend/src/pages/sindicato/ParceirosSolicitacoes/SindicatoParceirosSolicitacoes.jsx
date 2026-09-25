@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { usePetCatalogo } from '../../../components/PetServicosPicker';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -201,6 +202,7 @@ export default function SindicatoParceirosSolicitacoes() {
             </div>
 
             {detalhe.beer_dados && <BlocoBeer beer={detalhe.beer_dados} />}
+            {detalhe.pet_dados && <BlocoPet pet={detalhe.pet_dados} />}
 
             <div className="flex flex-wrap gap-2">
               <a
@@ -296,6 +298,19 @@ function BlocoBeer({ beer }) {
       <Linha label="Horário" valor={horario} />
       <Linha label="Bairros de entrega" valor={beer.bairros_entrega?.length ? beer.bairros_entrega.join(', ') : 'Não informou'} />
       <Linha label="Termo aceito" valor={`versão ${beer.termo_versao} em ${fmtDataHora(beer.termo_aceito_em)}`} />
+    </div>
+  );
+}
+
+// 🐾 Pet: o que marcou no cadastro (vai pro parceiro ao aprovar).
+function BlocoPet({ pet }) {
+  const catalogo = usePetCatalogo();
+  const nome = (lista, cod) => lista?.find(x => x.codigo === cod)?.nome || cod;
+  return (
+    <div className="rounded-xl p-4 border border-amber-200 bg-amber-50 space-y-2 text-sm">
+      <p className="text-xs font-bold text-amber-800">🐾 Pet Shop e Serviços — entra como Pet ao aprovar</p>
+      <Linha label="Oferece" valor={(pet.servicos || []).map(c => nome(catalogo?.servicos, c)).join(', ')} />
+      <Linha label="Portes" valor={(pet.portes || []).map(c => nome(catalogo?.portes, c)).join(', ') || 'Não se aplica'} />
     </div>
   );
 }

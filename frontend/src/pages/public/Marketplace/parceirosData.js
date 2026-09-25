@@ -121,6 +121,7 @@ export const CATEGORIAS_FILTRO = [
   { label: 'Alimentação', emoji: '🍔' },
   { label: 'Bebidas', emoji: '🍷' },
   { label: 'Serviços', emoji: '🔧' },
+  { label: 'Pet', emoji: '🐾' },
   { label: 'Fitness', emoji: '🏋️' },
   { label: 'Casa', emoji: '🏠' },
   { label: 'Moda', emoji: '👕' },
@@ -144,6 +145,7 @@ export const CATEGORIAS_HOME_FOOTER = [
   { slug: 'casa', label: 'Casa' },
   { slug: 'moda', label: 'Moda' },
   { slug: 'tecnologia', label: 'Tecnologia' },
+  { slug: 'pet', label: 'Pet' },
 ];
 
 export function normalizarCategoria(s) {

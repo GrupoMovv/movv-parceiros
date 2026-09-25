@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
+const { CATEGORIA_PET, validarPet, tipoNegocioPet } = require('../config/pet');
 const emailService = require('../services/emailService');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { verificarSindicalizacao } = require('../services/sindicalizacaoService');
@@ -23,6 +24,8 @@ const SEGMENTOS = {
   automotivo:   { label: 'Automotivo',   icone: '🚗', cor: '#334155' },
   imoveis:      { label: 'Imóveis',      icone: '🏠', cor: '#0369A1' },
   turismo:      { label: 'Turismo, Lazer & Experiências', icone: '🎯', cor: '#DB2777' },
+  // Pet = serviços (banho, veterinária...) e/ou produtos (ração...) — ver config/pet.js.
+  pet:          { label: CATEGORIA_PET, icone: '🐾', cor: '#F59E0B' },
   outro:        { label: 'Outro',        icone: '🎯', cor: '#64748B' },
 };
 
@@ -149,6 +152,13 @@ async function criarSolicitacao(req, res) {
 
   const ip = getIp(req);
 
+  let petDados = null;
+  if (segmento === 'pet') {
+    const pet = validarPet(b.pet || {});
+    if (pet.erro) return res.status(400).json({ error: pet.erro });
+    petDados = { servicos: pet.servicos, portes: pet.portes };
+  }
+
   let beerDados = null;
   if (segmento === 'bebidas') {
     const beer = dadosBeer(b.beer, ip);
@@ -188,8 +198,8 @@ async function criarSolicitacao(req, res) {
       `INSERT INTO sindicato_parceiros_solicitacoes
         (segmento, nome_fantasia, razao_social, cnpj, categoria_principal, descricao_curta,
          endereco, bairro, cidade, estado, whatsapp, email, instagram,
-         responsavel_nome, responsavel_cpf, responsavel_cargo, termos_aceitos_em, termos_ip, beer_dados)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),$17,$18)
+         responsavel_nome, responsavel_cpf, responsavel_cargo, termos_aceitos_em, termos_ip, beer_dados, pet_dados)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),$17,$18,$19)
        RETURNING id`,
       [
         segmento, b.nome_fantasia.trim(), b.razao_social?.trim() || null, cnpj,
@@ -198,6 +208,7 @@ async function criarSolicitacao(req, res) {
         whatsapp, email, b.instagram?.trim() || null,
         b.responsavel_nome.trim(), responsavelCpf, b.responsavel_cargo?.trim() || null, ip,
         beerDados ? JSON.stringify(beerDados) : null,
+        petDados ? JSON.stringify(petDados) : null,
       ]
     );
 
@@ -279,7 +290,9 @@ async function aprovarSolicitacao(req, res) {
 
     const seg = SEGMENTOS[sol.segmento] || SEGMENTOS.outro;
     const slug = await gerarSlugUnico(sol.nome_fantasia);
-    const categorias = [seg.label, sol.categoria_principal].filter(Boolean);
+    const categorias = [...new Set([seg.label, sol.categoria_principal].filter(Boolean))];
+    // Pet: serviços/portes do cadastro e o tipo (serviço/produto/híbrido) vem do que ele marcou.
+    const pet = sol.segmento === 'pet' && sol.pet_dados ? sol.pet_dados : null;
     const senha = gerarSenha();
     const senhaHash = await bcrypt.hash(senha, 10);
     const aprovadoPor = req.user?.email || req.user?.name || 'admin';
@@ -290,13 +303,15 @@ async function aprovarSolicitacao(req, res) {
       const parceiroResult = await client.query(
         `INSERT INTO sindicato_parceiros
           (slug, nome, razao_social, cnpj, categorias, categoria_principal, icone, cor_icone,
-           descricao_completa, endereco, bairro, cidade, estado, whatsapp, instagram, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'ativo')
+           descricao_completa, endereco, bairro, cidade, estado, whatsapp, instagram, status,
+          pet_servicos, pet_portes, tipo_negocio)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'ativo',$16,$17,COALESCE($18::tipo_negocio_enum, 'produto'))
          RETURNING *`,
         [
           slug, sol.nome_fantasia, sol.razao_social, sol.cnpj, categorias, sol.categoria_principal,
           seg.icone, seg.cor, sol.descricao_curta, sol.endereco, sol.bairro, sol.cidade, sol.estado,
           sol.whatsapp, sol.instagram,
+          pet?.servicos || [], pet?.portes || [], pet ? tipoNegocioPet(pet.servicos) : null,
         ]
       );
       const novo = parceiroResult.rows[0];

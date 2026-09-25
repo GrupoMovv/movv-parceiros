@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
+const { validarPet, tipoNegocioPet } = require('../config/pet');
 const { isValidCNPJ, onlyDigits } = require('../utils/validators');
 const cloudinaryService = require('../services/cloudinaryService');
 
@@ -50,6 +51,19 @@ async function updatePerfil(req, res) {
     const b = req.body;
     const sets = [];
     const params = [];
+
+    // Pet: serviços e portes (catálogo fechado, config/pet.js). Mudou os
+    // serviços, o tipo (serviço/produto/híbrido) acompanha.
+    if (b.pet_servicos !== undefined || b.pet_portes !== undefined) {
+      const pet = validarPet({ servicos: b.pet_servicos, portes: b.pet_portes });
+      if (pet.erro) return res.status(400).json({ error: pet.erro });
+      params.push(pet.servicos);
+      sets.push(`pet_servicos = $${params.length}`);
+      params.push(pet.portes);
+      sets.push(`pet_portes = $${params.length}`);
+      params.push(tipoNegocioPet(pet.servicos));
+      sets.push(`tipo_negocio = $${params.length}::tipo_negocio_enum`);
+    }
 
     if (b.cnpj !== undefined) {
       const cnpjDigits = onlyDigits(b.cnpj);

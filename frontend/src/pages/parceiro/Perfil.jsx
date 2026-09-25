@@ -6,6 +6,7 @@ import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
 import ImageCropUpload from '../../components/ImageCropUpload';
 import { DIAS, statusFuncionamento } from '../../utils/iubFood';
+import PetServicosPicker, { usePetCatalogo, erroPet } from '../../components/PetServicosPicker';
 
 const CATEGORIAS = CATEGORIAS_FILTRO.filter(c => c.label !== 'Todas').map(c => c.label);
 
@@ -46,6 +47,8 @@ export default function ParceiroPerfil() {
   const [form, setForm] = useState(null);
   const [horario, setHorario] = useState({});
   const [categoriasExtras, setCategoriasExtras] = useState([]);
+  const [pet, setPet] = useState({ servicos: [], portes: [] });
+  const petCatalogo = usePetCatalogo();
   const [salvando, setSalvando] = useState(false);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
@@ -66,8 +69,11 @@ export default function ParceiroPerfil() {
       });
       setCategoriasExtras((p.categorias || []).filter(c => c !== p.categoria_principal).slice(0, 3));
       setHorario(p.horario_funcionamento || {});
+      setPet({ servicos: p.pet_servicos || [], portes: p.pet_portes || [] });
     }).catch(() => toast.error('Erro ao carregar perfil'));
   }, []);
+
+  const temPet = Boolean(form) && (form.categoria_principal === 'Pet' || categoriasExtras.includes('Pet'));
 
   if (!perfil || !form) {
     return (
@@ -103,6 +109,8 @@ export default function ParceiroPerfil() {
   }
 
   async function handleSalvar() {
+    const erro = temPet ? erroPet(petCatalogo, pet) : null;
+    if (erro) { toast.error(erro); return; }
     setSalvando(true);
     try {
       await apiParceiro.put('/parceiro/perfil', {
@@ -112,6 +120,8 @@ export default function ParceiroPerfil() {
         telefone_fixo: form.telefone_fixo.replace(/\D/g, ''),
         categorias_extras: categoriasExtras,
         horario_funcionamento: horario,
+        // Pet: só manda quando a loja é Pet (senão não mexe no que está salvo).
+        ...(temPet ? { pet_servicos: pet.servicos, pet_portes: pet.portes } : {}),
       });
       toast.success('Perfil atualizado!');
     } catch (err) {
@@ -246,6 +256,13 @@ export default function ParceiroPerfil() {
             onChange={v => setCampo('beneficio', v)} />
         </div>
       </Secao>
+
+      {temPet && (
+        <Secao titulo="🐾 Pet Shop e Serviços">
+          <p className="text-xs text-slate-500 mb-4">Aparece na sua página e nos filtros do marketplace. Com serviço (banho, veterinária…) sua loja entra em Serviços; com ração/acessórios, em Produtos — com os dois, nas duas.</p>
+          <PetServicosPicker servicos={pet.servicos} portes={pet.portes} onChange={setPet} />
+        </Secao>
+      )}
 
       {/* Seção 2 — Localização e contato */}
       <Secao titulo="Localização e contato">

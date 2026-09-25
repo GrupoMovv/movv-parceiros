@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown, Search } from 'lucide-react';
 import api from '../../../services/api';
+import PetServicosPicker, { usePetCatalogo, erroPet } from '../../../components/PetServicosPicker';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../../config/contato';
 import { descontoMaxPct } from '../../../utils/precoPlanos';
@@ -24,6 +25,8 @@ const SEGMENTOS = [
   { valor: 'automotivo', label: 'Automotivo', emoji: '🚗', desc: 'Veículos, peças, acessórios, oficinas, serviços automotivos...' },
   { valor: 'imoveis', label: 'Imóveis', emoji: '🏠', desc: 'Venda, aluguel, terrenos, casas, apartamentos, imóveis comerciais...' },
   { valor: 'turismo', label: 'Turismo, Lazer & Experiências', emoji: '🎯', desc: 'Passeios, atrações, eventos, lazer e experiências...' },
+  // Pet ganha uma etapa a mais (serviços + portes) — ver EtapaPet.
+  { valor: 'pet', label: 'Pet Shop e Serviços', emoji: '🐾', desc: 'Banho e tosa, veterinária, hotelzinho, adestramento, ração e acessórios...' },
   { valor: 'outro', label: 'Outro', emoji: '🏷️', desc: 'Não encontrei meu segmento' },
 ];
 
@@ -42,9 +45,14 @@ const CATEGORIAS_POR_SEGMENTO = {
 // responsável (o aceite do Termo fica perto do aceite dos termos gerais).
 const PASSOS_PADRAO = ['empresa', 'local', 'responsavel'];
 const PASSOS_BEBIDAS = ['empresa', 'local', 'beer', 'responsavel'];
+const PASSOS_PET = ['empresa', 'local', 'pet', 'responsavel'];
 function passosDo(segmento) {
-  return segmento === 'bebidas' ? PASSOS_BEBIDAS : PASSOS_PADRAO;
+  if (segmento === 'bebidas') return PASSOS_BEBIDAS;
+  if (segmento === 'pet') return PASSOS_PET;
+  return PASSOS_PADRAO;
 }
+
+const PET_VAZIO = { servicos: [], portes: [] };
 
 const BEER_VAZIO = { tipo: '', whatsapp: '', bairros_entrega: [], horario_funcionamento: {}, aceite_termo: false };
 
@@ -134,6 +142,8 @@ export default function Vender() {
   const [etapa, setEtapa] = useState(1);
   const [form, setForm] = useState(FORM_VAZIO);
   const [beer, setBeer] = useState(BEER_VAZIO);
+  const [pet, setPet] = useState(PET_VAZIO);
+  const petCatalogo = usePetCatalogo();
   const [enviando, setEnviando] = useState(false);
   const [faqAberta, setFaqAberta] = useState(null);
   const [statusCnpj, setStatusCnpj] = useState(null); // null | 'checando' | 'ok' | { erro }
@@ -254,6 +264,9 @@ export default function Vender() {
     setSegmento(valor);
     setForm(f => ({ ...f, categoria_principal: '' }));
     setBeer(BEER_VAZIO);
+    setPet(PET_VAZIO);
+    // Pet: a categoria é a própria Pet (os detalhes vão na etapa pet).
+    if (valor === 'pet') setForm(f => ({ ...f, categoria_principal: 'Pet' }));
     setEtapa(1);
     setTela('formulario');
   }
@@ -288,6 +301,10 @@ export default function Vender() {
     return null;
   }
 
+  function validarEtapaPet() {
+    return erroPet(petCatalogo, pet);
+  }
+
   function validarEtapaResponsavel() {
     if (!form.responsavel_nome.trim()) return 'Informe o nome do responsável';
     if (!isValidCPF(form.responsavel_cpf)) return 'CPF do responsável inválido';
@@ -295,7 +312,7 @@ export default function Vender() {
     return null;
   }
 
-  const VALIDADORES = { empresa: validarEtapa1, local: validarEtapa2, beer: validarEtapaBeer, responsavel: validarEtapaResponsavel };
+  const VALIDADORES = { empresa: validarEtapa1, local: validarEtapa2, beer: validarEtapaBeer, pet: validarEtapaPet, responsavel: validarEtapaResponsavel };
 
   function avancar() {
     const erro = VALIDADORES[passoAtual]();
@@ -310,7 +327,7 @@ export default function Vender() {
     if (erro) { toast.error(erro); return; }
     setEnviando(true);
     try {
-      await api.post('/public/vender/solicitacao', { ...form, segmento, ...(segmento === 'bebidas' ? { beer } : {}) });
+      await api.post('/public/vender/solicitacao', { ...form, segmento, ...(segmento === 'bebidas' ? { beer } : {}), ...(segmento === 'pet' ? { pet } : {}) });
       setTela('confirmacao');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao enviar cadastro. Tente novamente.');
@@ -634,7 +651,7 @@ function TelaFormulario({ segmento, etapa, passos, form, setCampo, beer, setCamp
                   <span>{seg?.emoji}</span> {seg?.label}
                 </div>
               </Campo>
-              {segmento === 'bebidas' ? (
+              {segmento === 'pet' ? null : segmento === 'bebidas' ? (
                 // Em Bebidas o tipo do Disk Bebidas é a própria categoria.
                 <Campo label="Tipo de estabelecimento" obrigatorio>
                   <select
@@ -691,6 +708,15 @@ function TelaFormulario({ segmento, etapa, passos, form, setCampo, beer, setCamp
           )}
 
           {passo === 'beer' && <EtapaBeer beer={beer} setCampoBeer={setCampoBeer} />}
+
+          {passo === 'pet' && (
+            <Etapa titulo="🐾 Pet Shop e Serviços">
+              <p className="text-xs text-slate-500 -mt-2">
+                Isso aparece na sua página e nos filtros do marketplace — dá pra mudar depois pelo painel.
+              </p>
+              <PetServicosPicker servicos={pet.servicos} portes={pet.portes} onChange={setPet} />
+            </Etapa>
+          )}
 
           {passo === 'responsavel' && (
             <Etapa titulo="Dados do responsável">
