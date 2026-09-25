@@ -49,15 +49,22 @@ export default function ServicoDetalhe() {
   const enderecoCompleto = [servico.endereco, servico.bairro, servico.cidade].filter(Boolean).join(', ');
   const descricao = servico.descricao_completa || servico.descricao;
   const ehPet = Boolean(servico.pet_servicos?.length);
-  const mensagemWpp = ehPet
+  // Pet shop com atendimento (banho, vet...) já tem o quadro "Agendar pelo
+  // WhatsApp" com mensagem detalhada — aí o botão fixo genérico sai.
+  // Pet shop só de produtos segue com o botão fixo, falando de produtos.
+  const petAtende = ehPet && Boolean(petCatalogo?.servicos.some(s => s.natureza === 'servico' && servico.pet_servicos.includes(s.codigo)));
+  const mensagemWpp = petAtende
     ? mensagemAgendamentoPet(servico, agendamento, petCatalogo)
+    : ehPet
+    ? 'Olá! Vi seu petshop no IUB MAIS+ 🐾\nGostaria de saber sobre os produtos.'
     : `Olá! Vi o ${servico.nome} no IUB MAIS+ e gostaria de agendar um horário.`;
   const linkWpp = servico.whatsapp ? linkWhatsappComTexto(servico.whatsapp, mensagemWpp) : null;
   const voltarPara = ehPet ? '/marketplace/pet' : '/marketplace/servicos';
+  const ctaFixo = !(petAtende && linkWpp);
   const foto = servico.fotos_estabelecimento?.[0]?.url || servico.logo_url;
 
   return (
-    <div className="min-h-screen w-full bg-white pb-28">
+    <div className={`min-h-screen w-full bg-white ${ctaFixo ? 'pb-28' : 'pb-8'}`}>
       <div className="relative px-6 pt-8 pb-14 text-center overflow-hidden" style={{ background: `linear-gradient(150deg, ${ROXO_ESCURO} 0%, ${ROXO} 130%)` }}>
         <Link to={voltarPara} className="relative inline-flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-medium mb-4 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" /> {ehPet ? 'Voltar aos pet shops' : 'Voltar aos serviços'}
@@ -166,6 +173,7 @@ export default function ServicoDetalhe() {
       {/* CTA fixo embaixo — sempre visível pra agendar, sem precisar rolar
           de volta até o topo (mesma ideia de "sempre acessível" que os
           CTAs dos slides do carrossel). */}
+      {ctaFixo && (
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-slate-100 px-5 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         {linkWpp ? (
           <a
@@ -175,12 +183,13 @@ export default function ServicoDetalhe() {
             className="flex items-center justify-center gap-2 w-full max-w-2xl mx-auto text-sm sm:text-base font-black px-6 py-3.5 rounded-2xl shadow-lg transition-transform hover:scale-[1.02]"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            <MessageCircle className="w-5 h-5" /> 📱 AGENDAR VIA WHATSAPP
+            <MessageCircle className="w-5 h-5" /> {ehPet ? '📱 FALAR COM A LOJA' : '📱 AGENDAR VIA WHATSAPP'}
           </a>
         ) : (
           <p className="text-center text-xs text-slate-400 py-3">WhatsApp em breve pra esse prestador.</p>
         )}
       </div>
+      )}
     </div>
   );
 }
