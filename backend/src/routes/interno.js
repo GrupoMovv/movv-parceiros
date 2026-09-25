@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const router = require('express').Router();
 const assinaturaService = require('../services/assinaturaService');
+const carteirinhaAvisos = require('../services/carteirinhaAvisosService');
 
 // Rotinas internas disparadas por agendador externo (Render Cron Job) —
 // o projeto não roda cron dentro do processo (o serviço web pode dormir no
@@ -31,6 +32,22 @@ router.post('/assinaturas/rotina', exigirSegredo, async (req, res) => {
     return res.json({ ok: true, ...r, duracao_ms: Date.now() - inicio });
   } catch (err) {
     console.error('[rotina assinaturas] falhou:', err);
+    return res.status(500).json({ error: 'rotina falhou', detalhe: err.message });
+  }
+});
+
+// POST /api/interno/carteirinhas/rotina — avisos de WhatsApp da carteirinha
+// de 6 meses (vence em 30 dias / venceu). Idempotente: aviso já enviado
+// nunca repete (tabela carteirinha_avisos). Mesmo Cron Job, segundo curl:
+//   curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" https://<backend>/api/interno/carteirinhas/rotina
+router.post('/carteirinhas/rotina', exigirSegredo, async (req, res) => {
+  const inicio = Date.now();
+  try {
+    const r = await carteirinhaAvisos.rotinaDiaria();
+    console.log('[rotina carteirinhas]', JSON.stringify(r), `${Date.now() - inicio}ms`);
+    return res.json({ ok: true, ...r, duracao_ms: Date.now() - inicio });
+  } catch (err) {
+    console.error('[rotina carteirinhas] falhou:', err);
     return res.status(500).json({ error: 'rotina falhou', detalhe: err.message });
   }
 });

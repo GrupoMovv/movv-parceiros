@@ -1,8 +1,11 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { consultarDocumento } = require('../services/baseSeciService');
 const { situacaoDoAssociado } = require('../services/beneficioAssociado');
+const { avisarRenovacao } = require('../services/carteirinhaAvisosService');
+const { sendWhatsAppMessage } = require('../services/zapApiService');
 const { conferirNascimento } = require('../services/segundoFatorNascimento');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
@@ -382,6 +385,8 @@ async function vincularEmpresa(req, res) {
          WHERE id = $5`,
         [vinculo.id, empresaNome, hash, calcularValidoAte(), a.id]
       );
+      avisarRenovacao(a.id, eraAssociado ? 'renovada' : 'ativada')
+        .catch(err => console.error('[aviso renovação] falhou:', err.message));
       return res.json({
         cenario: eraAssociado ? 'renovado' : 'ativado',
         empresa_nome: vinculo.tipo_documento === 'cnpj' ? empresaNome : null,
@@ -399,4 +404,122 @@ async function vincularEmpresa(req, res) {
   }
 }
 
-module.exports = { login, primeiroAcesso, criar, vincularEmpresa, SENHA_MIN };
+const CODIGO_VALIDADE_MIN = 10;
+const CODIGO_REENVIO_SEG = 60;
+const CODIGOS_POR_HORA = 3;
+const CODIGO_MAX_TENTATIVAS = 5;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function mascararWhatsapp(d) {
+  const s = String(d || '');
+  return s.length >= 10 ? `(${s.slice(0, 2)}) *****-${s.slice(-4)}` : '*****';
+}
+
+// POST /api/public/conta/esqueci-senha  { login: CPF ou WhatsApp, cpf? }
+// Manda um código de 6 dígitos pro WhatsApp da conta. Se o número digitado
+// é WhatsApp de mais de uma conta (família no mesmo celular), pede o CPF.
+async function esqueciSenha(req, res) {
+  try {
+    const contas = await buscarContas(req.body?.login);
+    if (!contas) return res.status(400).json({ error: 'Digite seu CPF ou seu WhatsApp com DDD.', campo: 'login' });
+    if (contas.length === 0) return res.status(404).json({ error: 'Não encontramos conta com esse CPF ou WhatsApp.', code: 'NAO_ENCONTRADO' });
+
+    let alvo = contas.filter(c => c.senha_hash);
+    if (alvo.length === 0) {
+      return res.status(409).json({ error: 'Você ainda não criou sua senha. Vamos fazer seu primeiro acesso!', code: 'PRIMEIRO_ACESSO', via: contas[0].via });
+    }
+    if (alvo.length > 1) {
+      const cpf = onlyDigits(req.body?.cpf);
+      if (!cpf) return res.status(409).json({ error: 'Esse WhatsApp está em mais de uma conta. Digite também o seu CPF.', code: 'INFORME_CPF' });
+      alvo = alvo.filter(c => c.cpf === cpf);
+      if (alvo.length === 0) return res.status(404).json({ error: 'Esse CPF não bate com a conta desse WhatsApp.', code: 'NAO_ENCONTRADO', campo: 'cpf' });
+    }
+    const c = alvo[0];
+    if (!c.ativo) return res.status(403).json({ error: 'Seu cadastro está desativado. Fale com o Sindicato pelo WhatsApp.', code: 'INATIVO' });
+    if (!c.whatsapp) return res.status(409).json({ error: 'Sua conta está sem WhatsApp cadastrado. Fale com o suporte que a gente te ajuda.', code: 'SEM_WHATSAPP' });
+
+    const hist = (await db.query(
+      `SELECT COUNT(*) FILTER (WHERE criado_em > NOW() - interval '1 hour')::int AS na_hora,
+              EXTRACT(EPOCH FROM (NOW() - MAX(criado_em)))::int AS seg_desde_ultimo
+       FROM senha_codigos WHERE associado_id = $1`,
+      [c.id]
+    )).rows[0];
+    if (hist.seg_desde_ultimo !== null && hist.seg_desde_ultimo < CODIGO_REENVIO_SEG) {
+      const aguarde = CODIGO_REENVIO_SEG - hist.seg_desde_ultimo;
+      return res.status(429).json({ error: `Aguarde ${aguarde}s pra pedir outro código.`, code: 'AGUARDE', aguarde_seg: aguarde });
+    }
+    if (hist.na_hora >= CODIGOS_POR_HORA) {
+      return res.status(429).json({ error: 'Você já pediu vários códigos. Tente de novo daqui a 1 hora ou fale com o suporte.', code: 'LIMITE_CODIGOS' });
+    }
+
+    const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    // Pedido novo invalida os anteriores ainda abertos.
+    await db.query('UPDATE senha_codigos SET expira_em = NOW() WHERE associado_id = $1 AND usado_em IS NULL AND expira_em > NOW()', [c.id]);
+    const pedido = (await db.query(
+      `INSERT INTO senha_codigos (associado_id, codigo_hash, expira_em, ip)
+       VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval, $4) RETURNING id`,
+      [c.id, await bcrypt.hash(codigo, 8), String(CODIGO_VALIDADE_MIN), ipDe(req)]
+    )).rows[0].id;
+
+    const envio = await sendWhatsAppMessage(c.whatsapp,
+      `🔐 *IUB MAIS+*\n\nSeu código pra criar uma nova senha é: *${codigo}*\n\nVale por ${CODIGO_VALIDADE_MIN} minutos. Não passe esse código pra ninguém — nem pra quem disser que é do IUB MAIS+.\n\nNão pediu? É só ignorar esta mensagem.`);
+    if (!envio.success) {
+      await db.query('DELETE FROM senha_codigos WHERE id = $1', [pedido]);
+      return res.status(503).json({ error: 'Não conseguimos enviar o código pelo WhatsApp agora. Tente de novo em alguns minutos ou fale com o suporte.', code: 'ENVIO_FALHOU' });
+    }
+
+    return res.json({ pedido, whatsapp_mascarado: mascararWhatsapp(c.whatsapp), validade_min: CODIGO_VALIDADE_MIN, reenvio_seg: CODIGO_REENVIO_SEG });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos enviar o código agora. Tente de novo em instantes.' });
+  }
+}
+
+// POST /api/public/conta/redefinir-senha  { pedido, codigo, senha }
+// Código certo = senha nova + já entra logado. 5 códigos errados queimam o
+// pedido (precisa pedir outro).
+async function redefinirSenha(req, res) {
+  try {
+    const { pedido, senha } = req.body || {};
+    const codigo = onlyDigits(req.body?.codigo);
+    if (!UUID_RE.test(String(pedido || ''))) return res.status(400).json({ error: 'Pedido inválido. Peça um código novo.', code: 'CODIGO_EXPIRADO' });
+    if (codigo.length !== 6) return res.status(400).json({ error: 'O código tem 6 números.', campo: 'codigo' });
+    if (String(senha || '').length < SENHA_MIN) return res.status(400).json({ error: `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`, campo: 'senha' });
+
+    const p = (await db.query('SELECT * FROM senha_codigos WHERE id = $1', [pedido])).rows[0];
+    if (!p || p.usado_em || new Date(p.expira_em) <= new Date()) {
+      return res.status(410).json({ error: 'Esse código expirou. Peça um novo.', code: 'CODIGO_EXPIRADO' });
+    }
+    if (p.tentativas >= CODIGO_MAX_TENTATIVAS) {
+      return res.status(429).json({ error: 'Muitas tentativas com código errado. Peça um código novo.', code: 'CODIGO_EXPIRADO' });
+    }
+
+    if (!(await bcrypt.compare(codigo, p.codigo_hash))) {
+      const t = (await db.query('UPDATE senha_codigos SET tentativas = tentativas + 1 WHERE id = $1 RETURNING tentativas', [p.id])).rows[0].tentativas;
+      if (t >= CODIGO_MAX_TENTATIVAS) return res.status(429).json({ error: 'Muitas tentativas com código errado. Peça um código novo.', code: 'CODIGO_EXPIRADO' });
+      return res.status(401).json({ error: `Código incorreto. Restam ${CODIGO_MAX_TENTATIVAS - t} tentativa(s).`, campo: 'codigo' });
+    }
+
+    const conta = await db.transacao(async (client) => {
+      // "usado_em IS NULL" no WHERE: o mesmo código não troca a senha duas vezes.
+      const uso = await client.query('UPDATE senha_codigos SET usado_em = NOW() WHERE id = $1 AND usado_em IS NULL RETURNING associado_id', [p.id]);
+      if (!uso.rows[0]) return null;
+      await client.query('UPDATE senha_codigos SET expira_em = NOW() WHERE associado_id = $1 AND usado_em IS NULL', [p.associado_id]);
+      const r = await client.query(
+        `UPDATE sindicato_associados
+         SET senha_hash = $1, senha_definida_em = NOW(), senha_tentativas = 0, senha_bloqueada_ate = NULL, updated_at = NOW()
+         WHERE id = $2 RETURNING id, nome_completo, cpf`,
+        [await bcrypt.hash(String(senha), 10), p.associado_id]
+      );
+      return r.rows[0];
+    });
+    if (!conta) return res.status(410).json({ error: 'Esse código já foi usado. Peça um novo.', code: 'CODIGO_EXPIRADO' });
+
+    return res.json({ token: gerarTokenPainel(conta.id), nome_curto: primeiroNome(conta.nome_completo), cpf_parcial: maskCpfParcial(conta.cpf) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos trocar a senha agora. Tente de novo em instantes.' });
+  }
+}
+
+module.exports = { login, primeiroAcesso, criar, vincularEmpresa, esqueciSenha, redefinirSenha, SENHA_MIN };

@@ -2,6 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const ctrl = require('../controllers/baseSeciController');
+const { statusInstancia } = require('../services/zapApiService');
 
 // Leitura: admin e Renan (colaborador interno, role sindicato_aprendiz).
 // Importar/exportar/sempre ativa: só admin — a base tem CPF de filiado
@@ -29,6 +30,9 @@ router.get('/exportar',           requireAdmin, ctrl.exportar);
 router.post('/importar/preview',  requireAdmin, upload.single('arquivo'), ctrl.previewImportacao);
 router.post('/importar',          requireAdmin, upload.single('arquivo'), ctrl.importar);
 router.patch('/:id/sempre-ativa', requireAdmin, ctrl.setSempreAtiva);
+
+// Chip do WhatsApp (Z-API) conectado? Só consulta, não envia nada.
+router.get('/whatsapp-status', requireAdmin, async (req, res) => res.json(await statusInstancia()));
 
 // eslint-disable-next-line no-unused-vars
 router.use((err, req, res, next) => {

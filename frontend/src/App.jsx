@@ -82,6 +82,7 @@ import Acesso from './pages/public/Acesso/Acesso';
 import Entrar from './pages/public/Acesso/Entrar';
 import PrimeiroAcesso from './pages/public/Acesso/PrimeiroAcesso';
 import CriarConta from './pages/public/Acesso/CriarConta';
+import EsqueciSenha from './pages/public/Acesso/EsqueciSenha';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuCupons from './pages/public/Cadastro/MeuCupons';
 import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
@@ -251,6 +252,7 @@ export default function App() {
         <Route path="/acesso"             element={<Acesso />} />
         <Route path="/entrar/primeiro-acesso" element={<PrimeiroAcesso />} />
         <Route path="/criar-conta"        element={<CriarConta />} />
+        <Route path="/entrar/esqueci-senha" element={<EsqueciSenha />} />
         {/* login/cadastro antigos: links velhos (WhatsApp, favoritos) caem no fluxo novo */}
         <Route path="/jogar/login"        element={<Navigate to="/entrar?voltar=/jogar" replace />} />
         <Route path="/jogar"              element={<JogosHub />} />

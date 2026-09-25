@@ -116,7 +116,8 @@ export default function BaseSeci() {
           </p>
         </div>
         {isAdmin ? (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            <StatusWhatsapp />
             <button onClick={exportar} disabled={exportando} className="btn-secondary flex items-center gap-2 disabled:opacity-50">
               {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Exportar base atual
             </button>
@@ -479,6 +480,23 @@ function Amostra({ titulo, itens, total }) {
         {total > itens.length && <li className="px-2 py-1.5 text-slate-400">… e mais {total - itens.length}</li>}
       </ul>
     </details>
+  );
+}
+
+// Chip do WhatsApp (Z-API) que manda código de senha e avisos da carteirinha.
+function StatusWhatsapp() {
+  const [st, setSt] = useState(null);
+  useEffect(() => {
+    api.get('/sindicato/base-seci/whatsapp-status').then(r => setSt(r.data)).catch(() => setSt({ conectado: false, erro: 'não deu pra consultar' }));
+  }, []);
+  if (!st) return null;
+  return (
+    <span
+      title={st.erro || (st.conectado ? 'Códigos de senha e avisos da carteirinha saindo normalmente' : 'Chip desconectado')}
+      className={`text-xs font-semibold rounded-full px-3 py-1.5 ${st.conectado ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
+    >
+      WhatsApp {st.conectado ? 'conectado' : `com problema${st.erro ? `: ${st.erro}` : ''}`}
+    </span>
   );
 }
 
