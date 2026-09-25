@@ -7,7 +7,6 @@ import { Lightning, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons
 import TopNav from './components/TopNav';
 import CategoriaFaixa from './components/CategoriaFaixa';
 import HeroBannerCarousel from './components/HeroBannerCarousel';
-import FaixaEntrada from './components/FaixaEntrada';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
 import SecaoParceiros from './components/SecaoParceiros';
@@ -122,7 +121,6 @@ export default function Marketplace() {
           competindo pelo topo da página com o herói. */}
       <HeroBannerCarousel fechaMesInfo={fechaMesInfo} />
 
-      <FaixaEntrada />
 
       <div id="categorias" className="scroll-mt-16 border-b border-slate-100 bg-white">
         {/* padding mobile fica por conta do CategoriaFaixa (px-4 py-4 nele

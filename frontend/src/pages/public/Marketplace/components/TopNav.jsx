@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, LogOut, Search, MapPin, CreditCard, Users2, ChevronDown, User } from 'lucide-react';
 import { ShoppingCart } from '@phosphor-icons/react';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
-import ModalEntrar from './ModalEntrar';
 import MenuHorizontalMobile from './MenuHorizontalMobile';
 import BadgeMenu from './BadgeMenu';
 import { useCarrinho } from '../CarrinhoContext';
@@ -40,7 +39,6 @@ export default function TopNav({
   nomeAssociado, nomeCompleto, fotoUrl, carteirinhaHash, carregandoAssociado,
   onSair, onLoginSuccess, searchQuery, onSearchChange, onSearchSubmit,
 }) {
-  const [modalEntrarAberto, setModalEntrarAberto] = useState(false);
   const [menuPerfilAberto, setMenuPerfilAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,7 +95,7 @@ export default function TopNav({
   // no mobile compacto os dois entram como mais uma pill rolável em vez
   // de precisar de espaço fixo dedicado.
   const itensMenuMobile = [
-    { label: '🎡 Jogar', rota: getPainelToken() ? '/jogar' : '/jogar/login' },
+    { label: '🎡 Jogar', rota: getPainelToken() ? '/jogar' : '/entrar?voltar=/jogar' },
     ...MENU_SECUNDARIO,
     { label: '💎 SECI', rota: '/cadastrar-associado' },
   ];
@@ -167,7 +165,7 @@ export default function TopNav({
             do menu horizontal rolável (ver itensMenuMobile), pra não
             disputar espaço fixo na barra compacta. */}
         <Link
-          to={getPainelToken() ? '/jogar' : '/jogar/login'}
+          to={getPainelToken() ? '/jogar' : '/entrar?voltar=/jogar'}
           aria-label="Joguinhos IUB MAIS+"
           className="hidden sm:flex items-center gap-1.5 flex-shrink-0 text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-2 rounded-full text-black whitespace-nowrap animate-jogar-blink"
           style={{ backgroundColor: DOURADO }}
@@ -190,8 +188,8 @@ export default function TopNav({
 
         {/* Perfil compacto — só mobile. Logado vai direto pra /meu (hub da
             conta, já tem carteirinha/dados/sair lá dentro — ver
-            MeuPainelLayout.jsx); deslogado abre o mesmo ModalEntrar do
-            desktop. Sem dropdown aqui, não tem espaço pra isso numa barra
+            MeuPainelLayout.jsx); deslogado vai pra porta única /acesso,
+            igual ao desktop. Sem dropdown aqui, não tem espaço pra isso numa barra
             compacta. */}
         <div className="sm:hidden flex-shrink-0">
           {carregandoAssociado ? (
@@ -205,14 +203,13 @@ export default function TopNav({
               )}
             </Link>
           ) : (
-            <button
-              type="button"
-              onClick={() => setModalEntrarAberto(true)}
-              aria-label="Entrar"
+            <Link
+              to="/acesso"
+              aria-label="Logar"
               className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
             >
-              <User className="w-4 h-4 text-white" />
-            </button>
+              <User className="w-5 h-5 text-white" />
+            </Link>
           )}
         </div>
 
@@ -238,7 +235,7 @@ export default function TopNav({
               <div className="absolute right-0 top-[calc(100%+6px)] w-60 bg-white rounded-xl shadow-2xl border border-slate-100 py-1.5 overflow-hidden">
                 <div className="px-3.5 py-2 border-b border-slate-100">
                   <p className="text-sm font-bold text-slate-800 truncate">{nomeCompleto || nomeAssociado}</p>
-                  <p className="text-[11px] text-slate-400">Associado SECI</p>
+                  <p className="text-[11px] text-slate-400">{carteirinhaHash ? 'Associado SECI' : 'Minha conta IUB MAIS+'}</p>
                 </div>
                 {carteirinhaHash && (
                   <Link
@@ -275,14 +272,13 @@ export default function TopNav({
             )}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setModalEntrarAberto(true)}
-            className="hidden sm:inline-flex text-sm font-semibold px-4 py-2 rounded-lg flex-shrink-0 whitespace-nowrap"
+          <Link
+            to="/acesso"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg flex-shrink-0 whitespace-nowrap"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            Entrar
-          </button>
+            <User className="w-4 h-4" /> Logar
+          </Link>
         )}
       </div>
 
@@ -322,9 +318,6 @@ export default function TopNav({
           mobile expandido de antes por completo. */}
       <MenuHorizontalMobile itens={itensMenuMobile} onAncoraClick={irParaAncora} />
 
-      {modalEntrarAberto && (
-        <ModalEntrar onClose={() => setModalEntrarAberto(false)} onLoginSuccess={onLoginSuccess} />
-      )}
 
       <style>{`
         @keyframes carrinho-pulso { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.25); } }

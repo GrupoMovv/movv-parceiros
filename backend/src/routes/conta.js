@@ -8,5 +8,6 @@ const limite = simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 20 });
 
 router.post('/login',           limite, ctrl.login);
 router.post('/primeiro-acesso', limite, ctrl.primeiroAcesso);
+router.post('/criar',           limite, ctrl.criar);
 
 module.exports = router;

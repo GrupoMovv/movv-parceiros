@@ -72,7 +72,6 @@ const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/Produto
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
 const MarketplaceCarrinho = lazy(() => import('./pages/public/Marketplace/CarrinhoPage'));
 const MarketplaceVender = lazy(() => import('./pages/public/Marketplace/Vender'));
-import CadastroPublico from './pages/public/Cadastro/CadastroPublico';
 import CadastrarAssociado from './pages/public/Cadastro/CadastrarAssociado';
 import NotFound from './pages/public/NotFound';
 import Roleta from './pages/public/Jogos/Roleta';
@@ -82,7 +81,7 @@ import JogosHub from './pages/public/Jogos/JogosHub';
 import Acesso from './pages/public/Acesso/Acesso';
 import Entrar from './pages/public/Acesso/Entrar';
 import PrimeiroAcesso from './pages/public/Acesso/PrimeiroAcesso';
-import RoletaLogin from './pages/public/Jogos/RoletaLogin';
+import CriarConta from './pages/public/Acesso/CriarConta';
 import MeuCadastro from './pages/public/Cadastro/MeuCadastro';
 import MeuCupons from './pages/public/Cadastro/MeuCupons';
 import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
@@ -251,12 +250,14 @@ export default function App() {
         <Route path="/entrar"             element={<Entrar />} />
         <Route path="/acesso"             element={<Acesso />} />
         <Route path="/entrar/primeiro-acesso" element={<PrimeiroAcesso />} />
-        <Route path="/jogar/login"        element={<RoletaLogin />} />
+        <Route path="/criar-conta"        element={<CriarConta />} />
+        {/* login/cadastro antigos: links velhos (WhatsApp, favoritos) caem no fluxo novo */}
+        <Route path="/jogar/login"        element={<Navigate to="/entrar?voltar=/jogar" replace />} />
         <Route path="/jogar"              element={<JogosHub />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />
         <Route path="/jogar/memoria"      element={<MemoriaNiveis />} />
         <Route path="/jogar/memoria/:nivel" element={<Memoria />} />
-        <Route path="/cadastrar"          element={<CadastroPublico />} />
+        <Route path="/cadastrar"          element={<Navigate to="/acesso" replace />} />
         <Route path="/cadastrar-associado" element={<CadastrarAssociado />} />
         <Route path="/meu-cadastro/:edit_token" element={<MeuCadastro />} />
         <Route path="/meu-painel"         element={<Navigate to="/meu" replace />} />

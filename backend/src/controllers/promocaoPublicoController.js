@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_promocao', 'clique_whatsapp'];
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
@@ -10,14 +11,7 @@ async function buscarAssociadoIdPorHash(hash) {
 }
 
 async function buscarAssociadoAtivoPorHash(hash) {
-  if (!hash) return null;
-  const r = await db.query(
-    `SELECT nome_completo, codigo_filiado, carteirinha_hash
-     FROM sindicato_associados
-     WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE AND tipo_acesso = 'seci'`,
-    [hash]
-  );
-  return r.rows[0] || null;
+  return associadoAtivoPorHash(hash, 'a.nome_completo, a.codigo_filiado, a.carteirinha_hash');
 }
 
 function formatarPrecoBRL(v) {

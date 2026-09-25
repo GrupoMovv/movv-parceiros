@@ -80,8 +80,8 @@ async function listAssociados(req, res) {
     }
 
     if (carteirinha === 'nao_gerada') where.push('a.carteirinha_hash IS NULL');
-    else if (carteirinha === 'vencendo') where.push(`a.carteirinha_valida_ate IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE AND a.carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days'`);
-    else if (carteirinha === 'vencida') where.push('a.carteirinha_valida_ate IS NOT NULL AND a.carteirinha_valida_ate < CURRENT_DATE');
+    else if (carteirinha === 'vencendo') where.push(`NOT a.legado AND a.carteirinha_valida_ate IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE AND a.carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days'`);
+    else if (carteirinha === 'vencida') where.push('NOT a.legado AND a.carteirinha_valida_ate IS NOT NULL AND a.carteirinha_valida_ate < CURRENT_DATE');
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const fromSql = `FROM sindicato_associados a LEFT JOIN sindicato_empresas e ON e.id = a.empresa_id`;
@@ -117,8 +117,8 @@ async function stats(req, res) {
          COUNT(*) FILTER (WHERE ativo AND whatsapp IS NOT NULL)::int AS com_wpp,
          COUNT(*) FILTER (WHERE ativo AND whatsapp IS NULL)::int AS sem_wpp,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NULL)::int AS carteirinha_nao_gerada,
-         COUNT(*) FILTER (WHERE ativo AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS carteirinha_vencendo,
-         COUNT(*) FILTER (WHERE ativo AND carteirinha_valida_ate < CURRENT_DATE)::int AS carteirinha_vencida
+         COUNT(*) FILTER (WHERE ativo AND NOT legado AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS carteirinha_vencendo,
+         COUNT(*) FILTER (WHERE ativo AND NOT legado AND carteirinha_valida_ate < CURRENT_DATE)::int AS carteirinha_vencida
        FROM sindicato_associados
        WHERE tipo_acesso = 'seci'`
     );

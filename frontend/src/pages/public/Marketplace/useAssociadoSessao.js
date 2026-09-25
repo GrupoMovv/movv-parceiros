@@ -65,10 +65,12 @@ export function useAssociadoSessao() {
   }, []);
 
   // `associado` = qualquer conta logada (mostra nome, sair, carrinho).
-  // Preço/benefício de associado só vale pra conta 'seci' — conta 'cliente'
-  // é logada mas NÃO é associado. Sem o campo
-  // (backend antigo) conta como associado, que era o único tipo.
-  const ehAssociadoSeci = Boolean(associado) && (associado.tipo_acesso ?? 'seci') === 'seci';
+  // Preço/benefício de associado só com o benefício ATIVO agora — o servidor
+  // calcula (conta 'cliente', carteirinha vencida ou empresa devendo = sem
+  // benefício; ver beneficioAssociado.js). Sem o campo (backend antigo) vale
+  // o tipo da conta.
+  const ehAssociadoSeci = Boolean(associado)
+    && (associado.eh_associado_ativo ?? (associado.tipo_acesso ?? 'seci') === 'seci');
 
   return { associado, ehAssociadoSeci, carregando, logout, recarregar: carregarDoToken };
 }

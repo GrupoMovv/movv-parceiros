@@ -31,13 +31,13 @@ export default function MeuPainelLayout() {
   const [menuAberto, setMenuAberto] = useState(false);
 
   const recarregar = useCallback(async () => {
-    if (!getPainelToken()) { navigate('/cadastrar', { replace: true }); return; }
+    if (!getPainelToken()) { navigate('/entrar?voltar=/meu', { replace: true }); return; }
     try {
       const res = await apiPainel.get('/public/painel/me');
       setDados(res.data);
     } catch {
       setPainelToken(null);
-      navigate('/cadastrar', { replace: true });
+      navigate('/entrar?voltar=/meu', { replace: true });
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export default function MeuPainelLayout() {
   function handleSair() {
     setPainelToken(null);
     try { sessionStorage.clear(); } catch { /* indisponível, ignora */ }
-    window.location.href = '/cadastrar';
+    window.location.href = '/marketplace';
   }
 
   if (loading || !dados) {
@@ -137,7 +137,7 @@ function Sidebar({ dados, onSair, onNavegar }) {
           </NavLink>
         ))}
         <a
-          href={dados.carteirinha_hash ? `/marketplace?associado=${dados.carteirinha_hash}` : '/marketplace'}
+          href="/marketplace"
           className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
         >
           <ShoppingBag className="w-4 h-4" /> Marketplace

@@ -21,11 +21,11 @@ export default function MemoriaNiveis() {
   const [niveis, setNiveis] = useState([]);
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
+    if (!getPainelToken()) { navigate('/entrar?voltar=/jogar/memoria', { replace: true }); return; }
     apiPainel.get('/public/memoria/niveis')
       .then(res => setNiveis(res.data.niveis))
       .catch(err => {
-        if (err.response?.status === 401) navigate('/jogar/login', { replace: true });
+        if (err.response?.status === 401) navigate('/entrar?voltar=/jogar/memoria', { replace: true });
         else console.error('Erro ao carregar níveis da memória:', err);
       })
       .finally(() => setCarregando(false));

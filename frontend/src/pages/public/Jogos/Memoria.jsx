@@ -112,7 +112,7 @@ export default function Memoria() {
   }, [cfg, navigate]);
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/jogar/login', { replace: true }); return; }
+    if (!getPainelToken()) { navigate('/entrar?voltar=/jogar/memoria', { replace: true }); return; }
     if (!cfg) return;
     apiPainel.get('/public/memoria/niveis')
       .then(res => {
@@ -122,7 +122,7 @@ export default function Memoria() {
         if (info && !info.desbloqueado) navigate('/jogar/memoria', { replace: true });
       })
       .catch(err => {
-        if (err.response?.status === 401) navigate('/jogar/login', { replace: true });
+        if (err.response?.status === 401) navigate('/entrar?voltar=/jogar/memoria', { replace: true });
         else console.error('Erro ao carregar nível da memória:', err);
       })
       .finally(() => setCarregando(false));

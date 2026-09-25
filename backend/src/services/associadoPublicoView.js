@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { onlyDigits } = require('../utils/validators');
+const { situacaoDoAssociado } = require('./beneficioAssociado');
 
 // Mostra só os 3 primeiros e os 2 últimos dígitos — o acesso já é protegido
 // por token/sessão, isso aqui é só pra pessoa confirmar que é o cadastro
@@ -14,6 +15,7 @@ function maskCpfParcial(cpf) {
 // mantido por retrocompatibilidade) e /public/painel/me (sessão por
 // CPF + data de nascimento).
 async function montarViewAssociado(associado) {
+  const beneficio = await situacaoDoAssociado(associado.id);
   const empresaResult = associado.empresa_id
     ? await db.query('SELECT nome_fantasia, razao_social FROM sindicato_empresas WHERE id = $1', [associado.empresa_id])
     : null;
@@ -53,6 +55,9 @@ async function montarViewAssociado(associado) {
     // 'seci' | 'cliente' — só 'seci' tem carteirinha,
     // dependentes e preço de associado (ver useAssociadoSessao no front).
     tipo_acesso: associado.tipo_acesso,
+    // situação do benefício AGORA (validade + empresa em dia) — ver beneficioAssociado.js
+    beneficio,
+    eh_associado_ativo: beneficio?.situacao === 'ativo',
     dependentes: depResult.rows,
   };
 }

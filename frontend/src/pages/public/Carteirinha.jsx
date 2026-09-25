@@ -130,7 +130,11 @@ export default function Carteirinha() {
   }
 
   const validaAteYMD = dados.valida_ate ? dados.valida_ate.slice(0, 10) : null;
-  const vencida = !dados.ativo || !validaAteYMD || validaAteYMD < hojeYMD();
+  // legado (associado de antes do /criar-conta) não vence; pausado = carteirinha
+  // válida mas a empresa vinculada está devendo no SECI (situação vem do servidor).
+  const legado = Boolean(dados.legado) && dados.tipo !== 'dependente';
+  const vencida = !dados.ativo || (!legado && (!validaAteYMD || validaAteYMD < hojeYMD()));
+  const pausada = !vencida && dados.situacao === 'pausado';
   const ehDependente = dados.tipo === 'dependente';
   const categoriaLabel = CATEGORIA_LABEL[dados.categoria] || dados.categoria;
   const temDependentes = !ehDependente && dados.dependentes_count > 0;
@@ -172,11 +176,11 @@ export default function Carteirinha() {
             </div>
             <div
               className={`w-14 h-14 rounded-full flex items-center justify-center text-center leading-none font-bold uppercase flex-shrink-0 ${
-                vencida ? 'bg-red-500 text-white' : 'text-[#0B1F3A]'
+                vencida ? 'bg-red-500 text-white' : pausada ? 'bg-amber-400 text-[#0B1F3A]' : 'text-[#0B1F3A]'
               }`}
-              style={!vencida ? { backgroundColor: '#B8E62C' } : undefined}
+              style={!vencida && !pausada ? { backgroundColor: '#B8E62C' } : undefined}
             >
-              <span className={vencida ? 'text-[9px]' : 'text-[10px]'}>{vencida ? 'VENCIDO' : 'ATIVO'}</span>
+              <span className={vencida || pausada ? 'text-[9px]' : 'text-[10px]'}>{vencida ? 'VENCIDO' : pausada ? 'PAUSADO' : 'ATIVO'}</span>
             </div>
           </div>
 
@@ -243,13 +247,18 @@ export default function Carteirinha() {
               {vencida ? 'Válida até (expirada)' : 'Validade'}
             </p>
             <p className={`text-sm font-semibold mt-0.5 ${vencida ? 'text-red-600' : 'text-slate-800'}`}>
-              {fmtDataExtenso(dados.valida_ate) ? `Válida até ${fmtDataExtenso(dados.valida_ate)}` : '—'}
+              {legado ? 'Permanente' : fmtDataExtenso(dados.valida_ate) ? `Válida até ${fmtDataExtenso(dados.valida_ate)}` : '—'}
             </p>
           </div>
 
           {vencida && (
             <p className="text-center text-red-600 text-xs font-semibold bg-red-50 rounded-xl py-2.5 px-3">
-              Renovação pendente — procure o Sindicato
+              Renovação pendente — renove no seu painel IUB MAIS+ informando o CNPJ da empresa
+            </p>
+          )}
+          {pausada && (
+            <p className="text-center text-amber-700 text-xs font-semibold bg-amber-50 rounded-xl py-2.5 px-3">
+              Benefícios pausados — a empresa está com pendência no SECI
             </p>
           )}
 

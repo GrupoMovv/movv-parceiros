@@ -258,9 +258,9 @@ async function stats(req, res) {
       `SELECT
          COUNT(*) FILTER (WHERE ativo)::int AS total_associados_ativos,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL)::int AS emitidas,
-         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate >= CURRENT_DATE)::int AS ativas,
-         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS vencendo_15,
-         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate < CURRENT_DATE)::int AS vencidas,
+         COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NOT NULL AND (legado OR carteirinha_valida_ate >= CURRENT_DATE))::int AS ativas,
+         COUNT(*) FILTER (WHERE ativo AND NOT legado AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate >= CURRENT_DATE AND carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days')::int AS vencendo_15,
+         COUNT(*) FILTER (WHERE ativo AND NOT legado AND carteirinha_hash IS NOT NULL AND carteirinha_valida_ate < CURRENT_DATE)::int AS vencidas,
          COUNT(*) FILTER (WHERE ativo AND carteirinha_hash IS NULL)::int AS nao_geradas
        FROM sindicato_associados
        WHERE tipo_acesso = 'seci'`
@@ -329,9 +329,10 @@ async function stats(req, res) {
 
 const TIPOS_ASSOCIADO = {
   emitidas:    'a.ativo AND a.carteirinha_hash IS NOT NULL',
-  ativas:      'a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE',
-  vencendo:    "a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE AND a.carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days'",
-  vencidas:    'a.ativo AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate < CURRENT_DATE',
+  // legado (associados de antes do /criar-conta) não vence — decisão do Junior
+  ativas:      'a.ativo AND a.carteirinha_hash IS NOT NULL AND (a.legado OR a.carteirinha_valida_ate >= CURRENT_DATE)',
+  vencendo:    "a.ativo AND NOT a.legado AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate >= CURRENT_DATE AND a.carteirinha_valida_ate < CURRENT_DATE + INTERVAL '15 days'",
+  vencidas:    'a.ativo AND NOT a.legado AND a.carteirinha_hash IS NOT NULL AND a.carteirinha_valida_ate < CURRENT_DATE',
   nao_geradas: "a.ativo AND a.carteirinha_hash IS NULL AND a.tipo_acesso = 'seci'",
 };
 

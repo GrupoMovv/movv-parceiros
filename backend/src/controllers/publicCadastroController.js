@@ -128,7 +128,7 @@ async function loginPorHash(req, res) {
 
     const result = await db.query(
       `SELECT id FROM sindicato_associados
-       WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE`,
+       WHERE carteirinha_hash = $1 AND ativo = true AND (legado OR carteirinha_valida_ate >= CURRENT_DATE)`,
       [hash]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Carteirinha inválida ou expirada' });

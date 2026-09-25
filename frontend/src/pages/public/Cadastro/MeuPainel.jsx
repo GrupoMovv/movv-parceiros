@@ -12,6 +12,7 @@ import {
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
 import MascoteIubMais from '../../../components/MascoteIubMais';
 import { ehContaAssociado } from './MeuPainelLayout';
+import BlocoEmpresaSeci from './BlocoEmpresaSeci';
 
 const GOLD = '#D4AF37';
 
@@ -19,7 +20,7 @@ const GOLD = '#D4AF37';
 // dedicadas (MeuDados, MeuDependentes, MinhasCarteirinhas), o layout pai
 // (MeuPainelLayout) já cuida de auth + fetch, aqui só consome via contexto.
 export default function MeuPainel() {
-  const { dados } = useOutletContext();
+  const { dados, recarregar } = useOutletContext();
   const [reenviando, setReenviando] = useState(false);
   const [qtdParceiros, setQtdParceiros] = useState(null);
   const [podeJogarRoleta, setPodeJogarRoleta] = useState(false);
@@ -35,7 +36,7 @@ export default function MeuPainel() {
       const res = await apiPainel.post('/public/painel/reenviar-carteirinha');
       const nomeCurto = res.data.nome_completo.trim().split(/\s+/)[0];
       const urlTitular = publicCarteirinhaUrl(res.data.carteirinha_hash);
-      const urlPainel = `${window.location.origin}/cadastrar`;
+      const urlPainel = `${window.location.origin}/entrar?voltar=/meu`;
       const mensagem = montarMensagemCadastroPublico(urlTitular, urlPainel);
       if (!res.data.whatsapp) {
         toast.error('Cadastre seu WhatsApp em "Meus Dados" antes de reenviar');
@@ -51,9 +52,16 @@ export default function MeuPainel() {
 
   const primeiroNome = dados.nome_completo?.trim().split(/\s+/)[0] || '';
   const associado = ehContaAssociado(dados);
-  const selo = associado
-    ? { texto: dados.ativo ? 'ATIVO' : 'INATIVO', cls: dados.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' }
-    : { texto: 'CLIENTE IUB MAIS+', cls: 'bg-violet-100 text-violet-700' };
+  const SELOS = {
+    ativo: { texto: 'ATIVO', cls: 'bg-emerald-100 text-emerald-700' },
+    pausado: { texto: 'BENEFÍCIOS PAUSADOS', cls: 'bg-amber-100 text-amber-700' },
+    expirado: { texto: 'CARTEIRINHA VENCIDA', cls: 'bg-red-100 text-red-700' },
+    inativo: { texto: 'INATIVO', cls: 'bg-slate-100 text-slate-500' },
+    cliente: { texto: 'CLIENTE IUB MAIS+', cls: 'bg-violet-100 text-violet-700' },
+  };
+  // situação calculada no servidor (validade + empresa em dia); sem ela, a regra antiga
+  const selo = SELOS[dados.beneficio?.situacao] || (associado ? SELOS[dados.ativo ? 'ativo' : 'inativo'] : SELOS.cliente);
+  const beneficioAtivo = dados.eh_associado_ativo ?? associado;
 
   return (
     <div className="space-y-5">
@@ -66,6 +74,8 @@ export default function MeuPainel() {
           </div>
         </div>
       </div>
+
+      <BlocoEmpresaSeci dados={dados} recarregar={recarregar} />
 
       {podeJogarRoleta && (
         <Link
@@ -114,7 +124,7 @@ export default function MeuPainel() {
       </div>
 
       <Link
-        to={dados.carteirinha_hash ? `/marketplace?associado=${dados.carteirinha_hash}` : '/marketplace'}
+        to="/marketplace"
         className="block rounded-2xl p-4 text-white relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)' }}
       >
@@ -125,7 +135,7 @@ export default function MeuPainel() {
           <div className="min-w-0">
             <p className="font-black text-sm">🛍️ Marketplace IUB MAIS</p>
             <p className="text-white/85 text-xs mt-0.5">
-              {associado ? 'Compre com desconto exclusivo' : 'Ofertas'}{qtdParceiros ? ` em ${qtdParceiros} parceiros` : ''}!
+              {beneficioAtivo ? 'Compre com desconto exclusivo' : 'Ofertas'}{qtdParceiros ? ` em ${qtdParceiros} parceiros` : ''}!
             </p>
           </div>
         </div>

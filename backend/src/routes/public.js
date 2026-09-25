@@ -2,6 +2,7 @@ const router = require('express').Router();
 const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
+const { situacaoDoAssociado } = require('../services/beneficioAssociado');
 const produtoCtrl = require('../controllers/produtoPublicoController');
 const marketplaceHomeCtrl = require('../controllers/marketplaceHomeController');
 const promocaoCtrl = require('../controllers/promocaoPublicoController');
@@ -25,6 +26,7 @@ async function buscarCarteirinhaPorHash(hash) {
   );
   if (associadoResult.rows[0]) {
     const a = associadoResult.rows[0];
+    const beneficio = await situacaoDoAssociado(a.id);
     let dependentes = [];
     if (a.dependentes_count > 0) {
       const depsResult = await db.query(
@@ -50,6 +52,9 @@ async function buscarCarteirinhaPorHash(hash) {
       categoria: a.categoria_profissional,
       valida_ate: a.carteirinha_valida_ate,
       ativo: a.ativo,
+      // legado = sem validade; pausado = empresa vinculada devendo (ver beneficioAssociado.js)
+      legado: beneficio?.legado ?? false,
+      situacao: beneficio?.situacao ?? null,
       dependentes_count: a.dependentes_count,
       dependentes,
     };

@@ -1,27 +1,25 @@
 const db = require('../config/database');
 const { montarLinkWhatsapp } = require('../utils/whatsapp');
+const { associadoAtivoPorHash, situacaoDoAssociado } = require('../services/beneficioAssociado');
 
 function formatarPrecoBRL(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Benefício ativo (validade + empresa em dia, ou legado) — ver beneficioAssociado.js
 async function buscarAssociadoAtivoPorHash(hash) {
-  if (!hash) return null;
-  const r = await db.query(
-    `SELECT nome_completo, carteirinha_hash, tipo_acesso FROM sindicato_associados
-     WHERE carteirinha_hash = $1 AND ativo = true AND carteirinha_valida_ate >= CURRENT_DATE AND tipo_acesso = 'seci'`,
-    [hash]
-  );
-  return r.rows[0] || null;
+  const a = await associadoAtivoPorHash(hash);
+  return a ? { ...a, beneficio_ativo: true } : null;
 }
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
 
-// Conta logada que NÃO é associado SECI (conta 'cliente') paga o
-// preço normal e não se apresenta como associado pro parceiro. Visitante sem
-// login segue como antes (a mensagem já saía com o preço de associado).
+// Conta logada SEM benefício ativo (cliente, carteirinha vencida, empresa
+// devendo) paga o preço normal e não se apresenta como associado pro
+// parceiro. Visitante sem login segue como antes (a mensagem já saía com o
+// preço de associado).
 function montarMensagemGrupo(produtos, associado) {
-  const ehAssociadoSeci = associado?.tipo_acesso === 'seci' && Boolean(associado.carteirinha_hash);
+  const ehAssociadoSeci = Boolean(associado?.beneficio_ativo && associado.carteirinha_hash);
   const usaPrecoAssociado = !associado || ehAssociadoSeci;
   const linhas = ['Olá! Vi seus produtos no IUB Marketplace e tenho interesse em:', ''];
   let total = 0;
@@ -120,7 +118,9 @@ async function listar(req, res) {
       [req.painelAssociado.id]
     );
     const produtoIds = itensResult.rows.map(r => r.produto_id);
-    const { grupos, produtos_invalidos } = await montarGrupos(produtoIds, req.painelAssociado);
+    const situacao = await situacaoDoAssociado(req.painelAssociado.id);
+    const associado = { ...req.painelAssociado, beneficio_ativo: situacao?.situacao === 'ativo' };
+    const { grupos, produtos_invalidos } = await montarGrupos(produtoIds, associado);
     return res.json({ grupos, produtos_invalidos });
   } catch (err) {
     console.error(err);

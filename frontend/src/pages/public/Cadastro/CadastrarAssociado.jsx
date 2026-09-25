@@ -208,7 +208,7 @@ export default function CadastrarAssociado() {
               emoji="🚀" titulo="Quero ser associado individual"
               texto="Sem vínculo com empresa parceira"
               botao="Continuar" cor="white"
-              onClick={() => navigate('/cadastrar')}
+              onClick={() => navigate('/criar-conta')}
             />
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function CadastrarAssociado() {
           </button>
 
           <p className="text-center text-xs text-slate-400">
-            Não tem empresa parceira? <Link to="/cadastrar" className="underline font-semibold">Vire associado individual</Link>
+            Não tem empresa parceira? <Link to="/criar-conta" className="underline font-semibold">Vire associado individual</Link>
           </p>
         </div>
       </PageShell>

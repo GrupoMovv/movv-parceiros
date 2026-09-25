@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, CheckCircle2,
 } from 'lucide-react';
@@ -10,7 +10,6 @@ import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useCarrinho } from './CarrinhoContext';
-import ModalLoginAssociado from './components/ModalLoginAssociado';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -18,7 +17,9 @@ function formatarPreco(v) {
 
 export default function ProdutoDetalhe() {
   const { id } = useParams();
-  const { associado, ehAssociadoSeci, recarregar: recarregarAssociado } = useAssociadoSessao();
+  const { associado, ehAssociadoSeci } = useAssociadoSessao();
+  const navigate = useNavigate();
+  const location = useLocation();
   const associadoHash = associado?.carteirinha_hash || null;
 
   const [produto, setProduto] = useState(null);
@@ -28,7 +29,6 @@ export default function ProdutoDetalhe() {
   const [fotoAtiva, setFotoAtiva] = useState(0);
   const [descricaoExpandida, setDescricaoExpandida] = useState(false);
   const [carregandoWhatsapp, setCarregandoWhatsapp] = useState(false);
-  const [modalLoginAberto, setModalLoginAberto] = useState(false);
   const { alternar: alternarFavorito, ehFavorito } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
   const { adicionar: adicionarCarrinho, remover: removerCarrinho, estaNoCarrinho } = useCarrinho();
 
@@ -203,13 +203,15 @@ export default function ProdutoDetalhe() {
                     <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(produto.preco_associado)} <span className="font-normal">(economize {formatarPreco(economia)})</span>
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <button
-                      type="button" onClick={() => setModalLoginAberto(true)}
-                      className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
-                    >
-                      Sou associado — Fazer login
-                    </button>
-                    <Link to="/cadastrar" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
+                    {!associado && (
+                      <button
+                        type="button" onClick={() => navigate(`/entrar?voltar=${encodeURIComponent(location.pathname)}`)}
+                        className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
+                      >
+                        Sou associado — Fazer login
+                      </button>
+                    )}
+                    <Link to={associado ? '/meu' : '/criar-conta'} className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
                       Quero ser associado
                     </Link>
                   </div>
@@ -318,15 +320,17 @@ export default function ProdutoDetalhe() {
       )}
 
       {/* cta rodape */}
+      {!ehAssociadoSeci && (
       <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-10">
         <div className="rounded-2xl p-6 text-center text-white" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
-          <p className="font-bold text-lg">Ainda não é associado SECI?</p>
-          <p className="text-white/80 text-sm mt-1">Faça sua carteirinha grátis e economize em todos os parceiros!</p>
-          <Link to="/cadastrar" className="inline-block mt-4 text-sm font-bold px-6 py-3 rounded-xl" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
-            Fazer minha carteirinha
+          <p className="font-bold text-lg">Trabalha no comércio?</p>
+          <p className="text-white/80 text-sm mt-1">Se sua empresa é associada ao SECI, você ganha preço de associado em todos os parceiros.</p>
+          <Link to={associado ? '/meu' : '/criar-conta'} className="inline-block mt-4 text-sm font-bold px-6 py-3 rounded-xl" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+            {associado ? 'Informar o CNPJ da empresa' : 'Criar minha conta grátis'}
           </Link>
         </div>
       </div>
+      )}
 
       {/* whatsapp fixo mobile */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40">
@@ -342,12 +346,6 @@ export default function ProdutoDetalhe() {
         </button>
       </div>
 
-      {modalLoginAberto && (
-        <ModalLoginAssociado
-          onClose={() => setModalLoginAberto(false)}
-          onLoginSuccess={() => { recarregarAssociado(); setModalLoginAberto(false); }}
-        />
-      )}
     </div>
   );
 }

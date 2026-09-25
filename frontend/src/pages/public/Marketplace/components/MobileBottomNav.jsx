@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { House, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
 import { ROXO } from '../theme';
-import ModalEntrar from './ModalEntrar';
 import { useCarrinho } from '../CarrinhoContext';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
 import { getPainelToken } from '../../../../services/apiPainel';
@@ -10,7 +8,6 @@ import { getPainelToken } from '../../../../services/apiPainel';
 // Menu inferior fixo só no mobile — atalho de uma mão pras 4 ações mais
 // usadas, sem precisar rolar até o topo pra achar a navbar.
 export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
-  const [modalAberto, setModalAberto] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const emCasa = location.pathname === '/marketplace';
@@ -49,7 +46,7 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
             embaixo), e Jogar (Roleta + Memória, cupom diário) é o
             diferencial do IUB MAIS+ que merecia mais destaque. */}
         <Link
-          to={getPainelToken() ? '/jogar' : '/jogar/login'}
+          to={getPainelToken() ? '/jogar' : '/entrar?voltar=/jogar'}
           className="flex-1 flex flex-col items-center justify-center gap-0.5"
         >
           <span className="text-xl leading-none">🎡</span>
@@ -82,14 +79,13 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
             <span className="text-[10px] font-medium" style={{ color: ROXO }}>Perfil</span>
           </Link>
         ) : (
-          <button type="button" onClick={() => setModalAberto(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <Link to="/acesso" className="flex-1 flex flex-col items-center justify-center gap-0.5">
             <UserCircle size={20} color="#94A3B8" />
-            <span className="text-[10px] font-medium text-slate-400">Perfil</span>
-          </button>
+            <span className="text-[10px] font-medium text-slate-400">Logar</span>
+          </Link>
         )}
       </nav>
 
-      {modalAberto && <ModalEntrar onClose={() => setModalAberto(false)} onLoginSuccess={onLoginSuccess} />}
     </>
   );
 }

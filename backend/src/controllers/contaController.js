@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
-const { onlyDigits, isValidCPF } = require('../utils/validators');
+const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
+const { consultarDocumento } = require('../services/baseSeciService');
+const { situacaoDoAssociado } = require('../services/beneficioAssociado');
 const { conferirNascimento } = require('../services/segundoFatorNascimento');
 const { gerarTokenPainel } = require('../middleware/painelPublicoAuth');
 const { gerarHashUnico, calcularValidoAte } = require('./sindicatoCarteirinhaController');
@@ -170,4 +172,231 @@ async function primeiroAcesso(req, res) {
   }
 }
 
-module.exports = { login, primeiroAcesso, SENHA_MIN };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function limpar(v, max) {
+  const s = String(v ?? '').trim().replace(/\s+/g, ' ');
+  return s ? s.slice(0, max) : '';
+}
+
+function idadeValida(iso) {
+  if (!dataNascimentoValida(iso)) return false;
+  const anos = (Date.now() - new Date(`${iso}T12:00:00Z`).getTime()) / (365.25 * 24 * 3600 * 1000);
+  return anos >= 14 && anos <= 110;
+}
+
+// Os 4 cenários do cadastro (e do bloco "empresa" do /meu), decididos
+// sozinhos pela Base SECI — a pessoa nunca escolhe "sou associado":
+//   associado       CNPJ informado em dia, ou o próprio CPF é filiado em dia
+//   pendencia       CNPJ (ou o CPF filiado) está na base, mas devendo
+//   nao_encontrada  CNPJ informado não está na base
+//   cliente         não informou CNPJ e o CPF não é filiado
+async function classificarVinculo({ cpfDigits, cnpjDigits }) {
+  const empresa = cnpjDigits ? await consultarDocumento(cnpjDigits) : null;
+  if (empresa?.em_dia) return { cenario: 'associado', vinculo: empresa };
+  const filiado = await consultarDocumento(cpfDigits);
+  if (filiado?.em_dia) return { cenario: 'associado', vinculo: filiado };
+  if (cnpjDigits) {
+    return empresa
+      ? { cenario: 'pendencia', sinalizar: { doc: cnpjDigits, nomeEmpresa: empresa.nome_fantasia || empresa.razao_social } }
+      : { cenario: 'nao_encontrada', sinalizar: { doc: cnpjDigits, nomeEmpresa: null } };
+  }
+  if (filiado) return { cenario: 'pendencia', sinalizar: { doc: cpfDigits, nomeEmpresa: null } };
+  return { cenario: 'cliente' };
+}
+
+const MENSAGEM_SINALIZACAO = {
+  pendencia: 'Cadastro no IUB MAIS+ — empresa/filiado com PENDÊNCIA na Base SECI. Entrar em contato pra regularizar.',
+  nao_encontrada: 'Cadastro no IUB MAIS+ — CNPJ NÃO ENCONTRADO na Base SECI. Entrar em contato pra verificar a associação.',
+};
+
+// Avisa o Sindicato em /sindicato/solicitacoes. Não repete se a mesma
+// pessoa já tem aviso pendente pro mesmo documento (tentativas no /meu).
+async function sinalizarSindicato(client, { associadoId, nome, whatsapp, cenario, sinalizar, origem }) {
+  const jaTem = await client.query(
+    `SELECT 1 FROM sindicato_solicitacoes_empresa
+     WHERE associado_id = $1 AND cnpj_digitado = $2 AND status = 'pendente' LIMIT 1`,
+    [associadoId, sinalizar.doc]
+  );
+  if (jaTem.rows[0]) return;
+  await client.query(
+    `INSERT INTO sindicato_solicitacoes_empresa
+       (cnpj_digitado, nome_solicitante, whatsapp_solicitante, nome_empresa, mensagem, associado_id, origem, motivo)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [sinalizar.doc, nome, whatsapp, sinalizar.nomeEmpresa, MENSAGEM_SINALIZACAO[cenario], associadoId, origem, cenario]
+  );
+}
+
+function ipDe(req) {
+  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim() || null;
+}
+
+function validarCadastro(b) {
+  const d = {
+    nome: limpar(b.nome_completo, 255),
+    cpf: onlyDigits(b.cpf),
+    nasc: b.data_nascimento,
+    zap: onlyDigits(b.whatsapp),
+    email: limpar(b.email, 255).toLowerCase(),
+    cep: onlyDigits(b.cep),
+    endereco: limpar(b.endereco, 255),
+    numero: limpar(b.numero, 20),
+    bairro: limpar(b.bairro, 120),
+    cidade: limpar(b.cidade, 120),
+    estado: limpar(b.estado || 'GO', 2).toUpperCase(),
+    cnpj: onlyDigits(b.cnpj) || null,
+    senha: String(b.senha || ''),
+  };
+  const erro = (campo, error) => ({ erro: { error, campo } });
+  if (d.nome.length < 3 || !d.nome.includes(' ')) return erro('nome_completo', 'Digite seu nome completo (nome e sobrenome).');
+  if (!isValidCPF(d.cpf)) return erro('cpf', 'CPF inválido.');
+  if (!idadeValida(d.nasc)) return erro('data_nascimento', 'Data de nascimento inválida.');
+  if (d.zap.length < 10 || d.zap.length > 11) return erro('whatsapp', 'WhatsApp inválido — use DDD + número.');
+  if (!EMAIL_RE.test(d.email)) return erro('email', 'E-mail inválido.');
+  if (d.cep.length !== 8) return erro('cep', 'CEP inválido — são 8 números.');
+  if (d.endereco.length < 3) return erro('endereco', 'Digite a rua.');
+  if (!d.numero) return erro('numero', 'Digite o número (ou S/N).');
+  if (d.bairro.length < 2) return erro('bairro', 'Digite o bairro.');
+  if (d.cidade.length < 2) return erro('cidade', 'Digite a cidade.');
+  if (!/^[A-Z]{2}$/.test(d.estado)) return erro('estado', 'Estado inválido.');
+  if (d.cnpj && (d.cnpj.length !== 14 || !isValidCNPJ(d.cnpj))) return erro('cnpj', 'CNPJ inválido — confira ou deixe em branco.');
+  if (d.senha.length < SENHA_MIN) return erro('senha', `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`);
+  return { dados: d };
+}
+
+// POST /api/public/conta/criar — cadastro único ("grátis pra todos").
+async function criar(req, res) {
+  try {
+    const { erro, dados: d } = validarCadastro(req.body || {});
+    if (erro) return res.status(400).json(erro);
+    const aceite = req.body.aceite_novidades === true;
+    const senhaHash = await bcrypt.hash(d.senha, 10);
+
+    const existente = (await db.query('SELECT * FROM sindicato_associados WHERE cpf = $1', [d.cpf])).rows[0];
+    if (existente) {
+      if (existente.senha_hash) return res.status(409).json({ error: 'Este CPF já tem conta. É só entrar.', code: 'JA_TEM_CONTA' });
+      // Associado antigo que caiu no "criar conta": a data de nascimento do
+      // formulário prova que é ele (mesmo bloqueio do primeiro acesso) e o
+      // cadastro dele ganha senha + dados novos. Continua associado.
+      if (!existente.ativo) return res.status(403).json({ error: 'Seu cadastro está desativado. Fale com o Sindicato pelo WhatsApp.', code: 'INATIVO' });
+      if (!existente.data_nascimento) {
+        return res.status(409).json({ error: 'Você já é associado, mas seu cadastro está sem data de nascimento. Fale com o Sindicato pelo WhatsApp que a gente libera.', code: 'SEM_NASCIMENTO' });
+      }
+      const conferencia = await conferirNascimento(existente, d.nasc);
+      if (!conferencia.ok) {
+        return res.status(conferencia.status).json({
+          ...conferencia.body,
+          ...(conferencia.status === 401 && { error: 'Você já é associado! Mas a data de nascimento não confere com o cadastro do Sindicato.', campo: 'data_nascimento' }),
+        });
+      }
+      const precisaCarteirinha = existente.tipo_acesso === 'seci' && !existente.carteirinha_hash;
+      const hash = precisaCarteirinha ? await gerarHashUnico('sindicato_associados') : existente.carteirinha_hash;
+      await db.query(
+        `UPDATE sindicato_associados
+         SET senha_hash = $1, senha_definida_em = NOW(), whatsapp = $2, email = $3, cep = $4, endereco = $5,
+             numero = $6, bairro = $7, cidade = $8, estado = $9,
+             carteirinha_hash = $10,
+             carteirinha_valida_ate = CASE WHEN $11 THEN $12::date ELSE carteirinha_valida_ate END,
+             carteirinha_gerada_em = CASE WHEN $11 THEN NOW() ELSE carteirinha_gerada_em END,
+             edit_token = COALESCE(edit_token, $13), updated_at = NOW()
+         WHERE id = $14`,
+        [senhaHash, d.zap, d.email, d.cep, d.endereco, d.numero, d.bairro, d.cidade, d.estado,
+          hash, precisaCarteirinha, calcularValidoAte(), await gerarEditTokenUnico(), existente.id]
+      );
+      return res.json({
+        token: gerarTokenPainel(existente.id), nome_curto: primeiroNome(existente.nome_completo),
+        cpf_parcial: maskCpfParcial(d.cpf), cenario: 'associado_antigo',
+      });
+    }
+
+    const { cenario, vinculo, sinalizar } = await classificarVinculo({ cpfDigits: d.cpf, cnpjDigits: d.cnpj });
+    const ehAssociado = cenario === 'associado';
+    const hash = ehAssociado ? await gerarHashUnico('sindicato_associados') : null;
+    const editToken = await gerarEditTokenUnico();
+    const empresaNome = ehAssociado && vinculo.tipo_documento === 'cnpj' ? (vinculo.nome_fantasia || vinculo.razao_social) : null;
+
+    const conta = await db.transacao(async (client) => {
+      const ins = await client.query(
+        `INSERT INTO sindicato_associados
+           (external_id, nome_completo, cpf, data_nascimento, whatsapp, email, cep, endereco, numero, bairro, cidade, estado,
+            tipo_acesso, legado, empresa_seci_id, empresa_nome_livre, senha_hash, senha_definida_em, edit_token,
+            receber_whatsapp, consent_at, consent_ip,
+            carteirinha_hash, carteirinha_gerada_em, carteirinha_valida_ate)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                 $13, false, $14, $15, $16, NOW(), $17,
+                 $18, $19, $20,
+                 $21, CASE WHEN $21::varchar IS NULL THEN NULL ELSE NOW() END, $22)
+         RETURNING id, nome_completo`,
+        [
+          `CONTA-${Date.now()}-${d.cpf.slice(-4)}`, d.nome, d.cpf, d.nasc, d.zap, d.email, d.cep, d.endereco, d.numero,
+          d.bairro, d.cidade, d.estado,
+          ehAssociado ? 'seci' : 'cliente', ehAssociado ? vinculo.id : null, empresaNome, senhaHash, editToken,
+          aceite, aceite ? new Date() : null, aceite ? ipDe(req) : null,
+          hash, ehAssociado ? calcularValidoAte() : null,
+        ]
+      );
+      const nova = ins.rows[0];
+      if (sinalizar) {
+        await sinalizarSindicato(client, { associadoId: nova.id, nome: d.nome, whatsapp: d.zap, cenario, sinalizar, origem: 'criar_conta' });
+      }
+      return nova;
+    });
+
+    return res.status(201).json({
+      token: gerarTokenPainel(conta.id), nome_curto: primeiroNome(conta.nome_completo), cpf_parcial: maskCpfParcial(d.cpf),
+      cenario, empresa_nome: empresaNome || sinalizar?.nomeEmpresa || null,
+    });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Este CPF já tem conta. É só entrar.', code: 'JA_TEM_CONTA' });
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos criar sua conta agora. Tente de novo em instantes.' });
+  }
+}
+
+// POST /api/public/painel/empresa { cnpj? } — bloco do /meu: cliente ATIVA
+// o desconto informando o CNPJ; associado RENOVA (+6 meses a partir de hoje)
+// ou troca de empresa. Sem CNPJ, tenta pelo próprio CPF (filiado pessoa
+// física). Nunca rebaixa ninguém: CNPJ devendo / fora da base só avisa o
+// Sindicato. Legado não vence, não precisa.
+async function vincularEmpresa(req, res) {
+  try {
+    const a = req.painelAssociado;
+    if (a.tipo_acesso === 'seci' && a.legado) {
+      return res.status(400).json({ error: 'Sua carteirinha é permanente — não precisa renovar.', code: 'LEGADO' });
+    }
+    const cnpj = onlyDigits(req.body?.cnpj) || null;
+    if (cnpj && (cnpj.length !== 14 || !isValidCNPJ(cnpj))) return res.status(400).json({ error: 'CNPJ inválido — confira os números.', campo: 'cnpj' });
+
+    const { cenario, vinculo, sinalizar } = await classificarVinculo({ cpfDigits: a.cpf, cnpjDigits: cnpj });
+    if (cenario === 'cliente') return res.status(400).json({ error: 'Informe o CNPJ da empresa onde você trabalha.', campo: 'cnpj' });
+
+    if (cenario === 'associado') {
+      const eraAssociado = a.tipo_acesso === 'seci';
+      const hash = a.carteirinha_hash || await gerarHashUnico('sindicato_associados');
+      const empresaNome = vinculo.tipo_documento === 'cnpj' ? (vinculo.nome_fantasia || vinculo.razao_social) : a.empresa_nome_livre;
+      await db.query(
+        `UPDATE sindicato_associados
+         SET tipo_acesso = 'seci', empresa_seci_id = $1, empresa_nome_livre = $2,
+             carteirinha_hash = $3, carteirinha_gerada_em = COALESCE(carteirinha_gerada_em, NOW()),
+             carteirinha_valida_ate = $4, updated_at = NOW()
+         WHERE id = $5`,
+        [vinculo.id, empresaNome, hash, calcularValidoAte(), a.id]
+      );
+      return res.json({
+        cenario: eraAssociado ? 'renovado' : 'ativado',
+        empresa_nome: vinculo.tipo_documento === 'cnpj' ? empresaNome : null,
+        beneficio: await situacaoDoAssociado(a.id),
+      });
+    }
+
+    await db.transacao(client => sinalizarSindicato(client, {
+      associadoId: a.id, nome: a.nome_completo, whatsapp: a.whatsapp, cenario, sinalizar, origem: 'meu',
+    }));
+    return res.json({ cenario, empresa_nome: sinalizar.nomeEmpresa });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos verificar agora. Tente de novo em instantes.' });
+  }
+}
+
+module.exports = { login, primeiroAcesso, criar, vincularEmpresa, SENHA_MIN };

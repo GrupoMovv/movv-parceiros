@@ -3,6 +3,7 @@ const multer = require('multer');
 const { simpleRateLimit } = require('../middleware/rateLimit');
 const { authenticatePainelPublico } = require('../middleware/painelPublicoAuth');
 const ctrl = require('../controllers/publicPainelController');
+const contaCtrl = require('../controllers/contaController');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -28,6 +29,8 @@ const somenteAssociadoSeci = (req, res, next) => {
 router.get('/me',    ctrl.getMe);
 router.put('/me',    ctrl.updateMe);
 router.put('/perfil', ctrl.updateMe);
+// Ativar desconto (cliente) / renovar carteirinha (associado) pelo CNPJ.
+router.post('/empresa', contaCtrl.vincularEmpresa);
 router.post('/reenviar-carteirinha', somenteAssociadoSeci, ctrl.reenviarCarteirinha);
 router.post('/foto', upload.single('foto'), ctrl.uploadFoto);
 router.post('/dependentes',              somenteAssociadoSeci, ctrl.updateDependentes);

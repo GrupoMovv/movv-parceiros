@@ -109,6 +109,12 @@ export default function SindicatoSolicitacoes() {
                     {s.nome_empresa || 'Empresa não informada'} · CNPJ {fmtCnpj(s.cnpj_digitado)}
                     {s.cargo && ` · ${s.cargo}`}
                   </p>
+                  {s.motivo && (
+                    <span className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${s.motivo === 'pendencia' ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>
+                      {s.motivo === 'pendencia' ? '⚠️ Empresa com pendência' : '💡 Não está na Base SECI'}
+                      {' · '}{s.origem === 'meu' ? 'informou no painel' : 'cadastro no IUB MAIS+'}
+                    </span>
+                  )}
                   {s.mensagem && <p className="text-slate-400 text-xs mt-1 italic">"{s.mensagem}"</p>}
                   <p className="text-slate-400 text-xs mt-1">
                     {fmtDataHora(s.created_at)}
