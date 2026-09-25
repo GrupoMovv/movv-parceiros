@@ -29,6 +29,17 @@ export default function Acesso() {
         onClick={() => navigate('/criar-conta')}
         fundo={DOURADO} borda="#D99F00" texto={PRETO} fundoBotao={PRETO} corBotao="#FFFFFF"
       />
+
+      {/* Empresa que quer vender no IUB MAIS+ (parceiro) é outro cadastro —
+          fica separado das contas de pessoa, mas visível pra empresa não se
+          sentir esquecida. */}
+      <p className="text-center text-white/70 text-sm font-semibold mt-8 mb-3">É empresa e quer vender no IUB MAIS+?</p>
+      <Opcao
+        emoji="🏪" titulo="TENHO UMA EMPRESA" rotulo="CADASTRAR MINHA EMPRESA"
+        linhas={['Cadastre grátis no IUB MAIS+']}
+        onClick={() => navigate('/vender')}
+        fundo="#FFFFFF" borda="#E9D5FF" texto={PRETO} fundoBotao={ROXO} corBotao="#FFFFFF"
+      />
     </CascaAcesso>
   );
 }

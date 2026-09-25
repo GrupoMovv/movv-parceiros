@@ -416,14 +416,29 @@ function mascararWhatsapp(d) {
   return s.length >= 10 ? `(${s.slice(0, 2)}) *****-${s.slice(-4)}` : '*****';
 }
 
-// POST /api/public/conta/esqueci-senha  { login: CPF ou WhatsApp, cpf? }
-// Manda um código de 6 dígitos pro WhatsApp da conta. Se o número digitado
-// é WhatsApp de mais de uma conta (família no mesmo celular), pede o CPF.
+// Contas cujo WhatsApp é esse número (com e sem o 9 — ver variantesWhatsapp).
+async function buscarContasPorWhatsapp(numero) {
+  const d = onlyDigits(numero);
+  if (d.length !== 10 && d.length !== 11) return null;
+  const r = await db.query(
+    `SELECT id, nome_completo, cpf, whatsapp, ativo, senha_hash
+     FROM sindicato_associados WHERE whatsapp = ANY($1::varchar[])`,
+    [variantesWhatsapp(d)]
+  );
+  return r.rows.map(c => ({ ...c, via: 'whatsapp' }));
+}
+
+// POST /api/public/conta/esqueci-senha  { whatsapp, cpf? }
+// Só pelo WhatsApp: é pra lá que o código vai, então a pessoa digita o
+// número em que vai receber. Se o número é de mais de uma conta (família no
+// mesmo celular), pede o CPF. (`login` aceito por compatibilidade.)
 async function esqueciSenha(req, res) {
   try {
-    const contas = await buscarContas(req.body?.login);
-    if (!contas) return res.status(400).json({ error: 'Digite seu CPF ou seu WhatsApp com DDD.', campo: 'login' });
-    if (contas.length === 0) return res.status(404).json({ error: 'Não encontramos conta com esse CPF ou WhatsApp.', code: 'NAO_ENCONTRADO' });
+    const contas = await buscarContasPorWhatsapp(req.body?.whatsapp ?? req.body?.login);
+    if (!contas) return res.status(400).json({ error: 'Digite seu WhatsApp com DDD.', campo: 'whatsapp' });
+    if (contas.length === 0) {
+      return res.status(404).json({ error: 'Não encontramos conta com esse WhatsApp. Se você já é associado e nunca entrou com senha, faça o primeiro acesso.', code: 'NAO_ENCONTRADO' });
+    }
 
     let alvo = contas.filter(c => c.senha_hash);
     if (alvo.length === 0) {
