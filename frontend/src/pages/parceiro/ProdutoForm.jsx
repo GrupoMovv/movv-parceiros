@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { X, Loader2, Star, Lightbulb, Check, Send, Plus } from 'lucide-react';
+import { X, Loader2, Star, Lightbulb, Check, Send, Plus, Trash2 } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
@@ -50,6 +50,9 @@ export default function ParceiroProdutoForm() {
   const [publicado, setPublicado] = useState(null);
   const [ajudaAssociado, setAjudaAssociado] = useState(false);
   const secaoFotosRef = useRef(null);
+  const arrastandoRef = useRef(null); // índice da foto sendo arrastada (desktop)
+  const [alvoArraste, setAlvoArraste] = useState(null);
+  const [fotoAmpliada, setFotoAmpliada] = useState(null); // url em tela cheia
   const pendentesRef = useRef(pendentes);
   pendentesRef.current = pendentes;
   const fotoDaIAPreviewRef = useRef(fotoDaIAPreview);
@@ -316,7 +319,28 @@ export default function ParceiroProdutoForm() {
     }
   }
 
+  // Tira a foto de `de` e põe em `para` (as do meio andam uma casa) —
+  // ⭐ Principal é mover(i, 0). Otimista: a grade muda na hora e volta se
+  // o servidor recusar. A primeira é a que aparece nas vitrines (fotos[0]).
+  async function moverFoto(de, para) {
+    if (de === para || de == null) return;
+    const anterior = fotos;
+    const nova = [...fotos];
+    const [foto] = nova.splice(de, 1);
+    nova.splice(para, 0, foto);
+    setFotos(nova);
+    try {
+      const res = await apiParceiro.put(`/parceiro/produtos/${produtoId}/fotos/ordem`, { urls: nova.map(f => f.url) });
+      setFotos(res.data.fotos);
+      if (para === 0) toast.success('Foto principal trocada!');
+    } catch (err) {
+      setFotos(anterior);
+      toast.error(err.response?.data?.error || 'Erro ao reordenar fotos');
+    }
+  }
+
   async function removerFoto(index) {
+    if (!window.confirm('Excluir esta foto?')) return;
     try {
       const res = await apiParceiro.delete(`/parceiro/produtos/${produtoId}/fotos/${index}`);
       setFotos(res.data.fotos);
@@ -432,17 +456,47 @@ export default function ParceiroProdutoForm() {
 
               {/* fotos ja enviadas de verdade */}
               {fotos.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mt-4">
+                <>
+                <p className="text-[11px] text-slate-400 mt-4 mb-2">
+                  {fotos.length > 1 ? 'A primeira é a principal (aparece na vitrine). Arraste pra mudar a ordem ou toque em ⭐ pra tornar principal. Toque na foto pra ver em tela cheia.' : 'Toque na foto pra ver em tela cheia.'}
+                </p>
+                <div className="grid grid-cols-3 gap-3">
                   {fotos.map((foto, i) => (
-                    <div key={foto.url} className={`relative rounded-xl overflow-hidden aspect-square border group ${i === 0 ? 'ring-2' : 'border-slate-100'}`} style={i === 0 ? { '--tw-ring-color': ROXO } : {}}>
-                      <img src={foto.url} alt="" className="w-full h-full object-cover" />
-                      {i === 0 && <span className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: ROXO }}>Principal</span>}
-                      <button type="button" onClick={() => removerFoto(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X className="w-3 h-3 text-red-600" />
+                    <div
+                      key={foto.url}
+                      draggable={fotos.length > 1}
+                      onDragStart={e => { arrastandoRef.current = i; e.dataTransfer.effectAllowed = 'move'; }}
+                      onDragOver={e => { if (arrastandoRef.current == null) return; e.preventDefault(); setAlvoArraste(i); }}
+                      onDragLeave={() => setAlvoArraste(a => (a === i ? null : a))}
+                      onDrop={e => { e.preventDefault(); const de = arrastandoRef.current; arrastandoRef.current = null; setAlvoArraste(null); moverFoto(de, i); }}
+                      onDragEnd={() => { arrastandoRef.current = null; setAlvoArraste(null); }}
+                      className={`relative rounded-xl overflow-hidden aspect-square border ${i === 0 ? 'ring-2' : 'border-slate-100'} ${fotos.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''} ${alvoArraste === i ? 'outline outline-2 outline-dashed outline-offset-2 outline-amber-400' : ''}`}
+                      style={i === 0 ? { '--tw-ring-color': ROXO } : {}}
+                    >
+                      {/* img (não <button>): no Firefox arrastar a partir de um botão não inicia o drag */}
+                      <img
+                        src={foto.url} alt={`Foto ${i + 1} — toque pra ver em tela cheia`} draggable={false}
+                        role="button" tabIndex={0}
+                        onClick={() => setFotoAmpliada(foto.url)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFotoAmpliada(foto.url); } }}
+                        className={`w-full h-full object-cover ${fotos.length > 1 ? '' : 'cursor-zoom-in'}`}
+                      />
+                      {i === 0
+                        ? <span className="absolute top-1 left-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full text-white pointer-events-none" style={{ backgroundColor: ROXO }}>Principal</span>
+                        : <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px] font-bold flex items-center justify-center pointer-events-none">{i + 1}</span>}
+                      <button type="button" onClick={() => removerFoto(i)} aria-label="Excluir foto" title="Excluir foto" className="absolute top-1 right-1 w-7 h-7 rounded-full bg-white/90 shadow flex items-center justify-center">
+                        <Trash2 className="w-3.5 h-3.5 text-red-600" />
                       </button>
+                      {i > 0 && (
+                        <button type="button" onClick={() => moverFoto(i, 0)} title="Definir como principal"
+                          className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1 rounded-lg bg-white/90 shadow" style={{ color: ROXO }}>
+                          <Star className="w-3 h-3" fill={DOURADO} color={DOURADO} /> Principal
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
+                </>
               )}
 
               {/* pendentes: preview local antes de confirmar o envio */}
@@ -583,6 +637,15 @@ export default function ParceiroProdutoForm() {
           </div>
         </div>
       </div>
+
+      {fotoAmpliada && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90" onClick={() => setFotoAmpliada(null)} role="dialog" aria-modal="true" aria-label="Foto em tela cheia">
+          <img src={fotoAmpliada} alt="" className="max-w-full max-h-full object-contain rounded-lg" />
+          <button type="button" onClick={() => setFotoAmpliada(null)} aria-label="Fechar" className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+            <X className="w-5 h-5 text-slate-700" />
+          </button>
+        </div>
+      )}
 
       {publicado && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={() => setPublicado(null)}>

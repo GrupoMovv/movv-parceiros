@@ -275,4 +275,29 @@ async function deleteFoto(req, res) {
   }
 }
 
-module.exports = { list, getOne, create, update, remover, toggleStatus, uploadFotos, deleteFoto };
+// Mesmo contrato do reordenarFotos do perfil: urls na nova ordem, a
+// primeira vira a principal (vitrines leem fotos[0]).
+async function reordenarFotos(req, res) {
+  try {
+    const produto = await buscarProdutoDoParceiro(req.params.id, req.parceiro.id);
+    if (!produto) return res.status(404).json({ error: 'Produto não encontrado' });
+
+    const { urls } = req.body;
+    if (!Array.isArray(urls)) return res.status(400).json({ error: 'urls (array) é obrigatório' });
+
+    const fotos = produto.fotos || [];
+    const porUrl = new Map(fotos.map(f => [f.url, f]));
+    if (urls.length !== fotos.length || new Set(urls).size !== urls.length || !urls.every(u => porUrl.has(u))) {
+      return res.status(400).json({ error: 'Lista de fotos não confere — recarregue a página' });
+    }
+
+    const reordenadas = urls.map((u, i) => ({ ...porUrl.get(u), ordem: i + 1 }));
+    const result = await db.query('UPDATE sindicato_parceiro_produtos SET fotos = $1 WHERE id = $2 RETURNING *', [JSON.stringify(reordenadas), produto.id]);
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao reordenar fotos' });
+  }
+}
+
+module.exports = { list, getOne, create, update, remover, toggleStatus, uploadFotos, deleteFoto, reordenarFotos };

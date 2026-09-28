@@ -44,6 +44,7 @@ router.put('/:id',  ctrl.update);
 router.delete('/:id', ctrl.remover);
 router.put('/:id/toggle-status', ctrl.toggleStatus);
 router.post('/:id/fotos', upload.array('fotos', 3), ctrl.uploadFotos);
+router.put('/:id/fotos/ordem', ctrl.reordenarFotos);
 router.delete('/:id/fotos/:index', ctrl.deleteFoto);
 
 // eslint-disable-next-line no-unused-vars
