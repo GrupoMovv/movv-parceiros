@@ -4,7 +4,7 @@ const db = require('../config/database');
 const { gerarTokenParceiro } = require('../middleware/parceiroAuth');
 const { enviarRecuperacaoSenhaParceiro } = require('../services/emailService');
 const { planoEfetivo } = require('../config/planos');
-const { ehRestaurante } = require('../utils/categorias');
+const { ehRestaurante, ehBebidas } = require('../utils/categorias');
 
 const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 
@@ -18,7 +18,7 @@ const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
 // parceiro.plano e confia. Endpoints que enforçam limite continuam usando
 // planoEfetivo(req.parceiro) direto a partir do dado cru do banco.
 function parceiroPublico(p) {
-  return { id: p.id, nome: p.nome, slug: p.slug, cnpj: p.cnpj, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at, e_restaurante: ehRestaurante(p.categorias) };
+  return { id: p.id, nome: p.nome, slug: p.slug, cnpj: p.cnpj, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at, e_restaurante: ehRestaurante(p.categorias), e_bebidas: ehBebidas(p.categorias) };
 }
 
 async function login(req, res) {
@@ -73,7 +73,16 @@ async function logout(req, res) {
 }
 
 async function me(req, res) {
-  return res.json({ parceiro: parceiroPublico(req.parceiro), usuario: req.parceiroUsuario });
+  const parceiro = parceiroPublico(req.parceiro);
+  // Também é "de bebidas" quem entrou no Disk Bebidas pela aba do painel
+  // (sem ter escolhido o segmento no /vender) — ProdutoForm mostra o aviso.
+  if (!parceiro.e_bebidas) {
+    try {
+      const r = await db.query('SELECT 1 FROM beer_estabelecimentos WHERE parceiro_id = $1 AND ativo = true', [req.parceiro.id]);
+      parceiro.e_bebidas = r.rows.length > 0;
+    } catch { /* aviso é só UX — a trava de verdade é no salvar */ }
+  }
+  return res.json({ parceiro, usuario: req.parceiroUsuario });
 }
 
 async function esqueciSenha(req, res) {

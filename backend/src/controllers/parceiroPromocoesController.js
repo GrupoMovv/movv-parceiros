@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
+const { detectarProdutoMais18, MENSAGEM_PRODUTO_MAIS_18, verificarTermos, MENSAGEM_TERMO_PROIBIDO } = require('../config/beer');
 
 // "Ativas" pra fim de limite de plano = publicadas, ligadas e ainda não
 // encerradas (programadas contam também — já estão "reservando vaga").
@@ -114,6 +115,10 @@ async function validarCampos(b, parceiroId) {
   const titulo = sanitizeText(b.titulo, 200);
   if (!titulo || titulo.length < 3) return { erro: 'Título precisa ter pelo menos 3 caracteres' };
 
+  // Mesma trava do produto: +18 só pelo Disk Bebidas, droga/vape nunca
+  if (detectarProdutoMais18(titulo, b.descricao, b.categoria)) return { erro: MENSAGEM_PRODUTO_MAIS_18, codigo: 'PRODUTO_MAIS_18' };
+  if (verificarTermos(titulo, b.descricao).bloqueado) return { erro: MENSAGEM_TERMO_PROIBIDO };
+
   const precoDe = parseFloat(b.preco_de);
   if (!Number.isFinite(precoDe) || precoDe <= 0) return { erro: 'Preço "De" é obrigatório e deve ser maior que zero' };
 
@@ -169,8 +174,8 @@ async function validarCampos(b, parceiroId) {
 
 async function create(req, res) {
   try {
-    const { erro, valores } = await validarCampos(req.body, req.parceiro.id);
-    if (erro) return res.status(400).json({ error: erro });
+    const { erro, codigo, valores } = await validarCampos(req.body, req.parceiro.id);
+    if (erro) return res.status(400).json({ error: erro, codigo });
 
     if (valores.ativo && !valores.rascunho) {
       const limite = limiteDoPlano(req.parceiro.plano);
@@ -208,8 +213,8 @@ async function update(req, res) {
     const promocao = await buscarPromocaoDoParceiro(req.params.id, req.parceiro.id);
     if (!promocao) return res.status(404).json({ error: 'Promoção não encontrada' });
 
-    const { erro, valores } = await validarCampos(req.body, req.parceiro.id);
-    if (erro) return res.status(400).json({ error: erro });
+    const { erro, codigo, valores } = await validarCampos(req.body, req.parceiro.id);
+    if (erro) return res.status(400).json({ error: erro, codigo });
 
     const estavaAtivaPublicada = promocao.ativo && !promocao.rascunho;
     const vaiFicarAtivaPublicada = valores.ativo && !valores.rascunho;
@@ -298,6 +303,10 @@ async function duplicar(req, res) {
   try {
     const promocao = await buscarPromocaoDoParceiro(req.params.id, req.parceiro.id);
     if (!promocao) return res.status(404).json({ error: 'Promoção não encontrada' });
+    // promoção antiga (de antes da trava +18) não se multiplica por aqui
+    if (detectarProdutoMais18(promocao.titulo, promocao.descricao, promocao.categoria)) {
+      return res.status(400).json({ error: MENSAGEM_PRODUTO_MAIS_18, codigo: 'PRODUTO_MAIS_18' });
+    }
 
     const result = await db.query(
       `INSERT INTO sindicato_parceiro_promocoes

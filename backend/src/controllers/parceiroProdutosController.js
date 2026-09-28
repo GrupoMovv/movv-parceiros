@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
+const { detectarProdutoMais18, MENSAGEM_PRODUTO_MAIS_18, verificarTermos, MENSAGEM_TERMO_PROIBIDO } = require('../config/beer');
 const { limiteProdutos, planoEfetivo } = require('../config/planos');
 
 const LIMITE_FOTOS_PRODUTO = 3;
@@ -77,6 +78,10 @@ function validarCampos(b) {
   const descricao = sanitizeText(b.descricao, 500);
   if (!descricao || descricao.length < 20) return { erro: 'Descrição precisa ter pelo menos 20 caracteres' };
 
+  // +18 (bebida alcoólica/cigarro) só pelo Disk Bebidas; droga/vape em lugar nenhum
+  if (detectarProdutoMais18(nome, descricao, b.categoria, b.marca)) return { erro: MENSAGEM_PRODUTO_MAIS_18, codigo: 'PRODUTO_MAIS_18' };
+  if (verificarTermos(nome, descricao, b.marca).bloqueado) return { erro: MENSAGEM_TERMO_PROIBIDO };
+
   const preco = parseFloat(b.preco);
   if (!Number.isFinite(preco) || preco <= 0) return { erro: 'Preço normal é obrigatório e deve ser maior que zero' };
 
@@ -125,8 +130,8 @@ async function create(req, res) {
       }
     }
 
-    const { erro, valores } = validarCampos(req.body);
-    if (erro) return res.status(400).json({ error: erro });
+    const { erro, codigo, valores } = validarCampos(req.body);
+    if (erro) return res.status(400).json({ error: erro, codigo });
 
     if (valores.destaque) {
       const destaques = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND destaque = true', [req.parceiro.id]);
@@ -155,8 +160,8 @@ async function update(req, res) {
     const produto = await buscarProdutoDoParceiro(req.params.id, req.parceiro.id);
     if (!produto) return res.status(404).json({ error: 'Produto não encontrado' });
 
-    const { erro, valores } = validarCampos(req.body);
-    if (erro) return res.status(400).json({ error: erro });
+    const { erro, codigo, valores } = validarCampos(req.body);
+    if (erro) return res.status(400).json({ error: erro, codigo });
 
     if (valores.destaque && !produto.destaque) {
       const destaques = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND destaque = true AND id != $2', [req.parceiro.id, produto.id]);

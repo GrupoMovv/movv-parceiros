@@ -81,6 +81,35 @@ function verificarTermos(...textos) {
 
 const MENSAGEM_TERMO_PROIBIDO = 'Este produto contém termos que não são permitidos no IUB. Entre em contato com o suporte se acredita ser um erro.';
 
+// Bebida alcoólica e cigarro são +18: só entram pelo Disk Bebidas (catálogo
+// próprio, porta de idade, moderação). O catálogo GERAL (produtos e
+// promoções) recusa — incidente de 28/09/2026: cerveja cadastrada pelo form
+// comum apareceu em "Novidades" sem porta +18. Marcas de cerveja/destilado
+// entram porque muito nome de produto não traz a palavra "cerveja". De
+// fora, de propósito: "antarctica" (Guaraná Antarctica), "corona",
+// "original", "ice" — ambíguos demais.
+const TERMOS_MAIS_18 = [
+  'cerveja', 'cervejas', 'breja', 'brejas', 'chopp', 'chope', 'choppe', 'long neck',
+  'vinho', 'vinhos', 'espumante', 'espumantes', 'champanhe', 'champagne', 'prosecco', 'sidra', 'vermute',
+  'whisky', 'whiskey', 'uisque', 'vodka', 'vodca', 'cachaca', 'cachacas', 'pinga', 'aguardente',
+  'gin', 'rum', 'tequila', 'licor', 'licores', 'conhaque', 'brandy', 'absinto', 'sake', 'caipirinha', 'catuaba', // sem "saque": sem acento "saquê" = saque bancário
+  'heineken', 'budweiser', 'brahma', 'skol', 'itaipava', 'amstel', 'eisenbahn', 'spaten', 'bohemia', 'devassa',
+  'stella artois', 'becks', 'smirnoff', 'absolut', 'johnnie walker', 'jack daniels', 'jack daniel s', 'chivas',
+  'red label', 'black label', 'ypioca', 'velho barreiro', 'campari', 'aperol', 'jagermeister',
+  'cigarro', 'cigarros', 'tabaco', 'charuto', 'charutos',
+];
+// "vinho" como COR (roupa, tinta, móvel) não é bebida
+const EXPRESSOES_NAO_BEBIDA = ['cor vinho', 'tom vinho', 'tons vinho', 'vinho escuro', 'bordo vinho'];
+
+// Devolve o termo +18 achado (ou null) em qualquer um dos textos.
+function detectarProdutoMais18(...textos) {
+  let texto = normalizarTexto(textos.filter(Boolean).join(' '));
+  for (const e of EXPRESSOES_NAO_BEBIDA) texto = ` ${texto} `.split(` ${e} `).join(' ').trim();
+  return TERMOS_MAIS_18.find(t => contem(texto, t)) || null;
+}
+
+const MENSAGEM_PRODUTO_MAIS_18 = 'Bebida alcoólica e cigarro não podem ir no catálogo geral (são +18). Cadastre pela aba "🍻 Meu IUB Beer" do painel — lá tem a verificação de idade do cliente.';
+
 // Idade em anos completos na data de HOJE em Itumbiara (não no fuso do
 // servidor, que no Render é UTC — perto da meia-noite daria o dia errado).
 // `dataNascimento` = "YYYY-MM-DD" (DATE chega como string, ver
@@ -226,6 +255,7 @@ function normalizarBairros(lista) {
 module.exports = {
   TIPOS_ESTABELECIMENTO, DIAS, IDADE_MINIMA, TERMO_VERSAO,
   TERMOS_BLOQUEADOS, TERMOS_CONTEXTO, MENSAGEM_TERMO_PROIBIDO,
+  TERMOS_MAIS_18, MENSAGEM_PRODUTO_MAIS_18, detectarProdutoMais18,
   verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias, validarHorario, normalizarBairros,
   horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
   FAIXAS_VOLUME, faixaVolume,

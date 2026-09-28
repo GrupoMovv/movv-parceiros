@@ -143,7 +143,8 @@ export default function ParceiroPromocaoForm() {
         toast.success(rascunho ? 'Rascunho salvo! Agora você já pode adicionar uma foto.' : 'Promoção publicada!');
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao salvar promoção');
+      // +18 vem com o texto explicando a aba Disk Bebidas — fica mais tempo
+      toast.error(err.response?.data?.error || 'Erro ao salvar promoção', { duration: err.response?.data?.codigo === 'PRODUTO_MAIS_18' ? 9000 : 4000 });
     } finally {
       setSalvando(false);
     }

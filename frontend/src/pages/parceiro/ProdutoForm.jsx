@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { X, Loader2, Star, Lightbulb, Check, Send, Plus, Trash2 } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
@@ -53,6 +53,7 @@ export default function ParceiroProdutoForm() {
   // "Fotos enviadas!") com novo / mais fotos / lista; null = fechado.
   const [publicado, setPublicado] = useState(null);
   const [ajudaAssociado, setAjudaAssociado] = useState(false);
+  const [bloqueio18, setBloqueio18] = useState(false); // servidor recusou: bebida/cigarro no catálogo geral
   const secaoFotosRef = useRef(null);
   const arrastandoRef = useRef(null); // índice da foto sendo arrastada (desktop)
   const [alvoArraste, setAlvoArraste] = useState(null);
@@ -181,6 +182,7 @@ export default function ParceiroProdutoForm() {
     setProdutoId(null);
     setTranscricaoVoz(null);
     setMostrarBannerIA(true);
+    setBloqueio18(false);
     setPublicado(null);
     navigate('/parceiro/painel/produtos/novo', { replace: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -247,7 +249,11 @@ export default function ParceiroProdutoForm() {
         if (temPendente) await enviarPendentes(novoId, lista, { recemCriado: true });
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao salvar produto');
+      if (err.response?.data?.codigo === 'PRODUTO_MAIS_18') {
+        setBloqueio18(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      toast.error(err.response?.data?.error || 'Erro ao salvar produto', { duration: 8000 });
     } finally {
       setSalvando(false);
     }
@@ -380,6 +386,23 @@ export default function ParceiroProdutoForm() {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div className="space-y-6">
         <h1 className="text-xl font-bold" style={{ color: PRETO }}>{modoEdicao ? 'Editar produto' : 'Novo produto'}</h1>
+
+        {(parceiro?.e_bebidas || bloqueio18) && (
+          <div className={`rounded-2xl p-4 flex items-start gap-3 ${bloqueio18 ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}`} role={bloqueio18 ? 'alert' : undefined}>
+            <span className="text-2xl leading-none" aria-hidden="true">🍻</span>
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-bold ${bloqueio18 ? 'text-red-800' : 'text-amber-900'}`}>
+                {bloqueio18 ? 'Bebida alcoólica e cigarro não vão aqui' : 'Vende bebida alcoólica ou cigarro? Use a aba Disk Bebidas'}
+              </p>
+              <p className={`text-xs mt-0.5 ${bloqueio18 ? 'text-red-700' : 'text-amber-800'}`}>
+                Esses produtos são +18 e só podem ser vendidos pelo Disk Bebidas, que confere a idade do cliente. Aqui no catálogo geral eles são recusados.
+              </p>
+              <Link to="/parceiro/painel/beer" className="inline-block mt-2 text-xs font-bold px-3 py-1.5 rounded-lg text-white" style={{ backgroundColor: ROXO }}>
+                Ir pra aba 🍻 Meu IUB Beer
+              </Link>
+            </div>
+          </div>
+        )}
 
         {!produtoId && mostrarBannerIA && (
           <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #FFF7E0 0%, #FFFFFF 100%)', border: '1px solid #FDE9B8' }}>

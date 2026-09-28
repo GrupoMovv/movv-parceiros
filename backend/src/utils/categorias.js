@@ -13,4 +13,10 @@ function ehRestaurante(categorias) {
   return (categorias || []).some(c => normalizarCategoria(c) === alvo);
 }
 
-module.exports = { normalizarCategoria, ehRestaurante };
+// Segmento bebidas do /vender grava "Bebidas" (+ tipo, ex. "Adega")
+function ehBebidas(categorias) {
+  const alvo = normalizarCategoria('Bebidas');
+  return (categorias || []).some(c => normalizarCategoria(c) === alvo);
+}
+
+module.exports = { normalizarCategoria, ehRestaurante, ehBebidas };
