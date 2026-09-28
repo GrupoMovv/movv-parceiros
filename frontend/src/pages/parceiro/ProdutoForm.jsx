@@ -35,13 +35,17 @@ export default function ParceiroProdutoForm() {
 
   const [produtoId, setProdutoId] = useState(modoEdicao ? id : null);
   const [form, setForm] = useState(VAZIO);
-  const [fotos, setFotos] = useState([]);
-  const [pendentes, setPendentes] = useState([]); // fotos escolhidas, com preview local, antes de confirmar o envio
+  // Fotos numa lista só, JÁ na ordem final (a primeira é a principal):
+  // enviadas ({ url, publicId, ordem }) e escolhidas ainda não enviadas
+  // ({ pendente: true, file, preview, daIA? }). Com pendente na lista, a
+  // ordem fica só aqui e vai junto no envio (enviarPendentes) — dá pra
+  // arrumar tudo antes do primeiro Publicar.
+  const [galeria, setGaleria] = useState([]);
+  const fotos = galeria.filter(g => !g.pendente);
+  const pendentes = galeria.filter(g => g.pendente);
   const [carregando, setCarregando] = useState(modoEdicao);
   const [salvando, setSalvando] = useState(false);
   const [enviandoFotos, setEnviandoFotos] = useState(false);
-  const [fotoDaIA, setFotoDaIA] = useState(null); // File já recortado, guardado em memória até o produto ser criado
-  const [fotoDaIAPreview, setFotoDaIAPreview] = useState(null);
   const [mostrarBannerIA, setMostrarBannerIA] = useState(true);
   const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados, voz_limite_dia, voz_usados_hoje }
   const [transcricaoVoz, setTranscricaoVoz] = useState(null);
@@ -53,20 +57,28 @@ export default function ParceiroProdutoForm() {
   const arrastandoRef = useRef(null); // índice da foto sendo arrastada (desktop)
   const [alvoArraste, setAlvoArraste] = useState(null);
   const [fotoAmpliada, setFotoAmpliada] = useState(null); // url em tela cheia
-  const pendentesRef = useRef(pendentes);
-  pendentesRef.current = pendentes;
-  const fotoDaIAPreviewRef = useRef(fotoDaIAPreview);
-  fotoDaIAPreviewRef.current = fotoDaIAPreview;
+  const galeriaRef = useRef(galeria);
+  galeriaRef.current = galeria;
+  // Ordem (urls) que o servidor tem agora — o DELETE é por índice do
+  // servidor, e a galeria local pode estar noutra ordem ainda não salva.
+  const ordemServidorRef = useRef([]);
+  // Produto recém-criado: o form já tem tudo, não rebusca (a busca apagaria
+  // as prévias que ainda estão subindo).
+  const acabouDeCriarRef = useRef(null);
 
   // Libera a memória dos previews locais só ao desmontar a página — usa ref
-  // (não `pendentes` direto na dependência) pra não revogar os URLs ainda em
+  // (não `galeria` direto na dependência) pra não revogar os URLs ainda em
   // uso toda vez que o usuário adiciona/remove uma foto da seleção.
   useEffect(() => {
     return () => {
-      pendentesRef.current.forEach(p => URL.revokeObjectURL(p.preview));
-      if (fotoDaIAPreviewRef.current) URL.revokeObjectURL(fotoDaIAPreviewRef.current);
+      galeriaRef.current.forEach(g => { if (g.pendente) URL.revokeObjectURL(g.preview); });
     };
   }, []);
+
+  function fotosDoServidor(lista) {
+    ordemServidorRef.current = lista.map(f => f.url);
+    setGaleria(lista);
+  }
 
   // Contador "IA: X/Y usos este mês" / banner de trial — só usado na tela
   // de produto novo (banner de IA), não custa buscar sempre.
@@ -76,7 +88,7 @@ export default function ParceiroProdutoForm() {
   useEffect(carregarStatusIA, []);
 
   useEffect(() => {
-    if (!modoEdicao) return;
+    if (!modoEdicao || acabouDeCriarRef.current === id) return;
     // cancelado: clicou "+ Novo produto" antes desta busca voltar — não
     // pode encher o formulário novo com o produto que acabou de publicar
     let cancelado = false;
@@ -89,7 +101,7 @@ export default function ParceiroProdutoForm() {
         estoque_disponivel: p.estoque_disponivel, destaque: p.destaque,
         tempo_preparo_min: p.tempo_preparo_min ?? '',
       });
-      setFotos(p.fotos || []);
+      fotosDoServidor(p.fotos || []);
     }).catch(() => toast.error('Erro ao carregar produto')).finally(() => setCarregando(false));
     return () => { cancelado = true; };
   }, [id, modoEdicao]);
@@ -100,7 +112,7 @@ export default function ParceiroProdutoForm() {
   // que a IA sugeriu (o parceiro ainda confere/edita tudo aqui) e guarda a
   // foto já recortada EM MEMÓRIA (nunca sobe nada ainda: não existe
   // produtoId nesse momento). A foto só é enviada de verdade dentro de
-  // handleSalvar, junto com a criação do produto — ver enviarFotoDaIA().
+  // handleSalvar, junto com a criação do produto — ver enviarPendentes().
   function aplicarSugestaoIA(dadosIA) {
     setForm(f => ({
       ...f,
@@ -109,10 +121,20 @@ export default function ParceiroProdutoForm() {
       categoria: dadosIA.categoria || f.categoria,
       marca: dadosIA.marca || f.marca,
     }));
-    if (dadosIA.foto) {
-      setFotoDaIA(dadosIA.foto);
-      setFotoDaIAPreview(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(dadosIA.foto); });
+    if (dadosIA.foto) setGaleria(comFotoDaIA(galeria, dadosIA.foto));
+  }
+
+  // A foto da IA entra como principal, no lugar da foto da IA anterior
+  // (se já tinha uma); o parceiro pode reordenar depois como as outras.
+  function comFotoDaIA(lista, file) {
+    const antiga = lista.find(g => g.daIA);
+    const resto = lista.filter(g => !g.daIA);
+    if (resto.length >= LIMITE_FOTOS) {
+      toast.error(`Máximo de ${LIMITE_FOTOS} fotos por produto — tire uma pra usar a foto da IA`);
+      return lista;
     }
+    if (antiga) URL.revokeObjectURL(antiga.preview);
+    return [{ pendente: true, daIA: true, file, preview: URL.createObjectURL(file) }, ...resto];
   }
 
   // Callback do CadastroPorVoz — mesma ideia do aplicarSugestaoIA, mas a
@@ -143,12 +165,10 @@ export default function ParceiroProdutoForm() {
     };
     setForm(novoForm);
     setTranscricaoVoz(null);
-    if (d.foto) {
-      setFotoDaIA(d.foto);
-      setFotoDaIAPreview(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(d.foto); });
-    }
+    const novaGaleria = d.foto ? comFotoDaIA(galeria, d.foto) : galeria;
+    setGaleria(novaGaleria);
     carregarStatusIA();
-    if (publicar) handleSalvar(false, novoForm, d.foto || fotoDaIA);
+    if (publicar) handleSalvar(false, novoForm, novaGaleria);
     else toast.success('Pronto! Confira os dados e clique em Publicar.');
   }
 
@@ -156,10 +176,8 @@ export default function ParceiroProdutoForm() {
   // reaproveita este mesmo componente (não remonta), então zera na mão.
   function novoProduto() {
     pendentes.forEach(p => URL.revokeObjectURL(p.preview));
-    removerFotoDaIA();
     setForm(VAZIO);
-    setFotos([]);
-    setPendentes([]);
+    fotosDoServidor([]);
     setProdutoId(null);
     setTranscricaoVoz(null);
     setMostrarBannerIA(true);
@@ -171,12 +189,6 @@ export default function ParceiroProdutoForm() {
   function adicionarMaisFotos() {
     setPublicado(null);
     secaoFotosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function removerFotoDaIA() {
-    if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
-    setFotoDaIA(null);
-    setFotoDaIAPreview(null);
   }
 
   function validar(f = form) {
@@ -197,10 +209,10 @@ export default function ParceiroProdutoForm() {
     return null;
   }
 
-  // `f`/`foto` explícitos pra voz guiada poder publicar direto da revisão
-  // com os dados que acabou de montar (o setForm dela ainda não aplicou
-  // nesse mesmo tick). Os botões da tela chamam só handleSalvar(rascunho).
-  async function handleSalvar(rascunho, f = form, foto = fotoDaIA) {
+  // `f`/`lista` explícitos pra voz guiada poder publicar direto da revisão
+  // com os dados que acabou de montar (o setForm/setGaleria dela ainda não
+  // aplicou nesse mesmo tick). Os botões da tela chamam só handleSalvar(rascunho).
+  async function handleSalvar(rascunho, f = form, lista = galeriaRef.current) {
     const erro = validar(f);
     if (erro) return toast.error(erro);
 
@@ -213,33 +225,26 @@ export default function ParceiroProdutoForm() {
       rascunho,
       ativo: !rascunho,
     };
+    const temPendente = lista.some(g => g.pendente);
     try {
       if (produtoId) {
         // Foto escolhida e ainda não enviada vai junto — clicar Publicar
         // sem apertar "Enviar foto" perdia a foto calado.
-        if (pendentesRef.current.length) await confirmarEnvio(false);
+        if (temPendente) await enviarPendentes(produtoId, lista);
         await apiParceiro.put(`/parceiro/produtos/${produtoId}`, payload);
         if (rascunho) toast.success('Rascunho salvo!');
         else setPublicado('Produto atualizado!');
       } else {
         const res = await apiParceiro.post('/parceiro/produtos', payload);
         const novoId = res.data.id;
+        acabouDeCriarRef.current = String(novoId);
         setProdutoId(novoId);
         navigate(`/parceiro/painel/produtos/${novoId}`, { replace: true });
-        if (!rascunho) setPublicado('Produto publicado!');
-
-        // Veio do fluxo de IA: a foto já recortada sobe automaticamente
-        // junto com a criação, num único clique em "Publicar"/"Salvar
-        // rascunho" — sem isso o parceiro precisaria confirmar o envio de
-        // novo depois, o que era exatamente o bug reportado (a seção
-        // "Fotos" ficava bloqueada dizendo "salve primeiro" mesmo já tendo
-        // uma foto escolhida via IA).
-        if (foto) {
-          await enviarFotoDaIA(novoId, foto);
-        } else {
-          // publicado: o aviso é o quadro "🎊 Produto publicado!" (setPublicado acima)
-          if (rascunho) toast.success('Rascunho salvo! Agora você já pode adicionar fotos.');
-        }
+        if (rascunho) toast.success('Rascunho salvo!');
+        else setPublicado('Produto publicado!');
+        // Fotos escolhidas antes do primeiro salvar (manuais ou da IA) sobem
+        // agora, já na ordem arrumada — um clique só pro cadastro inteiro.
+        if (temPendente) await enviarPendentes(novoId, lista, { recemCriado: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao salvar produto');
@@ -248,102 +253,117 @@ export default function ParceiroProdutoForm() {
     }
   }
 
-  // Sobe a foto que veio do fluxo de IA assim que o produto acaba de ser
-  // criado — reusa o mesmo endpoint do upload manual (POST .../fotos), só
-  // que disparado automaticamente em vez de esperar o parceiro clicar
-  // "Enviar foto". Falha aqui não desfaz a criação do produto (que já
-  // aconteceu) — só avisa que a foto precisa ser adicionada manualmente.
-  async function enviarFotoDaIA(produtoIdAlvo, file) {
-    try {
-      const fd = new FormData();
-      fd.append('fotos', file);
-      const res = await apiParceiro.post(`/parceiro/produtos/${produtoIdAlvo}/fotos`, fd);
-      setFotos(res.data.fotos);
-      toast.success('Produto criado com a foto! 🎉');
-    } catch (err) {
-      const d = err.response?.data;
-      toast.error(
-        d?.detalhes
-          ? `Produto criado, mas o envio da foto falhou (${d.error} — ${d.detalhes}). Adicione manualmente ali embaixo.`
-          : 'Produto criado! A foto da IA não pôde ser enviada agora — adicione manualmente ali embaixo.',
-        { duration: 8000 }
-      );
-    } finally {
-      // Funcional: o preview pode ter sido criado neste mesmo tick (voz
-      // guiada publicando direto) e ainda não estar no `fotoDaIAPreview`.
-      setFotoDaIAPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-      setFotoDaIA(null);
-    }
-  }
-
-  // Chamado pelo ImageCropUpload uma vez pra cada foto já recortada
-  // (quadrada) e comprimida — só monta o preview local, o upload de
-  // verdade só acontece quando o parceiro confirma em confirmarEnvio().
-  function aoRecortarFoto(file) {
-    if (fotos.length + pendentesRef.current.length >= LIMITE_FOTOS) {
-      toast.error(`Máximo de ${LIMITE_FOTOS} fotos por produto`);
-      return;
-    }
-    setPendentes(p => [...p, { file, preview: URL.createObjectURL(file) }]);
-  }
-
-  function cancelarPendente(index) {
-    setPendentes(p => {
-      URL.revokeObjectURL(p[index].preview);
-      return p.filter((_, i) => i !== index);
-    });
-  }
-
-  // mostrarCaixa=false quando é o Publicar/Salvar que está enviando junto
-  // (aí a caixa que aparece é a de "Produto atualizado!").
-  async function confirmarEnvio(mostrarCaixa = true) {
-    const lote = pendentesRef.current;
-    if (!lote.length) return;
+  // Sobe as fotos pendentes de `lista` e deixa o servidor na MESMA ordem da
+  // lista (o upload sempre põe as novas no fim; se a ordem montada aqui for
+  // outra, acerta com o PUT .../fotos/ordem). Falha no envio não desfaz o
+  // produto — as prévias ficam na tela pra tentar de novo pelo "Enviar".
+  async function enviarPendentes(idAlvo, lista, { recemCriado = false } = {}) {
+    const novas = lista.filter(g => g.pendente);
+    if (!novas.length) return true;
     setEnviandoFotos(true);
+    let enviadas;
     try {
       const fd = new FormData();
-      lote.forEach(p => fd.append('fotos', p.file));
-      const res = await apiParceiro.post(`/parceiro/produtos/${produtoId}/fotos`, fd);
-      setFotos(res.data.fotos);
-      lote.forEach(p => URL.revokeObjectURL(p.preview));
-      setPendentes([]);
-      if (mostrarCaixa) setPublicado(lote.length === 1 ? 'Foto enviada!' : 'Fotos enviadas!');
+      novas.forEach(p => fd.append('fotos', p.file));
+      enviadas = (await apiParceiro.post(`/parceiro/produtos/${idAlvo}/fotos`, fd)).data.fotos;
     } catch (err) {
       const d = err.response?.data;
       // "detalhes"/"codigo" só vêm quando o erro é do Cloudinary (ver
       // cloudinaryService.js) — mostrar isso no toast é temporário, pra
       // debugar o bug de upload sem precisar abrir log do Render.
-      toast.error(d?.detalhes ? `${d.error} (${d.detalhes} — código ${d.codigo})` : (d?.error || 'Erro ao enviar fotos'), { duration: 8000 });
+      const motivo = d?.detalhes ? `${d.error} (${d.detalhes} — código ${d.codigo})` : (d?.error || 'Erro ao enviar fotos');
+      toast.error(recemCriado ? `Produto criado, mas as fotos não subiram: ${motivo}. Toque em "Enviar" nas fotos pra tentar de novo.` : motivo, { duration: 8000 });
+      setEnviandoFotos(false);
+      return false;
+    }
+    novas.forEach(p => URL.revokeObjectURL(p.preview));
+    const jaTinha = enviadas.length - novas.length;
+    let k = 0;
+    const urls = lista.map(g => (g.pendente ? enviadas[jaTinha + k++]?.url : g.url));
+    try {
+      // lista fora de sincronia com o servidor (ex.: outra aba mexeu): não
+      // arrisca reordenar, fica a ordem que o servidor devolveu
+      if (jaTinha >= 0 && urls.every(Boolean) && urls.some((u, i) => u !== enviadas[i]?.url)) {
+        enviadas = (await apiParceiro.put(`/parceiro/produtos/${idAlvo}/fotos/ordem`, { urls })).data.fotos;
+      }
+    } catch {
+      toast.error('Fotos enviadas, mas a ordem não salvou — arraste de novo pra arrumar.', { duration: 6000 });
     } finally {
+      fotosDoServidor(enviadas);
       setEnviandoFotos(false);
     }
+    return true;
   }
 
-  // Tira a foto de `de` e põe em `para` (as do meio andam uma casa) —
-  // ⭐ Principal é mover(i, 0). Otimista: a grade muda na hora e volta se
-  // o servidor recusar. A primeira é a que aparece nas vitrines (fotos[0]).
-  async function moverFoto(de, para) {
-    if (de === para || de == null) return;
-    const anterior = fotos;
-    const nova = [...fotos];
-    const [foto] = nova.splice(de, 1);
-    nova.splice(para, 0, foto);
-    setFotos(nova);
+  async function enviarFotosAgora() {
+    const n = pendentes.length;
+    if (await enviarPendentes(produtoId, galeria)) setPublicado(n === 1 ? 'Foto enviada!' : 'Fotos enviadas!');
+  }
+
+  // Chamado pelo ImageCropUpload uma vez pra cada foto já recortada
+  // (quadrada) e comprimida — só entra na galeria como prévia; o upload de
+  // verdade é no Publicar/Salvar ou no botão "Enviar".
+  function aoRecortarFoto(file) {
+    if (galeriaRef.current.length >= LIMITE_FOTOS) {
+      toast.error(`Máximo de ${LIMITE_FOTOS} fotos por produto`);
+      return;
+    }
+    const item = { pendente: true, file, preview: URL.createObjectURL(file) };
+    galeriaRef.current = [...galeriaRef.current, item]; // várias fotos no mesmo tick
+    setGaleria(galeriaRef.current);
+  }
+
+  function cancelarPendente(item) {
+    URL.revokeObjectURL(item.preview);
+    const nova = galeria.filter(g => g !== item);
+    setGaleria(nova);
+    // Sobraram só enviadas: a ordem que ficou esperando o envio salva agora.
+    if (!nova.some(g => g.pendente)) salvarOrdem(nova, galeria);
+  }
+
+  // Salva a ordem das enviadas se ela mudou; volta pra `anterior` se falhar.
+  async function salvarOrdem(nova, anterior, avisoPrincipal = false) {
+    const urls = nova.map(f => f.url);
+    if (!produtoId || urls.join('|') === ordemServidorRef.current.join('|')) {
+      if (avisoPrincipal) toast.success('Foto principal trocada!');
+      return;
+    }
     try {
-      const res = await apiParceiro.put(`/parceiro/produtos/${produtoId}/fotos/ordem`, { urls: nova.map(f => f.url) });
-      setFotos(res.data.fotos);
-      if (para === 0) toast.success('Foto principal trocada!');
+      const res = await apiParceiro.put(`/parceiro/produtos/${produtoId}/fotos/ordem`, { urls });
+      fotosDoServidor(res.data.fotos);
+      if (avisoPrincipal) toast.success('Foto principal trocada!');
     } catch (err) {
-      setFotos(anterior);
+      setGaleria(anterior);
       toast.error(err.response?.data?.error || 'Erro ao reordenar fotos');
     }
   }
 
-  async function removerFoto(index) {
+  // Tira a foto de `de` e põe em `para` (as do meio andam uma casa) —
+  // ⭐ Principal é mover(i, 0). Só enviadas: salva na hora (otimista, volta
+  // se o servidor recusar). Com prévia no meio: fica local e vai no envio.
+  function moverFoto(de, para) {
+    if (de == null || de === para) return;
+    const anterior = galeria;
+    const nova = [...galeria];
+    const [item] = nova.splice(de, 1);
+    nova.splice(para, 0, item);
+    setGaleria(nova);
+    if (nova.some(g => g.pendente)) {
+      if (para === 0) toast.success('Foto principal trocada!');
+      return;
+    }
+    salvarOrdem(nova, anterior, para === 0);
+  }
+
+  async function removerFoto(item) {
     if (!window.confirm('Excluir esta foto?')) return;
+    // DELETE é pelo índice no SERVIDOR (a ordem local pode estar diferente)
+    const index = ordemServidorRef.current.indexOf(item.url);
+    if (index < 0) return;
     try {
       const res = await apiParceiro.delete(`/parceiro/produtos/${produtoId}/fotos/${index}`);
-      setFotos(res.data.fotos);
+      ordemServidorRef.current = res.data.fotos.map(f => f.url);
+      setGaleria(g => g.filter(x => x.url !== item.url));
     } catch {
       toast.error('Erro ao remover foto');
     }
@@ -427,100 +447,80 @@ export default function ParceiroProdutoForm() {
         </Secao>
 
         <Secao titulo="Fotos" secaoRef={secaoFotosRef}>
-          {!produtoId && fotoDaIA && (
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 p-4">
-              <img src={fotoDaIAPreview} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-slate-100" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold" style={{ color: PRETO }}>✅ Foto da IA pronta</p>
-                <p className="text-xs text-slate-400">Vai junto automaticamente quando você salvar o produto</p>
-              </div>
-              <button type="button" onClick={removerFotoDaIA} aria-label="Remover foto" className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                <X className="w-3.5 h-3.5 text-slate-500" />
-              </button>
-            </div>
-          )}
-          {!produtoId && !fotoDaIA && (
-            <p className="text-slate-400 text-sm text-center py-6">Salve as informações do produto primeiro pra poder adicionar fotos — ou use o "Cadastrar com IA" ali em cima, que já deixa a foto pronta pra ir junto.</p>
-          )}
-          {produtoId && (
-            <>
-              <ImageCropUpload
-                aspectRatio={1}
-                multiple
-                disabled={fotos.length + pendentes.length >= LIMITE_FOTOS}
-                label={`Adicionar fotos — até ${LIMITE_FOTOS} fotos`}
-                hint="📸 Ajuste o enquadramento quadrado na tela — ideal fundo branco ou neutro"
-                onCropComplete={aoRecortarFoto}
-                botaoClassName="w-full border-2 border-dashed border-slate-200 hover:border-[#4C1D95] rounded-2xl p-6 text-center transition-colors flex flex-col items-center gap-2 disabled:opacity-60 disabled:cursor-default"
-              />
+          <ImageCropUpload
+            aspectRatio={1}
+            multiple
+            disabled={galeria.length >= LIMITE_FOTOS || enviandoFotos}
+            label={`Adicionar fotos — até ${LIMITE_FOTOS} fotos`}
+            hint="📸 Ajuste o enquadramento quadrado na tela — ideal fundo branco ou neutro"
+            onCropComplete={aoRecortarFoto}
+            botaoClassName="w-full border-2 border-dashed border-slate-200 hover:border-[#4C1D95] rounded-2xl p-6 text-center transition-colors flex flex-col items-center gap-2 disabled:opacity-60 disabled:cursor-default"
+          />
 
-              {/* fotos ja enviadas de verdade */}
-              {fotos.length > 0 && (
-                <>
-                <p className="text-[11px] text-slate-400 mt-4 mb-2">
-                  {fotos.length > 1 ? 'A primeira é a principal (aparece na vitrine). Arraste pra mudar a ordem ou toque em ⭐ pra tornar principal. Toque na foto pra ver em tela cheia.' : 'Toque na foto pra ver em tela cheia.'}
-                </p>
-                <div className="grid grid-cols-3 gap-3">
-                  {fotos.map((foto, i) => (
+          {galeria.length > 0 && (
+            <>
+              <p className="text-[11px] text-slate-400 mt-4 mb-2">
+                {galeria.length > 1 && 'A primeira é a principal (aparece na vitrine). Arraste pra mudar a ordem ou toque em ⭐ pra tornar principal. '}
+                Toque na foto pra ver em tela cheia.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {galeria.map((g, i) => {
+                  const src = g.pendente ? g.preview : g.url;
+                  const podeArrastar = galeria.length > 1 && !enviandoFotos;
+                  return (
                     <div
-                      key={foto.url}
-                      draggable={fotos.length > 1}
+                      key={src}
+                      draggable={podeArrastar}
                       onDragStart={e => { arrastandoRef.current = i; e.dataTransfer.effectAllowed = 'move'; }}
                       onDragOver={e => { if (arrastandoRef.current == null) return; e.preventDefault(); setAlvoArraste(i); }}
                       onDragLeave={() => setAlvoArraste(a => (a === i ? null : a))}
                       onDrop={e => { e.preventDefault(); const de = arrastandoRef.current; arrastandoRef.current = null; setAlvoArraste(null); moverFoto(de, i); }}
                       onDragEnd={() => { arrastandoRef.current = null; setAlvoArraste(null); }}
-                      className={`relative rounded-xl overflow-hidden aspect-square border ${i === 0 ? 'ring-2' : 'border-slate-100'} ${fotos.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''} ${alvoArraste === i ? 'outline outline-2 outline-dashed outline-offset-2 outline-amber-400' : ''}`}
+                      className={`relative rounded-xl overflow-hidden aspect-square border ${i === 0 ? 'ring-2' : g.pendente ? 'border-dashed border-slate-300' : 'border-slate-100'} ${podeArrastar ? 'cursor-grab active:cursor-grabbing' : ''} ${alvoArraste === i ? 'outline outline-2 outline-dashed outline-offset-2 outline-amber-400' : ''} ${enviandoFotos && g.pendente ? 'opacity-60' : ''}`}
                       style={i === 0 ? { '--tw-ring-color': ROXO } : {}}
                     >
                       {/* img (não <button>): no Firefox arrastar a partir de um botão não inicia o drag */}
                       <img
-                        src={foto.url} alt={`Foto ${i + 1} — toque pra ver em tela cheia`} draggable={false}
+                        src={src} alt={`Foto ${i + 1} — toque pra ver em tela cheia`} draggable={false}
                         role="button" tabIndex={0}
-                        onClick={() => setFotoAmpliada(foto.url)}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFotoAmpliada(foto.url); } }}
-                        className={`w-full h-full object-cover ${fotos.length > 1 ? '' : 'cursor-zoom-in'}`}
+                        onClick={() => setFotoAmpliada(src)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFotoAmpliada(src); } }}
+                        className={`w-full h-full object-cover ${podeArrastar ? '' : 'cursor-zoom-in'}`}
                       />
                       {i === 0
                         ? <span className="absolute top-1 left-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full text-white pointer-events-none" style={{ backgroundColor: ROXO }}>Principal</span>
                         : <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px] font-bold flex items-center justify-center pointer-events-none">{i + 1}</span>}
-                      <button type="button" onClick={() => removerFoto(i)} aria-label="Excluir foto" title="Excluir foto" className="absolute top-1 right-1 w-7 h-7 rounded-full bg-white/90 shadow flex items-center justify-center">
-                        <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                      </button>
+                      {g.pendente ? (
+                        <button type="button" onClick={() => cancelarPendente(g)} disabled={enviandoFotos} aria-label="Tirar esta foto" title="Tirar esta foto" className="absolute top-1 right-1 w-7 h-7 rounded-full bg-white/90 shadow flex items-center justify-center">
+                          <X className="w-3.5 h-3.5 text-red-600" />
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => removerFoto(g)} aria-label="Excluir foto" title="Excluir foto" className="absolute top-1 right-1 w-7 h-7 rounded-full bg-white/90 shadow flex items-center justify-center">
+                          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                        </button>
+                      )}
                       {i > 0 && (
-                        <button type="button" onClick={() => moverFoto(i, 0)} title="Definir como principal"
+                        <button type="button" onClick={() => moverFoto(i, 0)} disabled={enviandoFotos} title="Definir como principal"
                           className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1 rounded-lg bg-white/90 shadow" style={{ color: ROXO }}>
                           <Star className="w-3 h-3" fill={DOURADO} color={DOURADO} /> Principal
                         </button>
                       )}
                     </div>
-                  ))}
-                </div>
-                </>
-              )}
+                  );
+                })}
+              </div>
 
-              {/* pendentes: preview local antes de confirmar o envio */}
               {pendentes.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-xs font-semibold text-slate-500 mb-2">Prévia — assim é a foto que você escolheu:</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {pendentes.map((p, i) => (
-                      <div key={p.preview} className="relative rounded-xl overflow-hidden aspect-square border border-dashed border-slate-300 group">
-                        <img src={p.preview} alt="" className="w-full h-full object-cover" />
-                        <button type="button" onClick={() => cancelarPendente(i)} disabled={enviandoFotos}
-                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
-                          <X className="w-3 h-3 text-red-600" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" onClick={() => confirmarEnvio()} disabled={enviandoFotos}
+                produtoId ? (
+                  <button type="button" onClick={enviarFotosAgora} disabled={enviandoFotos}
                     className="mt-3 flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl text-white transition-colors disabled:opacity-60"
                     style={{ backgroundColor: ROXO }}>
                     {enviandoFotos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Enviar {pendentes.length} {pendentes.length === 1 ? 'foto' : 'fotos'}
                   </button>
-                </div>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-3">✅ {pendentes.length === 1 ? 'A foto vai' : 'As fotos vão'} junto quando você clicar em Publicar, nessa ordem.</p>
+                )
               )}
             </>
           )}
@@ -613,8 +613,8 @@ export default function ParceiroProdutoForm() {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Como vai aparecer no marketplace</p>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center">
-              {fotos[0]?.url || pendentes[0]?.preview || fotoDaIAPreview ? (
-                <img src={fotos[0]?.url || pendentes[0]?.preview || fotoDaIAPreview} alt="" className="w-full h-full object-cover" />
+              {galeria[0] ? (
+                <img src={galeria[0].url || galeria[0].preview} alt="" className="w-full h-full object-cover" />
               ) : <span className="text-slate-300 text-xs">Sem foto</span>}
               {form.destaque && (
                 <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
