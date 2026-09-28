@@ -82,6 +82,7 @@ app.use('/api/parceiro/conteudo-master', require('./routes/parceiroConteudoMaste
 app.use('/api/parceiro/fecha-mes',      require('./routes/parceiroFechaMes'));
 app.use('/api/parceiro/jogos',          require('./routes/parceiroJogos'));
 app.use('/api/parceiro/assinatura',     require('./routes/parceiroAssinatura'));
+app.use('/api/parceiro/pet-agenda',     require('./routes/parceiroPetAgenda'));
 // Mercado Pago (público, protegido por assinatura HMAC) e rotinas do cron.
 app.use('/api/webhook/mercadopago',     require('./routes/webhookMercadoPago'));
 app.use('/api/interno',                 require('./routes/interno'));
@@ -94,6 +95,7 @@ app.use('/api/public/entregadores',    require('./routes/entregadores'));
 app.use('/api/public/verificar-cnpj-seci', require('./routes/baseSeciPublico'));
 app.use('/api/public/conta',           require('./routes/conta'));
 app.use('/api/public/pet',             require('./routes/pet'));
+app.use('/api/public/meus-pets',       require('./routes/meusPets'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 app.use('/',                           require('./routes/produtoPublico'));

@@ -20,6 +20,7 @@ const ABAS = [
   { label: '🎯 Promoções', to: '/parceiro/painel/promocoes' },
   // IUB Food: só aparece pra quem tem "Alimentação" nas categorias (e_restaurante vem do /auth/me).
   { label: '🛵 Entrega', to: '/parceiro/painel/entrega', soRestaurante: true },
+  { label: '🐾 Agendamentos', to: '/parceiro/painel/agendamentos', soPetAtendimento: true },
   // IUB Disk Bebidas: aberto pra todo parceiro — é a própria aba que oferece
   // "Quero vender no IUB Beer" pra quem ainda não entrou.
   { label: '🍻 Meu IUB Beer', to: '/parceiro/painel/beer' },
@@ -141,6 +142,7 @@ export default function ParceiroPainelLayout() {
             ariaLabel="Menu do painel"
             itens={ABAS
               .filter(aba => !aba.soRestaurante || parceiro.e_restaurante)
+              .filter(aba => !aba.soPetAtendimento || parceiro.e_pet_atendimento)
               .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h } : aba))}
           />
         </div>

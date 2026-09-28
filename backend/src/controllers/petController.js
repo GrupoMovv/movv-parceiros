@@ -3,6 +3,7 @@ const { planoEfetivo } = require('../config/planos');
 const {
   SERVICOS_PET, PORTES_PET, RACAS_PET, CATEGORIA_PET, PRECO_MIN, PRECO_MAX,
   validarPet, validarPrecos, tipoNegocioPet, normalizarRacas,
+  ESPECIES_PET, PERIODOS_PET, DIAS_MAX_ANTECEDENCIA,
 } = require('../config/pet');
 const { sqlBoostBusca } = require('./marketplaceHomeController');
 
@@ -18,6 +19,7 @@ function catalogo(req, res) {
   return res.json({
     categoria: CATEGORIA_PET, servicos: SERVICOS_PET, portes: PORTES_PET, racas: RACAS_PET,
     preco_min: PRECO_MIN, preco_max: PRECO_MAX,
+    especies: ESPECIES_PET, periodos: PERIODOS_PET, dias_max_antecedencia: DIAS_MAX_ANTECEDENCIA,
   });
 }
 

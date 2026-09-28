@@ -157,7 +157,132 @@ function validarPrecos(precos, { servicos, portes }) {
   return { precos: saida };
 }
 
+// ─── Parte 3: ficha do pet e pedido de horário ─────────────────────────────
+
+const ESPECIES_PET = [
+  { codigo: 'cao', nome: 'Cão', emoji: '🐶' },
+  { codigo: 'gato', nome: 'Gato', emoji: '🐱' },
+  { codigo: 'outro', nome: 'Outro', emoji: '🐾' },
+];
+const PERIODOS_PET = [
+  { codigo: 'manha', nome: 'Manhã' },
+  { codigo: 'tarde', nome: 'Tarde' },
+  { codigo: 'noite', nome: 'Noite' },
+];
+const LIMITE_PETS_POR_CONTA = 20;
+const LIMITE_VACINAS_POR_PET = 40;
+// Pedido de horário: não aceita data passada nem muito longe (evita lixo)
+const DIAS_MAX_ANTECEDENCIA = 90;
+
+function texto(v, max) {
+  if (v === undefined || v === null) return null;
+  const limpo = String(v).replace(/<[^>]*>/g, '').trim();
+  return limpo ? limpo.slice(0, max) : null;
+}
+// "YYYY-MM-DD" válido ou null
+function dataISO(v) {
+  const s = String(v || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(`${s}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s ? null : s;
+}
+function telefone(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  return d.length >= 10 && d.length <= 13 ? d : null;
+}
+// Hoje em Itumbiara (Render roda em UTC)
+function hojeSP(deslocDias = 0) {
+  const d = new Date(Date.now() + deslocDias * 864e5);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
+}
+
+const CODIGOS_ESPECIE = new Set(ESPECIES_PET.map(e => e.codigo));
+const CODIGOS_PERIODO = new Set(PERIODOS_PET.map(p => p.codigo));
+
+// Ficha inteira vinda do /meu. { erro } | { valores, vacinas }
+function validarFichaPet(b) {
+  const nome = texto(b.nome, 60);
+  if (!nome) return { erro: 'Dê um nome pro seu pet' };
+  if (!CODIGOS_ESPECIE.has(b.especie)) return { erro: 'Escolha a espécie (cão, gato ou outro)' };
+  const especie = b.especie;
+
+  let raca = null;
+  if (b.raca === 'srd') raca = 'srd';
+  else if (b.raca) {
+    const r = RACAS_PET.find(x => x.codigo === b.raca);
+    if (!r) return { erro: 'Raça inválida' };
+    if (r.especie !== especie) return { erro: `${r.nome} não é raça de ${especie === 'gato' ? 'gato' : 'cão'}` };
+    raca = r.codigo;
+  }
+  const porte = b.porte ? (CODIGOS_PORTE.has(b.porte) ? b.porte : undefined) : null;
+  if (porte === undefined) return { erro: 'Porte inválido' };
+  const sexo = b.sexo ? (['macho', 'femea'].includes(b.sexo) ? b.sexo : undefined) : null;
+  if (sexo === undefined) return { erro: 'Sexo inválido' };
+
+  let nascimento = null;
+  if (b.nascimento) {
+    nascimento = dataISO(b.nascimento);
+    if (!nascimento) return { erro: 'Data de nascimento inválida' };
+    if (nascimento > hojeSP()) return { erro: 'Nascimento não pode ser no futuro' };
+    if (nascimento < '1990-01-01') return { erro: 'Data de nascimento inválida' };
+  }
+  const castrado = b.castrado === true || b.castrado === false ? b.castrado : null;
+
+  const vetTel = b.vet_telefone ? telefone(b.vet_telefone) : null;
+  if (b.vet_telefone && !vetTel) return { erro: 'Telefone do veterinário inválido (use DDD + número)' };
+  const extraTel = b.contato_extra_telefone ? telefone(b.contato_extra_telefone) : null;
+  if (b.contato_extra_telefone && !extraTel) return { erro: 'Telefone extra inválido (use DDD + número)' };
+
+  const vacinasIn = Array.isArray(b.vacinas) ? b.vacinas : [];
+  if (vacinasIn.length > LIMITE_VACINAS_POR_PET) return { erro: `Máximo de ${LIMITE_VACINAS_POR_PET} vacinas por pet` };
+  const vacinas = [];
+  for (const v of vacinasIn) {
+    const nomeV = texto(v?.nome, 80);
+    if (!nomeV) continue; // linha em branco some
+    const dataV = v.data ? dataISO(v.data) : null;
+    if (v.data && !dataV) return { erro: `Data inválida na vacina "${nomeV}"` };
+    const prox = v.proxima_dose ? dataISO(v.proxima_dose) : null;
+    if (v.proxima_dose && !prox) return { erro: `Próxima dose inválida na vacina "${nomeV}"` };
+    if (dataV && prox && prox < dataV) return { erro: `Na vacina "${nomeV}", a próxima dose vem antes da aplicação` };
+    vacinas.push({ nome: nomeV, data: dataV, proxima_dose: prox });
+  }
+
+  return {
+    valores: {
+      nome, especie, raca, raca_outra: raca ? null : texto(b.raca_outra, 60), porte, sexo,
+      nascimento, nascimento_aproximado: Boolean(nascimento && b.nascimento_aproximado),
+      castrado, alergias: texto(b.alergias, 500), medicamentos: texto(b.medicamentos, 500), comportamento: texto(b.comportamento, 500),
+      vet_nome: texto(b.vet_nome, 100), vet_telefone: vetTel,
+      contato_extra_nome: texto(b.contato_extra_nome, 100), contato_extra_telefone: extraTel,
+    },
+    vacinas,
+  };
+}
+
+// "Cão · Poodle · Pequeno · Fêmea" — o que o pet shop vê mesmo sem autorização
+function resumoPet(p) {
+  const racaNome = p.raca === 'srd' ? 'Sem raça definida' : (RACAS_PET.find(r => r.codigo === p.raca)?.nome || p.raca_outra);
+  return [
+    ESPECIES_PET.find(e => e.codigo === p.especie)?.nome,
+    racaNome,
+    PORTES_PET.find(x => x.codigo === p.porte)?.nome,
+    p.sexo === 'macho' ? 'Macho' : p.sexo === 'femea' ? 'Fêmea' : null,
+  ].filter(Boolean).join(' · ').slice(0, 160);
+}
+
+// Dia + período do pedido (ou da proposta). { erro } | { data, periodo }
+function validarDiaPeriodo(data, periodo) {
+  const d = dataISO(data);
+  if (!d) return { erro: 'Escolha o dia' };
+  if (d < hojeSP()) return { erro: 'Esse dia já passou' };
+  if (d > hojeSP(DIAS_MAX_ANTECEDENCIA)) return { erro: `Dá pra pedir até ${DIAS_MAX_ANTECEDENCIA} dias pra frente` };
+  if (!CODIGOS_PERIODO.has(periodo)) return { erro: 'Escolha o período (manhã, tarde ou noite)' };
+  return { data: d, periodo };
+}
+
 module.exports = {
   SERVICOS_PET, PORTES_PET, RACAS_PET, CATEGORIA_PET, PRECO_MIN, PRECO_MAX,
   validarPet, validarPrecos, tipoNegocioPet, normalizarServicos, normalizarPortes, normalizarRacas,
+  ESPECIES_PET, PERIODOS_PET, LIMITE_PETS_POR_CONTA, DIAS_MAX_ANTECEDENCIA,
+  validarFichaPet, resumoPet, validarDiaPeriodo, hojeSP,
 };

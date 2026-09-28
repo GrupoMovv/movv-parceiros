@@ -6,6 +6,10 @@ import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import SeloPlano from './components/SeloPlano';
 import { usePetCatalogo } from '../../../components/PetServicosPicker';
+import toast from 'react-hot-toast';
+import apiPainel from '../../../services/apiPainel';
+import { useAssociadoSessao } from './useAssociadoSessao';
+import { PERIODOS, nomePeriodo, dataCurta, hojeSP, emojiEspecie } from '../../../utils/pet';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 
 // Página individual de um serviço — 100% banco real (sindicato_parceiros
@@ -20,6 +24,7 @@ export default function ServicoDetalhe() {
   const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [agendamento, setAgendamento] = useState({ servico: '', porte: '', raca: '', data: '' });
   const petCatalogo = usePetCatalogo();
+  const { associado } = useAssociadoSessao();
 
   useEffect(() => {
     setCarregando(true);
@@ -118,8 +123,14 @@ export default function ServicoDetalhe() {
 
         <BlocoPet servico={servico} catalogo={petCatalogo} />
 
-        {ehPet && servico.whatsapp && (
-          <AgendarPet servico={servico} catalogo={petCatalogo} valor={agendamento} onChange={setAgendamento} link={linkWpp} />
+        {/* Pet parte 3: logado pede horário pelo sistema (fica registrado,
+            pet shop responde no painel, avisos por WhatsApp); visitante
+            continua com a mensagem pronta no WhatsApp da Parte 2. */}
+        {petAtende && associado && (
+          <PedirHorarioPet servico={servico} slug={slug} catalogo={petCatalogo} />
+        )}
+        {ehPet && servico.whatsapp && !associado && (
+          <AgendarPet servico={servico} catalogo={petCatalogo} valor={agendamento} onChange={setAgendamento} link={linkWpp} voltar={`/servicos/${slug}`} />
         )}
 
         {servico.modalidades && (
@@ -256,7 +267,7 @@ function BlocoPet({ servico, catalogo }) {
 // Card de agendamento: escolhe serviço, porte, raça e data -> a mensagem do
 // WhatsApp já vai pronta ("Gostaria de agendar Banho e Tosa para meu Poodle
 // no dia 12/10"). Tudo opcional; o botão de baixo usa a mesma mensagem.
-function AgendarPet({ servico, catalogo, valor, onChange, link }) {
+function AgendarPet({ servico, catalogo, valor, onChange, link, voltar }) {
   if (!catalogo) return null;
   const opcoesServico = catalogo.servicos.filter(s => s.natureza === 'servico' && servico.pet_servicos.includes(s.codigo));
   if (!opcoesServico.length) return null;
@@ -290,6 +301,142 @@ function AgendarPet({ servico, catalogo, valor, onChange, link }) {
         style={{ backgroundColor: '#25D366' }}>
         <MessageCircle className="w-4 h-4" /> Enviar pelo WhatsApp
       </a>
+      <p className="text-[11px] text-center text-slate-500">
+        Tem conta? <Link to={`/entrar?voltar=${encodeURIComponent(voltar)}`} className="font-bold underline" style={{ color: ROXO }}>Entre</Link> pra pedir o horário por aqui e guardar a ficha do seu pet.
+      </p>
+    </div>
+  );
+}
+
+// Pet parte 3 — pedido de horário de quem está logado: escolhe o pet (da
+// ficha em /meu/pets), serviço, dia e período. Na 1ª vez com este pet shop
+// pergunta se compartilha a ficha (LGPD: começa desmarcado, o dono decide).
+function PedirHorarioPet({ servico, slug, catalogo }) {
+  const [pets, setPets] = useState(null);
+  const [f, setF] = useState({ pet_id: '', servico: '', data: '', periodo: '', observacao: '', compartilhar: false });
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(null); // { agendamento, whatsapp_avisado }
+
+  useEffect(() => {
+    apiPainel.get('/public/meus-pets').then(r => {
+      setPets(r.data.pets);
+      if (r.data.pets.length === 1) setF(x => ({ ...x, pet_id: r.data.pets[0].id }));
+    }).catch(() => setPets([]));
+  }, []);
+
+  if (!catalogo || pets === null) return null;
+  const opcoesServico = catalogo.servicos.filter(s => s.natureza === 'servico' && servico.pet_servicos.includes(s.codigo));
+  const portesAtende = servico.pet_portes || [];
+  const pet = pets.find(p => p.id === Number(f.pet_id));
+  const jaAutorizado = pet?.autorizados.some(a => a.slug === slug);
+  const preco = pet?.porte ? (servico.pet_precos || []).find(p => p.servico === f.servico && p.porte === pet.porte) : null;
+  const set = (k, v) => setF(x => ({ ...x, [k]: v }));
+  const caixa = { backgroundColor: `${ROXO}08`, border: `1px solid ${ROXO}25` };
+  const sel = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm';
+
+  if (enviado) {
+    const ag = enviado.agendamento;
+    const linkManual = servico.whatsapp
+      ? linkWhatsappComTexto(servico.whatsapp, `Olá! Acabei de pedir ${nomeDe(catalogo.servicos, ag.servico)} pro ${ag.pet_nome} pelo IUB MAIS+ (${dataCurta(ag.data)}, ${nomePeriodo(ag.periodo).toLowerCase()}) 🐾`)
+      : null;
+    return (
+      <div className="rounded-2xl p-5 text-center space-y-2" style={caixa}>
+        <p className="text-3xl">🎉</p>
+        <p className="font-black" style={{ color: GRAFITE }}>Pedido enviado!</p>
+        <p className="text-sm text-slate-600">{ag.pet_nome} · {dataCurta(ag.data)}, {nomePeriodo(ag.periodo).toLowerCase()}</p>
+        <p className="text-xs text-slate-500">
+          {enviado.whatsapp_avisado ? '✅ Avisamos o pet shop pelo WhatsApp. ' : ''}
+          Você recebe a resposta pelo WhatsApp e acompanha em Meus Pets.
+        </p>
+        {!enviado.whatsapp_avisado && linkManual && (
+          <a href={linkManual} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl text-white" style={{ backgroundColor: '#25D366' }}>
+            <MessageCircle className="w-4 h-4" /> Avisar o pet shop pelo WhatsApp
+          </a>
+        )}
+        <div><Link to="/meu/pets" className="text-sm font-bold underline" style={{ color: ROXO }}>Ver meus pedidos</Link></div>
+      </div>
+    );
+  }
+
+  if (!pets.length) {
+    return (
+      <div className="rounded-2xl p-4 space-y-2 text-center" style={caixa}>
+        <h2 className="font-bold text-sm" style={{ color: GRAFITE }}>📅 Pedir horário</h2>
+        <p className="text-sm text-slate-600">Cadastre a ficha do seu pet uma vez e peça horário em poucos toques.</p>
+        <Link to="/meu/pets?novo=1" className="inline-block text-sm font-bold px-4 py-2.5 rounded-xl text-white" style={{ backgroundColor: ROXO }}>🐾 Cadastrar meu pet</Link>
+      </div>
+    );
+  }
+
+  async function enviar() {
+    if (!f.pet_id) return toast.error('Escolha o pet');
+    if (!f.servico) return toast.error('Escolha o serviço');
+    if (!f.data) return toast.error('Escolha o dia');
+    if (!f.periodo) return toast.error('Escolha o período');
+    setEnviando(true);
+    try {
+      const r = await apiPainel.post('/public/meus-pets/agendamentos', {
+        pet_id: Number(f.pet_id), parceiro_slug: slug, servico: f.servico, data: f.data, periodo: f.periodo,
+        observacao: f.observacao, compartilhar_ficha: !jaAutorizado && f.compartilhar,
+      });
+      setEnviado(r.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Não deu pra enviar o pedido');
+    } finally { setEnviando(false); }
+  }
+
+  return (
+    <div className="rounded-2xl p-4 space-y-3" style={caixa}>
+      <h2 className="font-bold text-sm" style={{ color: GRAFITE }}>📅 Pedir horário</h2>
+      <div>
+        <p className="text-xs font-semibold text-slate-500 mb-1.5">Pra qual pet?</p>
+        <div className="flex flex-wrap gap-2">
+          {pets.map(p => {
+            const foraPorte = p.porte && portesAtende.length && !portesAtende.includes(p.porte);
+            const ativo = Number(f.pet_id) === p.id;
+            return (
+              <button key={p.id} type="button" disabled={foraPorte} onClick={() => set('pet_id', p.id)}
+                title={foraPorte ? 'Esse pet shop não atende esse porte' : undefined}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl border-2 disabled:opacity-40"
+                style={ativo ? { borderColor: ROXO, color: ROXO, backgroundColor: '#fff' } : { borderColor: '#E2E8F0', color: '#475569', backgroundColor: '#fff' }}>
+                {emojiEspecie(p.especie)} {p.nome}
+              </button>
+            );
+          })}
+          <Link to="/meu/pets?novo=1" className="inline-flex items-center text-xs font-semibold px-3 py-2 rounded-xl border border-dashed border-slate-300 text-slate-500">+ outro pet</Link>
+        </div>
+      </div>
+      <select className={sel} value={f.servico} onChange={e => set('servico', e.target.value)} aria-label="Serviço">
+        <option value="">Serviço…</option>
+        {opcoesServico.map(s => <option key={s.codigo} value={s.codigo}>{s.emoji} {s.nome}</option>)}
+      </select>
+      <div className="grid grid-cols-2 gap-2">
+        <input type="date" className={sel} min={hojeSP()} max={hojeSP(catalogo.dias_max_antecedencia || 90)} value={f.data} onChange={e => set('data', e.target.value)} aria-label="Dia" />
+        <div className="grid grid-cols-3 gap-1">
+          {PERIODOS.map(p => (
+            <button key={p.codigo} type="button" onClick={() => set('periodo', p.codigo)} className="rounded-xl border-2 text-[11px] font-bold py-1"
+              style={f.periodo === p.codigo ? { borderColor: ROXO, color: ROXO, backgroundColor: '#fff' } : { borderColor: '#E2E8F0', color: '#64748B', backgroundColor: '#fff' }}>
+              {p.nome}
+            </button>
+          ))}
+        </div>
+      </div>
+      <textarea className={`${sel} resize-none`} rows={2} maxLength={500} value={f.observacao} onChange={e => set('observacao', e.target.value)} placeholder="Recado pro pet shop (opcional)" />
+      {preco && <p className="text-xs text-slate-600">Preço informado pelo pet shop: <span className="font-bold" style={{ color: ROXO_ESCURO }}>{brl(preco.preco)}</span></p>}
+      {pet && !jaAutorizado && (
+        <label className="flex items-start gap-2 rounded-xl bg-white border border-slate-200 px-3 py-2.5 cursor-pointer">
+          <input type="checkbox" className="mt-0.5" checked={f.compartilhar} onChange={e => set('compartilhar', e.target.checked)} />
+          <span className="text-xs text-slate-600">
+            <strong>Compartilhar a ficha do {pet.nome} com {servico.nome}?</strong> Eles passam a ver saúde, vacinas e contato de emergência. Você pode retirar o acesso quando quiser em Meus Pets.
+          </span>
+        </label>
+      )}
+      {pet && jaAutorizado && <p className="text-[11px] text-slate-500">🔓 {servico.nome} já pode ver a ficha do {pet.nome}.</p>}
+      <button type="button" onClick={enviar} disabled={enviando}
+        className="flex items-center justify-center gap-2 w-full text-sm font-black px-4 py-3 rounded-xl text-white disabled:opacity-60" style={{ backgroundColor: ROXO }}>
+        {enviando ? 'Enviando…' : 'Pedir horário'}
+      </button>
+      <p className="text-[11px] text-center text-slate-500">O pet shop confirma ou propõe outro horário — você recebe a resposta pelo WhatsApp.</p>
     </div>
   );
 }

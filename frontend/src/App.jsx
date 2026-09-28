@@ -90,6 +90,7 @@ import MeuPainelLayout from './pages/public/Cadastro/MeuPainelLayout';
 import MeuPainel from './pages/public/Cadastro/MeuPainel';
 import MeuDados from './pages/public/Cadastro/MeuDados';
 import MeuDependentes from './pages/public/Cadastro/MeuDependentes';
+import MeusPets from './pages/public/Cadastro/MeusPets';
 import MinhasCarteirinhas from './pages/public/Cadastro/MinhasCarteirinhas';
 import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
 import ParceiroPainelLayout from './pages/parceiro/PainelLayout';
@@ -108,6 +109,7 @@ import ParceiroFechaMes from './pages/parceiro/FechaMes';
 import ParceiroBeer from './pages/parceiro/Beer';
 import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
+import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
 import ParceiroMinhaAssinatura from './pages/parceiro/MinhaAssinatura';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
@@ -270,6 +272,7 @@ export default function App() {
           <Route path="dependentes" element={<MeuDependentes />} />
           <Route path="carteirinhas" element={<MinhasCarteirinhas />} />
           <Route path="cupons" element={<MeuCupons />} />
+          <Route path="pets" element={<MeusPets />} />
           {/* Qualquer sub-rota não mapeada aqui (ex.: /meu/login, que
               nunca existiu mas as pessoas tentam por analogia com
               /parceiro/login) cai no catch-all global (path="*" lá
@@ -300,6 +303,7 @@ export default function App() {
           <Route path="beer" element={<ParceiroBeer />} />
           <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
+          <Route path="agendamentos" element={<ParceiroAgendamentosPet />} />
           <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="minha-assinatura" element={<ParceiroMinhaAssinatura />} />
           <Route path="configuracoes" element={<ParceiroConfiguracoes />} />
