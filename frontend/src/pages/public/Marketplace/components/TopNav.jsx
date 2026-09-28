@@ -8,7 +8,6 @@ import BadgeMenu from './BadgeMenu';
 import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 import InstallAppButton from '../../../../components/InstallAppButton';
-import { getPainelToken } from '../../../../services/apiPainel';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
 
 // Itens com `rota` navegam de verdade (react-router); com `href` são
@@ -95,7 +94,7 @@ export default function TopNav({
   // no mobile compacto os dois entram como mais uma pill rolável em vez
   // de precisar de espaço fixo dedicado.
   const itensMenuMobile = [
-    { label: '🎡 Jogar', rota: getPainelToken() ? '/jogar' : '/entrar?voltar=/jogar' },
+    { label: '🎡 Jogar', rota: '/jogar' },
     ...MENU_SECUNDARIO,
     { label: '💎 SECI', rota: '/cadastrar-associado' },
   ];
@@ -165,7 +164,7 @@ export default function TopNav({
             do menu horizontal rolável (ver itensMenuMobile), pra não
             disputar espaço fixo na barra compacta. */}
         <Link
-          to={getPainelToken() ? '/jogar' : '/entrar?voltar=/jogar'}
+          to={'/jogar'}
           aria-label="Joguinhos IUB MAIS+"
           className="hidden sm:flex items-center gap-1.5 flex-shrink-0 text-xs sm:text-sm font-black px-2.5 sm:px-3.5 py-2 rounded-full text-black whitespace-nowrap animate-jogar-blink"
           style={{ backgroundColor: DOURADO }}

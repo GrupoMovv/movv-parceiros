@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import apiPainel, { getPainelToken } from '../../../services/apiPainel';
+import apiPainel from '../../../services/apiPainel';
 import MascoteIubMais from '../../../components/MascoteIubMais';
 import { NIVEIS } from './memoriaConfig';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
@@ -20,17 +20,15 @@ export default function MemoriaNiveis() {
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(true);
   const [niveis, setNiveis] = useState([]);
+  // Sem login: o backend libera todos os níveis e não guarda progresso
+  const [visitante, setVisitante] = useState(false);
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/entrar?voltar=/jogar/memoria', { replace: true }); return; }
     apiPainel.get('/public/memoria/niveis')
-      .then(res => setNiveis(res.data.niveis))
-      .catch(err => {
-        if (err.response?.status === 401) navigate('/entrar?voltar=/jogar/memoria', { replace: true });
-        else console.error('Erro ao carregar níveis da memória:', err);
-      })
+      .then(res => { setNiveis(res.data.niveis); setVisitante(Boolean(res.data.visitante)); })
+      .catch(err => console.error('Erro ao carregar níveis da memória:', err))
       .finally(() => setCarregando(false));
-  }, [navigate]);
+  }, []);
 
   const completados = niveis.filter(n => n.completado).length;
 
@@ -55,17 +53,28 @@ export default function MemoriaNiveis() {
         </p>
       </header>
 
-      <div className="max-w-md mx-auto px-4 mt-5">
-        <div className="bg-white/10 rounded-full h-2.5 overflow-hidden">
-          <div
-            className="h-full bg-iub-dourado rounded-full transition-all duration-500"
-            style={{ width: `${(completados / NIVEIS.length) * 100}%` }}
-          />
+      {visitante ? (
+        <div className="max-w-md mx-auto px-4 mt-5">
+          <div className="rounded-2xl bg-white/10 px-4 py-3 text-center">
+            <p className="text-white text-sm font-semibold">Jogando como visitante — todos os níveis liberados! 🎉</p>
+            <Link to="/entrar?voltar=/jogar/memoria" className="inline-block mt-1.5 text-iub-dourado text-xs font-bold underline">
+              Entre ou crie sua conta grátis pra salvar recordes e entrar no ranking
+            </Link>
+          </div>
         </div>
-        <p className="text-white/80 text-xs text-center mt-2 font-semibold">
-          Você completou {completados} de {NIVEIS.length} níveis!
-        </p>
-      </div>
+      ) : (
+        <div className="max-w-md mx-auto px-4 mt-5">
+          <div className="bg-white/10 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="h-full bg-iub-dourado rounded-full transition-all duration-500"
+              style={{ width: `${(completados / NIVEIS.length) * 100}%` }}
+            />
+          </div>
+          <p className="text-white/80 text-xs text-center mt-2 font-semibold">
+            Você completou {completados} de {NIVEIS.length} níveis!
+          </p>
+        </div>
+      )}
 
       <div className="max-w-md mx-auto px-4 mt-6 space-y-3">
         {niveis.map(nivel => (

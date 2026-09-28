@@ -19,6 +19,15 @@ function nivelDaQuery(query) {
 // alimenta a tela de seleção de nível e a barra de progresso no hub.
 async function getMeusNiveis(req, res) {
   try {
+    // Visitante: tudo liberado, sem progresso (decisão do Junior, 28/09/2026)
+    if (!req.painelAssociado) {
+      const niveis = NIVEIS.map(cfg => ({
+        nivel: cfg.nivel, nome: cfg.nome, emoji: cfg.emoji, pares: cfg.pares,
+        desbloqueado: true, completado: false, melhor_tempo_segundos: null,
+      }));
+      return res.json({ niveis, niveis_completados: 0, visitante: true });
+    }
+
     const result = await db.query(
       'SELECT nivel, completado, melhor_tempo, completado_em FROM sindicato_memoria_niveis WHERE associado_id = $1',
       [req.painelAssociado.id]
@@ -145,7 +154,9 @@ async function getMeuRecorde(req, res) {
 // partida dele no período+nível, não com cada partida individual.
 async function getRanking(req, res) {
   try {
-    const associadoId = req.painelAssociado.id;
+    // Visitante: null — ninguém sai como "eu", todo nome anonimizado e sem
+    // minha_posicao (a query de posição não casa com associado_id null).
+    const associadoId = req.painelAssociado?.id ?? null;
     const periodo = FILTROS_PERIODO[req.query.periodo] ? req.query.periodo : 'dia';
     const filtro = FILTROS_PERIODO[periodo];
     const nivel = nivelDaQuery(req.query);

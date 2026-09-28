@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import apiPainel, { getPainelToken } from '../../../services/apiPainel';
+import apiPainel from '../../../services/apiPainel';
 import MascoteIubMais, { MASCOTE_URL } from '../../../components/MascoteIubMais';
 import MemoriaCarta from './components/MemoriaCarta';
 import { getNivelConfig, POOL_PARES } from './memoriaConfig';
@@ -106,6 +106,8 @@ export default function Memoria() {
   // de vitória — não bloqueia o carregamento da Memória (jogo funciona
   // mesmo se essa chamada falhar, por isso catch silencioso).
   const [roletaStatus, setRoletaStatus] = useState(null);
+  // Sem conta (o backend responde visitante:true): joga tudo, não salva nada
+  const [visitante, setVisitante] = useState(false);
 
   // Nível inválido na URL (não é 1-5) — manda pra seleção de nível.
   useEffect(() => {
@@ -113,21 +115,18 @@ export default function Memoria() {
   }, [cfg, navigate]);
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/entrar?voltar=/jogar/memoria', { replace: true }); return; }
     if (!cfg) return;
     apiPainel.get('/public/memoria/niveis')
       .then(res => {
+        setVisitante(Boolean(res.data.visitante));
         const info = res.data.niveis.find(n => n.nivel === nivel);
         setDesbloqueado(info?.desbloqueado ?? false);
         setMelhorTempoPessoal(info?.melhor_tempo_segundos ?? null);
         if (info && !info.desbloqueado) navigate('/jogar/memoria', { replace: true });
+        if (!res.data.visitante) apiPainel.get('/public/roleta/status').then(r => setRoletaStatus(r.data)).catch(() => {});
       })
-      .catch(err => {
-        if (err.response?.status === 401) navigate('/entrar?voltar=/jogar/memoria', { replace: true });
-        else console.error('Erro ao carregar nível da memória:', err);
-      })
+      .catch(err => console.error('Erro ao carregar nível da memória:', err))
       .finally(() => setCarregando(false));
-    apiPainel.get('/public/roleta/status').then(res => setRoletaStatus(res.data)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, nivel]);
 
@@ -149,6 +148,21 @@ export default function Memoria() {
       setTimeout(() => tocarSom(1318, 0.32), 280);
     }
     dispararConfeteVitoria();
+
+    // Visitante: nada vai pro banco — o resultado é montado aqui, com o
+    // recorde guardado só neste aparelho, e o ranking é só pra ver.
+    if (visitante) {
+      const chave = `iub_memoria_recorde_visitante_${nivel}`;
+      let anterior = null;
+      try { anterior = Number(localStorage.getItem(chave)) || null; } catch { /* localStorage indisponível */ }
+      const novoRecorde = anterior === null || segundos < anterior;
+      if (novoRecorde) { try { localStorage.setItem(chave, String(segundos)); } catch { /* idem */ } }
+      setResultadoFinal({ partida: { tempo_segundos: segundos }, novo_recorde: novoRecorde, melhor_tempo_pessoal: novoRecorde ? segundos : anterior, nivel_desbloqueado: null });
+      apiPainel.get('/public/memoria/ranking', { params: { periodo: 'dia', nivel } })
+        .then(res => setRanking(r => ({ ...r, dia: res.data })))
+        .catch(err => console.error('Erro ao carregar ranking da memória:', err));
+      return;
+    }
 
     apiPainel.post('/public/memoria/partida', { tempo_segundos: segundos, jogadas, nivel })
       .then(res => {
@@ -357,6 +371,7 @@ export default function Memoria() {
           ranking={ranking}
           abaRanking={abaRanking}
           roletaStatus={roletaStatus}
+          visitante={visitante}
           onMudarAba={aba => { setAbaRanking(aba); if (aba === 'semana') carregarRankingSemana(); }}
           onJogarDeNovo={reiniciar}
           onProximoNivel={() => navigate(`/jogar/memoria/${nivel + 1}`)}
@@ -366,7 +381,7 @@ export default function Memoria() {
   );
 }
 
-function ModalVitoria({ cfg, resultadoFinal, jogadas, ranking, abaRanking, roletaStatus, onMudarAba, onJogarDeNovo, onProximoNivel }) {
+function ModalVitoria({ cfg, resultadoFinal, jogadas, ranking, abaRanking, roletaStatus, visitante, onMudarAba, onJogarDeNovo, onProximoNivel }) {
   const dados = ranking[abaRanking];
   const proximoNivel = getNivelConfig(cfg.nivel + 1);
 
@@ -453,6 +468,14 @@ function ModalVitoria({ cfg, resultadoFinal, jogadas, ranking, abaRanking, rolet
                   <li className="text-center text-xs text-iub-cinza py-2">Ninguém jogou esse nível ainda — seja o 1º!</li>
                 )}
               </ol>
+              {visitante && (
+                <div className="mt-3 rounded-xl bg-iub-dourado/15 px-3 py-2.5 text-center">
+                  <p className="text-xs font-semibold text-iub-roxo-escuro">Seu tempo de {formatarTempo(resultadoFinal.partida.tempo_segundos)} ficou de fora do ranking 😉</p>
+                  <Link to="/entrar?voltar=/jogar/memoria" className="inline-block mt-1 text-xs font-black text-iub-roxo underline">
+                    Entre ou crie sua conta grátis pra competir
+                  </Link>
+                </div>
+              )}
               {dados.minha_posicao && (
                 <p className="text-center text-xs text-iub-roxo font-bold mt-2">
                   Sua posição: {dados.minha_posicao.posicao}º ({formatarTempo(dados.minha_posicao.melhor_tempo_segundos)})

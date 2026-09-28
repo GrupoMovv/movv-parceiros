@@ -1,14 +1,15 @@
 const router = require('express').Router();
-const { authenticatePainelPublico } = require('../middleware/painelPublicoAuth');
+const { authenticatePainelPublico, lerPainelPublicoOpcional } = require('../middleware/painelPublicoAuth');
 const { simpleRateLimit } = require('../middleware/rateLimit');
 const ctrl = require('../controllers/memoriaController');
 
 router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 80 }));
-router.use(authenticatePainelPublico);
 
-router.get('/niveis',       ctrl.getMeusNiveis);
-router.post('/partida',     ctrl.registrarPartida);
-router.get('/meu-recorde',  ctrl.getMeuRecorde);
-router.get('/ranking',      ctrl.getRanking);
+// Visitante (sem login) joga todos os níveis e VÊ o ranking; salvar
+// partida/recorde (e entrar no ranking) continua só com conta.
+router.get('/niveis',       lerPainelPublicoOpcional, ctrl.getMeusNiveis);
+router.get('/ranking',      lerPainelPublicoOpcional, ctrl.getRanking);
+router.post('/partida',     authenticatePainelPublico, ctrl.registrarPartida);
+router.get('/meu-recorde',  authenticatePainelPublico, ctrl.getMeuRecorde);
 
 module.exports = router;

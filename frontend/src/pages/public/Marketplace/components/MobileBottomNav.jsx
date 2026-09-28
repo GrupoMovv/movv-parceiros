@@ -3,7 +3,6 @@ import { House, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
 import { ROXO } from '../theme';
 import { useCarrinho } from '../CarrinhoContext';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
-import { getPainelToken } from '../../../../services/apiPainel';
 
 // Menu inferior fixo só no mobile — atalho de uma mão pras 4 ações mais
 // usadas, sem precisar rolar até o topo pra achar a navbar.
@@ -46,7 +45,7 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
             embaixo), e Jogar (Roleta + Memória, cupom diário) é o
             diferencial do IUB MAIS+ que merecia mais destaque. */}
         <Link
-          to={getPainelToken() ? '/jogar' : '/entrar?voltar=/jogar'}
+          to={'/jogar'}
           className="flex-1 flex flex-col items-center justify-center gap-0.5"
         >
           <span className="text-xl leading-none">🎡</span>

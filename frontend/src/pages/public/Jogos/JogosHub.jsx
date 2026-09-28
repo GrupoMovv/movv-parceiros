@@ -16,20 +16,23 @@ export default function JogosHub() {
   const [podeJogar, setPodeJogar] = useState(true);
   const [jogaramHoje, setJogaramHoje] = useState(0);
   const [niveisCompletados, setNiveisCompletados] = useState(null);
+  // Hub e Memória abrem sem login; a Roleta (dá cupom de verdade) continua
+  // só pra quem tem conta — o card dela manda o visitante pro login.
+  const [visitante, setVisitante] = useState(!getPainelToken());
 
   useEffect(() => {
-    if (!getPainelToken()) { navigate('/entrar?voltar=/jogar', { replace: true }); return; }
+    apiPainel.get('/public/memoria/niveis')
+      .then(res => { if (!res.data.visitante) setNiveisCompletados(res.data.niveis_completados); })
+      .catch(() => {});
+    if (!getPainelToken()) { setCarregando(false); return; }
     apiPainel.get('/public/roleta/status')
       .then(res => { setPodeJogar(res.data.pode_jogar); setJogaramHoje(res.data.jogaram_hoje); })
       .catch(err => {
-        if (err.response?.status === 401) navigate('/entrar?voltar=/jogar', { replace: true });
+        if (err.response?.status === 401) setVisitante(true); // sessão vencida: segue como visitante
         else console.error('Erro ao carregar status dos joguinhos:', err);
       })
       .finally(() => setCarregando(false));
-    apiPainel.get('/public/memoria/niveis')
-      .then(res => setNiveisCompletados(res.data.niveis_completados))
-      .catch(() => {});
-  }, [navigate]);
+  }, []);
 
   if (carregando) {
     return (
@@ -55,16 +58,22 @@ export default function JogosHub() {
       <div className="max-w-4xl mx-auto mt-8 px-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
         <button
           type="button"
-          onClick={() => navigate('/jogar/roleta')}
+          onClick={() => navigate(visitante ? '/entrar?voltar=/jogar/roleta' : '/jogar/roleta')}
           className="text-left bg-white rounded-3xl p-5 shadow-xl hover:scale-[1.02] transition-transform"
         >
           <div className="text-5xl text-center">🎡</div>
           <h2 className="font-black text-lg text-iub-roxo text-center mt-2">ROLETA DA SORTE</h2>
-          <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">
-            {podeJogar ? '1 giro disponível hoje!' : 'Você já jogou hoje — volta amanhã!'}
-          </p>
-          <p className="text-center text-xs text-iub-cinza mt-2">🔥 {jogaramHoje} {jogaramHoje === 1 ? 'pessoa jogou' : 'pessoas jogaram'} hoje</p>
-          <p className="btn-iub-dourado w-full text-center mt-4 py-2.5 text-sm">JOGAR AGORA</p>
+          {visitante ? (
+            <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">1 giro por dia com prêmio de verdade — entre ou crie sua conta grátis</p>
+          ) : (
+            <>
+              <p className="text-center text-sm font-semibold mt-1 text-iub-roxo-escuro">
+                {podeJogar ? '1 giro disponível hoje!' : 'Você já jogou hoje — volta amanhã!'}
+              </p>
+              <p className="text-center text-xs text-iub-cinza mt-2">🔥 {jogaramHoje} {jogaramHoje === 1 ? 'pessoa jogou' : 'pessoas jogaram'} hoje</p>
+            </>
+          )}
+          <p className="btn-iub-dourado w-full text-center mt-4 py-2.5 text-sm">{visitante ? 'ENTRAR PRA GIRAR' : 'JOGAR AGORA'}</p>
         </button>
 
         <button
