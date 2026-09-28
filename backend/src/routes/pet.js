@@ -5,5 +5,6 @@ const ctrl = require('../controllers/petController');
 // /marketplace/pet — públicos.
 router.get('/catalogo',  ctrl.catalogo);
 router.get('/parceiros', ctrl.listarPublico);
+router.get('/parceiros/:slug/avaliacoes', ctrl.avaliacoesPublicas);
 
 module.exports = router;

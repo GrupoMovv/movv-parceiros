@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Loader2, Lock, MessageCircle, Syringe, HeartPulse, Phone } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { usePetCatalogo } from '../../components/PetServicosPicker';
+import ImageCropUpload from '../../components/ImageCropUpload';
 import { linkWhatsappComTexto } from '../../utils/carteirinhaWhatsapp';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { STATUS_PEDIDO, PERIODOS, nomePeriodo, dataCurta, dataBR, hojeSP, idadePet, formatarTelefone } from '../../utils/pet';
@@ -10,6 +11,7 @@ import { STATUS_PEDIDO, PERIODOS, nomePeriodo, dataCurta, dataBR, hojeSP, idadeP
 const ABAS = [
   { id: 'abertos', label: 'Para responder' },
   { id: 'confirmados', label: 'Confirmados' },
+  { id: 'atendidos', label: 'Atendidos' },
   { id: 'encerrados', label: 'Encerrados' },
 ];
 
@@ -110,6 +112,8 @@ function CardPedido({ ag, filtro, onAtualizado }) {
 
       <FichaPet ag={ag} />
 
+      {filtro === 'atendidos' && ag.atendimento_feito && <PosAtendimentoLoja ag={ag} onAtualizado={onAtualizado} />}
+
       {aberto && !modo && (
         <div className="flex flex-wrap gap-2 mt-4">
           {ag.status === 'pendente' && (
@@ -119,7 +123,7 @@ function CardPedido({ ag, filtro, onAtualizado }) {
           <button type="button" onClick={() => setModo('recusar')} className="text-sm font-semibold py-2.5 px-4 rounded-xl border border-slate-200 text-slate-500">Recusar</button>
         </div>
       )}
-      {podeDesmarcar && !modo && (
+      {podeDesmarcar && !modo && filtro !== 'atendidos' && (
         <div className="flex flex-wrap gap-2 mt-4">
           <button type="button" onClick={() => setModo('propor')} className="text-xs font-semibold py-2 px-3 rounded-lg border border-slate-200 text-slate-600">Remarcar</button>
           <button type="button" onClick={() => setModo('recusar')} className="text-xs font-semibold py-2 px-3 rounded-lg border border-red-100 text-red-500">Desmarcar</button>
@@ -155,6 +159,94 @@ function CardPedido({ ag, filtro, onAtualizado }) {
         </a>
       )}
       {ag.resposta && !aberto && <p className="text-xs text-slate-500 mt-2">Seu recado: “{ag.resposta}”</p>}
+    </div>
+  );
+}
+
+// Parte 4: depois do atendimento — fotos antes/depois (até 3 de cada; a 1ª
+// avisa o dono no WhatsApp) e a avaliação do cliente com resposta pública.
+function PosAtendimentoLoja({ ag, onAtualizado }) {
+  const [enviando, setEnviando] = useState(null); // 'antes' | 'depois'
+  const [resposta, setResposta] = useState(ag.avaliacao?.resposta || '');
+  const [editandoResposta, setEditandoResposta] = useState(false);
+  const fotos = ag.fotos || [];
+
+  async function subir(tipo, file) {
+    setEnviando(tipo);
+    try {
+      const fd = new FormData();
+      fd.append('tipo', tipo);
+      fd.append('fotos', file);
+      const r = await apiParceiro.post(`/parceiro/pet-agenda/${ag.id}/fotos`, fd);
+      onAtualizado(r.data);
+      if (r.data.whatsapp_avisado === true) toast.success(`Foto enviada — avisamos ${ag.cliente_nome} pelo WhatsApp 📸`);
+      else toast.success('Foto enviada');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao enviar a foto');
+    } finally { setEnviando(null); }
+  }
+  async function remover(foto) {
+    if (!window.confirm('Tirar esta foto?')) return;
+    try { onAtualizado((await apiParceiro.delete(`/parceiro/pet-agenda/${ag.id}/fotos/${foto.id}`)).data); } catch { toast.error('Erro ao remover'); }
+  }
+  async function responderAvaliacao() {
+    try {
+      onAtualizado((await apiParceiro.post(`/parceiro/pet-agenda/${ag.id}/avaliacao/resposta`, { resposta })).data);
+      setEditandoResposta(false);
+      toast.success('Resposta publicada');
+    } catch (err) { toast.error(err.response?.data?.error || 'Erro ao responder'); }
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="rounded-xl border border-slate-100 p-3">
+        <p className="text-sm font-bold" style={{ color: PRETO }}>📸 Fotos antes e depois</p>
+        <p className="text-[11px] text-slate-500 mb-2">O dono sempre vê. Na sua página pública só aparecem se ele permitir {ag.fotos_publicas ? '— ✅ ele permitiu' : ''}.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {['antes', 'depois'].map(tipo => {
+            const lista = fotos.filter(f => f.tipo === tipo);
+            return (
+              <div key={tipo}>
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">{tipo}</p>
+                <div className="grid grid-cols-3 gap-1">
+                  {lista.map(f => (
+                    <div key={f.id} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
+                      <img src={f.url} alt="" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => remover(f)} aria-label="Tirar foto" className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 text-red-600 text-xs font-bold leading-none">×</button>
+                    </div>
+                  ))}
+                </div>
+                {lista.length < 3 && (
+                  <ImageCropUpload aspectRatio={1} botaoUnico disabled={Boolean(enviando)} label={enviando === tipo ? 'Enviando…' : `+ Foto de ${tipo}`}
+                    onCropComplete={file => subir(tipo, file)}
+                    botaoClassName="mt-1 w-full text-xs font-semibold py-2 rounded-lg border border-dashed border-slate-300 text-slate-600 flex items-center justify-center gap-1 disabled:opacity-50" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {ag.avaliacao ? (
+        <div className="rounded-xl bg-amber-50/60 border border-amber-100 p-3">
+          <p className="text-sm">{'⭐'.repeat(ag.avaliacao.nota)}<span className="text-slate-300">{'★'.repeat(5 - ag.avaliacao.nota)}</span> <span className="text-xs text-slate-500">— {ag.cliente_nome}</span></p>
+          {ag.avaliacao.comentario && <p className="text-sm text-slate-700 mt-1">“{ag.avaliacao.comentario}”</p>}
+          {ag.avaliacao.oculta && <p className="text-[11px] text-slate-400 mt-1">Comentário ocultado pela moderação (a nota continua valendo).</p>}
+          {ag.avaliacao.resposta && !editandoResposta ? (
+            <div className="mt-2 pl-2 border-l-2 border-amber-300">
+              <p className="text-xs text-slate-700"><strong>Sua resposta:</strong> {ag.avaliacao.resposta}</p>
+              <button type="button" onClick={() => setEditandoResposta(true)} className="text-[11px] font-semibold underline text-slate-500 mt-1">Editar resposta</button>
+            </div>
+          ) : (
+            <div className="mt-2 space-y-1.5">
+              <textarea className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none bg-white" rows={2} maxLength={600} value={resposta} onChange={e => setResposta(e.target.value)} placeholder="Responder (fica público na sua página)" />
+              <button type="button" onClick={responderAvaliacao} disabled={!resposta.trim()} className="text-xs font-bold px-3 py-2 rounded-lg text-white disabled:opacity-40" style={{ backgroundColor: ROXO }}>Publicar resposta</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">⭐ {ag.cliente_nome} ainda não avaliou. {fotos.length ? '' : 'Mandar as fotos costuma trazer a avaliação — o cliente recebe o aviso no WhatsApp.'}</p>
+      )}
     </div>
   );
 }

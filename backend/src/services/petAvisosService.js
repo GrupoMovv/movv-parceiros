@@ -66,4 +66,20 @@ function avisarClienteMudou({ parceiroWhatsapp, ag, clienteNome }) {
   return enviar(parceiroWhatsapp, `🐾 *IUB MAIS+*\n\n${txt}\n\n${URL_PAINEL_PETSHOP}`);
 }
 
-module.exports = { avisarNovoPedido, avisarResposta, avisarClienteMudou, dataBR };
+// Parte 4: pet shop mandou a 1ª foto do atendimento → dono (veja e avalie)
+function avisarFotosProntas({ clienteWhatsapp, ag, parceiroNome }) {
+  return enviar(clienteWhatsapp,
+    `📸 *${parceiroNome}* mandou as fotos do *${ag.pet_nome}* (${nomeServico(ag.servico)}).\n\n` +
+    `Veja o antes e depois e conte como foi — sua avaliação ajuda outros tutores:\n${URL_MEUS_PETS}`);
+}
+
+// Parte 4: cliente avaliou → pet shop
+function avaliarEstrelas(n) { return '⭐'.repeat(n); }
+function avisarNovaAvaliacao({ parceiroWhatsapp, ag, nota, comentario }) {
+  return enviar(parceiroWhatsapp,
+    `🐾 *Nova avaliação — IUB MAIS+*\n\n${avaliarEstrelas(nota)} pro atendimento do *${ag.pet_nome}* (${nomeServico(ag.servico)})` +
+    (comentario ? `\n📝 "${comentario}"` : '') +
+    `\n\nResponda pelo painel (a resposta fica pública):\n${URL_PAINEL_PETSHOP}`);
+}
+
+module.exports = { avisarNovoPedido, avisarResposta, avisarClienteMudou, avisarFotosProntas, avisarNovaAvaliacao, dataBR };

@@ -78,8 +78,11 @@ export default function MeusPets() {
     );
   }
 
-  const abertos = pedidos.filter(p => ['pendente', 'proposta', 'confirmado'].includes(p.status) && String(p.data) >= hojeSP());
-  const antigos = pedidos.filter(p => !abertos.includes(p));
+  // Parte 4: atendimento feito e ainda sem avaliação sobe pro topo
+  const paraAvaliar = pedidos.filter(p => p.atendimento_feito && !p.avaliacao);
+  const abertos = pedidos.filter(p => !paraAvaliar.includes(p) && (['pendente', 'proposta'].includes(p.status) || (p.status === 'confirmado' && String(p.data) >= hojeSP())));
+  const antigos = pedidos.filter(p => !abertos.includes(p) && !paraAvaliar.includes(p));
+  const atualizarPedido = novo => setPedidos(ps => ps.map(p => (p.id === novo.id ? novo : p)));
 
   return (
     <div className="space-y-5">
@@ -93,10 +96,17 @@ export default function MeusPets() {
         </button>
       </div>
 
+      {paraAvaliar.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-bold" style={{ color: NAVY }}>⭐ Conte como foi</h2>
+          {paraAvaliar.map(p => <CardPedido key={p.id} ped={p} onAcao={acaoPedido} onAtualizado={atualizarPedido} />)}
+        </section>
+      )}
+
       {abertos.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-bold" style={{ color: NAVY }}>📅 Pedidos de horário</h2>
-          {abertos.map(p => <CardPedido key={p.id} ped={p} ocupado={ocupado === p.id} onAcao={acaoPedido} />)}
+          {abertos.map(p => <CardPedido key={p.id} ped={p} ocupado={ocupado === p.id} onAcao={acaoPedido} onAtualizado={atualizarPedido} />)}
         </section>
       )}
 
@@ -119,14 +129,14 @@ export default function MeusPets() {
       {antigos.length > 0 && (
         <details className="bg-white rounded-2xl border border-slate-100 p-4">
           <summary className="text-sm font-semibold cursor-pointer" style={{ color: NAVY }}>Histórico de pedidos ({antigos.length})</summary>
-          <div className="space-y-2 mt-3">{antigos.map(p => <CardPedido key={p.id} ped={p} onAcao={acaoPedido} />)}</div>
+          <div className="space-y-2 mt-3">{antigos.map(p => <CardPedido key={p.id} ped={p} onAcao={acaoPedido} onAtualizado={atualizarPedido} />)}</div>
         </details>
       )}
     </div>
   );
 }
 
-function CardPedido({ ped, ocupado, onAcao }) {
+function CardPedido({ ped, ocupado, onAcao, onAtualizado }) {
   const st = STATUS_PEDIDO[ped.status] || STATUS_PEDIDO.pendente;
   const catalogo = usePetCatalogo();
   const servico = catalogo?.servicos.find(s => s.codigo === ped.servico);
@@ -157,6 +167,7 @@ function CardPedido({ ped, ocupado, onAcao }) {
         </div>
       )}
       {ped.status !== 'proposta' && ped.resposta && <p className="text-xs text-slate-500 mt-2">“{ped.resposta}”</p>}
+      {ped.atendimento_feito && <PosAtendimento ped={ped} onAtualizado={onAtualizado} />}
       {aberto && (
         <div className="flex flex-wrap gap-2 mt-3">
           {linkLoja && (
@@ -164,9 +175,98 @@ function CardPedido({ ped, ocupado, onAcao }) {
               <MessageCircle className="w-3.5 h-3.5" /> Falar com a loja
             </a>
           )}
-          {ped.status !== 'proposta' && (
+          {ped.status !== 'proposta' && !ped.atendimento_feito && (
             <button type="button" onClick={() => onAcao(ped, 'cancelar')} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500">Cancelar pedido</button>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Parte 4: depois do atendimento — fotos que o pet shop mandou, permissão
+// pra galeria pública (o dono decide) e a avaliação (1 por atendimento).
+function PosAtendimento({ ped, onAtualizado }) {
+  const [nota, setNota] = useState(0);
+  const [comentario, setComentario] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [ampliada, setAmpliada] = useState(null);
+  const fotos = ped.fotos || [];
+  const antes = fotos.filter(f => f.tipo === 'antes');
+  const depois = fotos.filter(f => f.tipo === 'depois');
+
+  async function avaliar() {
+    if (!nota) return toast.error('Escolha de 1 a 5 estrelas');
+    setSalvando(true);
+    try {
+      const r = await apiPainel.post(`/public/meus-pets/agendamentos/${ped.id}/avaliar`, { nota, comentario });
+      onAtualizado?.(r.data.agendamento);
+      toast.success('Obrigado pela avaliação! 🐾');
+    } catch (err) { toast.error(err.response?.data?.error || 'Erro ao avaliar'); } finally { setSalvando(false); }
+  }
+  async function publicar(v) {
+    try {
+      const r = await apiPainel.post(`/public/meus-pets/agendamentos/${ped.id}/fotos-publicas`, { publicar: v });
+      onAtualizado?.(r.data.agendamento);
+      toast.success(v ? 'As fotos vão aparecer na página do pet shop' : 'Fotos só pra você');
+    } catch { toast.error('Erro ao salvar'); }
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      {fotos.length > 0 && (
+        <div className="rounded-xl border border-slate-100 p-3">
+          <p className="text-xs font-bold text-slate-700 mb-2">📸 Antes e depois</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[['Antes', antes], ['Depois', depois]].map(([titulo, lista]) => (
+              <div key={titulo}>
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">{titulo}</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {lista.map(f => (
+                    <button key={f.id} type="button" onClick={() => setAmpliada(f.url)} className="aspect-square rounded-lg overflow-hidden bg-slate-100">
+                      <img src={f.url} alt={`${titulo} do ${ped.pet_nome}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                  {!lista.length && <span className="text-[11px] text-slate-300">—</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <label className="flex items-start gap-2 mt-3 text-xs text-slate-600 cursor-pointer">
+            <input type="checkbox" className="mt-0.5" checked={ped.fotos_publicas === true} onChange={e => publicar(e.target.checked)} />
+            <span>Deixar {ped.parceiro_nome} mostrar essas fotos na página dele (só as fotos e o nome do pet)</span>
+          </label>
+        </div>
+      )}
+
+      {ped.avaliacao ? (
+        <div className="rounded-xl bg-amber-50/60 border border-amber-100 px-3 py-2.5">
+          <p className="text-sm">{'⭐'.repeat(ped.avaliacao.nota)}<span className="text-slate-300">{'★'.repeat(5 - ped.avaliacao.nota)}</span></p>
+          {ped.avaliacao.comentario && <p className="text-xs text-slate-700 mt-1">“{ped.avaliacao.comentario}”</p>}
+          {ped.avaliacao.oculta && <p className="text-[11px] text-slate-400 mt-1">Comentário ocultado pela moderação.</p>}
+          {ped.avaliacao.resposta && <p className="text-xs text-slate-600 mt-2 pl-2 border-l-2 border-amber-300"><strong>{ped.parceiro_nome}:</strong> {ped.avaliacao.resposta}</p>}
+        </div>
+      ) : (
+        <div className="rounded-xl border-2 border-amber-200 bg-amber-50/40 px-3 py-3 space-y-2">
+          <p className="text-sm font-bold text-slate-800">Como foi o atendimento do {ped.pet_nome}?</p>
+          <div className="flex gap-1" role="radiogroup" aria-label="Nota">
+            {[1, 2, 3, 4, 5].map(n => (
+              <button key={n} type="button" role="radio" aria-checked={nota === n} aria-label={`${n} estrela${n > 1 ? 's' : ''}`} onClick={() => setNota(n)}
+                className="text-3xl leading-none transition-transform active:scale-90" style={{ filter: n <= nota ? 'none' : 'grayscale(1) opacity(0.35)' }}>⭐</button>
+            ))}
+          </div>
+          <textarea className="input resize-none text-sm" rows={2} maxLength={600} value={comentario} onChange={e => setComentario(e.target.value)} placeholder="Conte pros outros tutores (opcional)" />
+          <button type="button" onClick={avaliar} disabled={salvando || !nota} className="w-full py-2.5 rounded-xl font-bold text-sm disabled:opacity-50" style={{ backgroundColor: LIME, color: NAVY }}>
+            {salvando ? 'Enviando…' : 'Enviar avaliação'}
+          </button>
+          <p className="text-[11px] text-slate-400">Sua avaliação aparece na página do pet shop com seu primeiro nome.</p>
+        </div>
+      )}
+
+      {ampliada && (
+        <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-4" onClick={() => setAmpliada(null)} role="dialog" aria-modal="true">
+          <img src={ampliada} alt="" className="max-w-full max-h-full object-contain rounded-lg" />
+          <button type="button" onClick={() => setAmpliada(null)} aria-label="Fechar" className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center"><X className="w-5 h-5 text-slate-700" /></button>
         </div>
       )}
     </div>

@@ -48,6 +48,7 @@ import SindicatoParceirosSolicitacoes from './pages/sindicato/ParceirosSolicitac
 import SindicatoParceiroInteressados from './pages/sindicato/ParceiroInteressados/SindicatoParceiroInteressados';
 import SindicatoPlanos from './pages/sindicato/Planos/SindicatoPlanos';
 import SindicatoBeerModeracao from './pages/sindicato/Beer/SindicatoBeerModeracao';
+import SindicatoPetAvaliacoes from './pages/sindicato/Pet/SindicatoPetAvaliacoes';
 import SindicatoEntregadores from './pages/sindicato/Entregadores/SindicatoEntregadores';
 import Carteirinha from './pages/public/Carteirinha';
 import Curiosidades from './pages/public/Curiosidades';
@@ -358,6 +359,7 @@ export default function App() {
           <Route path="sindicato/parceiro-interessados" element={<RequireSindicatoEmpresas><SindicatoParceiroInteressados /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/planos" element={<RequireSindicatoEmpresas><SindicatoPlanos /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beer-moderacao" element={<RequireAdmin><SindicatoBeerModeracao /></RequireAdmin>} />
+        <Route path="sindicato/pet-avaliacoes" element={<RequireAdmin><SindicatoPetAvaliacoes /></RequireAdmin>} />
           <Route path="sindicato/entregadores" element={<RequireAdmin><SindicatoEntregadores /></RequireAdmin>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />

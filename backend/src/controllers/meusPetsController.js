@@ -4,7 +4,8 @@ const {
   SERVICOS_PET, PORTES_PET, LIMITE_PETS_POR_CONTA,
   validarFichaPet, resumoPet, validarDiaPeriodo, hojeSP,
 } = require('../config/pet');
-const { avisarNovoPedido, avisarClienteMudou } = require('../services/petAvisosService');
+const { avisarNovoPedido, avisarClienteMudou, avisarNovaAvaliacao } = require('../services/petAvisosService');
+const { anexarFotosEAvaliacoes, atendimentoFeito } = require('../services/petAtendimentos');
 
 const primeiroNome = a => String(a?.nome_completo || '').trim().split(/\s+/)[0] || 'Um cliente';
 
@@ -174,6 +175,7 @@ async function revogar(req, res) {
 const SELECT_PEDIDO_CLIENTE = `
   SELECT ag.id, ag.pet_id, ag.pet_nome, ag.pet_resumo, ag.servico, ag.porte, ag.data, ag.periodo, ag.observacao,
          ag.preco_estimado, ag.status, ag.proposta_data, ag.proposta_periodo, ag.resposta, ag.respondido_em, ag.created_at,
+         ag.fotos_publicas,
          p.nome AS parceiro_nome, p.slug AS parceiro_slug, p.whatsapp AS parceiro_whatsapp
   FROM pet_agendamentos ag JOIN sindicato_parceiros p ON p.id = ag.parceiro_id`;
 
@@ -181,7 +183,7 @@ const SELECT_PEDIDO_CLIENTE = `
 async function meusPedidos(req, res) {
   try {
     const r = await db.query(`${SELECT_PEDIDO_CLIENTE} WHERE ag.associado_id = $1 ORDER BY ag.created_at DESC LIMIT 100`, [req.painelAssociado.id]);
-    return res.json({ agendamentos: r.rows });
+    return res.json({ agendamentos: await anexarFotosEAvaliacoes(r.rows) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar seus pedidos' });
@@ -288,7 +290,57 @@ async function cancelarPedido(req, res) {
   }
 }
 
+// ─── Parte 4: avaliação e fotos públicas ───────────────────────────────────
+
+async function pedidoCompleto(id) {
+  const r = await db.query(`${SELECT_PEDIDO_CLIENTE} WHERE ag.id = $1`, [id]);
+  return (await anexarFotosEAvaliacoes(r.rows))[0];
+}
+
+// POST /api/public/meus-pets/agendamentos/:id/avaliar { nota 1-5, comentario }
+// Só quem foi atendido: confirmado + o dia já chegou. Uma por atendimento.
+async function avaliar(req, res) {
+  try {
+    const ag = await pedidoDoCliente(req.params.id, req.painelAssociado.id);
+    if (!ag) return res.status(404).json({ error: 'Pedido não encontrado' });
+    if (!atendimentoFeito(ag)) return res.status(409).json({ error: 'Você avalia depois do atendimento' });
+    const nota = Number(req.body?.nota);
+    if (!Number.isInteger(nota) || nota < 1 || nota > 5) return res.status(400).json({ error: 'Escolha de 1 a 5 estrelas' });
+    const comentario = req.body?.comentario ? String(req.body.comentario).replace(/<[^>]*>/g, '').trim().slice(0, 600) || null : null;
+    try {
+      await db.query(
+        'INSERT INTO pet_avaliacoes (agendamento_id, parceiro_id, associado_id, nota, comentario) VALUES ($1, $2, $3, $4, $5)',
+        [ag.id, ag.parceiro_id, ag.associado_id, nota, comentario]
+      );
+    } catch (e) {
+      if (e.code === '23505') return res.status(409).json({ error: 'Você já avaliou esse atendimento' });
+      throw e;
+    }
+    const novo = await pedidoCompleto(ag.id);
+    const whatsappAvisado = await avisarNovaAvaliacao({ parceiroWhatsapp: novo.parceiro_whatsapp, ag: novo, nota, comentario });
+    return res.status(201).json({ agendamento: novo, whatsapp_avisado: whatsappAvisado });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao salvar a avaliação' });
+  }
+}
+
+// POST /api/public/meus-pets/agendamentos/:id/fotos-publicas { publicar: bool }
+// Consentimento do dono pra galeria pública do pet shop.
+async function definirFotosPublicas(req, res) {
+  try {
+    const ag = await pedidoDoCliente(req.params.id, req.painelAssociado.id);
+    if (!ag) return res.status(404).json({ error: 'Pedido não encontrado' });
+    await db.query('UPDATE pet_agendamentos SET fotos_publicas = $1, updated_at = NOW() WHERE id = $2', [req.body?.publicar === true, ag.id]);
+    return res.json({ agendamento: await pedidoCompleto(ag.id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao salvar' });
+  }
+}
+
 module.exports = {
   listar, criar, atualizar, remover, enviarFoto, revogar,
   meusPedidos, pedirHorario, aceitarProposta, cancelarPedido,
+  avaliar, definirFotosPublicas,
 };

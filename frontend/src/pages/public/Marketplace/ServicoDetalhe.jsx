@@ -123,6 +123,8 @@ export default function ServicoDetalhe() {
 
         <BlocoPet servico={servico} catalogo={petCatalogo} />
 
+        {petAtende && <AvaliacoesPet slug={slug} catalogo={petCatalogo} />}
+
         {/* Pet parte 3: logado pede horário pelo sistema (fica registrado,
             pet shop responde no painel, avisos por WhatsApp); visitante
             continua com a mensagem pronta no WhatsApp da Parte 2. */}
@@ -304,6 +306,82 @@ function AgendarPet({ servico, catalogo, valor, onChange, link, voltar }) {
       <p className="text-[11px] text-center text-slate-500">
         Tem conta? <Link to={`/entrar?voltar=${encodeURIComponent(voltar)}`} className="font-bold underline" style={{ color: ROXO }}>Entre</Link> pra pedir o horário por aqui e guardar a ficha do seu pet.
       </p>
+    </div>
+  );
+}
+
+// Pet parte 4 — nota, avaliações (com resposta do pet shop) e galeria
+// antes/depois. Só atendimentos reais avaliam; galeria só com ok do dono.
+function AvaliacoesPet({ slug, catalogo }) {
+  const [dados, setDados] = useState(null);
+  const [verTodas, setVerTodas] = useState(false);
+  const [ampliada, setAmpliada] = useState(null);
+  useEffect(() => {
+    api.get(`/public/pet/parceiros/${slug}/avaliacoes`).then(r => setDados(r.data)).catch(() => setDados(null));
+  }, [slug]);
+  if (!dados || (!dados.total && !dados.galeria.length)) return null;
+  const lista = verTodas ? dados.avaliacoes : dados.avaliacoes.slice(0, 3);
+  const estrelas = n => <span aria-label={`${n} de 5`}>{'⭐'.repeat(n)}<span className="text-slate-300">{'★'.repeat(5 - n)}</span></span>;
+  return (
+    <div className="space-y-4">
+      {dados.galeria.length > 0 && (
+        <div>
+          <h2 className="font-bold text-sm mb-2" style={{ color: GRAFITE }}>📸 Antes e depois</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            {dados.galeria.map(g => (
+              <div key={g.agendamento_id} className="flex-shrink-0 w-56 rounded-2xl border border-slate-100 p-2">
+                <div className="grid grid-cols-2 gap-1">
+                  {[['Antes', g.antes[0]], ['Depois', g.depois[0]]].map(([t, url]) => (
+                    <button key={t} type="button" disabled={!url} onClick={() => setAmpliada(url)} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
+                      {url && <img src={url} alt={`${t}: ${g.pet_nome}`} className="w-full h-full object-cover" />}
+                      <span className="absolute bottom-1 left-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-black/60 text-white">{t}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5 truncate">{g.pet_nome} · {nomeDe(catalogo?.servicos, g.servico)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {dados.total > 0 && (
+        <div>
+          <h2 className="font-bold text-sm mb-2" style={{ color: GRAFITE }}>⭐ Avaliações</h2>
+          <div className="flex items-center gap-4 rounded-2xl bg-amber-50/60 border border-amber-100 px-4 py-3">
+            <div className="text-center">
+              <p className="text-3xl font-black" style={{ color: GRAFITE }}>{dados.media.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</p>
+              <p className="text-[11px] text-slate-500">{dados.total} {dados.total === 1 ? 'avaliação' : 'avaliações'}</p>
+            </div>
+            <div className="flex-1 space-y-0.5">
+              {[5, 4, 3, 2, 1].map(n => (
+                <div key={n} className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                  <span className="w-2">{n}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                    <div className="h-full bg-amber-400" style={{ width: `${(dados.distribuicao[n] / dados.total) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <ul className="mt-3 space-y-3">
+            {lista.map(av => (
+              <li key={av.id} className="border-b border-slate-100 pb-3 last:border-0">
+                <p className="text-xs">{estrelas(av.nota)} <span className="font-semibold text-slate-700">{av.cliente}</span> <span className="text-slate-400">· {av.pet_nome} · {nomeDe(catalogo?.servicos, av.servico)}</span></p>
+                {av.comentario && <p className="text-sm text-slate-700 mt-1">{av.comentario}</p>}
+                {av.resposta && <p className="text-xs text-slate-600 mt-1.5 pl-2 border-l-2 border-amber-300"><strong>Resposta do pet shop:</strong> {av.resposta}</p>}
+              </li>
+            ))}
+          </ul>
+          {dados.avaliacoes.length > 3 && !verTodas && (
+            <button type="button" onClick={() => setVerTodas(true)} className="text-xs font-bold underline" style={{ color: ROXO }}>Ver todas as {dados.avaliacoes.length} avaliações</button>
+          )}
+        </div>
+      )}
+      {ampliada && (
+        <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-4" onClick={() => setAmpliada(null)} role="dialog" aria-modal="true">
+          <img src={ampliada} alt="" className="max-w-full max-h-full object-contain rounded-lg" />
+        </div>
+      )}
     </div>
   );
 }

@@ -45,11 +45,13 @@ async function listarPublico(req, res) {
     const bairro = String(q.bairro || '').trim() || null;
     const precoMin = numeroOuNull(q.preco_min);
     const precoMax = numeroOuNull(q.preco_max);
-    const ordem = ['preco', 'nome'].includes(q.ordem) ? q.ordem : 'destaque';
+    const ordem = ['preco', 'nome', 'avaliacao'].includes(q.ordem) ? q.ordem : 'destaque';
 
     const ordenacao = [
       raca ? `(p.pet_racas @> ARRAY[$3::text]) DESC` : null,
       ordem === 'preco' ? 'preco_a_partir ASC NULLS LAST' : null,
+      // melhor avaliado: maior média; empate = quem tem mais avaliações
+      ordem === 'avaliacao' ? 'nota_media DESC NULLS LAST, total_avaliacoes DESC' : null,
       ordem === 'destaque' ? `${sqlBoostBusca('p.')} DESC` : null,
       'p.nome ASC',
     ].filter(Boolean).join(', ');
@@ -61,8 +63,11 @@ async function listarPublico(req, res) {
                 (SELECT MIN(pp.preco) FROM pet_precos pp
                   WHERE pp.parceiro_id = p.id
                     AND ($1::text IS NULL OR pp.servico = $1)
-                    AND ($2::text IS NULL OR pp.porte = $2)) AS preco_a_partir
+                    AND ($2::text IS NULL OR pp.porte = $2)) AS preco_a_partir,
+                av.nota_media, COALESCE(av.total, 0) AS total_avaliacoes
          FROM sindicato_parceiros p
+         LEFT JOIN (SELECT parceiro_id, ROUND(AVG(nota)::numeric, 1) AS nota_media, COUNT(*)::int AS total
+                    FROM pet_avaliacoes GROUP BY parceiro_id) av ON av.parceiro_id = p.id
          WHERE p.status = 'ativo' AND p.pet_servicos <> '{}'
            AND ($1::text IS NULL OR p.pet_servicos @> ARRAY[$1::text])
            AND ($2::text IS NULL OR p.pet_portes @> ARRAY[$2::text])
@@ -95,6 +100,8 @@ async function listarPublico(req, res) {
         tipo_negocio: p.tipo_negocio, pet_servicos: p.pet_servicos, pet_portes: p.pet_portes, pet_racas: p.pet_racas,
         preco_a_partir: p.preco_a_partir == null ? null : Number(p.preco_a_partir),
         especialista: Boolean(raca && p.pet_racas.includes(raca)),
+        nota_media: p.nota_media == null ? null : Number(p.nota_media),
+        total_avaliacoes: p.total_avaliacoes,
       })),
       facetas: {
         bairros: f.rows,
@@ -162,4 +169,53 @@ async function salvarMeuPet(req, res) {
   }
 }
 
-module.exports = { catalogo, listarPublico, meuPet, salvarMeuPet, dadosPetDoParceiro };
+// GET /api/public/pet/parceiros/:slug/avaliacoes — Parte 4, página do pet shop.
+// Nota média + últimas avaliações (comentário oculto pelo admin sai como
+// null, a nota conta) + galeria antes/depois SÓ dos atendimentos em que o
+// dono permitiu. Cliente aparece como "Maria S." (LGPD).
+async function avaliacoesPublicas(req, res) {
+  try {
+    const p = (await db.query("SELECT id FROM sindicato_parceiros WHERE slug = $1 AND status = 'ativo'", [req.params.slug])).rows[0];
+    if (!p) return res.status(404).json({ error: 'Pet shop não encontrado' });
+    const resumo = (await db.query(
+      `SELECT ROUND(AVG(nota)::numeric, 1) AS media, COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE nota = 5)::int AS n5, COUNT(*) FILTER (WHERE nota = 4)::int AS n4,
+              COUNT(*) FILTER (WHERE nota = 3)::int AS n3, COUNT(*) FILTER (WHERE nota = 2)::int AS n2,
+              COUNT(*) FILTER (WHERE nota = 1)::int AS n1
+       FROM pet_avaliacoes WHERE parceiro_id = $1`, [p.id]
+    )).rows[0];
+    const lista = (await db.query(
+      `SELECT av.id, av.nota, CASE WHEN av.oculta THEN NULL ELSE av.comentario END AS comentario, av.oculta,
+              av.resposta, av.created_at, a.nome_completo, ag.pet_nome, ag.servico
+       FROM pet_avaliacoes av
+       JOIN sindicato_associados a ON a.id = av.associado_id
+       JOIN pet_agendamentos ag ON ag.id = av.agendamento_id
+       WHERE av.parceiro_id = $1 ORDER BY av.created_at DESC LIMIT 30`, [p.id]
+    )).rows.map(({ nome_completo, ...r }) => {
+      const partes = String(nome_completo || '').trim().split(/\s+/);
+      return { ...r, cliente: partes[0] ? `${partes[0]}${partes[1] ? ` ${partes[1][0]}.` : ''}` : 'Cliente' };
+    });
+    const fotos = (await db.query(
+      `SELECT f.agendamento_id, f.tipo, f.url, ag.pet_nome, ag.servico, ag.data
+       FROM pet_atendimento_fotos f JOIN pet_agendamentos ag ON ag.id = f.agendamento_id
+       WHERE ag.parceiro_id = $1 AND ag.fotos_publicas = true AND ag.status = 'confirmado'
+       ORDER BY ag.data DESC, f.id`, [p.id]
+    )).rows;
+    const galeria = [];
+    for (const f of fotos) {
+      let g = galeria.find(x => x.agendamento_id === f.agendamento_id);
+      if (!g) { g = { agendamento_id: f.agendamento_id, pet_nome: f.pet_nome, servico: f.servico, antes: [], depois: [] }; galeria.push(g); }
+      g[f.tipo].push(f.url);
+    }
+    return res.json({
+      media: resumo.media == null ? null : Number(resumo.media), total: resumo.total,
+      distribuicao: { 5: resumo.n5, 4: resumo.n4, 3: resumo.n3, 2: resumo.n2, 1: resumo.n1 },
+      avaliacoes: lista, galeria: galeria.slice(0, 12),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar avaliações' });
+  }
+}
+
+module.exports = { catalogo, listarPublico, meuPet, salvarMeuPet, dadosPetDoParceiro, avaliacoesPublicas };

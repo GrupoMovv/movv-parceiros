@@ -22,6 +22,8 @@ router.get('/agendamentos',                 ctrl.meusPedidos);
 router.post('/agendamentos',                ctrl.pedirHorario);
 router.post('/agendamentos/:id/aceitar',    ctrl.aceitarProposta);
 router.post('/agendamentos/:id/cancelar',   ctrl.cancelarPedido);
+router.post('/agendamentos/:id/avaliar',    ctrl.avaliar);
+router.post('/agendamentos/:id/fotos-publicas', ctrl.definirFotosPublicas);
 
 router.get('/',        ctrl.listar);
 router.post('/',       ctrl.criar);

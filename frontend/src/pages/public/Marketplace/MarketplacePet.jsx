@@ -100,6 +100,7 @@ export default function MarketplacePet() {
               </button>
               <select value={filtro.ordem} onChange={e => definir('ordem', e.target.value)} className="text-xs font-semibold rounded-xl border border-slate-200 px-2 py-2 text-slate-600" aria-label="Ordenar">
                 <option value="">Destaques</option>
+                <option value="avaliacao">Melhor avaliado</option>
                 <option value="preco">Menor preço</option>
                 <option value="nome">A–Z</option>
               </select>
@@ -194,7 +195,14 @@ function CardPetShop({ p, catalogo, filtro }) {
           <p className="font-bold text-sm truncate" style={{ color: GRAFITE }}>{p.nome}</p>
           <SeloPlano plano={p.plano} />
         </div>
-        {p.bairro && <p className="text-[11px] text-slate-400 flex items-center gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /> {p.bairro}</p>}
+        <div className="flex items-center gap-2 mt-0.5">
+          {p.total_avaliacoes > 0 && (
+            <span className="text-[11px] font-bold text-amber-700" aria-label={`Nota ${p.nota_media} de 5, ${p.total_avaliacoes} avaliações`}>
+              ⭐ {p.nota_media.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} <span className="font-normal text-slate-400">({p.total_avaliacoes})</span>
+            </span>
+          )}
+          {p.bairro && <p className="text-[11px] text-slate-400 flex items-center gap-0.5"><MapPin className="w-3 h-3" /> {p.bairro}</p>}
+        </div>
         <p className="text-sm mt-1" title={emojis.map(s => s.nome).join(', ')}>{emojis.map(s => s.emoji).join(' ')}</p>
         <div className="flex items-center justify-between gap-2 mt-1">
           <span className="text-[11px] font-semibold text-slate-500 truncate">
