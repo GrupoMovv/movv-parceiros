@@ -45,7 +45,9 @@ export default function ParceiroProdutoForm() {
   const [mostrarBannerIA, setMostrarBannerIA] = useState(true);
   const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados, voz_limite_dia, voz_usados_hoje }
   const [transcricaoVoz, setTranscricaoVoz] = useState(null);
-  const [publicado, setPublicado] = useState(false); // quadro pós-publicar: novo / mais fotos / lista
+  // Título do quadro pós-salvar ("Produto publicado!", "Produto atualizado!",
+  // "Fotos enviadas!") com novo / mais fotos / lista; null = fechado.
+  const [publicado, setPublicado] = useState(null);
   const [ajudaAssociado, setAjudaAssociado] = useState(false);
   const secaoFotosRef = useRef(null);
   const pendentesRef = useRef(pendentes);
@@ -158,13 +160,13 @@ export default function ParceiroProdutoForm() {
     setProdutoId(null);
     setTranscricaoVoz(null);
     setMostrarBannerIA(true);
-    setPublicado(false);
+    setPublicado(null);
     navigate('/parceiro/painel/produtos/novo', { replace: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function adicionarMaisFotos() {
-    setPublicado(false);
+    setPublicado(null);
     secaoFotosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -210,14 +212,18 @@ export default function ParceiroProdutoForm() {
     };
     try {
       if (produtoId) {
+        // Foto escolhida e ainda não enviada vai junto — clicar Publicar
+        // sem apertar "Enviar foto" perdia a foto calado.
+        if (pendentesRef.current.length) await confirmarEnvio(false);
         await apiParceiro.put(`/parceiro/produtos/${produtoId}`, payload);
-        toast.success('Produto atualizado!');
+        if (rascunho) toast.success('Rascunho salvo!');
+        else setPublicado('Produto atualizado!');
       } else {
         const res = await apiParceiro.post('/parceiro/produtos', payload);
         const novoId = res.data.id;
         setProdutoId(novoId);
         navigate(`/parceiro/painel/produtos/${novoId}`, { replace: true });
-        if (!rascunho) setPublicado(true);
+        if (!rascunho) setPublicado('Produto publicado!');
 
         // Veio do fluxo de IA: a foto já recortada sobe automaticamente
         // junto com a criação, num único clique em "Publicar"/"Salvar
@@ -285,17 +291,20 @@ export default function ParceiroProdutoForm() {
     });
   }
 
-  async function confirmarEnvio() {
-    if (!pendentes.length) return;
+  // mostrarCaixa=false quando é o Publicar/Salvar que está enviando junto
+  // (aí a caixa que aparece é a de "Produto atualizado!").
+  async function confirmarEnvio(mostrarCaixa = true) {
+    const lote = pendentesRef.current;
+    if (!lote.length) return;
     setEnviandoFotos(true);
     try {
       const fd = new FormData();
-      pendentes.forEach(p => fd.append('fotos', p.file));
+      lote.forEach(p => fd.append('fotos', p.file));
       const res = await apiParceiro.post(`/parceiro/produtos/${produtoId}/fotos`, fd);
       setFotos(res.data.fotos);
-      pendentes.forEach(p => URL.revokeObjectURL(p.preview));
+      lote.forEach(p => URL.revokeObjectURL(p.preview));
       setPendentes([]);
-      toast.success('Fotos enviadas!');
+      if (mostrarCaixa) setPublicado(lote.length === 1 ? 'Foto enviada!' : 'Fotos enviadas!');
     } catch (err) {
       const d = err.response?.data;
       // "detalhes"/"codigo" só vêm quando o erro é do Cloudinary (ver
@@ -451,7 +460,7 @@ export default function ParceiroProdutoForm() {
                       </div>
                     ))}
                   </div>
-                  <button type="button" onClick={confirmarEnvio} disabled={enviandoFotos}
+                  <button type="button" onClick={() => confirmarEnvio()} disabled={enviandoFotos}
                     className="mt-3 flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl text-white transition-colors disabled:opacity-60"
                     style={{ backgroundColor: ROXO }}>
                     {enviandoFotos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -576,10 +585,10 @@ export default function ParceiroProdutoForm() {
       </div>
 
       {publicado && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={() => setPublicado(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={() => setPublicado(null)}>
           <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="titulo-publicado">
             <p className="text-4xl leading-none" aria-hidden="true">🎊</p>
-            <h2 id="titulo-publicado" className="text-lg font-black mt-3" style={{ color: PRETO }}>Produto publicado!</h2>
+            <h2 id="titulo-publicado" className="text-lg font-black mt-3" style={{ color: PRETO }}>{publicado}</h2>
             <p className="text-sm text-slate-500 mt-1 truncate">{form.nome}</p>
             <div className="flex flex-col gap-2 mt-5">
               <button type="button" onClick={novoProduto} className="flex items-center justify-center gap-2 text-white font-bold py-3 rounded-xl" style={{ backgroundColor: ROXO }}>
