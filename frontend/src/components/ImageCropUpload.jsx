@@ -130,8 +130,9 @@ async function getRecorteComoBlob(imageSrc, pixelCrop) {
  * @param {boolean} disabled
  * @param {string} tamanhoIcone - classes de tamanho do ícone (Camera/Loader2) do botão, ex. "w-12 h-12" pra áreas de upload grandes/destacadas. Default "w-4 h-4" (botão compacto de sempre).
  * @param {(file: File) => void|Promise<void>} onCropComplete - chamado com o File JPEG final a cada imagem confirmada
+ * @param {boolean} botaoUnico - um botão só (galeria) também no celular — pra quem já tem a própria câmera ao lado (CapturaFoto)
  */
-export default function ImageCropUpload({ aspectRatio = 1, multiple = false, label = 'Selecionar imagem', hint, disabled = false, tamanhoIcone = 'w-4 h-4', onCropComplete, className = '', botaoClassName }) {
+export default function ImageCropUpload({ aspectRatio = 1, multiple = false, label = 'Selecionar imagem', hint, disabled = false, tamanhoIcone = 'w-4 h-4', onCropComplete, className = '', botaoClassName, botaoUnico = false }) {
   const inputGaleriaRef = useRef(null);
   const inputCameraRef = useRef(null);
   const [carregandoSelecao, setCarregandoSelecao] = useState(false);
@@ -239,7 +240,7 @@ export default function ImageCropUpload({ aspectRatio = 1, multiple = false, lab
 
   return (
     <div className={className}>
-      {EH_MOBILE ? (
+      {EH_MOBILE && !botaoUnico ? (
         <div
           onDragOver={aoArrastarSobre}
           onDragLeave={aoSairArraste}

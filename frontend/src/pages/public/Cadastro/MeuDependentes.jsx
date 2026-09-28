@@ -132,7 +132,7 @@ export default function MeuDependentes() {
 
             {capturandoId === dep.id && (
               <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                <CapturaFoto onCapturar={captura => handleFoto(dep, captura)} />
+                <CapturaFoto permitirGaleria onCapturar={captura => handleFoto(dep, captura)} />
                 {enviandoFotoId === dep.id && <p className="text-center text-slate-400 text-xs flex items-center justify-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</p>}
               </div>
             )}

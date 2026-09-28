@@ -235,7 +235,7 @@ export default function MeuCadastro() {
 
                 {capturandoDependenteIdx === idx ? (
                   <div className="space-y-2 pt-1">
-                    <CapturaFoto onCapturar={captura => handleTrocarFotoDependente(idx, captura)} />
+                    <CapturaFoto permitirGaleria onCapturar={captura => handleTrocarFotoDependente(idx, captura)} />
                     {enviandoFotoDependenteIdx === idx && <p className="text-center text-slate-400 text-xs flex items-center justify-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</p>}
                     <button onClick={() => setCapturandoDependenteIdx(null)} className="w-full text-slate-400 text-xs underline">Cancelar</button>
                   </div>

@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, RefreshCw, AlertTriangle } from 'lucide-react';
+import ImageCropUpload from '../../../components/ImageCropUpload';
 
-// Só câmera ao vivo, nunca upload de arquivo — pedido explícito (foto real
-// da pessoa na hora, não uma foto qualquer escolhida da galeria).
-export default function CapturaFoto({ onCapturar, fotoAtual }) {
+// Câmera ao vivo — pedido explícito (foto real da pessoa na hora, não uma
+// foto qualquer escolhida da galeria). Exceção: `permitirGaleria` (só na
+// foto de DEPENDENTE — o filho nem sempre está do lado na hora; decisão do
+// Junior em 28/09/2026). O titular continua só câmera.
+export default function CapturaFoto({ onCapturar, fotoAtual, permitirGaleria = false }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [erro, setErro] = useState(null);
@@ -69,22 +72,51 @@ export default function CapturaFoto({ onCapturar, fotoAtual }) {
     onCapturar(null);
   }
 
+  // Foto da galeria, já recortada quadrada (o círculo mostra o centro)
+  function aoEscolherDaGaleria(file) {
+    const previewUrl = URL.createObjectURL(file);
+    setErro(null);
+    setPreview(previewUrl);
+    pararCamera();
+    onCapturar({ blob: file, previewUrl });
+  }
+
+  const galeria = permitirGaleria && (
+    <div className="text-center">
+      <p className="text-slate-400 text-xs mb-2">ou</p>
+      <ImageCropUpload
+        aspectRatio={1}
+        botaoUnico
+        label="Escolher da galeria"
+        onCropComplete={aoEscolherDaGaleria}
+        botaoClassName="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-[#0B1F3A] text-[#0B1F3A] text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-60"
+      />
+      <p className="text-slate-400 text-[11px] mt-1.5">Deixe o rosto no centro do quadrado</p>
+    </div>
+  );
+
   if (!suportaCamera) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
-        <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-        <p className="text-amber-800 text-sm font-medium">Este navegador não suporta câmera.</p>
-        <p className="text-amber-700 text-xs mt-1">Use o Chrome ou o Safari no seu celular pra continuar.</p>
+      <div className="space-y-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+          <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+          <p className="text-amber-800 text-sm font-medium">Este navegador não suporta câmera.</p>
+          <p className="text-amber-700 text-xs mt-1">Use o Chrome ou o Safari no seu celular pra continuar.</p>
+        </div>
+        {galeria}
       </div>
     );
   }
 
   if (erro) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
-        <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-        <p className="text-red-700 text-sm font-medium">{erro}</p>
-        <button onClick={() => setErro(null)} className="mt-3 text-red-600 text-sm underline">Tentar de novo</button>
+      <div className="space-y-3">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
+          <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-700 text-sm font-medium">{erro}</p>
+          <button onClick={() => setErro(null)} className="mt-3 text-red-600 text-sm underline">Tentar de novo</button>
+        </div>
+        {galeria}
       </div>
     );
   }
@@ -126,6 +158,7 @@ export default function CapturaFoto({ onCapturar, fotoAtual }) {
           <Camera className="w-4 h-4" /> Tirar foto
         </button>
       </div>
+      {galeria}
     </div>
   );
 }
