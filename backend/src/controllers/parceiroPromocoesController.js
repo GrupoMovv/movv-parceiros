@@ -121,11 +121,15 @@ async function validarCampos(b, parceiroId) {
   if (!Number.isFinite(precoPor) || precoPor <= 0) return { erro: 'Preço "Por" é obrigatório e deve ser maior que zero' };
   if (precoPor >= precoDe) return { erro: 'Preço "Por" precisa ser menor que o preço "De"' };
 
+  // Mesma regra do produto (parceiroProdutosController.validarCampos), com o
+  // "Por" como preço de referência: vazio/zero/igual = sem desconto extra
+  // de associado, guardado NULL; maior nunca.
   let precoAssociado = null;
   if (b.preco_associado !== undefined && b.preco_associado !== null && b.preco_associado !== '') {
-    precoAssociado = parseFloat(b.preco_associado);
-    if (!Number.isFinite(precoAssociado) || precoAssociado <= 0) return { erro: 'Preço associado inválido' };
-    if (precoAssociado >= precoPor) return { erro: 'Preço associado precisa ser menor que o preço promocional' };
+    const pa = parseFloat(b.preco_associado);
+    if (!Number.isFinite(pa) || pa < 0) return { erro: 'Preço associado inválido' };
+    if (pa > precoPor) return { erro: 'Preço associado não pode ser maior que o preço promocional ("Por")' };
+    if (pa > 0 && pa < precoPor) precoAssociado = pa;
   }
 
   const dataInicio = b.data_inicio ? new Date(b.data_inicio) : null;

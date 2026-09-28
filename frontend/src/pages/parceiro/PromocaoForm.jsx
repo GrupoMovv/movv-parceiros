@@ -99,10 +99,11 @@ export default function ParceiroPromocaoForm() {
     if (!Number.isFinite(de) || de <= 0) return 'Preço "De" é obrigatório';
     if (!Number.isFinite(por) || por <= 0) return 'Preço "Por" é obrigatório';
     if (por >= de) return 'Preço "Por" precisa ser menor que o preço "De"';
+    // Opcional: vazio ou igual ao "Por" = sem desconto extra (o backend guarda NULL).
     if (form.preco_associado) {
       const pa = parseFloat(form.preco_associado);
-      if (!Number.isFinite(pa) || pa <= 0) return 'Preço associado inválido';
-      if (pa >= por) return 'Preço associado precisa ser menor que o preço promocional';
+      if (!Number.isFinite(pa) || pa < 0) return 'Preço associado inválido';
+      if (pa > por) return 'Preço associado não pode ser maior que o preço promocional ("Por")';
     }
     if (!form.data_inicio) return 'Informe a data de início';
     if (!form.data_fim) return 'Informe a data de término';
@@ -273,7 +274,9 @@ export default function ParceiroPromocaoForm() {
             <Campo label="Data de término" value={form.data_fim} onChange={v => setCampo('data_fim', v)} type="datetime-local" />
           </div>
 
-          <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" className="mt-4" />
+          <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" className="mt-4"
+            placeholder="Deixe vazio pra usar o mesmo preço (sem desconto)" />
+          <p className="text-[11px] text-slate-400 mt-1">Associados SECI podem ter preço diferenciado. Deixe vazio se não quiser oferecer desconto agora.</p>
           <Campo label="Limite de usos (opcional — ex: primeiros 20)" value={form.limite_usos} onChange={v => setCampo('limite_usos', v)} type="number" className="mt-4" />
 
           <div className="flex flex-col gap-2 mt-4">
@@ -336,12 +339,12 @@ function Label({ children }) {
   return <label className="block text-xs font-semibold text-slate-500 mb-1.5">{children}</label>;
 }
 
-function Campo({ label, value, onChange, type = 'text', className = '' }) {
+function Campo({ label, value, onChange, type = 'text', className = '', placeholder }) {
   return (
     <div className={className}>
       <Label>{label}</Label>
       {type === 'money' ? (
-        <CampoPreco value={value} onChange={onChange} className={campoCls} />
+        <CampoPreco value={value} onChange={onChange} className={campoCls} placeholder={placeholder} />
       ) : (
         <input type={type} value={value} onChange={e => onChange(e.target.value)} className={campoCls} />
       )}
