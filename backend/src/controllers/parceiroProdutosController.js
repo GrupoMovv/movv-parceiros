@@ -80,11 +80,17 @@ function validarCampos(b) {
   const preco = parseFloat(b.preco);
   if (!Number.isFinite(preco) || preco <= 0) return { erro: 'Preço normal é obrigatório e deve ser maior que zero' };
 
+  // Opcional. Vazio ou IGUAL ao normal = sem desconto de associado, guardado
+  // como NULL: o site inteiro lê "preco_associado IS NOT NULL" como "tem
+  // desconto" (selo 💎, filtro de desconto, vitrine de ofertas) e o
+  // carrinho já cobra o preço normal quando é NULL — associado e cliente
+  // comum pagam o mesmo. Maior que o normal nunca.
   let precoAssociado = null;
   if (b.preco_associado !== undefined && b.preco_associado !== null && b.preco_associado !== '') {
-    precoAssociado = parseFloat(b.preco_associado);
-    if (!Number.isFinite(precoAssociado) || precoAssociado <= 0) return { erro: 'Preço associado inválido' };
-    if (precoAssociado >= preco) return { erro: 'Preço associado deve ser menor que o preço normal' };
+    const pa = parseFloat(b.preco_associado);
+    if (!Number.isFinite(pa) || pa < 0) return { erro: 'Preço associado inválido' };
+    if (pa > preco) return { erro: 'Preço associado não pode ser maior que o normal' };
+    if (pa > 0 && pa < preco) precoAssociado = pa;
   }
 
   // Opcional (IUB Food): vazio/ausente = usa o tempo_preparo_min do restaurante.

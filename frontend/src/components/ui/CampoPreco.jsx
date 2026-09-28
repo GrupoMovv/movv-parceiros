@@ -29,7 +29,10 @@ export default function CampoPreco({ value, onChange, className, placeholder = '
 
   function handleChange(e) {
     const digitos = e.target.value.replace(/\D/g, '');
-    const centavos = parseInt(digitos || '0', 10);
+    // Apagou tudo = campo vazio de verdade (não "0.00"), senão campo
+    // opcional apagado virava "preço inválido" na validação.
+    if (!/[1-9]/.test(digitos)) return onChange('');
+    const centavos = parseInt(digitos, 10);
     onChange((centavos / 100).toFixed(2));
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { X, Loader2, Star, Lightbulb, Check, Send } from 'lucide-react';
+import { X, Loader2, Star, Lightbulb, Check, Send, Plus } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, DOURADO, PRETO } from '../public/Marketplace/theme';
 import { CATEGORIAS_FILTRO } from '../public/Marketplace/parceirosData';
@@ -20,6 +20,7 @@ const DICAS = [
   'Não precisa ser foto profissional!',
 ];
 const LIMITE_FOTOS = 3;
+const TEXTO_AJUDA_ASSOCIADO = 'Associados SECI podem ter preço diferenciado. Deixe vazio se não quiser oferecer desconto agora.';
 const VAZIO = { nome: '', descricao: '', categoria: '', marca: '', preco: '', preco_associado: '', estoque_disponivel: true, destaque: false, tempo_preparo_min: '' };
 
 export default function ParceiroProdutoForm() {
@@ -44,6 +45,9 @@ export default function ParceiroProdutoForm() {
   const [mostrarBannerIA, setMostrarBannerIA] = useState(true);
   const [statusIA, setStatusIA] = useState(null); // { trial_ativo, trial_dias_restantes, limite, usados, voz_limite_dia, voz_usados_hoje }
   const [transcricaoVoz, setTranscricaoVoz] = useState(null);
+  const [publicado, setPublicado] = useState(false); // quadro pós-publicar: novo / mais fotos / lista
+  const [ajudaAssociado, setAjudaAssociado] = useState(false);
+  const secaoFotosRef = useRef(null);
   const pendentesRef = useRef(pendentes);
   pendentesRef.current = pendentes;
   const fotoDaIAPreviewRef = useRef(fotoDaIAPreview);
@@ -68,7 +72,11 @@ export default function ParceiroProdutoForm() {
 
   useEffect(() => {
     if (!modoEdicao) return;
+    // cancelado: clicou "+ Novo produto" antes desta busca voltar — não
+    // pode encher o formulário novo com o produto que acabou de publicar
+    let cancelado = false;
     apiParceiro.get(`/parceiro/produtos/${id}`).then(res => {
+      if (cancelado) return;
       const p = res.data;
       setForm({
         nome: p.nome, descricao: p.descricao, categoria: p.categoria || '', marca: p.marca || '',
@@ -78,6 +86,7 @@ export default function ParceiroProdutoForm() {
       });
       setFotos(p.fotos || []);
     }).catch(() => toast.error('Erro ao carregar produto')).finally(() => setCarregando(false));
+    return () => { cancelado = true; };
   }, [id, modoEdicao]);
 
   function setCampo(campo, valor) { setForm(f => ({ ...f, [campo]: valor })); }
@@ -138,6 +147,27 @@ export default function ParceiroProdutoForm() {
     else toast.success('Pronto! Confira os dados e clique em Publicar.');
   }
 
+  // "+ Novo produto" do quadro pós-publicar. /produtos/:id → /produtos/novo
+  // reaproveita este mesmo componente (não remonta), então zera na mão.
+  function novoProduto() {
+    pendentes.forEach(p => URL.revokeObjectURL(p.preview));
+    removerFotoDaIA();
+    setForm(VAZIO);
+    setFotos([]);
+    setPendentes([]);
+    setProdutoId(null);
+    setTranscricaoVoz(null);
+    setMostrarBannerIA(true);
+    setPublicado(false);
+    navigate('/parceiro/painel/produtos/novo', { replace: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function adicionarMaisFotos() {
+    setPublicado(false);
+    secaoFotosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function removerFotoDaIA() {
     if (fotoDaIAPreview) URL.revokeObjectURL(fotoDaIAPreview);
     setFotoDaIA(null);
@@ -149,10 +179,11 @@ export default function ParceiroProdutoForm() {
     if (f.descricao.trim().length < 20) return 'Descrição precisa ter pelo menos 20 caracteres';
     const preco = parseFloat(f.preco);
     if (!Number.isFinite(preco) || preco <= 0) return 'Preço normal é obrigatório e deve ser maior que zero';
+    // Opcional: vazio ou igual = sem desconto (o backend guarda NULL).
     if (f.preco_associado) {
       const pa = parseFloat(f.preco_associado);
-      if (!Number.isFinite(pa) || pa <= 0) return 'Preço associado inválido';
-      if (pa >= preco) return 'Preço associado deve ser menor que o preço normal';
+      if (!Number.isFinite(pa) || pa < 0) return 'Preço associado inválido';
+      if (pa > preco) return 'Preço associado não pode ser maior que o normal';
     }
     if (f.tempo_preparo_min !== '') {
       const t = Number(f.tempo_preparo_min);
@@ -186,6 +217,7 @@ export default function ParceiroProdutoForm() {
         const novoId = res.data.id;
         setProdutoId(novoId);
         navigate(`/parceiro/painel/produtos/${novoId}`, { replace: true });
+        if (!rascunho) setPublicado(true);
 
         // Veio do fluxo de IA: a foto já recortada sobe automaticamente
         // junto com a criação, num único clique em "Publicar"/"Salvar
@@ -196,7 +228,8 @@ export default function ParceiroProdutoForm() {
         if (foto) {
           await enviarFotoDaIA(novoId, foto);
         } else {
-          toast.success(rascunho ? 'Rascunho salvo! Agora você já pode adicionar fotos.' : 'Produto publicado!');
+          // publicado: o aviso é o quadro "🎊 Produto publicado!" (setPublicado acima)
+          if (rascunho) toast.success('Rascunho salvo! Agora você já pode adicionar fotos.');
         }
       }
     } catch (err) {
@@ -283,6 +316,9 @@ export default function ParceiroProdutoForm() {
     }
   }
 
+  // igual ao normal não é desconto (vira NULL no backend) — prévia sem selo
+  const temDescontoAssociado = parseFloat(form.preco_associado) > 0 && parseFloat(form.preco_associado) < parseFloat(form.preco);
+
   if (carregando) {
     return <div className="flex justify-center py-24"><Loader2 className="w-6 h-6 animate-spin" style={{ color: ROXO }} /></div>;
   }
@@ -357,7 +393,7 @@ export default function ParceiroProdutoForm() {
           </div>
         </Secao>
 
-        <Secao titulo="Fotos">
+        <Secao titulo="Fotos" secaoRef={secaoFotosRef}>
           {!produtoId && fotoDaIA && (
             <div className="flex items-center gap-3 rounded-2xl border border-slate-100 p-4">
               <img src={fotoDaIAPreview} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-slate-100" />
@@ -428,10 +464,33 @@ export default function ParceiroProdutoForm() {
         </Secao>
 
         <Secao titulo="Preços e status">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Campo label="Preço normal" value={form.preco} onChange={v => setCampo('preco', v)} type="money" />
-            <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" />
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <label className="text-xs font-semibold text-slate-500">Preço associado (opcional)</label>
+                <button
+                  type="button"
+                  onClick={() => setAjudaAssociado(a => !a)}
+                  aria-expanded={ajudaAssociado}
+                  aria-label="O que é preço associado?"
+                  title={TEXTO_AJUDA_ASSOCIADO}
+                  className="w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold leading-none flex items-center justify-center hover:bg-slate-300"
+                >
+                  ?
+                </button>
+              </div>
+              <CampoPreco
+                value={form.preco_associado}
+                onChange={v => setCampo('preco_associado', v)}
+                className={campoCls}
+                placeholder="Deixe vazio pra usar o mesmo preço (sem desconto)"
+              />
+            </div>
           </div>
+          {ajudaAssociado && (
+            <p className="mt-2 text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">{TEXTO_AJUDA_ASSOCIADO}</p>
+          )}
           {eRestaurante && (
             <div className="mt-4 max-w-[240px]">
               <Label>Tempo de preparo (min) — opcional</Label>
@@ -504,9 +563,9 @@ export default function ParceiroProdutoForm() {
               <p className="font-bold text-sm truncate" style={{ color: PRETO }}>{form.nome || 'Nome do produto'}</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="font-bold text-sm" style={{ color: ROXO }}>R$ {form.preco ? parseFloat(form.preco).toFixed(2) : '0,00'}</span>
-                {form.preco_associado && <span className="text-xs text-slate-400 line-through">R$ {parseFloat(form.preco_associado).toFixed(2)}</span>}
+                {temDescontoAssociado && <span className="text-xs text-slate-400 line-through">R$ {parseFloat(form.preco_associado).toFixed(2)}</span>}
               </div>
-              {form.preco_associado && (
+              {temDescontoAssociado && (
                 <span className="inline-block mt-1.5 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}>
                   💎 Exclusivo associado
                 </span>
@@ -515,6 +574,27 @@ export default function ParceiroProdutoForm() {
           </div>
         </div>
       </div>
+
+      {publicado && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={() => setPublicado(false)}>
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="titulo-publicado">
+            <p className="text-4xl leading-none" aria-hidden="true">🎊</p>
+            <h2 id="titulo-publicado" className="text-lg font-black mt-3" style={{ color: PRETO }}>Produto publicado!</h2>
+            <p className="text-sm text-slate-500 mt-1 truncate">{form.nome}</p>
+            <div className="flex flex-col gap-2 mt-5">
+              <button type="button" onClick={novoProduto} className="flex items-center justify-center gap-2 text-white font-bold py-3 rounded-xl" style={{ backgroundColor: ROXO }}>
+                <Plus className="w-4 h-4" /> Novo produto
+              </button>
+              <button type="button" onClick={adicionarMaisFotos} className="flex items-center justify-center gap-2 font-bold py-3 rounded-xl border-2" style={{ borderColor: ROXO, color: ROXO }}>
+                <Plus className="w-4 h-4" /> Adicionar mais fotos
+              </button>
+              <button type="button" onClick={() => navigate('/parceiro/painel/produtos')} className="text-sm font-semibold py-2.5 rounded-xl text-slate-600 hover:bg-slate-50">
+                Ver meus produtos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -538,9 +618,9 @@ function Campo({ label, value, onChange, type = 'text' }) {
   );
 }
 
-function Secao({ titulo, children }) {
+function Secao({ titulo, children, secaoRef }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <div ref={secaoRef} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 scroll-mt-4">
       <h2 className="font-bold text-base mb-5" style={{ color: PRETO }}>{titulo}</h2>
       {children}
     </div>
