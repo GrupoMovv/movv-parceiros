@@ -174,7 +174,7 @@ export default function CadastrarAssociado() {
             </p>
           </div>
 
-          <Link to="/" className="text-slate-400 text-xs underline">Voltar ao início</Link>
+          <Link to="/marketplace" className="text-slate-400 text-xs underline">Voltar ao início</Link>
         </div>
       </PageShell>
     );
@@ -427,7 +427,7 @@ function TelaMensagem({ icon, titulo, texto }) {
         {icon}
         <h1 className="text-xl font-bold text-slate-900">{titulo}</h1>
         <p className="text-slate-500 text-sm">{texto}</p>
-        <Link to="/" className="inline-block text-slate-400 text-xs underline mt-2">Voltar ao início</Link>
+        <Link to="/marketplace" className="inline-block text-slate-400 text-xs underline mt-2">Voltar ao início</Link>
       </div>
     </PageShell>
   );

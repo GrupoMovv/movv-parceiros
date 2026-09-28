@@ -8,6 +8,7 @@ import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useAssociadoSessao } from './useAssociadoSessao';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -140,8 +141,11 @@ export default function PromocaoDetalhe() {
 
   return (
     <div className="min-h-screen w-full bg-white pb-24 sm:pb-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-3">
+        <BotaoVoltar fallback="/marketplace" />
+      </div>
       {/* breadcrumb */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-5 flex items-center gap-1 text-xs text-slate-400 flex-wrap">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-1 flex items-center gap-1 text-xs text-slate-400 flex-wrap">
         <Link to="/marketplace" className="hover:underline">Home</Link>
         {promocao.categoria && (
           <>

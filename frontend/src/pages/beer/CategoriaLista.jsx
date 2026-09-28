@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, SlidersHorizontal, Storefront } from '@phosphor-icons/react';
+import { SlidersHorizontal, Storefront } from '@phosphor-icons/react';
+import BotaoVoltar from '../../components/ui/BotaoVoltar';
 import api from '../../services/api';
 import CardProduto from '../../components/beer/CardProduto';
 import CardAdegaAberta from '../../components/beer/CardAdegaAberta';
@@ -116,9 +117,7 @@ export default function CategoriaLista() {
     <>
       <header style={{ background: `radial-gradient(120% 160% at 90% 0%, ${BEER.violeta} 0%, ${BEER.roxo} 40%, ${BEER.painel} 85%)` }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-5 sm:py-8">
-          <Link to={voltar} className="inline-flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: BEER.lavanda }}>
-            <ArrowLeft size={14} weight="bold" /> {cat && !cat.eh_grupo ? dados.grupo.nome : 'Disk Bebidas'}
-          </Link>
+          <BotaoVoltar variante="claro" fallback={voltar} />
           <h1 className="mt-1 text-2xl sm:text-4xl font-black text-white tracking-tight uppercase" style={{ fontFamily: 'Poppins, sans-serif' }}>
             {cat ? `${cat.icone} ${cat.nome}` : '…'}
           </h1>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { MapPin, Clock, Storefront, Wine } from '@phosphor-icons/react';
+import BotaoVoltar from '../../components/ui/BotaoVoltar';
 import api from '../../services/api';
 import SeloPlano from '../public/Marketplace/components/SeloPlano';
 import BadgeAberto from '../../components/beer/BadgeAberto';
@@ -60,7 +61,7 @@ export default function EstabelecimentoDetail() {
     <>
       <header style={{ background: `radial-gradient(120% 160% at 90% 0%, ${BEER.violeta} 0%, ${BEER.roxo} 40%, ${BEER.painel} 85%)` }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-10">
-          <Link to="/beer" className="text-xs font-semibold hover:underline" style={{ color: BEER.lavanda }}>← Disk Bebidas</Link>
+          <BotaoVoltar variante="claro" fallback="/beer" />
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-7">
             <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-3xl overflow-hidden flex items-center justify-center flex-shrink-0" style={{ backgroundColor: BEER.painel, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: `1px solid ${BEER.borda}` }}>
               {e.logo_url ? <img src={e.logo_url} alt={e.nome} className="w-full h-full object-cover" /> : <Wine size={48} weight="duotone" color={BEER.lavanda} />}

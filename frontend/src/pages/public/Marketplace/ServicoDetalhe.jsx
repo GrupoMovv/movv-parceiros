@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, MapPin, Clock, Tag, CalendarCheck, ImageOff } from 'lucide-react';
+import { MessageCircle, MapPin, Clock, Tag, CalendarCheck, ImageOff } from 'lucide-react';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import SeloPlano from './components/SeloPlano';
@@ -66,9 +67,9 @@ export default function ServicoDetalhe() {
   return (
     <div className={`min-h-screen w-full bg-white ${ctaFixo ? 'pb-28' : 'pb-8'}`}>
       <div className="relative px-6 pt-8 pb-14 text-center overflow-hidden" style={{ background: `linear-gradient(150deg, ${ROXO_ESCURO} 0%, ${ROXO} 130%)` }}>
-        <Link to={voltarPara} className="relative inline-flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-medium mb-4 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> {ehPet ? 'Voltar aos pet shops' : 'Voltar aos serviços'}
-        </Link>
+        <div className="relative text-left -mt-4 mb-2">
+          <BotaoVoltar variante="claro" fallback={voltarPara} />
+        </div>
 
         <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
           <SeloPlano plano={servico.plano} size="lg" />

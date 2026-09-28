@@ -9,6 +9,7 @@ import SeloPlano from './components/SeloPlano';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { usePetCatalogo } from '../../../components/PetServicosPicker';
 import { ROXO, ROXO_ESCURO, GRAFITE } from './theme';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 const FILTROS = ['servico', 'porte', 'bairro', 'raca', 'preco_min', 'preco_max', 'ordem'];
 const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -74,6 +75,9 @@ export default function MarketplacePet() {
         onSearchChange={setSearchQuery}
         onSearchSubmit={() => navigate('/marketplace')}
       />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-2">
+          <BotaoVoltar fallback="/marketplace" />
+        </div>
 
       <div className="px-6 py-10 sm:py-12 text-center" style={{ background: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 55%, #F59E0B 150%)' }}>
         <h1 className="text-white font-black text-2xl sm:text-4xl">🐾 PET EM ITUMBIARA</h1>

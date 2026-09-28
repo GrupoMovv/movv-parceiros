@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import { useCarrinho } from './CarrinhoContext';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { PRETO, ROXO } from './theme';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -51,6 +52,9 @@ export default function CarrinhoPage() {
         onSearchChange={() => {}}
         onSearchSubmit={handleSearchSubmit}
       />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-2">
+          <BotaoVoltar fallback="/marketplace" />
+        </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-8 w-full py-6 flex-1">
         <h1 className="flex items-center gap-2 text-xl sm:text-2xl font-bold tracking-tight mb-6" style={{ color: PRETO }}>

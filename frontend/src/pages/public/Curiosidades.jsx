@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, XCircle, ArrowRight, ArrowLeft, Storefront, ShoppingBag } from '@phosphor-icons/react';
+import { CheckCircle, XCircle, ArrowRight, Storefront, ShoppingBag } from '@phosphor-icons/react';
 import MascoteIubMais from '../../components/MascoteIubMais';
+import BotaoVoltar from '../../components/ui/BotaoVoltar';
 
 // Números validados (SBVC 2025 + IBGE 2024) — GMV per capita é a única
 // fonte de verdade calculada (422bi / 212,58mi hab); todo o resto
@@ -138,9 +139,7 @@ export default function Curiosidades() {
           único jeito de sair era rolar até o CTA lá embaixo — usuário
           "ficava preso" (feedback real de teste). */}
       <div className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100 px-4 sm:px-6 h-12 flex items-center">
-        <Link to="/marketplace" className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors">
-          <ArrowLeft size={16} weight="bold" /> Voltar ao Marketplace
-        </Link>
+        <BotaoVoltar fallback="/marketplace" />
       </div>
 
       {/* 1. HERO */}

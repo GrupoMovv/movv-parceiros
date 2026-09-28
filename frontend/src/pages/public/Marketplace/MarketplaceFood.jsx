@@ -7,6 +7,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { ROXO } from './theme';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 function normalizarCategoria(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -71,6 +72,9 @@ export default function MarketplaceFood() {
         onSearchChange={setSearchQuery}
         onSearchSubmit={() => navigate('/marketplace')}
       />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-2">
+          <BotaoVoltar fallback="/marketplace" />
+        </div>
 
       <div className="px-6 py-10 sm:py-14 text-center" style={{ background: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 60%, #B87E00 150%)' }}>
         <h1 className="text-white font-black text-2xl sm:text-4xl">🍔 IUB FOOD</h1>

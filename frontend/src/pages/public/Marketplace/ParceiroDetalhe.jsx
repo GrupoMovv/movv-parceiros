@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Instagram, MapPin, Tag, Star, Navigation } from 'lucide-react';
+import { MessageCircle, Instagram, MapPin, Tag, Star, Navigation } from 'lucide-react';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { buscarParceiroPorSlug } from './parceirosData';
 import api from '../../../services/api';
@@ -75,9 +76,9 @@ export default function ParceiroDetalhe() {
           className="absolute inset-0 pointer-events-none"
           style={{ opacity: 0.06, backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 14px)' }}
         />
-        <Link to="/marketplace" className="relative inline-flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-medium mb-4 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao Marketplace
-        </Link>
+        <div className="relative text-left -mt-4 mb-2">
+          <BotaoVoltar variante="claro" fallback="/marketplace" />
+        </div>
 
         <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
           {parceiro.exclusivo && (

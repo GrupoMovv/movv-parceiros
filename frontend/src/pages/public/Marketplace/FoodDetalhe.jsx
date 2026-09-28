@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, ShoppingCart, Check } from 'lucide-react';
+import { MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, ShoppingCart, Check } from 'lucide-react';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { DIAS, formatarBRL, horarioConfigurado, statusFuncionamento, textoTaxaEntrega, textoTempoPreparo } from '../../../utils/iubFood';
@@ -83,9 +84,9 @@ export default function FoodDetalhe() {
   return (
     <div className="min-h-screen w-full bg-white pb-28">
       <div className="relative px-6 pt-8 pb-14 text-center overflow-hidden" style={{ background: `linear-gradient(150deg, ${ROXO_ESCURO} 0%, ${ROXO} 130%)` }}>
-        <Link to="/marketplace/food" className="relative inline-flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-medium mb-4 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao IUB Food
-        </Link>
+        <div className="relative text-left -mt-4 mb-2">
+          <BotaoVoltar variante="claro" fallback="/marketplace/food" />
+        </div>
 
         <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
           <SeloPlano plano={restaurante.plano} size="lg" />

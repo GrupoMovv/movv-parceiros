@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import MascoteIubMais from '../../../components/MascoteIubMais';
 import RoletaWheel, { calcularRotacaoAlvo } from './components/RoletaWheel';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 const DURACAO_GIRO_MS = 5000;
 
@@ -110,7 +111,10 @@ export default function Roleta() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
-      <header className="text-center pt-10 px-4">
+      <div className="max-w-3xl mx-auto px-4 pt-3">
+        <BotaoVoltar variante="claro" fallback="/jogar" />
+      </div>
+      <header className="text-center pt-4 px-4">
         <h1 className="text-3xl sm:text-4xl font-black text-white">🎡 ROLETA DA SORTE</h1>
         <p className="text-white/90 font-semibold mt-1">Você sempre ganha um cupom!</p>
         <p className="text-iub-dourado font-black uppercase text-sm sm:text-base mt-2 tracking-wide">

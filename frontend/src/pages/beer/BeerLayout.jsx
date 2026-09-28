@@ -11,6 +11,7 @@ import ModalProduto from '../../components/beer/ModalProduto';
 import { ProdutoModalContext } from './produtoModalContext';
 import { useAcessoBeer } from './useAcessoBeer';
 import { AVISO_VITRINE, BEER } from './beerConfig';
+import BotaoVoltar from '../../components/ui/BotaoVoltar';
 
 // Casca de TODAS as rotas /beer/* (home, Quero Agora, categoria,
 // estabelecimento, busca): porta +18 num lugar só — nada da área é buscado
@@ -112,8 +113,8 @@ export function CabecalhoBeer({ titulo, subtitulo, voltar = '/beer', direita = n
     <header style={{ background: `radial-gradient(120% 160% at 90% 0%, ${BEER.violeta} 0%, ${BEER.roxo} 40%, ${BEER.painel} 85%)` }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-9 flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          {voltar && <Link to={voltar} className="text-xs font-semibold hover:underline" style={{ color: BEER.lavanda }}>← Disk Bebidas</Link>}
-          <h1 className="mt-1 text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{titulo}</h1>
+          {voltar && <BotaoVoltar variante="claro" fallback={voltar} />}
+          <h1 className="mt-1text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{titulo}</h1>
           {subtitulo && <p className="mt-1.5 text-sm sm:text-base" style={{ color: 'rgba(255,255,255,0.8)' }}>{subtitulo}</p>}
         </div>
         {direita}

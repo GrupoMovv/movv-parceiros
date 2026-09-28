@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ArrowRight, Loader2, PartyPopper, CheckCircle2, XCircle, ChevronDown, Search } from 'lucide-react';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
 import PetServicosPicker, { usePetCatalogo, erroPet } from '../../../components/PetServicosPicker';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
@@ -364,6 +365,9 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
   return (
     <div className="min-h-screen w-full bg-white">
       <section className="relative px-6 py-20 sm:py-28 text-center overflow-hidden" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 55%, #7C3AED 100%)` }}>
+        <div className="absolute top-3 left-4 sm:left-6 z-10">
+          <BotaoVoltar variante="claro" fallback="/marketplace" />
+        </div>
         <div className="relative max-w-3xl mx-auto">
           <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight tracking-tight">
             Anuncie seus produtos e serviços no IUB MAIS

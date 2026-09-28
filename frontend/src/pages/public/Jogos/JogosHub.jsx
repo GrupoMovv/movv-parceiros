@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import MascoteIubMais from '../../../components/MascoteIubMais';
 import { NIVEIS as NIVEIS_MEMORIA } from './memoriaConfig';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 // Landing dos IUB MAIS+ Joguinhos — hoje só a Roleta existe de verdade;
 // Tigrinho do Bem e Raspadinha são cards "em breve" (sem rota própria
@@ -41,7 +42,10 @@ export default function JogosHub() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
-      <header className="text-center pt-10 px-4">
+      <div className="max-w-3xl mx-auto px-4 pt-3">
+        <BotaoVoltar variante="claro" fallback="/marketplace" />
+      </div>
+      <header className="text-center pt-4 px-4">
         <h1 className="text-3xl sm:text-4xl font-black text-white">🎮 IUB MAIS+ JOGUINHOS</h1>
         <p className="text-iub-dourado font-black uppercase text-sm sm:text-base mt-2 tracking-wide">
           Onde você NUNCA perde!

@@ -4,6 +4,7 @@ import { Lock } from 'lucide-react';
 import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import MascoteIubMais from '../../../components/MascoteIubMais';
 import { NIVEIS } from './memoriaConfig';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 function formatarTempo(segundos) {
   if (segundos == null) return '--:--';
@@ -44,7 +45,10 @@ export default function MemoriaNiveis() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
-      <header className="text-center pt-8 px-4">
+      <div className="max-w-3xl mx-auto px-4 pt-3">
+        <BotaoVoltar variante="claro" fallback="/jogar" />
+      </div>
+      <header className="text-center pt-3 px-4">
         <h1 className="text-3xl sm:text-4xl font-black text-white">🧠 JOGO DA MEMÓRIA</h1>
         <p className="text-iub-dourado font-black uppercase text-xs sm:text-sm mt-2 tracking-wide">
           Escolha seu nível

@@ -267,7 +267,7 @@ export default function MeuCadastro() {
             Salvar alterações
           </button>
 
-          <Link to="/" className="block text-center text-slate-400 text-xs underline">Voltar ao início</Link>
+          <Link to="/marketplace" className="block text-center text-slate-400 text-xs underline">Voltar ao início</Link>
         </div>
       </div>
     </PageShell>

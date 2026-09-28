@@ -6,6 +6,7 @@ import apiPainel, { getPainelToken } from '../../../services/apiPainel';
 import MascoteIubMais, { MASCOTE_URL } from '../../../components/MascoteIubMais';
 import MemoriaCarta from './components/MemoriaCarta';
 import { getNivelConfig, POOL_PARES } from './memoriaConfig';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 function embaralhar(itens) {
   const copia = [...itens];
@@ -238,9 +239,13 @@ export default function Memoria() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
-      <header className="text-center pt-5 sm:pt-8 px-4">
-        <Link to="/jogar/memoria" className="text-white/60 hover:text-white text-xs underline">← Todos os níveis</Link>
-        <h1 className="text-xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">
+      {/* destino fixo: ao passar de nível o histórico empilha níveis, e
+          "voltar" tem que levar pra lista, não pro nível anterior */}
+      <div className="max-w-3xl mx-auto px-4 pt-2">
+        <BotaoVoltar variante="claro" para="/jogar/memoria" />
+      </div>
+      <header className="text-center pt-0 sm:pt-2 px-4">
+        <h1 className="text-xl sm:text-4xl font-black text-white">
           {cfg.emoji} NÍVEL {cfg.nivel} — {cfg.nome}
         </h1>
         <p className="text-iub-dourado font-black uppercase text-xs sm:text-sm mt-1 sm:mt-2 tracking-wide">

@@ -10,6 +10,7 @@ import Footer from './components/Footer';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import BannerAtivarSeci from './components/BannerAtivarSeci';
 import { PRETO, ROXO } from './theme';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 const ORDENACOES = [
   { valor: 'relevancia', label: 'Relevância' },
@@ -97,6 +98,9 @@ export default function MarketplaceCategoria() {
         onSearchChange={setSearchQuery}
         onSearchSubmit={() => navigate('/marketplace')}
       />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-2">
+          <BotaoVoltar fallback="/marketplace" />
+        </div>
 
       <BannerAtivarSeci associado={associado} ehAssociadoSeci={ehAssociadoSeci} carregando={carregandoAssociado} />
 

@@ -11,6 +11,7 @@ import { otimizarCloudinary } from '../../../utils/cloudinary';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { WhatsappLogo } from '@phosphor-icons/react';
 import { CONTATO_IUB, linkWhatsappIub } from '../../../config/contato';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 const MSG_WHATSAPP_ENTREGADOR = 'Olá! Vim pelo site IUB MAIS+ e quero saber mais sobre o IUB+ Entregadores. 🛵';
 
@@ -279,6 +280,9 @@ export default function Entregadores() {
         onSearchChange={() => {}}
         onSearchSubmit={() => navigate('/marketplace')}
       />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-2">
+          <BotaoVoltar fallback="/marketplace" />
+        </div>
 
       {/* Banner: mesmas peças do slide do carrossel (1:1 mobile, 3:1 desktop).
           Texto embaixo no mobile (a arte ocupa o topo), à esquerda no desktop

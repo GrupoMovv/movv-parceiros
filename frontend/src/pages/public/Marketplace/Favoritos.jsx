@@ -10,6 +10,7 @@ import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useProdutosPorIds } from './useSecaoData';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { PARCEIROS_INICIAIS } from './parceirosData';
+import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 // Página dedicada de favoritos (produtos + lojas) — existia só como um
 // toggle que trocava o conteúdo de uma seção lá embaixo da home
@@ -47,6 +48,9 @@ export default function Favoritos() {
         onSearchChange={() => {}}
         onSearchSubmit={() => navigate('/marketplace')}
       />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full pt-2">
+          <BotaoVoltar fallback="/marketplace" />
+        </div>
 
       <div className="px-6 py-10 sm:py-14 text-center" style={{ background: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 60%, #B87E00 150%)' }}>
         <h1 className="text-white font-black text-2xl sm:text-4xl">❤️ MEUS FAVORITOS</h1>
