@@ -111,6 +111,9 @@ import ParceiroBeer from './pages/parceiro/Beer';
 import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
+import ParceiroFidelidadePet from './pages/parceiro/FidelidadePet';
+import AtenderPet from './pages/public/Pet/AtenderPet';
+import BalcaoPet from './pages/public/Pet/BalcaoPet';
 import ParceiroMinhaAssinatura from './pages/parceiro/MinhaAssinatura';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
@@ -260,6 +263,9 @@ export default function App() {
         {/* login/cadastro antigos: links velhos (WhatsApp, favoritos) caem no fluxo novo */}
         <Route path="/jogar/login"        element={<Navigate to="/entrar?voltar=/jogar" replace />} />
         <Route path="/jogar"              element={<JogosHub />} />
+        {/* Pet parte 5: QR do pet (pet shop lê) e QR do balcão (cliente lê) */}
+        <Route path="/atender/:token"     element={<AtenderPet />} />
+        <Route path="/balcao/:token"      element={<BalcaoPet />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />
         <Route path="/jogar/memoria"      element={<MemoriaNiveis />} />
         <Route path="/jogar/memoria/:nivel" element={<Memoria />} />
@@ -305,6 +311,7 @@ export default function App() {
           <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
           <Route path="agendamentos" element={<ParceiroAgendamentosPet />} />
+          <Route path="fidelidade" element={<ParceiroFidelidadePet />} />
           <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="minha-assinatura" element={<ParceiroMinhaAssinatura />} />
           <Route path="configuracoes" element={<ParceiroConfiguracoes />} />

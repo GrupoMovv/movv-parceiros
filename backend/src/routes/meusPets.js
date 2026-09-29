@@ -25,7 +25,13 @@ router.post('/agendamentos/:id/cancelar',   ctrl.cancelarPedido);
 router.post('/agendamentos/:id/avaliar',    ctrl.avaliar);
 router.post('/agendamentos/:id/fotos-publicas', ctrl.definirFotosPublicas);
 
+// Parte 5: QR do balcão, atendimento realizado e contestação
+router.get('/loja/:token',                   ctrl.verLoja);
+router.post('/atendimentos',                 ctrl.registrarPeloQrDaLoja);
+router.post('/atendimentos/:id/contestar',   ctrl.contestar);
+
 router.get('/',        ctrl.listar);
+router.get('/:id/qr',  ctrl.qrDoPet);
 router.post('/',       ctrl.criar);
 router.put('/:id',     ctrl.atualizar);
 router.delete('/:id',  ctrl.remover);

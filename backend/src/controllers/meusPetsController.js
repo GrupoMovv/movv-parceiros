@@ -4,7 +4,8 @@ const {
   SERVICOS_PET, PORTES_PET, LIMITE_PETS_POR_CONTA,
   validarFichaPet, resumoPet, validarDiaPeriodo, hojeSP,
 } = require('../config/pet');
-const { avisarNovoPedido, avisarClienteMudou, avisarNovaAvaliacao } = require('../services/petAvisosService');
+const { avisarNovoPedido, avisarClienteMudou, avisarNovaAvaliacao, avisarClienteRegistrou, avisarContestado } = require('../services/petAvisosService');
+const { tokenDoPet, registrarAtendimento, descarimbar, progressoDoPet } = require('../services/petFidelidade');
 const { anexarFotosEAvaliacoes, atendimentoFeito } = require('../services/petAtendimentos');
 
 const primeiroNome = a => String(a?.nome_completo || '').trim().split(/\s+/)[0] || 'Um cliente';
@@ -40,11 +41,22 @@ async function listarPetsCompletos(associadoId) {
      FROM pet_autorizacoes a JOIN sindicato_parceiros p ON p.id = a.parceiro_id
      WHERE a.pet_id = ANY($1) AND a.revogado_em IS NULL ORDER BY a.autorizado_em`, [ids]
   )).rows;
-  return pets.map(p => ({
+  // Parte 5: atendimentos registrados nos últimos 30 dias (pra contestar) + cartões
+  const atendimentos = (await db.query(
+    `SELECT at.id, at.pet_id, at.servico, at.dia, at.origem, at.status, at.created_at, p.nome AS parceiro_nome,
+            (at.origem = 'loja_leu' AND at.status = 'confirmado' AND at.created_at > NOW() - INTERVAL '7 days') AS pode_contestar
+     FROM pet_atendimentos at JOIN sindicato_parceiros p ON p.id = at.parceiro_id
+     WHERE at.pet_id = ANY($1) AND at.created_at > NOW() - INTERVAL '30 days' ORDER BY at.created_at DESC`, [ids]
+  )).rows;
+  const fidelidades = await Promise.all(pets.map(p => progressoDoPet(p.id)));
+  return pets.map((p, i) => ({
     ...p,
     foto_public_id: undefined,
+    qr_token: undefined, // o QR sai por GET /:id/qr (cria na 1ª vez)
     vacinas: vacinas.filter(v => v.pet_id === p.id).map(({ pet_id, ...v }) => v),
     autorizados: autorizacoes.filter(a => a.pet_id === p.id).map(({ pet_id, ...a }) => a),
+    atendimentos: atendimentos.filter(a => a.pet_id === p.id).map(({ pet_id, ...a }) => a),
+    fidelidade: fidelidades[i],
   }));
 }
 
@@ -339,8 +351,93 @@ async function definirFotosPublicas(req, res) {
   }
 }
 
+// ─── Parte 5: QR e atendimento realizado ───────────────────────────────────
+
+// GET /api/public/meus-pets/:id/qr — token do QR do pet (cria na 1ª vez)
+async function qrDoPet(req, res) {
+  try {
+    const pet = await buscarPetDoDono(req.params.id, req.painelAssociado.id);
+    if (!pet) return res.status(404).json({ error: 'Pet não encontrado' });
+    return res.json({ token: await tokenDoPet(pet.id), nome: pet.nome });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao gerar o QR' });
+  }
+}
+
+async function lojaPeloToken(token) {
+  return (await db.query(
+    "SELECT id, nome, slug, whatsapp, pet_servicos FROM sindicato_parceiros WHERE pet_qr_token = $1 AND status = 'ativo'", [String(token || '')]
+  )).rows[0] || null;
+}
+
+// GET /api/public/meus-pets/loja/:token — cliente leu o QR do balcão
+async function verLoja(req, res) {
+  try {
+    const loja = await lojaPeloToken(req.params.token);
+    if (!loja) return res.status(404).json({ error: 'QR de pet shop não encontrado' });
+    return res.json({
+      loja: { nome: loja.nome, slug: loja.slug },
+      servicos: SERVICOS_PET.filter(s => s.natureza === 'servico' && (loja.pet_servicos || []).includes(s.codigo)).map(s => ({ codigo: s.codigo, nome: s.nome, emoji: s.emoji })),
+      pets: (await db.query('SELECT id, nome, especie, foto_url FROM pets WHERE associado_id = $1 AND ativo = true ORDER BY created_at', [req.painelAssociado.id])).rows,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao ler o QR' });
+  }
+}
+
+// POST /api/public/meus-pets/atendimentos { loja_token, pet_id, servico }
+// Fica aguardando a loja confirmar (só aí carimba).
+async function registrarPeloQrDaLoja(req, res) {
+  try {
+    const b = req.body || {};
+    const loja = await lojaPeloToken(b.loja_token);
+    if (!loja) return res.status(404).json({ error: 'QR de pet shop não encontrado' });
+    const pet = await buscarPetDoDono(b.pet_id, req.painelAssociado.id);
+    if (!pet) return res.status(400).json({ error: 'Escolha um dos seus pets' });
+    const def = SERVICOS_PET.find(s => s.codigo === b.servico);
+    if (!def || def.natureza !== 'servico' || !(loja.pet_servicos || []).includes(def.codigo)) return res.status(400).json({ error: 'Escolha o serviço feito' });
+    const r = await registrarAtendimento({ pet, parceiroId: loja.id, servico: def.codigo, origem: 'cliente_leu' });
+    if (r.erro) return res.status(r.status).json({ error: r.erro });
+    const whatsappAvisado = await avisarClienteRegistrou({ parceiroWhatsapp: loja.whatsapp, clienteNome: primeiroNome(req.painelAssociado), petNome: pet.nome, servico: def.codigo });
+    return res.status(201).json({ atendimento: r.atendimento, loja: { nome: loja.nome }, whatsapp_avisado: whatsappAvisado });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao registrar' });
+  }
+}
+
+// POST /api/public/meus-pets/atendimentos/:id/contestar — "não fui eu" (até 7 dias)
+async function contestar(req, res) {
+  try {
+    const at = (await db.query(
+      `SELECT at.*, p.whatsapp AS loja_whatsapp, pe.nome AS pet_nome FROM pet_atendimentos at
+       JOIN sindicato_parceiros p ON p.id = at.parceiro_id JOIN pets pe ON pe.id = at.pet_id
+       WHERE at.id = $1 AND at.associado_id = $2`, [req.params.id, req.painelAssociado.id]
+    )).rows[0];
+    if (!at) return res.status(404).json({ error: 'Atendimento não encontrado' });
+    if (at.origem !== 'loja_leu' || at.status !== 'confirmado' || Date.now() - new Date(at.created_at).getTime() > 7 * 864e5) {
+      return res.status(409).json({ error: 'Esse atendimento não pode mais ser contestado' });
+    }
+    const ok = await db.transacao(async client => {
+      const tirou = await descarimbar(client, at.id);
+      if (!tirou) return false;
+      await client.query("UPDATE pet_atendimentos SET status = 'contestado' WHERE id = $1", [at.id]);
+      return true;
+    });
+    if (!ok) return res.status(409).json({ error: 'Esse atendimento já fechou um cartão — fale com o pet shop' });
+    await avisarContestado({ parceiroWhatsapp: at.loja_whatsapp, clienteNome: primeiroNome(req.painelAssociado), petNome: at.pet_nome, dia: at.dia });
+    return res.json({ pets: await listarPetsCompletos(req.painelAssociado.id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao contestar' });
+  }
+}
+
 module.exports = {
   listar, criar, atualizar, remover, enviarFoto, revogar,
   meusPedidos, pedirHorario, aceitarProposta, cancelarPedido,
   avaliar, definirFotosPublicas,
+  qrDoPet, verLoja, registrarPeloQrDaLoja, contestar,
 };

@@ -28,6 +28,7 @@ async function montarLista(parceiroId, filtro) {
     `SELECT ag.id, ag.pet_id, ag.pet_nome, ag.pet_resumo, ag.servico, ag.porte, ag.data, ag.periodo, ag.observacao,
             ag.preco_estimado, ag.status, ag.proposta_data, ag.proposta_periodo, ag.resposta, ag.respondido_em, ag.created_at,
             ag.fotos_publicas,
+            EXISTS (SELECT 1 FROM pet_atendimentos pa WHERE pa.agendamento_id = ag.id AND pa.status = 'confirmado') AS atendimento_registrado,
             a.nome_completo AS cliente_nome, a.whatsapp AS cliente_whatsapp,
             (au.pet_id IS NOT NULL) AS ficha_autorizada
      FROM pet_agendamentos ag

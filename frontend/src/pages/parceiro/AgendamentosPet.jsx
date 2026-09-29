@@ -197,8 +197,23 @@ function PosAtendimentoLoja({ ag, onAtualizado }) {
     } catch (err) { toast.error(err.response?.data?.error || 'Erro ao responder'); }
   }
 
+  // Parte 5: sem QR, o pet shop marca aqui (conta como ele ter lido o QR do pet)
+  async function marcarRealizado() {
+    try {
+      const r = await apiParceiro.post('/parceiro/pet-fidelidade/atendimentos', { agendamento_id: ag.id });
+      const f = r.data.fidelidade;
+      toast.success(f?.premio ? `Registrado! 🎁 Cartão completo: ${f.premio.premio_texto}` : f ? `Registrado! Cartão ${f.carimbos}/${f.meta}` : 'Atendimento registrado');
+      onAtualizado((await apiParceiro.get('/parceiro/pet-agenda', { params: { filtro: 'atendidos' } })).data);
+    } catch (err) { toast.error(err.response?.data?.error || 'Erro ao registrar'); }
+  }
+
   return (
     <div className="mt-4 space-y-3">
+      {ag.atendimento_registrado ? (
+        <p className="text-xs font-semibold text-green-700">✅ Atendimento registrado (conta no cartão fidelidade)</p>
+      ) : ag.pet_id ? (
+        <button type="button" onClick={marcarRealizado} className="w-full text-sm font-bold py-2.5 rounded-xl text-white bg-green-600">✅ Marcar como realizado</button>
+      ) : null}
       <div className="rounded-xl border border-slate-100 p-3">
         <p className="text-sm font-bold" style={{ color: PRETO }}>📸 Fotos antes e depois</p>
         <p className="text-[11px] text-slate-500 mb-2">O dono sempre vê. Na sua página pública só aparecem se ele permitir {ag.fotos_publicas ? '— ✅ ele permitiu' : ''}.</p>

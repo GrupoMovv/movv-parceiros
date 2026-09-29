@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2, Plus, Pencil, Trash2, X, Save, ShieldCheck, Syringe, HeartPulse, Phone, MessageCircle } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, X, Save, ShieldCheck, Syringe, HeartPulse, Phone, MessageCircle, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import apiPainel from '../../../services/apiPainel';
 import { usePetCatalogo } from '../../../components/PetServicosPicker';
 import ImageCropUpload from '../../../components/ImageCropUpload';
@@ -50,6 +51,15 @@ export default function MeusPets() {
       setPets(r.data.pets);
       toast.success('Acesso retirado');
     } catch { toast.error('Erro ao retirar o acesso'); }
+  }
+
+  async function contestar(at) {
+    if (!window.confirm(`Esse atendimento em ${at.parceiro_nome} não foi seu? O carimbo sai e o pet shop é avisado.`)) return;
+    try {
+      const r = await apiPainel.post(`/public/meus-pets/atendimentos/${at.id}/contestar`);
+      setPets(r.data.pets);
+      toast.success('Avisamos o pet shop. Carimbo retirado.');
+    } catch (err) { toast.error(err.response?.data?.error || 'Erro'); }
   }
 
   async function acaoPedido(ped, acao) {
@@ -118,7 +128,7 @@ export default function MeusPets() {
         </div>
       ) : (
         <div className="space-y-3">
-          {pets.map(pet => <CardPet key={pet.id} pet={pet} catalogo={catalogo} onEditar={() => setEditando(pet)} onExcluir={() => excluir(pet)} onRevogar={aut => revogar(pet, aut)} />)}
+          {pets.map(pet => <CardPet key={pet.id} pet={pet} catalogo={catalogo} onEditar={() => setEditando(pet)} onExcluir={() => excluir(pet)} onRevogar={aut => revogar(pet, aut)} onContestar={contestar} />)}
         </div>
       )}
 
@@ -273,7 +283,54 @@ function PosAtendimento({ ped, onAtualizado }) {
   );
 }
 
-function CardPet({ pet, catalogo, onEditar, onExcluir, onRevogar }) {
+// Parte 5: QR do pet (o pet shop lê com a câmera e registra o atendimento)
+function ModalQrPet({ pet, onFechar }) {
+  const [token, setToken] = useState(null);
+  useEffect(() => {
+    apiPainel.get(`/public/meus-pets/${pet.id}/qr`).then(r => setToken(r.data.token)).catch(() => toast.error('Erro ao gerar o QR'));
+  }, [pet.id]);
+  return (
+    <div className="fixed inset-0 z-[110] bg-black/70 flex items-center justify-center p-4" onClick={onFechar} role="dialog" aria-modal="true">
+      <div className="bg-white rounded-3xl p-6 w-full max-w-xs text-center space-y-3" onClick={e => e.stopPropagation()}>
+        <p className="font-black text-lg" style={{ color: NAVY }}>{emojiEspecie(pet.especie)} {pet.nome}</p>
+        {token ? <QRCodeSVG value={`${window.location.origin}/atender/${token}`} size={220} level="M" includeMargin className="mx-auto" /> : <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />}
+        <p className="text-xs text-slate-500">Mostre no pet shop: eles leem com a câmera e o atendimento entra no cartão fidelidade.</p>
+        <button type="button" onClick={onFechar} className="w-full py-2.5 rounded-xl font-semibold text-sm border border-slate-200 text-slate-600">Fechar</button>
+      </div>
+    </div>
+  );
+}
+
+function FidelidadePet({ pet, catalogo, onContestar }) {
+  const f = pet.fidelidade || { cartoes: [], premios: [] };
+  const premios = f.premios.filter(p => !p.resgatado_em && new Date(p.expira_em) > new Date());
+  const contestaveis = (pet.atendimentos || []).filter(a => a.pode_contestar);
+  if (!f.cartoes.length && !premios.length && !contestaveis.length) return null;
+  const nomeServico = c => catalogo?.servicos.find(s => s.codigo === c)?.nome;
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3 space-y-2">
+      <p className="text-[11px] font-semibold text-slate-500">🎟️ Cartão fidelidade</p>
+      {premios.map(p => (
+        <p key={p.id} className="text-xs font-bold text-green-800 bg-green-50 rounded-lg px-2.5 py-1.5">🎁 {p.premio_texto} em {p.parceiro_nome} — vale até {new Date(p.expira_em).toLocaleDateString('pt-BR')}</p>
+      ))}
+      {f.cartoes.map(c => (
+        <div key={c.id}>
+          <p className="text-xs text-slate-600">{c.parceiro_nome}{c.servico ? ` · ${nomeServico(c.servico)}` : ''}: <strong>{c.carimbos}/{c.meta}</strong> → {c.premio}</p>
+          <div className="flex gap-0.5 mt-1">{Array.from({ length: c.meta }, (_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i < c.carimbos ? 'bg-amber-400' : 'bg-slate-200'}`} />)}</div>
+        </div>
+      ))}
+      {contestaveis.map(a => (
+        <p key={a.id} className="text-[11px] text-slate-500 flex items-center justify-between gap-2">
+          <span className="truncate">✅ {a.parceiro_nome} registrou {nomeServico(a.servico)?.toLowerCase() || 'atendimento'} em {a.dia.split('-').reverse().slice(0, 2).join('/')}</span>
+          <button type="button" onClick={() => onContestar({ ...a, parceiro_nome: a.parceiro_nome })} className="text-red-600 font-semibold hover:underline flex-shrink-0">Não fui eu</button>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function CardPet({ pet, catalogo, onEditar, onExcluir, onRevogar, onContestar }) {
+  const [verQr, setVerQr] = useState(false);
   const raca = pet.raca === 'srd' ? 'Sem raça definida' : (catalogo?.racas.find(r => r.codigo === pet.raca)?.nome || pet.raca_outra);
   const porte = catalogo?.portes.find(p => p.codigo === pet.porte)?.nome;
   const idade = idadePet(pet.nascimento, pet.nascimento_aproximado);
@@ -315,10 +372,13 @@ function CardPet({ pet, catalogo, onEditar, onExcluir, onRevogar }) {
           </ul>
         )}
       </div>
-      <div className="flex gap-2 mt-3">
+      <FidelidadePet pet={pet} catalogo={catalogo} onContestar={onContestar} />
+      <div className="flex flex-wrap gap-2 mt-3">
+        <button type="button" onClick={() => setVerQr(true)} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white" style={{ backgroundColor: NAVY }}><QrCode className="w-3.5 h-3.5" /> QR do {pet.nome}</button>
         <button type="button" onClick={onEditar} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600"><Pencil className="w-3.5 h-3.5" /> Editar ficha</button>
         <button type="button" onClick={onExcluir} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-100 text-red-500 ml-auto"><Trash2 className="w-3.5 h-3.5" /> Excluir</button>
       </div>
+      {verQr && <ModalQrPet pet={pet} onFechar={() => setVerQr(false)} />}
     </div>
   );
 }

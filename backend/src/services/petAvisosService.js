@@ -82,4 +82,33 @@ function avisarNovaAvaliacao({ parceiroWhatsapp, ag, nota, comentario }) {
     `\n\nResponda pelo painel (a resposta fica pública):\n${URL_PAINEL_PETSHOP}`);
 }
 
-module.exports = { avisarNovoPedido, avisarResposta, avisarClienteMudou, avisarFotosProntas, avisarNovaAvaliacao, dataBR };
+// Parte 5: pet shop registrou o atendimento (leu o QR do pet ou marcou
+// como realizado) → dono, com o cartão e o link pra contestar
+function avisarAtendimentoRegistrado({ clienteWhatsapp, petNome, parceiroNome, fidelidade }) {
+  let cartao = '';
+  if (fidelidade?.premio) {
+    const ate = new Date(fidelidade.premio.expira_em).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    cartao = `\n\n🎁 *Cartão completo!* Prêmio liberado: *${fidelidade.premio.premio_texto}* (vale até ${ate}).`;
+  } else if (fidelidade) {
+    cartao = `\n\n🎟️ Cartão fidelidade: *${fidelidade.carimbos}/${fidelidade.meta}* — faltam ${fidelidade.meta - fidelidade.carimbos} pra ganhar *${fidelidade.cartao.premio}*.`;
+  }
+  return enviar(clienteWhatsapp,
+    `🐾 *${parceiroNome}* registrou o atendimento do *${petNome}* hoje ✅${cartao}\n\nNão foi você? Avise em:\n${URL_MEUS_PETS}`);
+}
+
+// Parte 5: cliente leu o QR do balcão → pet shop confirma
+function avisarClienteRegistrou({ parceiroWhatsapp, clienteNome, petNome, servico }) {
+  return enviar(parceiroWhatsapp,
+    `🐾 *IUB MAIS+*\n\n${clienteNome} registrou pelo QR do balcão o atendimento de *${nomeServico(servico)}* do *${petNome}*.\n\nConfirme pra contar no cartão fidelidade:\n${FRONT}/parceiro/painel/fidelidade`);
+}
+
+// Parte 5: dono contestou ("não fui eu") → pet shop
+function avisarContestado({ parceiroWhatsapp, clienteNome, petNome, dia }) {
+  return enviar(parceiroWhatsapp,
+    `⚠️ *IUB MAIS+*\n\n${clienteNome} disse que o atendimento do *${petNome}* registrado em ${dataBR(dia)} não foi dele. O carimbo foi retirado.\n\n${FRONT}/parceiro/painel/fidelidade`);
+}
+
+module.exports = {
+  avisarNovoPedido, avisarResposta, avisarClienteMudou, avisarFotosProntas, avisarNovaAvaliacao,
+  avisarAtendimentoRegistrado, avisarClienteRegistrou, avisarContestado, dataBR,
+};
