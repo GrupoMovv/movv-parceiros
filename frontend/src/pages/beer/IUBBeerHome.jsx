@@ -6,6 +6,7 @@ import MenuMobileMaisAcessados from '../../components/beer/MenuMobileMaisAcessad
 import TodasCategorias from '../../components/beer/TodasCategorias';
 import BotaoMonteSeuDrink from '../../components/beer/BotaoMonteSeuDrink';
 import CardEstabelecimento from '../../components/beer/CardEstabelecimento';
+import CarrosseisVitrine from '../../components/beer/CarrosseisVitrine';
 import { Vazio } from './BeerLayout';
 import { BEER, ROXINHO_GENTLEMAN_URL } from './beerConfig';
 
@@ -103,6 +104,8 @@ export default function IUBBeerHome() {
           <TituloSecao>Mais acessados</TituloSecao>
           <MenuMobileMaisAcessados ehDomingo={hojeEhDomingo()} />
         </section>
+
+        <CarrosseisVitrine />
 
         {/* Celular: 19 grupos em lista viravam uma rolagem enorme antes dos
             estabelecimentos — lá fica só o botão pra tela dedicada. Do sm

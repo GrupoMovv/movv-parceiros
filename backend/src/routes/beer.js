@@ -9,6 +9,7 @@ const { simpleRateLimit } = require('../middleware/rateLimit');
 // moderação em /api/sindicato-beer (routes/sindicatoBeer.js, admin).
 router.get('/categorias', ctrl.getCategorias);
 router.get('/resumo', ctrl.getResumo);
+router.get('/vitrine', ctrl.getVitrine);
 router.get('/estabelecimentos', ctrl.getEstabelecimentos);
 router.get('/estabelecimentos/:slug', ctrl.getEstabelecimento);
 router.get('/estabelecimentos/:slug/produtos', ctrl.getProdutosEstabelecimento);

@@ -527,7 +527,73 @@ async function getProduto(req, res) {
   }
 }
 
+// ─── Vitrine da home: carrosséis por grupo (Junior, 29/09/2026) ───────────
+// Um carrossel por GRUPO do catálogo (Cervejas, Vinhos...), na ordem do
+// catálogo, só com >= 3 produtos. Dentro do grupo: destaque > plano >
+// aberto agora > mais novo ("mais vendidos" não existe: o pedido fecha no
+// WhatsApp da adega). Depois intercala as adegas (não repete a mesma em
+// seguida). Cigarros fora: regulamentado não entra em vitrine de
+// descoberta (continua na grade de categorias e na busca). Cache de 5 min
+// por processo — "aberto agora" pode atrasar até 5 min, aceitável.
+const VITRINE_MIN_POR_GRUPO = 3;
+const VITRINE_MAX_POR_GRUPO = 12;
+const VITRINE_CACHE_MS = 5 * 60 * 1000;
+const GRUPOS_FORA_DA_VITRINE = ['cigarros'];
+let cacheVitrine = { em: 0, dados: null };
+
+// Mantém a ordem, mas nunca a mesma adega duas vezes seguidas quando dá
+// pra evitar (pega o próximo de outra adega e volta pro pulado depois).
+function intercalarAdegas(lista) {
+  const resto = [...lista];
+  const saida = [];
+  while (resto.length) {
+    const ultima = saida[saida.length - 1]?.estabelecimento.id;
+    const i = resto.findIndex(p => p.estabelecimento.id !== ultima);
+    saida.push(resto.splice(i === -1 ? 0 : i, 1)[0]);
+  }
+  return saida;
+}
+
+function montarVitrine(linhas, grupos) {
+  const peso = p => PLANOS[p.estabelecimento.plano]?.boost_busca || 0;
+  const produtos = linhas.map(r => ({ ...publicoProduto(r), grupo: r.grupo, criado_em: r.produto_criado_em }));
+  return grupos.map(g => {
+    const doGrupo = produtos
+      .filter(p => p.grupo === g.codigo)
+      .sort((a, b) => (Number(b.destaque) - Number(a.destaque)) || (peso(b) - peso(a))
+        || (Number(b.estabelecimento.status_aberto) - Number(a.estabelecimento.status_aberto))
+        || (new Date(b.criado_em) - new Date(a.criado_em)));
+    return {
+      codigo: g.codigo, nome: g.nome, icone: g.icone, total: doGrupo.length,
+      produtos: intercalarAdegas(doGrupo).slice(0, VITRINE_MAX_POR_GRUPO).map(({ grupo, criado_em, ...p }) => p),
+    };
+  }).filter(s => s.total >= VITRINE_MIN_POR_GRUPO);
+}
+
+// GET /vitrine
+async function getVitrine(req, res) {
+  try {
+    if (cacheVitrine.dados && Date.now() - cacheVitrine.em < VITRINE_CACHE_MS) return res.json(cacheVitrine.dados);
+    const grupos = (await db.query(
+      `SELECT codigo, nome_exibicao AS nome, icone FROM beer_categorias
+       WHERE ativo = true AND categoria_pai IS NULL AND codigo <> ALL($1) ORDER BY ordem`, [GRUPOS_FORA_DA_VITRINE]
+    )).rows;
+    const linhas = (await db.query(
+      `SELECT ${SELECT_PRODUTO}, COALESCE(bc.categoria_pai, bc.codigo) AS grupo
+       ${FROM_PRODUTO} WHERE ${WHERE_PRODUTO_VISIVEL} AND COALESCE(bc.categoria_pai, bc.codigo) <> ALL($1)
+       LIMIT 3000`, [GRUPOS_FORA_DA_VITRINE]
+    )).rows;
+    const dados = { secoes: montarVitrine(linhas, grupos) };
+    cacheVitrine = { em: Date.now(), dados };
+    return res.json(dados);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao montar a vitrine' });
+  }
+}
+
 module.exports = {
+  getVitrine, montarVitrine, intercalarAdegas,
   getCategoria, getProduto,
   getCategorias, getResumo, getEstabelecimentos, getEstabelecimento, getProdutosEstabelecimento,
   getProdutos, getQueroAgora, verificarIdade, registrarAcesso,
