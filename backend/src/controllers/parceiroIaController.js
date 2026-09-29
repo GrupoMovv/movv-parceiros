@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { limiteIA, limiteVozDia, planoEfetivo } = require('../config/planos');
 const openaiService = require('../services/openaiService');
+const { detectarProdutoMais18 } = require('../config/beer');
 
 const TRIAL_DIAS = 3;
 const RATE_LIMIT_MAX = 5; // chamadas por minuto, por parceiro
@@ -88,6 +89,34 @@ async function getStatus(req, res) {
 // Não cria nem altera produto nenhum — só sugere; quem confirma/salva é
 // o fluxo normal de ProdutoForm.jsx.
 async function analisarImagem(req, res) {
+  return analisarComCota(req, res, async file => {
+    const dados = await openaiService.analisarProdutoPorImagem(file.buffer, file.mimetype);
+    // Formulário COMUM reconheceu bebida/cigarro: a tela já manda pro Disk
+    // Bebidas antes do parceiro preencher preço (o servidor recusaria no salvar)
+    if (dados) dados.mais18 = Boolean(detectarProdutoMais18(dados.nome, dados.descricao, dados.marca, (dados.palavras_chave || []).join(' ')));
+    return dados;
+  });
+}
+
+// POST /parceiro/beer/produtos/analisar-imagem — Disk Bebidas: mesma cota
+// e registro de uso do formulário comum, mas a IA escolhe a categoria entre
+// as folhas do catálogo do Beer.
+async function analisarImagemBeer(req, res) {
+  let categorias;
+  try {
+    categorias = (await db.query(
+      `SELECT f.codigo, g.nome_exibicao || ' › ' || f.nome_exibicao AS caminho
+       FROM beer_categorias f JOIN beer_categorias g ON g.codigo = f.categoria_pai
+       WHERE f.ativo = true AND g.ativo = true ORDER BY g.ordem, f.ordem`
+    )).rows;
+  } catch (err) {
+    console.error('[parceiroIaController.analisarImagemBeer]', err);
+    return res.status(500).json({ error: 'Erro ao analisar imagem' });
+  }
+  return analisarComCota(req, res, file => openaiService.analisarBebidaPorImagem(file.buffer, file.mimetype, categorias));
+}
+
+async function analisarComCota(req, res, analisar) {
   try {
     const parceiro = req.parceiro;
     if (!req.file) return res.status(400).json({ error: 'Envie uma imagem' });
@@ -116,7 +145,7 @@ async function analisarImagem(req, res) {
 
     let dados;
     try {
-      dados = await openaiService.analisarProdutoPorImagem(req.file.buffer, req.file.mimetype);
+      dados = await analisar(req.file);
     } catch (err) {
       return responderErroIA(res, err);
     }
@@ -283,4 +312,4 @@ function responderErroIA(res, err) {
   });
 }
 
-module.exports = { getStatus, analisarImagem, cadastrarPorVoz, cadastrarPorVozGuiada };
+module.exports = { getStatus, analisarImagem, analisarImagemBeer, cadastrarPorVoz, cadastrarPorVozGuiada };

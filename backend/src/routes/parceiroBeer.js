@@ -2,6 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { authenticateParceiro } = require('../middleware/parceiroAuth');
 const ctrl = require('../controllers/parceiroBeerController');
+const iaCtrl = require('../controllers/parceiroIaController');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -24,6 +25,8 @@ router.post('/meu/desativar', ctrl.desativar);
 router.post('/meu/status', ctrl.exigirExtensaoAtiva, ctrl.atualizarStatus);
 router.get('/produtos', ctrl.exigirExtensaoAtiva, ctrl.listarProdutos);
 router.post('/produtos', ctrl.exigirExtensaoAtiva, upload.single('foto'), ctrl.criarProduto);
+// Cadastro por foto com IA (mesma cota da IA do formulário comum); só SUGERE
+router.post('/produtos/analisar-imagem', ctrl.exigirExtensaoAtiva, upload.single('imagem'), iaCtrl.analisarImagemBeer);
 router.put('/produtos/:id', ctrl.exigirExtensaoAtiva, upload.single('foto'), ctrl.editarProduto);
 router.delete('/produtos/:id', ctrl.exigirExtensaoAtiva, ctrl.excluirProduto);
 router.post('/produtos/:id/disponibilidade', ctrl.exigirExtensaoAtiva, ctrl.atualizarDisponibilidade);

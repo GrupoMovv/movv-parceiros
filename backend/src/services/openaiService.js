@@ -122,6 +122,102 @@ async function analisarProdutoPorImagem(buffer, mimetype) {
 }
 
 // ---------------------------------------------------------------------------
+// IUB Disk Bebidas: mesma ideia do analisarProdutoPorImagem, mas a IA escolhe
+// a categoria entre as FOLHAS do catálogo do Beer (beer_categorias) e lê o
+// rótulo (volume, origem, quantidade no pack). `categorias` =
+// [{ codigo, caminho: 'Cervejas › Long neck' }] vindas do banco — a resposta
+// só vale se o código estiver nessa lista.
+function montarPromptBebida(categorias) {
+  return `Você cadastra produtos de uma adega/distribuidora em Itumbiara-GO (bebidas, petiscos, gelo, carvão, itens de festa). Analise a foto e retorne SOMENTE um JSON válido:
+
+{
+  "nome": "nome comercial como o cliente procura, com marca e volume/quantidade (máx. 80 caracteres). Ex.: 'Heineken Long Neck 330ml', 'Skol Lata 350ml - Pack com 12'",
+  "descricao": "1 ou 2 frases completas em português, até 250 caracteres, objetivas (tipo, sabor, ocasião). Sem exagero.",
+  "marca": "marca do rótulo, ou string vazia",
+  "categoria_codigo": "EXATAMENTE um código da lista abaixo",
+  "volume_ml": número inteiro em ml de UMA unidade (lata 350, long neck 330, garrafa 600, litrão 1000, vinho 750) ou null se não der pra ler/estimar com segurança,
+  "quantidade": número de unidades se for pack/caixa/fardo, senão 1,
+  "origem": "país de origem se aparecer no rótulo (ex.: 'Chile'), senão string vazia",
+  "alcoolica": true se for bebida alcoólica,
+  "certeza": "alta" ou "baixa",
+  "duvidas": ["campos em que você não tem certeza, entre: nome, marca, categoria_codigo, volume_ml"]
+}
+
+Categorias (código — caminho):
+${categorias.map(c => `${c.codigo} — ${c.caminho}`).join('\n')}
+
+Regras:
+- Se não for um produto identificável (foto borrada, pessoa, paisagem), responda SOMENTE {"erro": "motivo curto em português"}.
+- categoria_codigo tem que ser um código da lista; na dúvida entre duas, escolha a mais específica que você tem certeza e marque "categoria_codigo" em duvidas.
+- Não invente volume: se o rótulo não mostra e não é um formato padrão reconhecível, use null.`;
+}
+
+async function analisarBebidaPorImagem(buffer, mimetype, categorias) {
+  if (!CONFIGURADO) {
+    const erro = new Error('IA não configurada no servidor (OPENAI_API_KEY ausente).');
+    erro.codigo = 'CONFIG_AUSENTE';
+    throw erro;
+  }
+  const dataUri = `data:${extensaoParaMime(mimetype)};base64,${buffer.toString('base64')}`;
+  let resp;
+  try {
+    resp = await client.chat.completions.create({
+      model: MODELO,
+      response_format: { type: 'json_object' },
+      max_tokens: 500,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: montarPromptBebida(categorias) },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analise esta foto e retorne o JSON pedido.' },
+            // 'auto' e não 'low': precisa ler rótulo (volume, marca, origem)
+            { type: 'image_url', image_url: { url: dataUri, detail: 'auto' } },
+          ],
+        },
+      ],
+    });
+  } catch (err) {
+    console.error('[OPENAI ERROR bebida]:', err?.status, err?.error || err?.message);
+    const erro = new Error('Não foi possível analisar a imagem agora.');
+    erro.codigo = err instanceof OpenAI.APIConnectionTimeoutError ? 'TIMEOUT' : (err?.status || 'DESCONHECIDO');
+    throw erro;
+  }
+  let dados;
+  try {
+    dados = JSON.parse(resp.choices?.[0]?.message?.content);
+  } catch {
+    const erro = new Error('A IA devolveu uma resposta inesperada.');
+    erro.codigo = 'JSON_INVALIDO';
+    throw erro;
+  }
+  return normalizarRespostaBebida(dados, categorias);
+}
+
+// Separado pra dar pra testar sem chamar a OpenAI.
+function normalizarRespostaBebida(dados, categorias) {
+  if (!dados || dados.erro) return null;
+  const codigos = new Set(categorias.map(c => c.codigo));
+  const volume = Number.isInteger(Number(dados.volume_ml)) && Number(dados.volume_ml) > 0 && Number(dados.volume_ml) <= 20000 ? Number(dados.volume_ml) : null;
+  const duvidas = Array.isArray(dados.duvidas) ? dados.duvidas.filter(d => ['nome', 'marca', 'categoria_codigo', 'volume_ml'].includes(d)) : [];
+  const categoria = codigos.has(dados.categoria_codigo) ? dados.categoria_codigo : '';
+  if (!categoria && !duvidas.includes('categoria_codigo')) duvidas.push('categoria_codigo');
+  return {
+    nome: String(dados.nome || '').trim().slice(0, 80),
+    descricao: String(dados.descricao || '').trim().slice(0, 300),
+    marca: String(dados.marca || '').trim().slice(0, 80),
+    categoria_codigo: categoria,
+    volume_ml: volume,
+    quantidade: Math.max(1, Math.min(200, parseInt(dados.quantidade, 10) || 1)),
+    origem: String(dados.origem || '').trim().slice(0, 60),
+    alcoolica: dados.alcoolica === true,
+    certeza: dados.certeza === 'alta' && !duvidas.length ? 'alta' : 'baixa',
+    duvidas,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Cadastro por VOZ (IUB Food fase 1): áudio -> Whisper (texto) -> GPT-4o
 // (JSON estruturado). Duas chamadas separadas de propósito: o Whisper só
 // transcreve, e quem entende "vinte e nove e noventa" = 29.90 é o GPT.
@@ -309,4 +405,4 @@ async function extrairEtapaVoz(etapa, transcricao, contexto = {}) {
   return texto || null;
 }
 
-module.exports = { analisarProdutoPorImagem, transcreverAudio, estruturarProdutoPorTexto, extrairEtapaVoz, CATEGORIAS, MIMETYPES_AUDIO, mimetypeBase };
+module.exports = { analisarProdutoPorImagem, analisarBebidaPorImagem, normalizarRespostaBebida, transcreverAudio, estruturarProdutoPorTexto, extrairEtapaVoz, CATEGORIAS, MIMETYPES_AUDIO, mimetypeBase };

@@ -123,6 +123,12 @@ export default function ParceiroProdutoForm() {
       marca: dadosIA.marca || f.marca,
     }));
     if (dadosIA.foto) setGaleria(comFotoDaIA(galeria, dadosIA.foto));
+    // A IA viu bebida alcoólica/cigarro: avisa já (o servidor recusaria no Publicar)
+    if (dadosIA.mais18) {
+      setBloqueio18(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error('A IA reconheceu bebida alcoólica ou cigarro — isso é cadastrado na aba 🍻 Meu IUB Beer, que também tem cadastro por foto.', { duration: 8000 });
+    }
   }
 
   // A foto da IA entra como principal, no lugar da foto da IA anterior

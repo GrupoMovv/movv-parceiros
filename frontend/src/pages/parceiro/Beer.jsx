@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Wine, Plus, Pencil, Trash2, Upload, Loader2, Star, Zap, X, Clock, AlertTriangle } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import CampoPreco from '../../components/ui/CampoPreco';
+import ImageCropUpload from '../../components/ImageCropUpload';
 import TermoDiskBebidas from '../../components/beer/TermoDiskBebidas';
 import EditorHorario from '../../components/beer/EditorHorario';
 import { DIAS, TIPOS_ESTABELECIMENTO, textoDias } from '../beer/beerConfig';
@@ -344,6 +345,36 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
   const fileRef = useRef(null);
+  // Produto novo começa escolhendo: IA (foto → preenche tudo) ou manual
+  const [modo, setModo] = useState(produto ? 'form' : 'escolha'); // escolha | analisando | form
+  const [ia, setIa] = useState(null); // resposta da IA: { certeza, duvidas[] } pra destacar o que conferir
+  const precoRef = useRef(null);
+
+  async function analisarFoto(file) {
+    setModo('analisando');
+    setFoto(file);
+    setPreview(URL.createObjectURL(file));
+    try {
+      const fd = new FormData();
+      fd.append('imagem', file);
+      const { data } = await apiParceiro.post('/parceiro/beer/produtos/analisar-imagem', fd);
+      setNome(data.nome || '');
+      setDescricao(data.descricao || '');
+      setCategoria(categorias.some(g => g.filhas.some(f => f.codigo === data.categoria_codigo)) ? data.categoria_codigo : '');
+      setVolume(data.volume_ml ? String(data.volume_ml) : '');
+      setOrigem(data.origem || '');
+      setIa(data);
+      setModo('form');
+      setTimeout(() => precoRef.current?.querySelector('input')?.focus(), 150);
+    } catch (err) {
+      const d = err.response?.data;
+      toast.error(d?.codigo === 'NAO_IDENTIFICADO' ? 'A IA não reconheceu o produto. Tente uma foto do rótulo de frente — ou cadastre manual.'
+        : d?.codigo === 'LIMITE_ATINGIDO' ? `${d.error} Cadastre manual ou veja os planos.` : (d?.error || 'Não deu pra analisar agora — cadastre manual.'), { duration: 7000 });
+      setModo('form'); // segue com a foto já escolhida, no manual
+    }
+  }
+  const duvida = campo => ia?.duvidas?.includes(campo);
+  const estiloDuvida = campo => (duvida(campo) ? 'border-amber-400 bg-amber-50' : 'border-slate-200');
 
   const podeSalvar = nome.trim().length >= 2 && categoria && parseFloat(preco) > 0;
 
@@ -394,10 +425,36 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
             : 'O produto aparece no Disk Bebidas depois da aprovação do IUB.'}
         </p>
 
+        {modo === 'escolha' && (
+          <div className="mt-5 space-y-3">
+            <ImageCropUpload aspectRatio={1} botaoUnico label="Cadastrar com IA" tamanhoIcone="w-6 h-6" onCropComplete={analisarFoto}
+              botaoClassName="w-full flex items-center justify-center gap-2 py-6 rounded-2xl text-white text-lg font-black shadow-lg bg-[#4C1D95] hover:bg-[#3B1575]" />
+            <p className="text-center text-xs text-slate-500 -mt-1">Recomendado: tire a foto do rótulo — a IA preenche nome, categoria e volume. Você só digita o preço.</p>
+            <button type="button" onClick={() => setModo('form')} className="w-full py-3.5 rounded-2xl border-2 border-slate-200 text-sm font-bold text-slate-600">✏️ Cadastrar manual</button>
+          </div>
+        )}
+
+        {modo === 'analisando' && (
+          <div className="mt-6 flex flex-col items-center gap-3 py-8">
+            {preview && <img src={preview} alt="" className="w-28 h-28 rounded-2xl object-cover" />}
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: ROXO }} />
+            <p className="text-sm font-semibold text-slate-600">🤖 Lendo o rótulo…</p>
+          </div>
+        )}
+
+        {modo === 'form' && ia && (
+          <div className={`mt-4 rounded-xl px-3 py-2.5 text-xs ${ia.certeza === 'alta' ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900'}`}>
+            {ia.certeza === 'alta'
+              ? '🤖 Preenchi tudo pela foto. Confira e digite o preço.'
+              : '🤖 Preenchi pela foto, mas confira os campos em amarelo antes de enviar.'}
+          </div>
+        )}
+
+        {modo === 'form' && (
         <div className="space-y-3 mt-4">
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Nome *</label>
-            <input value={nome} onChange={e => setNome(e.target.value)} maxLength={200} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" placeholder="Ex: Heineken long neck 330ml" />
+            <input value={nome} onChange={e => setNome(e.target.value)} maxLength={200} className={`w-full px-3 py-2 text-sm border rounded-lg ${estiloDuvida('nome')}`} placeholder="Ex: Heineken long neck 330ml" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Descrição</label>
@@ -405,7 +462,7 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Categoria *</label>
-            <select value={categoria} onChange={e => setCategoria(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white">
+            <select value={categoria} onChange={e => setCategoria(e.target.value)} className={`w-full px-3 py-2 text-sm border rounded-lg ${duvida('categoria_codigo') ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-white'}`}>
               <option value="">Escolha…</option>
               {categorias.map(g => (
                 <optgroup key={g.codigo} label={`${g.icone} ${g.nome}${g.regulamentada ? ' (regulamentado)' : ''}`}>
@@ -414,7 +471,7 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
               ))}
             </select>
           </div>
-          <div>
+          <div ref={precoRef}>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Preço *{ofertaAtiva(produto || {}) && <span className="font-normal text-slate-400"> (normal — a oferta continua na aba Ofertas)</span>}</label>
             <CampoPreco value={preco} onChange={setPreco} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
           </div>
@@ -422,7 +479,7 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Volume (ml)</label>
-                <input type="number" min="1" value={volume} onChange={e => setVolume(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" placeholder="Ex: 350" />
+                <input type="number" min="1" value={volume} onChange={e => setVolume(e.target.value)} className={`w-full px-3 py-2 text-sm border rounded-lg ${estiloDuvida('volume_ml')}`} placeholder="Ex: 350" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Origem</label>
@@ -453,13 +510,16 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
           </label>
           {erro && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2" role="alert">{erro}</p>}
         </div>
+        )}
 
+        {modo === 'form' && (
         <div className="flex gap-2 mt-6">
           <button type="button" onClick={onClose} disabled={salvando} className="flex-1 text-sm font-semibold py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50">Cancelar</button>
           <button type="button" onClick={salvar} disabled={!podeSalvar || salvando} className="flex-1 text-sm font-bold py-2.5 rounded-xl text-white disabled:opacity-40" style={{ backgroundColor: ROXO }}>
             {salvando ? 'Salvando…' : produto ? 'Salvar' : 'Enviar pra análise'}
           </button>
         </div>
+        )}
       </div>
     </div>
   );
