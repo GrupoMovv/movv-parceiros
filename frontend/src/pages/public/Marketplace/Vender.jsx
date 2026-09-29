@@ -824,7 +824,7 @@ function EtapaBeer({ beer, setCampoBeer }) {
 
       <Campo label="Horário de funcionamento" obrigatorio>
         <EditorHorario horario={beer.horario_funcionamento} onChange={h => setCampoBeer('horario_funcionamento', h)} />
-        <p className="text-[11px] text-slate-400 mt-1.5">Pelo menos um dia. O botão “Aberto agora” do painel só liga dentro desse horário.</p>
+        <p className="text-[11px] text-slate-400 mt-1.5">Pelo menos um dia. O botão “Aberto agora” do painel desliga sozinho no fim do turno (fora do horário, liga por até 4h).</p>
       </Campo>
 
       <p className="text-[11px] text-slate-400">📸 Logo e foto de capa você envia no painel, logo depois da aprovação.</p>

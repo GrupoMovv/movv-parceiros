@@ -8,6 +8,15 @@ export default function EditorHorario({ horario, onChange }) {
     onChange({ ...horario, [chave]: { aberto: false, abre: '18:00', fecha: '23:00', ...horario[chave], [campo]: valor } });
   }
 
+  // "Copiar horário": o 1º dia marcado vira o horário da semana inteira
+  // (todos os dias ficam marcados; o parceiro desmarca a folga depois).
+  const modelo = DIAS.find(d => horario[d.chave]?.aberto);
+  const hm = modelo && { abre: horario[modelo.chave].abre || '18:00', fecha: horario[modelo.chave].fecha || '23:00' };
+  const jaIgual = hm && DIAS.every(d => horario[d.chave]?.aberto && (horario[d.chave].abre || '18:00') === hm.abre && (horario[d.chave].fecha || '23:00') === hm.fecha);
+  function copiarParaTodos() {
+    onChange(Object.fromEntries(DIAS.map(d => [d.chave, { aberto: true, ...hm }])));
+  }
+
   return (
     <div className="editor-horario space-y-1.5">
       {/* Ícone de relógio do Chrome desktop come ~24px por campo: abaixo de
@@ -33,6 +42,11 @@ export default function EditorHorario({ horario, onChange }) {
           </div>
         );
       })}
+      {hm && !jaIgual && (
+        <button type="button" onClick={copiarParaTodos} className="mt-1 text-xs font-semibold text-violet-700 hover:underline text-left">
+          📋 Usar o horário de {modelo.label} ({hm.abre}–{hm.fecha}) em todos os dias
+        </button>
+      )}
     </div>
   );
 }

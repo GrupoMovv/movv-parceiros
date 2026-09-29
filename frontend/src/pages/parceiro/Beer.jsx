@@ -111,16 +111,17 @@ export default function ParceiroBeer() {
 
   const lim = dados.limites;
   const destaquesUsados = produtos.filter(p => p.destaque).length;
-  // "aberto" = o que o CLIENTE vê (backend: botão ligado dentro do turno e
-  // neste turno). Fora do horário o botão nem liga.
+  // "aberto" = o que o CLIENTE vê (backend abertoAte: dentro do horário até
+  // o fim do turno; fora do horário, abertura manual que fecha sozinha em 4h).
   const st = dados.status || {};
   const aberto = Boolean(st.aberto);
-  const travado = !aberto && !st.pode_abrir;
-  const turnoAcabou = est.status_aberto && !aberto;
+  const travado = !aberto && st.pode_abrir === false;
+  const fechouSozinho = est.status_aberto && !aberto;
+  const horasManual = st.horas_abertura_manual || 4;
   let apoio;
-  if (aberto) apoio = `Seus produtos "disponível agora" aparecem no Quero Agora. Fecha sozinho às ${st.turno?.fecha}. Toque pra fechar antes.`;
-  else if (travado) apoio = `Fora do seu horário de funcionamento${st.proxima_abertura ? ` — você abre ${st.proxima_abertura}` : ''}. O botão libera no horário.`;
-  else apoio = turnoAcabou ? 'O turno anterior acabou e você fechou sozinho. Toque pra abrir de novo.' : 'Você não aparece no Quero Agora. Toque pra abrir.';
+  if (aberto) apoio = `Seus produtos "disponível agora" aparecem no Quero Agora. Fecha sozinho às ${st.fecha_as || st.turno?.fecha}. Toque pra fechar antes.`;
+  else if (st.fora_do_horario) apoio = `Fora do seu horário${st.proxima_abertura ? ` (você abre ${st.proxima_abertura})` : ''}. Abriu diferente hoje? Toque pra abrir agora — fecha sozinho em ${horasManual}h.`;
+  else apoio = fechouSozinho ? 'Você fechou sozinho no fim do período. Toque pra abrir de novo.' : 'Você não aparece no Quero Agora. Toque pra abrir.';
 
   return (
     <div className="space-y-6">
@@ -660,7 +661,7 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
         <div>
           <label className="block text-xs font-semibold text-slate-500 mb-2">Horário de funcionamento *</label>
           <EditorHorario horario={horario} onChange={setHorario} />
-          <p className="text-[11px] text-slate-400 mt-1.5">Obrigatório (pelo menos um dia). O botão “Aberto agora” só liga dentro desse horário e desliga sozinho quando o turno acaba — assim ninguém aparece aberto de madrugada por esquecimento.</p>
+          <p className="text-[11px] text-slate-400 mt-1.5">Obrigatório (pelo menos um dia). O botão “Aberto agora” desliga sozinho quando o turno acaba; fora do horário ele liga por até 4h — assim ninguém aparece aberto de madrugada por esquecimento.</p>
         </div>
       </div>
 

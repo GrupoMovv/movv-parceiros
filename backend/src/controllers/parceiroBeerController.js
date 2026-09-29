@@ -4,7 +4,7 @@ const moderacao = require('../services/beerModeracao');
 const { planoEfetivo, limiteProdutos, limiteDestaquesBeer } = require('../config/planos');
 const {
   TIPOS_ESTABELECIMENTO, TERMO_VERSAO, MENSAGEM_TERMO_PROIBIDO, verificarTermos, normalizarDias,
-  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo, validarHorario, normalizarBairros,
+  horarioConfigurado, turnoAtual, proximaAbertura, abertoAte, ABERTURA_MANUAL_MS, validarHorario, normalizarBairros,
 } = require('../config/beer');
 const { onlyDigits, isValidCNPJ } = require('../utils/validators');
 const { ipCliente } = require('../utils/ipCliente');
@@ -48,9 +48,14 @@ function limites(parceiro) {
 function statusPainel(ext) {
   if (!ext) return null;
   const turno = turnoAtual(ext.horario_funcionamento);
+  const ate = abertoAte(ext);
   return {
-    aberto: abertoEfetivo(ext),
-    pode_abrir: Boolean(turno),
+    aberto: Boolean(ate),
+    // fora do horário também liga (fecha sozinho em 4h — config/beer.js)
+    pode_abrir: true,
+    fora_do_horario: !turno,
+    fecha_as: ate ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }).format(ate) : null,
+    horas_abertura_manual: ABERTURA_MANUAL_MS / 3600000,
     turno: turno ? { abre: turno.abre, fecha: turno.fecha, fim: turno.fim } : null,
     proxima_abertura: turno ? null : proximaAbertura(ext.horario_funcionamento),
     horario_configurado: horarioConfigurado(ext.horario_funcionamento),
@@ -174,14 +179,11 @@ async function desativar(req, res) {
 }
 
 // POST /meu/status { status_aberto } — o toggle grande "Aberto agora".
+// Dentro do horário: fica aberto até o fim do turno. Fora do horário
+// (abertura manual): fecha sozinho em 4h — ver abertoAte em config/beer.js.
 async function atualizarStatus(req, res) {
   try {
     if (typeof req.body?.status_aberto !== 'boolean') return res.status(400).json({ error: 'status_aberto deve ser true ou false' });
-    // Só LIGA dentro de um turno do horário cadastrado (fechar pode sempre).
-    if (req.body.status_aberto && !turnoAtual(req.beer.horario_funcionamento)) {
-      const prox = proximaAbertura(req.beer.horario_funcionamento);
-      return res.status(400).json({ error: `Fora do seu horário de funcionamento${prox ? ` — você abre ${prox}` : ''}. Ajuste o horário em "Editar dados" se abriu diferente hoje.` });
-    }
     const r = await db.query(
       `UPDATE beer_estabelecimentos SET status_aberto = $1, ultimo_status_update = NOW(), updated_at = NOW()
        WHERE id = $2 RETURNING *`,

@@ -40,7 +40,13 @@ export default function ParceiroDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {METRICAS.map((m) => {
           const Icone = m.icone;
-          const valor = stats ? stats[m.chave] : null;
+          let valor = stats ? stats[m.chave] : null;
+          let sub = m.sub;
+          // Produtos do Disk Bebidas (outra tabela) entram no total, com a divisão embaixo
+          if (m.chave === 'produtos_cadastrados' && stats?.bebidas_cadastradas > 0) {
+            sub = `(${valor} no catálogo · ${stats.bebidas_cadastradas} no Disk Bebidas)`;
+            valor += stats.bebidas_cadastradas;
+          }
           return (
             <div key={m.chave} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: `${ROXO}12` }}>
@@ -49,7 +55,7 @@ export default function ParceiroDashboard() {
               <p className="text-2xl font-extrabold" style={{ color: PRETO }}>
                 {valor === null ? '—' : m.meta ? `${valor}/${m.meta}` : valor}
               </p>
-              <p className="text-slate-500 text-xs font-medium mt-1">{m.label} {m.sub}</p>
+              <p className="text-slate-500 text-xs font-medium mt-1">{m.label} {sub}</p>
             </div>
           );
         })}

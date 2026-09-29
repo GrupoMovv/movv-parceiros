@@ -260,11 +260,28 @@ function proximaAbertura(horario, agora = new Date()) {
   return null;
 }
 
-// O que o cliente vê: botão ligado DENTRO de um turno E ligado neste turno.
-function abertoEfetivo(est, agora = new Date()) {
-  if (!est?.status_aberto || !est.ultimo_status_update) return false;
+// "Abrir agora" fora do horário (Junior, 29/09/2026): liga e fecha sozinho
+// depois de ABERTURA_MANUAL_MS — ninguém fica aberto de madrugada por
+// esquecimento. Se um turno começa dentro dessa janela, vale até o fim dele.
+const ABERTURA_MANUAL_MS = 4 * 60 * 60 * 1000;
+
+// Até quando está aberto (Date) ou null = fechado pro cliente.
+// - Ligado DENTRO de um turno: até o fim daquele turno.
+// - Ligado FORA de turno (manual): 4h, esticando se um turno começar no meio.
+function abertoAte(est, agora = new Date()) {
+  if (!est?.status_aberto || !est.ultimo_status_update) return null;
+  const ligadoEm = new Date(est.ultimo_status_update);
   const turno = turnoAtual(est.horario_funcionamento, agora);
-  return Boolean(turno && new Date(est.ultimo_status_update) >= turno.inicio);
+  if (turno && ligadoEm >= turno.inicio) return turno.fim;
+  if (turnoAtual(est.horario_funcionamento, ligadoEm)) return null; // ligou num turno que já acabou
+  const fimManual = new Date(ligadoEm.getTime() + ABERTURA_MANUAL_MS);
+  if (turno && turno.inicio <= fimManual) return turno.fim > fimManual ? turno.fim : fimManual;
+  return agora < fimManual ? fimManual : null;
+}
+
+// O que o cliente vê.
+function abertoEfetivo(est, agora = new Date()) {
+  return Boolean(abertoAte(est, agora));
 }
 
 // dias_disponiveis aceito do front: {"todos": true} ou só chaves de DIAS
@@ -301,6 +318,6 @@ module.exports = {
   CONFIANCA_MIN_APROVADOS, CONFIANCA_DIAS_SEM_REJEICAO, TAXA_AUDITORIA, CNAES_BEBIDAS, cnaeCompativel,
   FAIXAS_PRECO_GRUPO, FAIXA_PRECO_PADRAO, detectarPalavrao,
   verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias, validarHorario, normalizarBairros,
-  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
+  horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo, abertoAte, ABERTURA_MANUAL_MS,
   FAIXAS_VOLUME, faixaVolume,
 };

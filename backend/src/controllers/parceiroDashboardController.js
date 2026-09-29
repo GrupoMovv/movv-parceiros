@@ -10,7 +10,7 @@ async function stats(req, res) {
   try {
     const parceiroId = req.parceiro.id;
 
-    const [produtos, promocoes, visitas, cliquesWhatsapp, ultimosProdutos] = await Promise.all([
+    const [produtos, promocoes, visitas, cliquesWhatsapp, ultimosProdutos, bebidas] = await Promise.all([
       db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1', [parceiroId]),
       db.query(
         `SELECT COUNT(*)::int AS n FROM sindicato_parceiro_promocoes
@@ -32,10 +32,19 @@ async function stats(req, res) {
          WHERE parceiro_id = $1 ORDER BY created_at DESC LIMIT 3`,
         [parceiroId]
       ),
+      // Disk Bebidas mora em outra tabela (beer_produtos) — sem isso a adega
+      // que só vende bebida via "0 produtos" no painel. Rejeitado não conta.
+      db.query(
+        `SELECT COUNT(*)::int AS n FROM beer_produtos bp
+         JOIN beer_estabelecimentos be ON be.id = bp.estabelecimento_id
+         WHERE be.parceiro_id = $1 AND bp.status <> 'rejeitado'`,
+        [parceiroId]
+      ),
     ]);
 
     return res.json({
       produtos_cadastrados: produtos.rows[0].n,
+      bebidas_cadastradas: bebidas.rows[0].n,
       promocoes_ativas: promocoes.rows[0].n,
       visitas_30d: visitas.rows[0].n,
       cliques_whatsapp_30d: cliquesWhatsapp.rows[0].n,
