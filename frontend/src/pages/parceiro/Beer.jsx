@@ -409,12 +409,13 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
       fd.append('dias_disponiveis', JSON.stringify(dias));
       fd.append('disponivel_agora', String(agora));
       if (foto) fd.append('foto', foto);
+      // publicado_direto: moderação inteligente (parceiro confiável + checks OK)
       if (produto) {
         const res = await apiParceiro.put(`/parceiro/beer/produtos/${produto.id}`, fd);
-        onSalvo(res.data.voltou_moderacao ? 'Salvo — o produto voltou pra análise do IUB' : 'Produto atualizado');
+        onSalvo(res.data.publicado_direto ? 'Salvo e já no ar ✅' : res.data.voltou_moderacao ? 'Salvo — o produto voltou pra análise do IUB' : 'Produto atualizado');
       } else {
-        await apiParceiro.post('/parceiro/beer/produtos', fd);
-        onSalvo('Produto enviado pra análise do IUB');
+        const res = await apiParceiro.post('/parceiro/beer/produtos', fd);
+        onSalvo(res.data.publicado_direto ? 'Publicado! Já está no Disk Bebidas ✅' : 'Produto enviado pra análise do IUB');
       }
     } catch (err) {
       // termo proibido (422) e demais validações aparecem DENTRO do modal,

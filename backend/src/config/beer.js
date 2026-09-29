@@ -110,6 +110,48 @@ function detectarProdutoMais18(...textos) {
 
 const MENSAGEM_PRODUTO_MAIS_18 = 'Bebida alcoólica e cigarro não podem ir no catálogo geral (são +18). Cadastre pela aba "🍻 Meu IUB Beer" do painel — lá tem a verificação de idade do cliente.';
 
+// ─── Moderação inteligente (Junior, 29/09/2026) ─────────────────────────────
+// Parceiro CONFIÁVEL publica direto se todos os checks passarem.
+const CONFIANCA_MIN_APROVADOS = 5;
+const CONFIANCA_DIAS_SEM_REJEICAO = 30;
+const TAXA_AUDITORIA = 0.1; // 1 em 10 dos publicados direto vai pra aba "Conferir"
+
+// CNAE compatível com Disk Bebidas (só dígitos). O CNAE é o filtro que
+// teria pego o "caso da escola" (CNPJ ativo, CNAE de escola). Fora da lista
+// NÃO bloqueia: tudo do parceiro vai pra fila.
+const CNAES_BEBIDAS = [
+  '4723700',                                   // varejo de bebidas
+  '4635401', '4635402', '4635403', '4635499',  // atacado de bebidas
+  '5611201', '5611203', '5611204', '5611205',  // restaurante, lanchonete, bar sem/com entretenimento
+  '5620104',                                   // fornecimento de alimentos (domiciliar)
+  '4711301', '4711302', '4712100',             // hiper, super, minimercado
+  '4729602', '4729699',                        // conveniência, alimentos em geral
+  '1113502',                                   // cervejaria (artesanal)
+];
+const cnaeCompativel = cnae => CNAES_BEBIDAS.includes(String(cnae || '').replace(/\D/g, ''));
+
+// Preço "plausível" por GRUPO (min, max em R$). Fora disso = fila com o
+// motivo (não bloqueia: pode ser caixa grande, garrafa rara...).
+const FAIXAS_PRECO_GRUPO = {
+  cervejas: [1, 500], vinhos: [10, 3000], espumantes: [15, 3000], whisky: [30, 5000],
+  cachacas: [5, 1500], destilados: [15, 3000], aperitivos_licores: [10, 2000], drinks_prontos: [3, 300],
+  sake_oriental: [15, 1500], sem_alcool: [1, 300], gelo: [2, 150], mixers: [2, 200],
+  ingredientes_drinks: [1, 300], petiscos: [1, 300], comidas_prontas: [5, 600], churrasco: [5, 2000],
+  festa: [1, 800], acessorios_drinks: [2, 1500], cigarros: [5, 500],
+};
+const FAIXA_PRECO_PADRAO = [1, 5000];
+
+// Palavrão (palavra inteira, sem acento) — nome/descrição com isso vão pra fila.
+const PALAVROES = [
+  'porra', 'caralho', 'merda', 'puta', 'putaria', 'puto', 'buceta', 'boceta', 'foder', 'fodase', 'foda se', 'fodido',
+  'fdp', 'cu', 'cuzao', 'arrombado', 'arrombada', 'viado', 'bosta', 'otario', 'otaria', 'desgraca', 'desgracado',
+  'piranha', 'vagabunda', 'vagabundo', 'corno', 'pau no cu', 'filho da puta', 'vsf', 'pqp', 'tnc', 'krl',
+];
+function detectarPalavrao(...textos) {
+  const t = normalizarTexto(textos.filter(Boolean).join(' '));
+  return PALAVROES.find(p => contem(t, p)) || null;
+}
+
 // Idade em anos completos na data de HOJE em Itumbiara (não no fuso do
 // servidor, que no Render é UTC — perto da meia-noite daria o dia errado).
 // `dataNascimento` = "YYYY-MM-DD" (DATE chega como string, ver
@@ -256,6 +298,8 @@ module.exports = {
   TIPOS_ESTABELECIMENTO, DIAS, IDADE_MINIMA, TERMO_VERSAO,
   TERMOS_BLOQUEADOS, TERMOS_CONTEXTO, MENSAGEM_TERMO_PROIBIDO,
   TERMOS_MAIS_18, MENSAGEM_PRODUTO_MAIS_18, detectarProdutoMais18,
+  CONFIANCA_MIN_APROVADOS, CONFIANCA_DIAS_SEM_REJEICAO, TAXA_AUDITORIA, CNAES_BEBIDAS, cnaeCompativel,
+  FAIXAS_PRECO_GRUPO, FAIXA_PRECO_PADRAO, detectarPalavrao,
   verificarTermos, normalizarTexto, idadeEmAnos, diaDeHoje, normalizarDias, validarHorario, normalizarBairros,
   horarioConfigurado, turnoAtual, proximaAbertura, abertoEfetivo,
   FAIXAS_VOLUME, faixaVolume,

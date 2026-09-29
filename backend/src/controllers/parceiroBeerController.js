@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
+const moderacao = require('../services/beerModeracao');
 const { planoEfetivo, limiteProdutos, limiteDestaquesBeer } = require('../config/planos');
 const {
   TIPOS_ESTABELECIMENTO, TERMO_VERSAO, MENSAGEM_TERMO_PROIBIDO, verificarTermos, normalizarDias,
@@ -134,10 +135,16 @@ async function salvarMeu(req, res) {
         precisaTermo ? [...valores, req.parceiro.id, TERMO_VERSAO, getIp(req)] : [...valores, req.parceiro.id]
       );
     }
+    // CNAE mudou: reavalia a fila (o que só esperava pelo CNAE vai pro ar)
+    let publicadosPelaMudancaDeCnae = 0;
+    if (ext && (ext.cnae || null) !== (cnae || null)) {
+      publicadosPelaMudancaDeCnae = await moderacao.reavaliarFila(r.rows[0]).catch(e => { console.error('[beer] reavaliarFila', e.message); return 0; });
+    }
     // Devolve o parceiro junto (CNPJ pode ter mudado aqui): o painel usa essa
     // resposta direto, sem esperar recarregar o /meu.
     const pAtual = await db.query('SELECT cnpj, whatsapp FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
     return res.json({
+      publicados_pela_mudanca_de_cnae: publicadosPelaMudancaDeCnae,
       estabelecimento: r.rows[0], status: statusPainel(r.rows[0]),
       parceiro: { nome: req.parceiro.nome, slug: req.parceiro.slug, cnpj: pAtual.rows[0]?.cnpj || null, whatsapp: pAtual.rows[0]?.whatsapp || null },
     });
@@ -294,7 +301,11 @@ async function criarProduto(req, res) {
       [req.beer.id, d.categoria_codigo, d.nome, d.descricao, d.preco, foto?.url || null, foto?.publicId || null,
         JSON.stringify(d.dias_disponiveis), d.disponivel_agora, v.sinalizados, d.volume_ml, d.origem]
     );
-    return res.status(201).json({ produto: r.rows[0] });
+    // Moderação inteligente: entrou pendente; confiável + checks OK = publica direto
+    const m = await moderacao.avaliar({ parceiroId: req.parceiro.id, estabelecimento: req.beer, dados: d, foto: req.file || null, fotoAntiga: null, anterior: null, sinalizados: v.sinalizados });
+    await moderacao.registrarDecisao(r.rows[0].id, req.beer.id, m, r.rows[0]);
+    const produto = (await db.query('SELECT * FROM beer_produtos WHERE id = $1', [r.rows[0].id])).rows[0];
+    return res.status(201).json({ produto, publicado_direto: m.publicarDireto, checks: m.checks });
   } catch (err) {
     console.error(err);
     if (err.cloudinaryCode) return res.status(502).json({ error: err.message, detalhes: err.cloudinaryMessage, codigo: err.cloudinaryCode });
@@ -353,7 +364,20 @@ async function editarProduto(req, res) {
         d.volume_ml, d.origem, precoOriginal, manterOferta]
     );
     if (foto && atual.imagem_public_id) cloudinaryService.deletarFoto(atual.imagem_public_id).catch(() => {});
-    return res.json({ produto: r.rows[0], voltou_moderacao: voltaPendente && atual.status !== 'pendente' });
+    // Mexeu no que o moderador aprovou: passa pelos checks de novo (pode
+    // voltar pro ar direto se o parceiro é confiável e tudo passou)
+    let m = null;
+    if (voltaPendente) {
+      m = await moderacao.avaliar({ parceiroId: req.parceiro.id, estabelecimento: req.beer, dados: d, foto: req.file || null, fotoAntiga: atual.imagem, anterior: atual, sinalizados: v.sinalizados });
+      await moderacao.registrarDecisao(atual.id, req.beer.id, m, r.rows[0]);
+    }
+    const produto = (await db.query('SELECT * FROM beer_produtos WHERE id = $1', [atual.id])).rows[0];
+    return res.json({
+      produto,
+      voltou_moderacao: voltaPendente && produto.status === 'pendente' && atual.status !== 'pendente',
+      publicado_direto: Boolean(m?.publicarDireto),
+      checks: m?.checks || null,
+    });
   } catch (err) {
     console.error(err);
     if (err.cloudinaryCode) return res.status(502).json({ error: err.message, detalhes: err.cloudinaryMessage, codigo: err.cloudinaryCode });

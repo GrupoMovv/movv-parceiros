@@ -218,6 +218,51 @@ function normalizarRespostaBebida(dados, categorias) {
 }
 
 // ---------------------------------------------------------------------------
+// Moderação inteligente do Disk Bebidas (Junior, 29/09/2026).
+
+// Foto imprópria (nudez, violência...) pela API de moderação da OpenAI
+// (aceita imagem; sem custo por token). → { flagged, categorias[] }
+// Lança erro se não deu pra checar — quem chama trata como "não verificado".
+async function moderarImagem(buffer, mimetype) {
+  if (!CONFIGURADO) { const e = new Error('IA não configurada'); e.codigo = 'CONFIG_AUSENTE'; throw e; }
+  const r = await client.moderations.create({
+    model: 'omni-moderation-latest',
+    input: [{ type: 'image_url', image_url: { url: `data:${extensaoParaMime(mimetype)};base64,${buffer.toString('base64')}` } }],
+  });
+  const res = r.results?.[0] || {};
+  return { flagged: Boolean(res.flagged), categorias: Object.entries(res.categories || {}).filter(([, v]) => v).map(([k]) => k) };
+}
+
+// A foto combina com a categoria escolhida? (cadastro MANUAL; no cadastro
+// pela IA a própria IA já escolheu a categoria). → { compativel, motivo }
+async function conferirCategoriaFoto(buffer, mimetype, { nome, caminhoCategoria }) {
+  if (!CONFIGURADO) { const e = new Error('IA não configurada'); e.codigo = 'CONFIG_AUSENTE'; throw e; }
+  const resp = await client.chat.completions.create({
+    model: MODELO,
+    response_format: { type: 'json_object' },
+    max_tokens: 120,
+    temperature: 0,
+    messages: [
+      {
+        role: 'system',
+        content: 'Você confere cadastros de uma adega. Responda SOMENTE JSON {"compativel": true|false, "motivo": "frase curta em português"}. '
+          + 'compativel=true se a foto mostra um produto que razoavelmente pertence à categoria informada (e ao nome). '
+          + 'false só quando claramente não combina (ex.: foto de pessoa, de outro tipo de produto, de documento).',
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `Categoria: ${caminhoCategoria}\nNome: ${nome}` },
+          { type: 'image_url', image_url: { url: `data:${extensaoParaMime(mimetype)};base64,${buffer.toString('base64')}`, detail: 'low' } },
+        ],
+      },
+    ],
+  });
+  const d = JSON.parse(resp.choices?.[0]?.message?.content || '{}');
+  return { compativel: d.compativel === true, motivo: String(d.motivo || '').slice(0, 200) };
+}
+
+// ---------------------------------------------------------------------------
 // Cadastro por VOZ (IUB Food fase 1): áudio -> Whisper (texto) -> GPT-4o
 // (JSON estruturado). Duas chamadas separadas de propósito: o Whisper só
 // transcreve, e quem entende "vinte e nove e noventa" = 29.90 é o GPT.
@@ -405,4 +450,4 @@ async function extrairEtapaVoz(etapa, transcricao, contexto = {}) {
   return texto || null;
 }
 
-module.exports = { analisarProdutoPorImagem, analisarBebidaPorImagem, normalizarRespostaBebida, transcreverAudio, estruturarProdutoPorTexto, extrairEtapaVoz, CATEGORIAS, MIMETYPES_AUDIO, mimetypeBase };
+module.exports = { analisarProdutoPorImagem, analisarBebidaPorImagem, normalizarRespostaBebida, moderarImagem, conferirCategoriaFoto, transcreverAudio, estruturarProdutoPorTexto, extrairEtapaVoz, CATEGORIAS, MIMETYPES_AUDIO, mimetypeBase };

@@ -11,6 +11,7 @@ import { textoDias } from '../../beer/beerConfig';
 // cristal...) que o filtro não bloqueia sozinho: é aqui que alguém olha.
 const ABAS = [
   { id: 'pendente', label: 'Pendentes' },
+  { id: 'auditoria', label: 'Conferir (amostra)' },
   { id: 'aprovado', label: 'Aprovados' },
   { id: 'rejeitado', label: 'Rejeitados' },
   { id: 'log', label: 'Tentativas bloqueadas' },
@@ -56,7 +57,7 @@ export default function SindicatoBeerModeracao() {
           >
             {a.label}
             {a.id !== 'log' && contagem[a.id] > 0 && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${a.id === 'pendente' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{contagem[a.id]}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${['pendente', 'auditoria'].includes(a.id) ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{contagem[a.id]}</span>
             )}
           </button>
         ))}
@@ -65,7 +66,7 @@ export default function SindicatoBeerModeracao() {
       {aba === 'log' ? <AbaLog log={log} /> : produtos == null ? (
         <p className="text-slate-400 text-sm">Carregando…</p>
       ) : produtos.length === 0 ? (
-        <p className="text-slate-400 text-sm text-center py-16">{aba === 'pendente' ? 'Nada esperando moderação. 🍻' : 'Nenhum produto aqui.'}</p>
+        <p className="text-slate-400 text-sm text-center py-16">{aba === 'pendente' ? 'Nada esperando moderação. 🍻' : aba === 'auditoria' ? 'Nada pra conferir. Aqui cai 1 em cada 10 produtos publicados direto pela moderação automática.' : 'Nenhum produto aqui.'}</p>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {produtos.map(p => <CardModeracao key={p.id} produto={p} onModerado={carregar} />)}
@@ -88,6 +89,18 @@ function CardModeracao({ produto: p, onModerado }) {
       onModerado();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao moderar');
+      setEnviando(false);
+    }
+  }
+
+  async function auditar() {
+    setEnviando(true);
+    try {
+      await api.post(`/sindicato-beer/auditar/${p.id}`);
+      toast.success('Conferido');
+      onModerado();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro');
       setEnviando(false);
     }
   }
@@ -121,6 +134,8 @@ function CardModeracao({ produto: p, onModerado }) {
 
       {p.status === 'rejeitado' && p.motivo_rejeicao && <p className="mt-2 text-xs text-red-700">Motivo: {p.motivo_rejeicao}</p>}
 
+      <ChecksModeracao produto={p} />
+
       {rejeitando ? (
         <div className="mt-3 space-y-2">
           <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={2} autoFocus placeholder="Motivo (vai no e-mail pro parceiro)" className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg resize-none" />
@@ -141,8 +156,41 @@ function CardModeracao({ produto: p, onModerado }) {
               <Check className="w-4 h-4" /> Aprovar
             </button>
           )}
+          {p.auditoria_pendente && (
+            <button type="button" onClick={auditar} disabled={enviando} className="flex-1 inline-flex items-center justify-center gap-1 text-sm font-bold py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+              <Check className="w-4 h-4" /> Conferido, tudo certo
+            </button>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Resultado da moderação inteligente: o que falhou em destaque (é por isso
+// que está na fila); o que passou fica recolhido.
+const NOME_CHECK = {
+  termos: 'Termos', palavrao: 'Palavrão', preco: 'Preço', foto_impropria: 'Foto imprópria',
+  categoria_foto: 'Categoria × foto', cnae: 'CNAE', confianca: 'Confiança do parceiro',
+};
+function ChecksModeracao({ produto: p }) {
+  const checks = p.moderacao_checks || [];
+  if (!checks.length) return null;
+  const falhas = checks.filter(c => !c.ok);
+  return (
+    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-xs">
+      {p.moderacao_origem === 'automatica' && <p className="font-bold text-green-700 mb-1">🤖 Publicado direto pela moderação automática</p>}
+      {falhas.length > 0 && (
+        <ul className="space-y-0.5">
+          {falhas.map(c => <li key={c.check} className="text-red-700"><strong>⚠️ {NOME_CHECK[c.check] || c.check}:</strong> {c.motivo}</li>)}
+        </ul>
+      )}
+      <details className={falhas.length ? 'mt-1.5' : ''}>
+        <summary className="cursor-pointer text-slate-500">{checks.length - falhas.length} de {checks.length} checks OK</summary>
+        <ul className="mt-1 space-y-0.5 text-slate-600">
+          {checks.filter(c => c.ok).map(c => <li key={c.check}>✅ {NOME_CHECK[c.check] || c.check}: {c.motivo}</li>)}
+        </ul>
+      </details>
     </div>
   );
 }

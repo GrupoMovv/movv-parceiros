@@ -7,6 +7,7 @@ const ctrl = require('../controllers/sindicatoBeerController');
 router.use(authenticate, requireAdmin);
 router.get('/produtos', ctrl.listarProdutos);
 router.post('/moderar/:produtoId', ctrl.moderar);
+router.post('/auditar/:produtoId', ctrl.auditar);
 router.get('/log', ctrl.listarLog);
 
 module.exports = router;
