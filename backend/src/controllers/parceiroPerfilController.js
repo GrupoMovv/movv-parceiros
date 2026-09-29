@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 const { validarPet, tipoNegocioPet } = require('../config/pet');
-const { isValidCNPJ, onlyDigits } = require('../utils/validators');
+const { isValidCNPJ, onlyDigits, EMPRESA_TESTE_SEM_CNPJ } = require('../utils/validators');
 const cloudinaryService = require('../services/cloudinaryService');
 
 const MAX_FOTOS_ESTABELECIMENTO = 5;
@@ -69,6 +69,10 @@ async function updatePerfil(req, res) {
       const cnpjDigits = onlyDigits(b.cnpj);
       if (cnpjDigits && !isValidCNPJ(cnpjDigits)) {
         return res.status(400).json({ error: 'CNPJ inválido' });
+      }
+      if (cnpjDigits) {
+        const t = await db.query('SELECT empresa_teste FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
+        if (t.rows[0]?.empresa_teste) return res.status(400).json({ error: EMPRESA_TESTE_SEM_CNPJ });
       }
       params.push(cnpjDigits || null);
       sets.push(`cnpj = $${params.length}`);

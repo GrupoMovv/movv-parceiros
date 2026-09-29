@@ -222,7 +222,15 @@ export default function ParceiroPerfil() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Campo label="Nome fantasia" value={form.nome} onChange={v => setCampo('nome', v)} />
           <Campo label="Razão social (opcional)" value={form.razao_social} onChange={v => setCampo('razao_social', v)} />
-          <Campo label="CNPJ (opcional)" value={form.cnpj} onChange={v => setCampo('cnpj', formatarCnpj(v))} placeholder="00.000.000/0000-00" />
+          {/* Empresa de teste nunca tem CNPJ (migration 074): o campo nem aparece */}
+          {perfil?.empresa_teste ? (
+            <div>
+              <Label>CNPJ</Label>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">🧪 Empresa de teste: sem CNPJ, pra não usar o de uma empresa real.</p>
+            </div>
+          ) : (
+            <Campo label="CNPJ (opcional)" value={form.cnpj} onChange={v => setCampo('cnpj', formatarCnpj(v))} placeholder="00.000.000/0000-00" />
+          )}
           <div>
             <Label>Categoria principal</Label>
             <select value={form.categoria_principal} onChange={e => setCampo('categoria_principal', e.target.value)} className={campoCls}>

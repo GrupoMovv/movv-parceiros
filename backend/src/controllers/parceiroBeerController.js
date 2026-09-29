@@ -6,7 +6,7 @@ const {
   TIPOS_ESTABELECIMENTO, TERMO_VERSAO, MENSAGEM_TERMO_PROIBIDO, verificarTermos, normalizarDias,
   horarioConfigurado, turnoAtual, proximaAbertura, abertoAte, ABERTURA_MANUAL_MS, validarHorario, normalizarBairros,
 } = require('../config/beer');
-const { onlyDigits, isValidCNPJ } = require('../utils/validators');
+const { onlyDigits, isValidCNPJ, EMPRESA_TESTE_SEM_CNPJ } = require('../utils/validators');
 const { ipCliente } = require('../utils/ipCliente');
 
 // Aba "Meu IUB Beer" do painel do parceiro (/api/parceiro/beer, sessão do
@@ -100,13 +100,14 @@ async function salvarMeu(req, res) {
 
     // CNPJ mora no parceiro (é da empresa, não só do Beer) — o termo exige
     // CNPJ, então sem um válido no cadastro precisa informar aqui. Empresa
-    // de teste (migration 073) não tem CNPJ: dispensa, mas se digitar um
-    // tem que ser válido.
+    // de teste (migrations 073/074) NUNCA tem CNPJ — nem digitado: já foram
+    // 2 CNPJs reais de terceiros em conta de teste. Usa só o CNAE.
     const atual = await db.query('SELECT cnpj, empresa_teste FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
     const cnpjInformado = b.cnpj ? onlyDigits(b.cnpj) : null;
+    const empresaTeste = Boolean(atual.rows[0]?.empresa_teste);
+    if (empresaTeste && cnpjInformado) return res.status(400).json({ error: EMPRESA_TESTE_SEM_CNPJ });
     const cnpj = cnpjInformado || onlyDigits(atual.rows[0]?.cnpj);
-    const dispensaCnpj = atual.rows[0]?.empresa_teste && !cnpjInformado;
-    if (!dispensaCnpj && !isValidCNPJ(cnpj)) return res.status(400).json({ error: 'Informe um CNPJ válido — o Disk Bebidas exige empresa com CNPJ' });
+    if (!empresaTeste && !isValidCNPJ(cnpj)) return res.status(400).json({ error: 'Informe um CNPJ válido — o Disk Bebidas exige empresa com CNPJ' });
 
     const bairros = normalizarBairros(b.bairros_entrega);
     const tempo = b.tempo_entrega_min ? Number(b.tempo_entrega_min) : null;

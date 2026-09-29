@@ -37,4 +37,7 @@ function isValidCNPJ(cnpj) {
   return c === base12 + String(d1) + String(d2);
 }
 
-module.exports = { onlyDigits, isValidCPF, isValidCNPJ };
+// Empresa de teste nunca tem CNPJ (migration 074 trava no banco também).
+const EMPRESA_TESTE_SEM_CNPJ = 'Empresa de teste não pode ter CNPJ — um CNPJ digitado aqui é de uma empresa real. Use só o CNAE.';
+
+module.exports = { onlyDigits, isValidCPF, isValidCNPJ, EMPRESA_TESTE_SEM_CNPJ };

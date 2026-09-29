@@ -572,7 +572,7 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
     setSalvando(true);
     try {
       const res = await apiParceiro.put('/parceiro/beer/meu', {
-        tipo, cnpj, cnae, whatsapp, bairros_entrega: bairros, tempo_entrega_min: tempo ? Number(tempo) : null,
+        tipo, cnpj: dados.parceiro.empresa_teste ? '' : cnpj, cnae, whatsapp, bairros_entrega: bairros, tempo_entrega_min: tempo ? Number(tempo) : null,
         retirada_disponivel: retirada, horario_funcionamento: horario, aceite_termo: aceite,
       });
       toast.success(editando ? 'Dados atualizados' : 'Bem-vindo ao IUB Disk Bebidas! 🍻');
@@ -612,8 +612,10 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">CNPJ {dados.parceiro.empresa_teste ? '' : '*'}</label>
-            <input value={cnpj} onChange={e => setCnpj(e.target.value)} className={campo} placeholder="00.000.000/0000-00" required={!dados.parceiro.empresa_teste} />
-            {dados.parceiro.empresa_teste && <p className="text-[11px] text-amber-600 mt-1">🧪 Empresa de teste: CNPJ dispensado e nada aparece pra cliente.</p>}
+            {/* Empresa de teste nunca tem CNPJ (migration 074) — nem campo pra digitar */}
+            {dados.parceiro.empresa_teste
+              ? <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">🧪 Empresa de teste: sem CNPJ (use só o CNAE) e nada aparece pra cliente.</p>
+              : <input value={cnpj} onChange={e => setCnpj(e.target.value)} className={campo} placeholder="00.000.000/0000-00" required />}
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">CNAE de bebidas</label>
