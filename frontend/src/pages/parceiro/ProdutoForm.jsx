@@ -398,19 +398,22 @@ export default function ParceiroProdutoForm() {
             <span className="text-2xl leading-none" aria-hidden="true">🍻</span>
             <div className="min-w-0 flex-1">
               <p className={`text-sm font-bold ${bloqueio18 ? 'text-red-800' : 'text-amber-900'}`}>
-                {bloqueio18 ? 'Bebida alcoólica e cigarro não vão aqui' : 'Vende bebida alcoólica ou cigarro? Use a aba Disk Bebidas'}
+                {bloqueio18 ? 'Bebida alcoólica e cigarro não vão aqui' : 'Bebida, gelo, petisco? Cadastre no Disk Bebidas'}
               </p>
               <p className={`text-xs mt-0.5 ${bloqueio18 ? 'text-red-700' : 'text-amber-800'}`}>
-                Esses produtos são +18 e só podem ser vendidos pelo Disk Bebidas, que confere a idade do cliente. Aqui no catálogo geral eles são recusados.
+                Bebida alcoólica e cigarro são +18 e só podem ser vendidos pelo Disk Bebidas, que confere a idade do cliente. Lá também tem cadastro por foto com IA.
               </p>
-              <Link to="/parceiro/painel/beer" className="inline-block mt-2 text-xs font-bold px-3 py-1.5 rounded-lg text-white" style={{ backgroundColor: ROXO }}>
-                Ir pra aba 🍻 Meu IUB Beer
+              {/* ?novo=1: a aba Beer já abre o "Como cadastrar?" (IA com câmera/galeria ou manual) */}
+              <Link to="/parceiro/painel/beer?novo=1" className="inline-flex items-center gap-1.5 mt-2.5 text-sm font-black px-4 py-2.5 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
+                📸 Cadastrar no Disk Bebidas (com IA)
               </Link>
             </div>
           </div>
         )}
 
-        {!produtoId && mostrarBannerIA && (
+        {/* parceiro de bebidas: a IA dele é a do Disk Bebidas (caixa acima) —
+            duas caixas de cadastro na mesma tela confundiam */}
+        {!produtoId && mostrarBannerIA && !parceiro?.e_bebidas && (
           <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #FFF7E0 0%, #FFFFFF 100%)', border: '1px solid #FDE9B8' }}>
             <p className="font-black text-sm" style={{ color: PRETO }}>🎊 NOVO! Cadastro com IA</p>
             <p className="text-slate-500 text-xs mt-1 mb-4">

@@ -81,21 +81,24 @@ export default function ParceiroProdutos() {
         </div>
       </div>
 
+      <p className="text-xs text-slate-500 -mb-3">Ache rápido seus produtos: busque pelo nome ou filtre por categoria e situação.</p>
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome..."
+          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar meus produtos pelo nome…" aria-label="Buscar meus produtos pelo nome"
             className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-slate-400" />
         </div>
-        <select value={categoria} onChange={e => setCategoria(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none">
-          <option value="">Todas categorias</option>
+        <select value={categoria} onChange={e => setCategoria(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
+          aria-label="Filtrar por categoria" title="Filtrar por categoria do produto">
+          <option value="">Categoria: todas</option>
           {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={status} onChange={e => setStatus(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none">
-          <option value="">Todos os status</option>
-          <option value="ativo">Ativo</option>
-          <option value="pausado">Pausado</option>
-          <option value="rascunho">Rascunho</option>
+        <select value={status} onChange={e => setStatus(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
+          aria-label="Filtrar por situação" title="Ativo = aparece na vitrine · Pausado = escondido · Rascunho = ainda não publicado">
+          <option value="">Situação: todas</option>
+          <option value="ativo">Ativo (na vitrine)</option>
+          <option value="pausado">Pausado (escondido)</option>
+          <option value="rascunho">Rascunho (não publicado)</option>
         </select>
       </div>
 

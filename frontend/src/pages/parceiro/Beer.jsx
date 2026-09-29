@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Wine, Plus, Pencil, Trash2, Upload, Loader2, Star, Zap, X, Clock, AlertTriangle } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
@@ -34,6 +34,10 @@ export default function ParceiroBeer() {
   const [categorias, setCategorias] = useState([]);
   const [editandoCadastro, setEditandoCadastro] = useState(false);
   const [modalProduto, setModalProduto] = useState(null); // null | 'novo' | produto
+  // ?novo=1 (vindo do "Cadastrar no Disk Bebidas" da aba Produtos): já abre
+  // o "Como cadastrar?" — sem precisar tocar em "+ Adicionar produto"
+  const [params, setParams] = useSearchParams();
+  const abrirNovoDaUrl = useRef(params.get('novo') === '1');
   const [aba, setAba] = useState('produtos'); // 'produtos' | 'ofertas'
   const [mudandoStatus, setMudandoStatus] = useState(false);
 
@@ -50,6 +54,13 @@ export default function ParceiroBeer() {
     carregar().catch(() => toast.error('Erro ao carregar IUB Disk Bebidas'));
     apiParceiro.get('/public/beer/categorias').then(res => setCategorias(res.data.grupos)).catch(() => {});
   }, [carregar]);
+
+  useEffect(() => {
+    if (!abrirNovoDaUrl.current || !dados) return;
+    abrirNovoDaUrl.current = false;
+    if (dados.estabelecimento?.ativo) setModalProduto('novo');
+    setParams(p => { p.delete('novo'); return p; }, { replace: true });
+  }, [dados, setParams]);
 
   if (!dados) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
 
@@ -426,11 +437,16 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
         </p>
 
         {modo === 'escolha' && (
-          <div className="mt-5 space-y-3">
-            <ImageCropUpload aspectRatio={1} botaoUnico label="Cadastrar com IA" tamanhoIcone="w-6 h-6" onCropComplete={analisarFoto}
-              botaoClassName="w-full flex items-center justify-center gap-2 py-6 rounded-2xl text-white text-lg font-black shadow-lg bg-[#4C1D95] hover:bg-[#3B1575]" />
-            <p className="text-center text-xs text-slate-500 -mt-1">Recomendado: tire a foto do rótulo — a IA preenche nome, categoria e volume. Você só digita o preço.</p>
-            <button type="button" onClick={() => setModo('form')} className="w-full py-3.5 rounded-2xl border-2 border-slate-200 text-sm font-bold text-slate-600">✏️ Cadastrar manual</button>
+          <div className="mt-5">
+            <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: '#F5F3FF', border: '2px solid #DDD6FE' }}>
+              <p className="text-center text-lg font-black" style={{ color: ROXO }}>📸 Cadastrar com IA</p>
+              <p className="text-center text-xs text-slate-600 -mt-1">Foto do rótulo → a IA preenche nome, categoria e volume. Você só digita o preço.</p>
+              {/* celular: "Tirar foto" (câmera) + "Da galeria"; computador: escolher arquivo */}
+              <ImageCropUpload aspectRatio={1} label="Foto do rótulo" tamanhoIcone="w-6 h-6" onCropComplete={analisarFoto}
+                botaoClassName="w-full flex items-center justify-center gap-2 py-5 rounded-2xl text-white text-base font-black shadow-lg bg-[#4C1D95] hover:bg-[#3B1575]" />
+            </div>
+            <div className="flex items-center gap-3 my-4 text-xs text-slate-400"><span className="flex-1 h-px bg-slate-200" /> ou <span className="flex-1 h-px bg-slate-200" /></div>
+            <button type="button" onClick={() => setModo('form')} className="w-full text-sm font-semibold text-slate-500 underline">✏️ Cadastrar manualmente</button>
           </div>
         )}
 

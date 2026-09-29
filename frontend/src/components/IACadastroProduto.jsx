@@ -135,7 +135,7 @@ export default function IACadastroProduto({ onConfirmar }) {
                 </div>
                 {dados.mais18 && (
                   <p className="mb-4 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-800">
-                    🍻 <strong>Isso parece bebida alcoólica ou cigarro.</strong> Aqui no catálogo geral não é aceito (é +18). Cadastre na aba <a href="/parceiro/painel/beer" className="font-bold underline">Meu IUB Beer</a> — lá também tem cadastro por foto.
+                    🍻 <strong>Isso parece bebida alcoólica ou cigarro.</strong> Aqui no catálogo geral não é aceito (é +18). Cadastre na aba <a href="/parceiro/painel/beer?novo=1" className="font-bold underline">Meu IUB Beer</a> — lá também tem cadastro por foto.
                   </p>
                 )}
 
