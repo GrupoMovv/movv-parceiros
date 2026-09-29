@@ -44,7 +44,7 @@ export default function MemoriaNiveis() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
       <div className="max-w-3xl mx-auto px-4 pt-3">
-        <BotaoVoltar variante="claro" fallback="/jogar" />
+        <BotaoVoltar variante="claro" para="/jogar" />
       </div>
       <header className="text-center pt-3 px-4">
         <h1 className="text-3xl sm:text-4xl font-black text-white">🧠 JOGO DA MEMÓRIA</h1>

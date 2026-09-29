@@ -2,11 +2,14 @@ const router = require('express').Router();
 const ctrl = require('../controllers/beerController');
 const { lerPainelPublicoOpcional } = require('../middleware/painelPublicoAuth');
 const { simpleRateLimit } = require('../middleware/rateLimit');
+const { lerAdminOpcional } = require('../middleware/auth');
 
 // IUB DISK BEBIDAS — rotas públicas (sob /api/public, igual Food). O que o
 // parceiro edita (status, produtos, disponibilidade) fica em
 // /api/parceiro/beer (routes/parceiroBeer.js, sessão do parceiro); a
 // moderação em /api/sindicato-beer (routes/sindicatoBeer.js, admin).
+// Admin logado → req.modoQa: vê também as empresas de teste.
+router.use(lerAdminOpcional);
 router.get('/categorias', ctrl.getCategorias);
 router.get('/resumo', ctrl.getResumo);
 router.get('/vitrine', ctrl.getVitrine);

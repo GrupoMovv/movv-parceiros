@@ -46,7 +46,7 @@ export default function JogosHub() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
       <div className="max-w-3xl mx-auto px-4 pt-3">
-        <BotaoVoltar variante="claro" fallback="/marketplace" />
+        <BotaoVoltar variante="claro" para="/marketplace" />
       </div>
       <header className="text-center pt-4 px-4">
         <h1 className="text-3xl sm:text-4xl font-black text-white">🎮 IUB MAIS+ JOGUINHOS</h1>

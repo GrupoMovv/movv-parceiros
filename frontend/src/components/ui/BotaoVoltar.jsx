@@ -4,8 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 // "← Voltar" padrão do site público. Volta pra tela anterior DENTRO do site;
 // quem chegou direto (link do WhatsApp, QR, Google — sem histórico nosso) vai
 // pro `fallback`, a home da seção, em vez de sair do site ou não fazer nada.
-// `para` força um destino fixo (quando voltar no histórico daria errado,
-// ex.: entre níveis do jogo da memória).
+// `para` força um destino fixo e SUBSTITUI a tela atual no histórico (jogos:
+// voltar sempre sai do jogo em vez de andar pelas telas internas dele).
 //
 // history.state.idx é do react-router v6 (BrowserRouter): 0 = primeira tela
 // aberta nesta aba.
@@ -13,7 +13,7 @@ export default function BotaoVoltar({ fallback = '/marketplace', para, label = '
   const navigate = useNavigate();
 
   function voltar() {
-    if (para) return navigate(para);
+    if (para) return navigate(para, { replace: true });
     const idx = window.history.state?.idx;
     if (typeof idx === 'number' && idx > 0) navigate(-1);
     else navigate(fallback, { replace: true });

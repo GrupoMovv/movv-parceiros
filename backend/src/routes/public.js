@@ -113,9 +113,9 @@ router.get('/marketplace/stats', async (req, res) => {
       db.query(
         `SELECT COUNT(*)::int AS total FROM sindicato_parceiro_produtos pr
          JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-         WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`
+         WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste`
       ),
-      db.query(`SELECT COUNT(*)::int AS total FROM sindicato_parceiros WHERE status = 'ativo'`),
+      db.query(`SELECT COUNT(*)::int AS total FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste`),
     ]);
     return res.json({
       associados: associadosResult.rows[0].total,

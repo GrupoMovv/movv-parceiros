@@ -253,10 +253,9 @@ export default function Memoria() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro pb-16">
-      {/* destino fixo: ao passar de nível o histórico empilha níveis, e
-          "voltar" tem que levar pra lista, não pro nível anterior */}
+      {/* voltar dentro do jogo = sai do jogo (hub), nunca o nível anterior */}
       <div className="max-w-3xl mx-auto px-4 pt-2">
-        <BotaoVoltar variante="claro" para="/jogar/memoria" />
+        <BotaoVoltar variante="claro" para="/jogar" />
       </div>
       <header className="text-center pt-0 sm:pt-2 px-4">
         <h1 className="text-xl sm:text-4xl font-black text-white">
@@ -374,7 +373,7 @@ export default function Memoria() {
           visitante={visitante}
           onMudarAba={aba => { setAbaRanking(aba); if (aba === 'semana') carregarRankingSemana(); }}
           onJogarDeNovo={reiniciar}
-          onProximoNivel={() => navigate(`/jogar/memoria/${nivel + 1}`)}
+          onProximoNivel={() => navigate(`/jogar/memoria/${nivel + 1}`, { replace: true })}
         />
       )}
     </div>
@@ -499,7 +498,7 @@ function ModalVitoria({ cfg, resultadoFinal, jogadas, ranking, abaRanking, rolet
               {botaoRoleta.label}
             </Link>
           )}
-          <Link to="/jogar/memoria" className="text-iub-cinza text-xs py-1 underline">
+          <Link to="/jogar/memoria" replace className="text-iub-cinza text-xs py-1 underline">
             Ver todos os níveis
           </Link>
         </div>

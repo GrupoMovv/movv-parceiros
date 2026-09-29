@@ -60,4 +60,21 @@ const requireInternal = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin, requireInternal };
+// Rota pública com "olho de admin": se vier o JWT do admin (movv_token, que
+// a `api` do front já manda sozinha), marca req.modoQa = true — aí a rota
+// mostra também as empresas de teste (sindicato_parceiros.empresa_teste).
+// Nunca bloqueia: sem token ou token de outro tipo segue como cliente comum.
+const lerAdminOpcional = async (req, res, next) => {
+  req.modoQa = false;
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    if (decoded.userType === 'internal' || decoded.userType === 'indicator' || !decoded.id) return next();
+    const r = await db.query('SELECT is_admin, is_active FROM partners WHERE id = $1', [decoded.id]);
+    req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active);
+  } catch { /* token inválido/expirado: cliente comum */ }
+  next();
+};
+
+module.exports = { authenticate, requireAdmin, requireInternal, lerAdminOpcional };

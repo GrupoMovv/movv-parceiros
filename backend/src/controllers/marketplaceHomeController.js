@@ -24,7 +24,7 @@ const SELECT_PRODUTO = `
 const FROM_PRODUTO_ATIVO = `
   FROM sindicato_parceiro_produtos pr
   JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-  WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'
+  WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste
 `;
 
 // Bloco 10: "Ofertas da semana" passou a ser 100% movida a promoção de
@@ -42,7 +42,7 @@ async function getOfertasSemana(req, res) {
        FROM sindicato_parceiro_promocoes pm
        JOIN sindicato_parceiros pa ON pa.id = pm.parceiro_id
        LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = pm.produto_id
-       WHERE pm.ativo = true AND pm.rascunho = false AND pa.status = 'ativo'
+       WHERE pm.ativo = true AND pm.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste
          AND pm.data_inicio <= NOW() AND pm.data_fim >= NOW()
          AND (pm.limite_usos IS NULL OR pm.usos_atuais < pm.limite_usos)
        ORDER BY pm.destaque DESC, desconto_pct DESC, pm.data_fim ASC
@@ -125,7 +125,7 @@ async function getMaisVendidos(req, res) {
        JOIN sindicato_parceiro_produtos pr ON pr.id = c.produto_id
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
        WHERE c.tipo = 'clique_whatsapp' AND c.criado_em >= NOW() - INTERVAL '7 days'
-         AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'
+         AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste
        GROUP BY pr.id, pa.nome, pa.slug
        ORDER BY cliques DESC, pr.created_at DESC
        LIMIT 24`
@@ -158,7 +158,7 @@ const CATEGORIAS_HOME = [
 
 async function getCategorias(req, res) {
   try {
-    const result = await db.query(`SELECT categorias FROM sindicato_parceiros WHERE status = 'ativo'`);
+    const result = await db.query(`SELECT categorias FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste`);
     const todasCategorias = result.rows.flatMap(r => (r.categorias || []).map(normalizarCategoria));
 
     const categorias = CATEGORIAS_HOME.map(c => ({
@@ -201,7 +201,7 @@ async function getProdutosPorCategoria(req, res) {
     const categoriaHome = CATEGORIAS_HOME.find(c => c.slug === slug);
     if (slug !== 'todas' && !categoriaHome) return res.status(404).json({ error: 'Categoria não encontrada' });
 
-    const parceirosResult = await db.query(`SELECT id, bairro, categorias FROM sindicato_parceiros WHERE status = 'ativo'`);
+    const parceirosResult = await db.query(`SELECT id, bairro, categorias FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste`);
     let parceiros = parceirosResult.rows;
     if (categoriaHome) {
       const alvo = normalizarCategoria(categoriaHome.label);
@@ -285,7 +285,7 @@ async function getParceiros(req, res) {
   try {
     const result = await db.query(
       `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
-       FROM sindicato_parceiros WHERE status = 'ativo' ORDER BY nome ASC`
+       FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste ORDER BY nome ASC`
     );
     return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
   } catch (err) {
@@ -304,7 +304,7 @@ async function getParceirosDestaques(req, res) {
       `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro,
               plano_expira_em, cortesia_interna
        FROM sindicato_parceiros
-       WHERE status = 'ativo' AND plano IN (${planosLiteral}) AND ${sqlPlanoVigente()}
+       WHERE status = 'ativo' AND NOT empresa_teste AND plano IN (${planosLiteral}) AND ${sqlPlanoVigente()}
        ORDER BY ${sqlBoostBusca('')} DESC, nome ASC
        LIMIT 12`
     );
@@ -335,7 +335,7 @@ async function getPioneiros(req, res) {
   try {
     const result = await db.query(
       `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
-       FROM sindicato_parceiros WHERE status = 'ativo' AND e_pioneiro = true ORDER BY plano_ativo_desde ASC`
+       FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste AND e_pioneiro = true ORDER BY plano_ativo_desde ASC`
     );
     return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
   } catch (err) {
@@ -389,7 +389,7 @@ async function getMasterPorCategoria(req, res) {
   try {
     const result = await db.query(
       `SELECT id, slug, nome, logo_url, categorias, plano
-       FROM sindicato_parceiros WHERE status = 'ativo'`
+       FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste`
     );
     const masters = result.rows.filter(p => planoEfetivo(p) === 'master');
 
@@ -447,7 +447,7 @@ async function getServicos(req, res) {
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
               preco_medio, duracao_media, modalidades
        FROM sindicato_parceiros
-       WHERE status = 'ativo' AND tipo_negocio IN ('servico', 'hibrido')
+       WHERE status = 'ativo' AND NOT empresa_teste AND tipo_negocio IN ('servico', 'hibrido')
        ORDER BY ${sqlBoostBusca('')} DESC, nome ASC`
     );
     const servicos = result.rows
@@ -530,7 +530,7 @@ async function getBusca(req, res) {
     const parceirosResult = await db.query(
       `SELECT id, slug, nome, logo_url, categoria_principal, categorias, plano, tipo_negocio
        FROM sindicato_parceiros
-       WHERE status = 'ativo' AND nome ILIKE $1
+       WHERE status = 'ativo' AND NOT empresa_teste AND nome ILIKE $1
        ORDER BY nome ASC
        LIMIT 12`,
       [like]
@@ -568,7 +568,7 @@ async function getFood(req, res) {
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
               preco_medio, duracao_media, horario_atendimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
-       WHERE status = 'ativo'`
+       WHERE status = 'ativo' AND NOT empresa_teste`
     );
     const restaurantes = result.rows
       .filter(p => ehRestaurante(p.categorias))

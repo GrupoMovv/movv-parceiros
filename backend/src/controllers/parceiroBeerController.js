@@ -61,11 +61,11 @@ function statusPainel(ext) {
 async function getMeu(req, res) {
   try {
     const ext = await buscarExtensao(req.parceiro.id);
-    const p = await db.query('SELECT cnpj, whatsapp FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
+    const p = await db.query('SELECT cnpj, whatsapp, empresa_teste FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
     return res.json({
       estabelecimento: ext,
       status: statusPainel(ext),
-      parceiro: { nome: req.parceiro.nome, slug: req.parceiro.slug, cnpj: p.rows[0]?.cnpj || null, whatsapp: p.rows[0]?.whatsapp || null },
+      parceiro: { nome: req.parceiro.nome, slug: req.parceiro.slug, cnpj: p.rows[0]?.cnpj || null, whatsapp: p.rows[0]?.whatsapp || null, empresa_teste: Boolean(p.rows[0]?.empresa_teste) },
       limites: limites(req.parceiro),
       termo_versao_atual: TERMO_VERSAO,
       tipos: TIPOS_ESTABELECIMENTO,
@@ -94,11 +94,14 @@ async function salvarMeu(req, res) {
     if (cnae && cnae.length !== 7) return res.status(400).json({ error: 'CNAE deve ter 7 dígitos (ex.: 4723-7/00)' });
 
     // CNPJ mora no parceiro (é da empresa, não só do Beer) — o termo exige
-    // CNPJ, então sem um válido no cadastro precisa informar aqui.
-    const atual = await db.query('SELECT cnpj FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
+    // CNPJ, então sem um válido no cadastro precisa informar aqui. Empresa
+    // de teste (migration 073) não tem CNPJ: dispensa, mas se digitar um
+    // tem que ser válido.
+    const atual = await db.query('SELECT cnpj, empresa_teste FROM sindicato_parceiros WHERE id = $1', [req.parceiro.id]);
     const cnpjInformado = b.cnpj ? onlyDigits(b.cnpj) : null;
     const cnpj = cnpjInformado || onlyDigits(atual.rows[0]?.cnpj);
-    if (!isValidCNPJ(cnpj)) return res.status(400).json({ error: 'Informe um CNPJ válido — o Disk Bebidas exige empresa com CNPJ' });
+    const dispensaCnpj = atual.rows[0]?.empresa_teste && !cnpjInformado;
+    if (!dispensaCnpj && !isValidCNPJ(cnpj)) return res.status(400).json({ error: 'Informe um CNPJ válido — o Disk Bebidas exige empresa com CNPJ' });
 
     const bairros = normalizarBairros(b.bairros_entrega);
     const tempo = b.tempo_entrega_min ? Number(b.tempo_entrega_min) : null;

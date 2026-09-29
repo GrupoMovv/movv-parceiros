@@ -68,7 +68,7 @@ async function listarPublico(req, res) {
          FROM sindicato_parceiros p
          LEFT JOIN (SELECT parceiro_id, ROUND(AVG(nota)::numeric, 1) AS nota_media, COUNT(*)::int AS total
                     FROM pet_avaliacoes GROUP BY parceiro_id) av ON av.parceiro_id = p.id
-         WHERE p.status = 'ativo' AND p.pet_servicos <> '{}'
+         WHERE p.status = 'ativo' AND NOT p.empresa_teste AND p.pet_servicos <> '{}'
            AND ($1::text IS NULL OR p.pet_servicos @> ARRAY[$1::text])
            AND ($2::text IS NULL OR p.pet_portes @> ARRAY[$2::text])
            AND ($3::text IS NULL OR p.pet_racas = '{}' OR p.pet_racas @> ARRAY[$3::text])
@@ -85,13 +85,13 @@ async function listarPublico(req, res) {
     const f = await db.query(
       `SELECT trim(p.bairro) AS bairro, COUNT(*)::int AS total
        FROM sindicato_parceiros p
-       WHERE p.status = 'ativo' AND p.pet_servicos <> '{}' AND COALESCE(trim(p.bairro), '') <> ''
+       WHERE p.status = 'ativo' AND NOT p.empresa_teste AND p.pet_servicos <> '{}' AND COALESCE(trim(p.bairro), '') <> ''
        GROUP BY 1 ORDER BY 1`
     );
     const faixa = (await db.query(
       `SELECT MIN(pp.preco) AS min, MAX(pp.preco) AS max
        FROM pet_precos pp JOIN sindicato_parceiros p ON p.id = pp.parceiro_id
-       WHERE p.status = 'ativo'`
+       WHERE p.status = 'ativo' AND NOT p.empresa_teste`
     )).rows[0];
 
     return res.json({

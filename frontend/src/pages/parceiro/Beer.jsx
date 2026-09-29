@@ -610,8 +610,9 @@ function FormCadastro({ dados, editando, onCancelar, onSalvo }) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">CNPJ *</label>
-            <input value={cnpj} onChange={e => setCnpj(e.target.value)} className={campo} placeholder="00.000.000/0000-00" required />
+            <label className="block text-xs font-semibold text-slate-500 mb-1">CNPJ {dados.parceiro.empresa_teste ? '' : '*'}</label>
+            <input value={cnpj} onChange={e => setCnpj(e.target.value)} className={campo} placeholder="00.000.000/0000-00" required={!dados.parceiro.empresa_teste} />
+            {dados.parceiro.empresa_teste && <p className="text-[11px] text-amber-600 mt-1">🧪 Empresa de teste: CNPJ dispensado e nada aparece pra cliente.</p>}
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">CNAE de bebidas</label>

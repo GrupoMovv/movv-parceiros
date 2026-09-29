@@ -58,7 +58,7 @@ async function buscarParceirosElegiveis(jogoTipo) {
      FROM sindicato_jogos_parceiros jp
      JOIN sindicato_parceiros p ON p.id = jp.parceiro_id
      WHERE jp.jogo_tipo = $1 AND jp.ativo = true AND jp.peso_sorteio > 0
-       AND p.status = 'ativo'
+       AND p.status = 'ativo' AND NOT p.empresa_teste
        AND (
          SELECT COUNT(*) FROM sindicato_cupons_roleta c
          WHERE c.parceiro_id = jp.parceiro_id AND c.jogo_tipo = jp.jogo_tipo AND c.jogado_em::date = NOW()::date

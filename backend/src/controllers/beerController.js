@@ -17,8 +17,14 @@ function sqlOrdemPlano() {
   return `(CASE WHEN NOT ${sqlPlanoVigente('pa.')} THEN 0 ${casos} ELSE 0 END)`;
 }
 
-const WHERE_ESTABELECIMENTO_VISIVEL = `be.ativo = true AND pa.status = 'ativo'`;
-const WHERE_PRODUTO_VISIVEL = `bp.status = 'aprovado' AND bp.disponivel = true AND bc.ativo = true AND ${WHERE_ESTABELECIMENTO_VISIVEL}`;
+// Empresa de teste (sindicato_parceiros.empresa_teste, migration 073) nunca
+// aparece pra cliente. `qa` = admin logado no mesmo navegador (req.modoQa,
+// middleware lerAdminOpcional): vê a empresa teste mesmo PAUSADA — a Adega
+// Teste fica pausada de propósito, proteção dupla.
+const estabelecimentoVisivel = (qa = false) => (qa
+  ? `be.ativo = true AND (pa.status = 'ativo' OR pa.empresa_teste)`
+  : `be.ativo = true AND pa.status = 'ativo' AND NOT pa.empresa_teste`);
+const produtoVisivel = (qa = false) => `bp.status = 'aprovado' AND bp.disponivel = true AND bc.ativo = true AND ${estabelecimentoVisivel(qa)}`;
 const FROM_PRODUTO = `
   FROM beer_produtos bp
   JOIN beer_estabelecimentos be ON be.id = bp.estabelecimento_id
@@ -105,7 +111,7 @@ async function getCategorias(req, res) {
        FROM beer_categorias WHERE ativo = true ORDER BY ordem, nome_exibicao`
     );
     const contagem = await db.query(
-      `SELECT bp.categoria_codigo, COUNT(*)::int AS total ${FROM_PRODUTO} WHERE ${WHERE_PRODUTO_VISIVEL} GROUP BY 1`
+      `SELECT bp.categoria_codigo, COUNT(*)::int AS total ${FROM_PRODUTO} WHERE ${produtoVisivel(req.modoQa)} GROUP BY 1`
     );
     const totalPor = Object.fromEntries(contagem.rows.map(r => [r.categoria_codigo, r.total]));
 
@@ -128,7 +134,7 @@ async function getResumo(req, res) {
     const r = await db.query(
       `SELECT be.status_aberto, be.ultimo_status_update, be.horario_funcionamento
        FROM beer_estabelecimentos be JOIN sindicato_parceiros pa ON pa.id = be.parceiro_id
-       WHERE ${WHERE_ESTABELECIMENTO_VISIVEL}`
+       WHERE ${estabelecimentoVisivel(req.modoQa)}`
     );
     return res.json({ estabelecimentos: r.rows.length, abertos: r.rows.filter(e => abertoEfetivo(e)).length });
   } catch (err) {
@@ -144,7 +150,7 @@ async function getEstabelecimentos(req, res) {
   try {
     const { categoria, bairro, aberto } = req.query;
     const params = [];
-    const filtros = [WHERE_ESTABELECIMENTO_VISIVEL];
+    const filtros = [estabelecimentoVisivel(req.modoQa)];
     // botão ligado é condição necessária; o turno confere em JS lá embaixo
     if (aberto === 'true') filtros.push('be.status_aberto = true');
     if (categoria) {
@@ -180,11 +186,11 @@ async function getEstabelecimentos(req, res) {
   }
 }
 
-async function buscarEstabelecimentoPorSlug(slug) {
+async function buscarEstabelecimentoPorSlug(slug, qa) {
   const r = await db.query(
     `SELECT ${SELECT_ESTABELECIMENTO}, pa.descricao, pa.endereco, pa.bairro, pa.cidade, pa.fotos_estabelecimento
      FROM beer_estabelecimentos be JOIN sindicato_parceiros pa ON pa.id = be.parceiro_id
-     WHERE pa.slug = $1 AND ${WHERE_ESTABELECIMENTO_VISIVEL}`,
+     WHERE pa.slug = $1 AND ${estabelecimentoVisivel(qa)}`,
     [slug]
   );
   return r.rows[0] || null;
@@ -195,7 +201,7 @@ async function buscarEstabelecimentoPorSlug(slug) {
 // saiu do Beer.
 async function getEstabelecimento(req, res) {
   try {
-    const e = await buscarEstabelecimentoPorSlug(req.params.slug);
+    const e = await buscarEstabelecimentoPorSlug(req.params.slug, req.modoQa);
     if (!e) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
     return res.json(publicoEstabelecimento(e));
   } catch (err) {
@@ -208,11 +214,11 @@ async function getEstabelecimento(req, res) {
 // (todos os dias; o card mostra "Só domingo" em vez de esconder).
 async function getProdutosEstabelecimento(req, res) {
   try {
-    const e = await buscarEstabelecimentoPorSlug(req.params.slug);
+    const e = await buscarEstabelecimentoPorSlug(req.params.slug, req.modoQa);
     if (!e) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
 
     const params = [e.estabelecimento_id];
-    const filtros = [WHERE_PRODUTO_VISIVEL, 'be.id = $1'];
+    const filtros = [produtoVisivel(req.modoQa), 'be.id = $1'];
     if (req.query.categoria) {
       const sqlCat = await filtroCategoria(req.query.categoria, params);
       if (!sqlCat) return res.status(400).json({ error: 'Categoria inválida' });
@@ -235,9 +241,9 @@ async function getProdutosEstabelecimento(req, res) {
 // busca). `q` filtra em JS sem acento (nome, descrição, categoria,
 // estabelecimento) — catálogo de uma cidade cabe tranquilo na memória, e
 // o banco não tem unaccent. Teto de 300 linhas por segurança.
-async function listarProdutos({ categoria, dia, disponivelAgora, soAbertos, q, tempoMax, retirada }) {
+async function listarProdutos({ categoria, dia, disponivelAgora, soAbertos, q, tempoMax, retirada, qa }) {
   const params = [];
-  const filtros = [WHERE_PRODUTO_VISIVEL];
+  const filtros = [produtoVisivel(qa)];
   if (categoria) {
     const sqlCat = await filtroCategoria(categoria, params);
     if (!sqlCat) return null;
@@ -280,7 +286,7 @@ async function getProdutos(req, res) {
     const dia = diaDaQuery(req.query.dia);
     if (dia === undefined) return res.status(400).json({ error: 'Dia inválido' });
     const produtos = await listarProdutos({
-      categoria: req.query.categoria, dia, disponivelAgora: req.query.disponivel_agora === 'true', q: req.query.q,
+      categoria: req.query.categoria, dia, disponivelAgora: req.query.disponivel_agora === 'true', q: req.query.q, qa: req.modoQa,
     });
     if (!produtos) return res.status(400).json({ error: 'Categoria inválida' });
     return res.json({ produtos });
@@ -298,7 +304,7 @@ async function getQueroAgora(req, res) {
     const tempo = req.query.tempo ? Number(req.query.tempo) : null;
     if (tempo !== null && ![30, 45].includes(tempo)) return res.status(400).json({ error: 'Tempo inválido' });
     const produtos = await listarProdutos({
-      dia: diaDeHoje(), disponivelAgora: true, soAbertos: true, tempoMax: tempo, retirada: req.query.retirada === 'true',
+      dia: diaDeHoje(), disponivelAgora: true, soAbertos: true, tempoMax: tempo, retirada: req.query.retirada === 'true', qa: req.modoQa,
     });
     return res.json({ produtos });
   } catch (err) {
@@ -435,7 +441,7 @@ async function getCategoria(req, res) {
 
     const r = await db.query(
       `SELECT ${SELECT_PRODUTO} ${FROM_PRODUTO}
-       WHERE ${WHERE_PRODUTO_VISIVEL} AND (bp.categoria_codigo = $1 OR bc.categoria_pai = $1)
+       WHERE ${produtoVisivel(req.modoQa)} AND (bp.categoria_codigo = $1 OR bc.categoria_pai = $1)
        LIMIT 2000`,
       [cat.codigo]
     );
@@ -518,7 +524,7 @@ async function getProduto(req, res) {
   try {
     const id = parseInt(req.params.id, 10);
     if (!Number.isInteger(id)) return res.status(404).json({ error: 'Produto não encontrado' });
-    const r = await db.query(`SELECT ${SELECT_PRODUTO} ${FROM_PRODUTO} WHERE ${WHERE_PRODUTO_VISIVEL} AND bp.id = $1`, [id]);
+    const r = await db.query(`SELECT ${SELECT_PRODUTO} ${FROM_PRODUTO} WHERE ${produtoVisivel(req.modoQa)} AND bp.id = $1`, [id]);
     if (!r.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
     return res.json(publicoProduto(r.rows[0]));
   } catch (err) {
@@ -529,13 +535,13 @@ async function getProduto(req, res) {
 
 // ─── Vitrine da home: carrosséis por grupo (Junior, 29/09/2026) ───────────
 // Um carrossel por GRUPO do catálogo (Cervejas, Vinhos...), na ordem do
-// catálogo, só com >= 3 produtos. Dentro do grupo: destaque > plano >
+// catálogo, só com >= 2 produtos (era 3; Junior baixou pra 2 em 29/09). Dentro do grupo: destaque > plano >
 // aberto agora > mais novo ("mais vendidos" não existe: o pedido fecha no
 // WhatsApp da adega). Depois intercala as adegas (não repete a mesma em
 // seguida). Cigarros fora: regulamentado não entra em vitrine de
 // descoberta (continua na grade de categorias e na busca). Cache de 5 min
 // por processo — "aberto agora" pode atrasar até 5 min, aceitável.
-const VITRINE_MIN_POR_GRUPO = 3;
+const VITRINE_MIN_POR_GRUPO = 2;
 const VITRINE_MAX_POR_GRUPO = 12;
 const VITRINE_CACHE_MS = 5 * 60 * 1000;
 const GRUPOS_FORA_DA_VITRINE = ['cigarros'];
@@ -573,18 +579,18 @@ function montarVitrine(linhas, grupos) {
 // GET /vitrine
 async function getVitrine(req, res) {
   try {
-    if (cacheVitrine.dados && Date.now() - cacheVitrine.em < VITRINE_CACHE_MS) return res.json(cacheVitrine.dados);
+    if (!req.modoQa && cacheVitrine.dados && Date.now() - cacheVitrine.em < VITRINE_CACHE_MS) return res.json(cacheVitrine.dados);
     const grupos = (await db.query(
       `SELECT codigo, nome_exibicao AS nome, icone FROM beer_categorias
        WHERE ativo = true AND categoria_pai IS NULL AND codigo <> ALL($1) ORDER BY ordem`, [GRUPOS_FORA_DA_VITRINE]
     )).rows;
     const linhas = (await db.query(
       `SELECT ${SELECT_PRODUTO}, COALESCE(bc.categoria_pai, bc.codigo) AS grupo
-       ${FROM_PRODUTO} WHERE ${WHERE_PRODUTO_VISIVEL} AND COALESCE(bc.categoria_pai, bc.codigo) <> ALL($1)
+       ${FROM_PRODUTO} WHERE ${produtoVisivel(req.modoQa)} AND COALESCE(bc.categoria_pai, bc.codigo) <> ALL($1)
        LIMIT 3000`, [GRUPOS_FORA_DA_VITRINE]
     )).rows;
     const dados = { secoes: montarVitrine(linhas, grupos) };
-    cacheVitrine = { em: Date.now(), dados };
+    if (!req.modoQa) cacheVitrine = { em: Date.now(), dados };
     return res.json(dados);
   } catch (err) {
     console.error(err);
