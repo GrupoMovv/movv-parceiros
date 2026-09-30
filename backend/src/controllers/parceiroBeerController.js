@@ -277,9 +277,40 @@ async function validarProduto(req, b) {
   };
 }
 
-async function subirFoto(req) {
-  if (!req.file) return null;
-  return cloudinaryService.uploadFoto(req.file.buffer, `iubmais/parceiros/${req.parceiro.id}/beer`, 'PRODUTO');
+// Várias fotos por produto (migration 075): beer_produtos.fotos na ordem,
+// a primeira é a principal e `imagem`/`imagem_public_id` sempre espelham
+// ela (card, busca, moderação e painel leem `imagem`).
+const LIMITE_FOTOS_BEER = 3;
+
+function subirArquivo(req, file) {
+  return cloudinaryService.uploadFoto(file.buffer, `iubmais/parceiros/${req.parceiro.id}/beer`, 'PRODUTO');
+}
+
+async function subirFotos(req, files) {
+  const enviadas = [];
+  for (const f of files) {
+    const { url, publicId } = await subirArquivo(req, f);
+    enviadas.push({ url, publicId });
+  }
+  return enviadas;
+}
+
+// multipart: "fotos" (várias, na ordem) e/ou "foto" (1 — telas antigas em cache)
+function arquivosDe(req) {
+  return [...(req.files?.foto || []), ...(req.files?.fotos || [])];
+}
+
+async function salvarFotos(produtoId, fotos) {
+  const r = await db.query(
+    'UPDATE beer_produtos SET fotos = $1, imagem = $2, imagem_public_id = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
+    [JSON.stringify(fotos), fotos[0]?.url || null, fotos[0]?.publicId || null, produtoId]
+  );
+  return r.rows[0];
+}
+
+function fotosDoProduto(p) {
+  if (Array.isArray(p.fotos) && p.fotos.length) return p.fotos;
+  return p.imagem ? [{ url: p.imagem, publicId: p.imagem_public_id }] : [];
 }
 
 // POST /produtos (multipart: campos + foto opcional) — entra SEMPRE como
@@ -297,18 +328,20 @@ async function criarProduto(req, res) {
       }
     }
 
-    const foto = await subirFoto(req);
+    const arquivos = arquivosDe(req);
+    if (arquivos.length > LIMITE_FOTOS_BEER) return res.status(400).json({ error: `Máximo de ${LIMITE_FOTOS_BEER} fotos por produto` });
+    const fotos = await subirFotos(req, arquivos);
     const d = v.dados;
     const r = await db.query(
       `INSERT INTO beer_produtos
-         (estabelecimento_id, categoria_codigo, nome, descricao, preco, imagem, imagem_public_id,
+         (estabelecimento_id, categoria_codigo, nome, descricao, preco, imagem, imagem_public_id, fotos,
           dias_disponiveis, disponivel_agora, termos_sinalizados, volume_ml, origem)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [req.beer.id, d.categoria_codigo, d.nome, d.descricao, d.preco, foto?.url || null, foto?.publicId || null,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [req.beer.id, d.categoria_codigo, d.nome, d.descricao, d.preco, fotos[0]?.url || null, fotos[0]?.publicId || null, JSON.stringify(fotos),
         JSON.stringify(d.dias_disponiveis), d.disponivel_agora, v.sinalizados, d.volume_ml, d.origem]
     );
     // Moderação inteligente: entrou pendente; confiável + checks OK = publica direto
-    const m = await moderacao.avaliar({ parceiroId: req.parceiro.id, estabelecimento: req.beer, dados: d, foto: req.file || null, fotoAntiga: null, anterior: null, sinalizados: v.sinalizados });
+    const m = await moderacao.avaliar({ parceiroId: req.parceiro.id, estabelecimento: req.beer, dados: d, fotosNovas: arquivos, principalNova: arquivos[0] || null, fotoAntiga: null, anterior: null, sinalizados: v.sinalizados });
     await moderacao.registrarDecisao(r.rows[0].id, req.beer.id, m, r.rows[0]);
     const produto = (await db.query('SELECT * FROM beer_produtos WHERE id = $1', [r.rows[0].id])).rows[0];
     return res.status(201).json({ produto, publicado_direto: m.publicarDireto, checks: m.checks });
@@ -335,7 +368,10 @@ async function editarProduto(req, res) {
     if (v.erro) return res.status(v.status).json({ error: v.erro });
 
     const d = v.dados;
-    const foto = await subirFoto(req);
+    // Foto no PUT = tela antiga (em cache) trocando a principal; a tela nova
+    // mexe nas fotos pelas rotas /produtos/:id/fotos.
+    const arquivoFoto = arquivosDe(req)[0] || null;
+    const foto = arquivoFoto ? await subirArquivo(req, arquivoFoto) : null;
     const mudouConteudo = d.nome !== atual.nome || (d.descricao || null) !== (atual.descricao || null)
       || d.categoria_codigo !== atual.categoria_codigo || (d.origem || null) !== (atual.origem || null) || Boolean(foto);
 
@@ -369,12 +405,15 @@ async function editarProduto(req, res) {
         v.sinalizados, foto?.url || null, foto?.publicId || null, voltaPendente, atual.id,
         d.volume_ml, d.origem, precoOriginal, manterOferta]
     );
-    if (foto && atual.imagem_public_id) cloudinaryService.deletarFoto(atual.imagem_public_id).catch(() => {});
+    if (foto) {
+      await salvarFotos(atual.id, [foto, ...fotosDoProduto(atual).slice(1)]);
+      if (atual.imagem_public_id) cloudinaryService.deletarFoto(atual.imagem_public_id).catch(() => {});
+    }
     // Mexeu no que o moderador aprovou: passa pelos checks de novo (pode
     // voltar pro ar direto se o parceiro é confiável e tudo passou)
     let m = null;
     if (voltaPendente) {
-      m = await moderacao.avaliar({ parceiroId: req.parceiro.id, estabelecimento: req.beer, dados: d, foto: req.file || null, fotoAntiga: atual.imagem, anterior: atual, sinalizados: v.sinalizados });
+      m = await moderacao.avaliar({ parceiroId: req.parceiro.id, estabelecimento: req.beer, dados: d, foto: arquivoFoto, fotoAntiga: atual.imagem, anterior: atual, sinalizados: v.sinalizados });
       await moderacao.registrarDecisao(atual.id, req.beer.id, m, r.rows[0]);
     }
     const produto = (await db.query('SELECT * FROM beer_produtos WHERE id = $1', [atual.id])).rows[0];
@@ -396,11 +435,91 @@ async function excluirProduto(req, res) {
     const atual = await buscarMeuProduto(req);
     if (!atual) return res.status(404).json({ error: 'Produto não encontrado' });
     await db.query('DELETE FROM beer_produtos WHERE id = $1', [atual.id]);
-    if (atual.imagem_public_id) cloudinaryService.deletarFoto(atual.imagem_public_id).catch(() => {});
+    for (const f of fotosDoProduto(atual)) if (f.publicId) cloudinaryService.deletarFoto(f.publicId).catch(() => {});
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao excluir produto' });
+  }
+}
+
+// ─── Fotos do produto (mesmo contrato do formulário comum) ────────────────
+// POST /produtos/:id/fotos (multipart "fotos") — entram no fim da lista.
+// Foto NOVA passa pela moderação de novo (os checks rodam em cada foto
+// nova; parceiro confiável com tudo OK volta pro ar sozinho).
+async function enviarFotos(req, res) {
+  try {
+    const atual = await buscarMeuProduto(req);
+    if (!atual) return res.status(404).json({ error: 'Produto não encontrado' });
+    const arquivos = arquivosDe(req);
+    if (!arquivos.length) return res.status(400).json({ error: 'Envie ao menos uma imagem' });
+    const fotos = fotosDoProduto(atual);
+    if (fotos.length + arquivos.length > LIMITE_FOTOS_BEER) {
+      return res.status(400).json({ error: `Máximo de ${LIMITE_FOTOS_BEER} fotos por produto` });
+    }
+    const novas = await subirFotos(req, arquivos);
+    await salvarFotos(atual.id, [...fotos, ...novas]);
+
+    const emOferta = atual.em_oferta && atual.preco_original !== null;
+    const dados = {
+      nome: atual.nome, descricao: atual.descricao, categoria_codigo: atual.categoria_codigo, origem: atual.origem,
+      preco: Number(emOferta ? atual.preco_original : atual.preco),
+    };
+    const m = await moderacao.avaliar({
+      parceiroId: req.parceiro.id, estabelecimento: req.beer, dados,
+      fotosNovas: arquivos, principalNova: fotos.length ? null : arquivos[0],
+      fotoAntiga: atual.imagem, anterior: atual, sinalizados: atual.termos_sinalizados || [],
+    });
+    await moderacao.registrarDecisao(atual.id, req.beer.id, m, atual);
+    const produto = (await db.query('SELECT * FROM beer_produtos WHERE id = $1', [atual.id])).rows[0];
+    return res.json({
+      fotos: produto.fotos, produto,
+      voltou_moderacao: atual.status !== 'pendente' && produto.status === 'pendente',
+      publicado_direto: m.publicarDireto, checks: m.checks,
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.cloudinaryCode) return res.status(502).json({ error: err.message, detalhes: err.cloudinaryMessage, codigo: err.cloudinaryCode });
+    return res.status(500).json({ error: 'Erro ao enviar fotos' });
+  }
+}
+
+// PUT /produtos/:id/fotos/ordem { urls } — a primeira vira a principal.
+// Só reordena foto que já passou pela moderação: não volta pra análise.
+async function reordenarFotos(req, res) {
+  try {
+    const atual = await buscarMeuProduto(req);
+    if (!atual) return res.status(404).json({ error: 'Produto não encontrado' });
+    const { urls } = req.body || {};
+    if (!Array.isArray(urls)) return res.status(400).json({ error: 'urls (array) é obrigatório' });
+    const fotos = fotosDoProduto(atual);
+    const porUrl = new Map(fotos.map(f => [f.url, f]));
+    if (urls.length !== fotos.length || new Set(urls).size !== urls.length || !urls.every(u => porUrl.has(u))) {
+      return res.status(400).json({ error: 'Lista de fotos não confere — recarregue a página' });
+    }
+    const produto = await salvarFotos(atual.id, urls.map(u => porUrl.get(u)));
+    return res.json({ fotos: produto.fotos });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao reordenar fotos' });
+  }
+}
+
+// DELETE /produtos/:id/fotos/:index (índice na ordem do servidor)
+async function removerFoto(req, res) {
+  try {
+    const atual = await buscarMeuProduto(req);
+    if (!atual) return res.status(404).json({ error: 'Produto não encontrado' });
+    const fotos = fotosDoProduto(atual);
+    const index = parseInt(req.params.index, 10);
+    if (!Number.isInteger(index) || index < 0 || index >= fotos.length) return res.status(404).json({ error: 'Foto não encontrada' });
+    const [removida] = fotos.splice(index, 1);
+    const produto = await salvarFotos(atual.id, fotos);
+    if (removida?.publicId) cloudinaryService.deletarFoto(removida.publicId).catch(() => {});
+    return res.json({ fotos: produto.fotos });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao remover foto' });
   }
 }
 
@@ -485,4 +604,5 @@ module.exports = {
   salvarOferta,
   exigirExtensaoAtiva, getMeu, salvarMeu, desativar, atualizarStatus,
   listarProdutos, criarProduto, editarProduto, excluirProduto, atualizarDisponibilidade,
+  enviarFotos, reordenarFotos, removerFoto,
 };

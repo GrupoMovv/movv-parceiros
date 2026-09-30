@@ -42,9 +42,16 @@ async function categoriaVeioDaIA(parceiroId, categoria) {
 }
 
 // dados = produto validado (nome, descricao, categoria_codigo, preco, origem)
-// foto  = req.file (foto NOVA) | null; fotoAntiga = imagem que já estava no produto
+// fotosNovas = arquivos (multer) das fotos que ENTRARAM agora — todas passam
+//   pela moderação de imagem (várias fotos, migration 075)
+// principalNova = arquivo que virou a foto PRINCIPAL agora (categoria × foto
+//   usa ela) | null = a principal é a que já estava
+// foto = atalho antigo: 1 foto nova que também é a principal
+// fotoAntiga = imagem que já estava no produto
 // anterior = produto antes da edição (pra reaproveitar o que não mudou) | null
-async function avaliar({ parceiroId, estabelecimento, dados, foto, fotoAntiga, anterior, sinalizados }) {
+async function avaliar({ parceiroId, estabelecimento, dados, foto, fotosNovas, principalNova, fotoAntiga, anterior, sinalizados }) {
+  const novas = fotosNovas || (foto ? [foto] : []);
+  const principal = principalNova !== undefined ? principalNova : (foto || null);
   const checks = [];
   const add = (check, ok, motivo) => checks.push({ check, ok, motivo });
   const cat = (await db.query(
@@ -64,32 +71,46 @@ async function avaliar({ parceiroId, estabelecimento, dados, foto, fotoAntiga, a
   const precoOk = dados.preco >= min && dados.preco <= max;
   add('preco', precoOk, precoOk ? `Preço dentro do comum (${brl(min)} a ${brl(max)})` : `Preço fora do comum pra essa categoria: ${brl(dados.preco)} (esperado ${brl(min)} a ${brl(max)})`);
 
-  // 2. foto imprópria + 3. categoria × foto
-  if (foto) {
+  // 2. foto imprópria: TODAS as fotos novas; as antigas valem o que já tinham
+  const antesImpropria = anterior && fotoAntiga ? (anterior.moderacao_checks || []).find(c => c.check === 'foto_impropria') : null;
+  if (novas.length) {
     try {
-      const m = await comTimeout(openaiService.moderarImagem(foto.buffer, foto.mimetype));
-      add('foto_impropria', !m.flagged, m.flagged ? `Foto sinalizada: ${m.categorias.join(', ')}` : 'Foto sem conteúdo impróprio');
+      const rs = await Promise.all(novas.map(f => comTimeout(openaiService.moderarImagem(f.buffer, f.mimetype))));
+      const sinalizadas = rs.filter(m => m.flagged);
+      if (sinalizadas.length) {
+        add('foto_impropria', false, `Foto sinalizada: ${[...new Set(sinalizadas.flatMap(m => m.categorias))].join(', ')}`);
+      } else if (antesImpropria && !antesImpropria.ok) {
+        add('foto_impropria', false, antesImpropria.motivo); // uma foto antiga já tinha problema
+      } else {
+        add('foto_impropria', true, novas.length > 1 ? `${novas.length} fotos novas sem conteúdo impróprio` : 'Foto sem conteúdo impróprio');
+      }
     } catch {
       add('foto_impropria', false, 'Não deu pra verificar a foto agora');
     }
+  } else if (fotoAntiga && anterior) {
+    // sem foto nova: a foto já passou antes
+    add('foto_impropria', antesImpropria ? antesImpropria.ok : true, antesImpropria ? antesImpropria.motivo : 'Foto já publicada antes');
+  } else {
+    add('foto_impropria', true, 'Sem foto');
+  }
+
+  // 3. categoria × foto PRINCIPAL
+  if (principal) {
     if (await categoriaVeioDaIA(parceiroId, dados.categoria_codigo)) {
       add('categoria_foto', true, 'Categoria escolhida pela IA a partir da foto');
     } else {
       try {
-        const c = await comTimeout(openaiService.conferirCategoriaFoto(foto.buffer, foto.mimetype, { nome: dados.nome, caminhoCategoria: cat?.caminho || dados.categoria_codigo }));
+        const c = await comTimeout(openaiService.conferirCategoriaFoto(principal.buffer, principal.mimetype, { nome: dados.nome, caminhoCategoria: cat?.caminho || dados.categoria_codigo }));
         add('categoria_foto', c.compativel, c.compativel ? 'Foto combina com a categoria' : `Foto não parece ser de ${cat?.caminho}: ${c.motivo}`);
       } catch {
         add('categoria_foto', false, 'Não deu pra conferir a categoria pela foto agora');
       }
     }
   } else if (fotoAntiga && anterior) {
-    // sem foto nova: a foto já passou antes; categoria só "vale" se não mudou
-    const antes = (anterior.moderacao_checks || []).find(c => c.check === 'foto_impropria');
-    add('foto_impropria', antes ? antes.ok : true, antes ? antes.motivo : 'Foto já publicada antes');
+    // principal é a que já estava: categoria só "vale" se não mudou
     const mesmaCategoria = anterior.categoria_codigo === dados.categoria_codigo;
     add('categoria_foto', mesmaCategoria, mesmaCategoria ? 'Categoria não mudou' : 'Categoria mudou sem foto nova — conferir');
   } else {
-    add('foto_impropria', true, 'Sem foto');
     add('categoria_foto', true, 'Sem foto pra comparar');
   }
 

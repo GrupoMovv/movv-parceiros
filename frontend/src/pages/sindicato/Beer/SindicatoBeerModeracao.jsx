@@ -116,8 +116,21 @@ function CardModeracao({ produto: p, onModerado }) {
   return (
     <div className={`bg-white rounded-2xl border shadow-sm p-4 ${p.termos_sinalizados?.length ? 'border-amber-300' : 'border-slate-100'}`}>
       <div className="flex gap-3">
-        <div className="w-24 h-24 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0 text-3xl">
-          {p.imagem ? <a href={p.imagem} target="_blank" rel="noopener noreferrer"><img src={p.imagem} alt="" className="w-full h-full object-cover" /></a> : <span aria-hidden="true">{p.categoria_icone}</span>}
+        <div className="flex-shrink-0">
+          <div className="w-24 h-24 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center text-3xl">
+            {p.imagem ? <a href={p.imagem} target="_blank" rel="noopener noreferrer"><img src={p.imagem} alt="" className="w-full h-full object-cover" /></a> : <span aria-hidden="true">{p.categoria_icone}</span>}
+          </div>
+          {/* várias fotos: as outras em miniatura (todas passam pelo moderador) */}
+          {p.fotos?.length > 1 && (
+            <div className="flex gap-1 mt-1 w-24">
+              {p.fotos.slice(1).map(f => (
+                <a key={f.url} href={f.url} target="_blank" rel="noopener noreferrer" className="w-[30px] h-[30px] rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
+                  <img src={f.url} alt="" className="w-full h-full object-cover" />
+                </a>
+              ))}
+            </div>
+          )}
+          {p.fotos?.length > 1 && <p className="text-[10px] text-slate-400 mt-0.5">{p.fotos.length} fotos</p>}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold text-slate-400">{p.grupo_nome} › {p.categoria_nome}</p>

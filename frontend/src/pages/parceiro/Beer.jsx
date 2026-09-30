@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Wine, Plus, Pencil, Trash2, Upload, Loader2, Star, Zap, X, Clock, AlertTriangle } from 'lucide-react';
+import { Wine, Plus, Pencil, Trash2, Loader2, Star, Zap, X, Clock, AlertTriangle } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import CampoPreco from '../../components/ui/CampoPreco';
 import ImageCropUpload from '../../components/ImageCropUpload';
 import TermoDiskBebidas from '../../components/beer/TermoDiskBebidas';
+import useGaleriaFotos from '../../components/parceiro/useGaleriaFotos';
+import GradeFotos from '../../components/parceiro/GradeFotos';
 import EditorHorario from '../../components/beer/EditorHorario';
 import { DIAS, TIPOS_ESTABELECIMENTO, textoDias } from '../beer/beerConfig';
 import { formatarBRL } from '../../utils/iubFood';
@@ -23,6 +25,8 @@ const STATUS_PRODUTO = {
 };
 
 const NOME_PLANO = { gratis: 'Grátis', oficial: 'Oficial', premium: 'Premium', master: 'Master' };
+
+const LIMITE_FOTOS_BEER = 3; // igual ao backend (parceiroBeerController)
 
 function mensagemErro(err, padrao) {
   return err.response?.data?.error || padrao;
@@ -234,7 +238,7 @@ export default function ParceiroBeer() {
         <ModalProduto
           produto={modalProduto === 'novo' ? null : modalProduto}
           categorias={categorias}
-          onClose={() => setModalProduto(null)}
+          onClose={mexeuNasFotos => { setModalProduto(null); if (mexeuNasFotos) carregar(); }}
           onSalvo={async msg => { setModalProduto(null); toast.success(msg); await carregar(); }}
         />
       )}
@@ -352,11 +356,17 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
   const [origem, setOrigem] = useState(produto?.origem || '');
   const [dias, setDias] = useState(produto?.dias_disponiveis && !produto.dias_disponiveis.todos ? produto.dias_disponiveis : { todos: true });
   const [agora, setAgora] = useState(Boolean(produto?.disponivel_agora));
-  const [foto, setFoto] = useState(null);
-  const [preview, setPreview] = useState(produto?.imagem || null);
+  // Várias fotos (mesma grade/lógica do formulário comum): produto novo manda
+  // tudo junto no cadastro; produto existente reordena/exclui na hora e as
+  // fotos novas sobem no Salvar (foto nova = volta pra análise).
+  const fotosIniciais = produto?.fotos?.length ? produto.fotos : (produto?.imagem ? [{ url: produto.imagem, publicId: produto.imagem_public_id }] : []);
+  const gal = useGaleriaFotos({ produtoId: produto?.id, urlFotos: id => `/parceiro/beer/produtos/${id}/fotos`, limite: LIMITE_FOTOS_BEER });
+  useEffect(() => { gal.fotosDoServidor(fotosIniciais); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [previewIA, setPreviewIA] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
-  const fileRef = useRef(null);
+  // Fechar sem salvar depois de reordenar/excluir foto: a lista lá fora recarrega
+  const fechar = () => onClose(Boolean(produto) && gal.fotos.map(f => f.url).join('|') !== fotosIniciais.map(f => f.url).join('|'));
   // Produto novo começa escolhendo: IA (foto → preenche tudo) ou manual
   const [modo, setModo] = useState(produto ? 'form' : 'escolha'); // escolha | analisando | form
   const [ia, setIa] = useState(null); // resposta da IA: { certeza, duvidas[] } pra destacar o que conferir
@@ -364,8 +374,8 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
 
   async function analisarFoto(file) {
     setModo('analisando');
-    setFoto(file);
-    setPreview(URL.createObjectURL(file));
+    gal.aoRecortarFoto(file); // a foto da IA já entra como principal da galeria
+    setPreviewIA(URL.createObjectURL(file));
     try {
       const fd = new FormData();
       fd.append('imagem', file);
@@ -409,12 +419,20 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
       fd.append('origem', origem.trim());
       fd.append('dias_disponiveis', JSON.stringify(dias));
       fd.append('disponivel_agora', String(agora));
-      if (foto) fd.append('foto', foto);
       // publicado_direto: moderação inteligente (parceiro confiável + checks OK)
       if (produto) {
         const res = await apiParceiro.put(`/parceiro/beer/produtos/${produto.id}`, fd);
-        onSalvo(res.data.publicado_direto ? 'Salvo e já no ar ✅' : res.data.voltou_moderacao ? 'Salvo — o produto voltou pra análise do IUB' : 'Produto atualizado');
+        let r = res.data;
+        // fotos novas sobem depois (e passam pela moderação de novo)
+        if (gal.pendentes.length) {
+          const rf = await gal.enviarPendentes(produto.id, gal.galeriaRef.current);
+          if (!rf) return; // o toast já explicou; o modal fica aberto pra tentar de novo
+          if (rf.produto) r = { publicado_direto: rf.publicado_direto, voltou_moderacao: r.voltou_moderacao || rf.voltou_moderacao };
+        }
+        onSalvo(r.publicado_direto ? 'Salvo e já no ar ✅' : r.voltou_moderacao ? 'Salvo — o produto voltou pra análise do IUB' : 'Produto atualizado');
       } else {
+        // produto novo: todas as fotos vão no cadastro, na ordem da grade
+        gal.galeriaRef.current.forEach(g => { if (g.pendente) fd.append('fotos', g.file); });
         const res = await apiParceiro.post('/parceiro/beer/produtos', fd);
         onSalvo(res.data.publicado_direto ? 'Publicado! Já está no Disk Bebidas ✅' : 'Produto enviado pra análise do IUB');
       }
@@ -428,13 +446,13 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,15,20,0.6)' }} onClick={fechar}>
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button type="button" onClick={onClose} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-100" aria-label="Fechar"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={fechar} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-100" aria-label="Fechar"><X className="w-4 h-4" /></button>
         <h2 className="text-lg font-bold" style={{ color: PRETO }}>{produto ? 'Editar produto' : 'Adicionar produto'}</h2>
         <p className="text-slate-500 text-xs mt-1">
           {produto?.status === 'aprovado'
-            ? 'Mudar nome, descrição, categoria ou foto manda o produto de volta pra análise.'
+            ? 'Mudar nome, descrição, categoria ou pôr foto nova manda o produto de volta pra análise. Reordenar ou excluir foto não.'
             : 'O produto aparece no Disk Bebidas depois da aprovação do IUB.'}
         </p>
 
@@ -454,7 +472,7 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
 
         {modo === 'analisando' && (
           <div className="mt-6 flex flex-col items-center gap-3 py-8">
-            {preview && <img src={preview} alt="" className="w-28 h-28 rounded-2xl object-cover" />}
+            {previewIA && <img src={previewIA} alt="" className="w-28 h-28 rounded-2xl object-cover" />}
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: ROXO }} />
             <p className="text-sm font-semibold text-slate-600">🤖 Lendo o rótulo…</p>
           </div>
@@ -505,13 +523,20 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
               </div>
             </div>
             <p className="text-[11px] text-slate-400 -mt-2 mb-3">Opcionais — usados nos filtros da categoria (volume, origem).</p>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Foto</label>
-            <div onClick={() => fileRef.current?.click()} className="w-full h-28 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center cursor-pointer hover:border-slate-300 overflow-hidden bg-slate-50">
-              {preview ? <img src={preview} alt="" className="w-full h-full object-contain" /> : (
-                <span className="flex flex-col items-center gap-1 text-slate-400 text-xs"><Upload className="w-5 h-5" /> Escolher foto</span>
-              )}
-            </div>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setFoto(f); setPreview(URL.createObjectURL(f)); } }} />
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Fotos <span className="font-normal text-slate-400">(até {LIMITE_FOTOS_BEER} — frente, rótulo, pack…)</span></label>
+            {/* celular: "Tirar foto" + "Da galeria"; computador: escolher arquivos */}
+            <ImageCropUpload
+              aspectRatio={1}
+              multiple
+              disabled={gal.galeria.length >= LIMITE_FOTOS_BEER || gal.enviandoFotos}
+              label={gal.galeria.length ? '+ Adicionar mais fotos' : 'Adicionar fotos'}
+              onCropComplete={gal.aoRecortarFoto}
+              botaoClassName="w-full border-2 border-dashed border-slate-200 hover:border-[#4C1D95] rounded-xl p-3 text-center text-xs transition-colors flex flex-col items-center gap-1 disabled:opacity-60 disabled:cursor-default"
+            />
+            <GradeFotos g={gal} />
+            {produto && gal.pendentes.length > 0 && (
+              <p className="text-[11px] text-slate-500 mt-2">✅ {gal.pendentes.length === 1 ? 'A foto nova vai' : 'As fotos novas vão'} quando você clicar em Salvar (e o produto passa pela análise de novo).</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Dias disponíveis</label>
@@ -532,7 +557,7 @@ function ModalProduto({ produto, categorias, onClose, onSalvo }) {
 
         {modo === 'form' && (
         <div className="flex gap-2 mt-6">
-          <button type="button" onClick={onClose} disabled={salvando} className="flex-1 text-sm font-semibold py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50">Cancelar</button>
+          <button type="button" onClick={fechar} disabled={salvando} className="flex-1 text-sm font-semibold py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50">Cancelar</button>
           <button type="button" onClick={salvar} disabled={!podeSalvar || salvando} className="flex-1 text-sm font-bold py-2.5 rounded-xl text-white disabled:opacity-40" style={{ backgroundColor: ROXO }}>
             {salvando ? 'Salvando…' : produto ? 'Salvar' : 'Enviar pra análise'}
           </button>

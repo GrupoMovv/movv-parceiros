@@ -1,23 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, WhatsappLogo, MapPin, Clock, Wine, MagnifyingGlassPlus } from '@phosphor-icons/react';
+import { X, WhatsappLogo, MapPin, Clock, Wine, MagnifyingGlassPlus, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import BadgeAberto from './BadgeAberto';
 import { formatarBRL } from '../../utils/iubFood';
 import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
 
 // Modal do produto (aberto pelo ?p=ID que o BeerLayout controla). Celular:
-// tela cheia; desktop: janela sobre a página. Foto amplia no clique; ESC e
-// o X fecham. `produto` null = ainda carregando (link direto).
+// tela cheia; desktop: janela sobre a página. Várias fotos: setas, bolinhas,
+// arrastar o dedo e ←/→ do teclado; a foto amplia no clique; ESC e o X
+// fecham. `produto` null = ainda carregando (link direto).
 export default function ModalProduto({ produto: p, onFechar }) {
   const [zoom, setZoom] = useState(false);
+  const fotos = p?.fotos?.length ? p.fotos : (p?.imagem ? [p.imagem] : []);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => { setIdx(0); }, [p?.id]);
+  const atual = fotos[Math.min(idx, fotos.length - 1)] || null;
+  const passar = passo => setIdx(i => (i + passo + fotos.length) % fotos.length);
+  const toqueX = useRef(null);
+  const deslize = {
+    onTouchStart: ev => { toqueX.current = ev.touches[0].clientX; },
+    onTouchEnd: ev => {
+      if (toqueX.current == null || fotos.length < 2) return;
+      const dx = ev.changedTouches[0].clientX - toqueX.current;
+      toqueX.current = null;
+      if (Math.abs(dx) > 40) passar(dx < 0 ? 1 : -1);
+    },
+  };
 
   useEffect(() => {
-    const aoTeclar = e => { if (e.key === 'Escape') (zoom ? setZoom(false) : onFechar()); };
+    const aoTeclar = e => {
+      if (e.key === 'Escape') (zoom ? setZoom(false) : onFechar());
+      else if (fotos.length > 1 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) passar(e.key === 'ArrowRight' ? 1 : -1);
+    };
     window.addEventListener('keydown', aoTeclar);
     const overflowAntes = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', aoTeclar); document.body.style.overflow = overflowAntes; };
-  }, [onFechar, zoom]);
+  }, [onFechar, zoom, fotos.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const e = p?.estabelecimento || {};
   const link = p ? linkPedido(p) : null;
@@ -39,17 +58,19 @@ export default function ModalProduto({ produto: p, onFechar }) {
           <div className="w-full h-96 animate-pulse" style={{ backgroundColor: BEER.painel }} />
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => p.imagem && setZoom(true)}
-              className={`relative sm:w-1/2 h-72 sm:h-auto sm:min-h-[420px] flex-shrink-0 flex items-center justify-center ${p.imagem ? 'cursor-zoom-in' : 'cursor-default'}`}
-              style={{ backgroundColor: BEER.painel }}
-              aria-label={p.imagem ? 'Ampliar foto' : undefined}
-            >
-              {p.imagem ? <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover" /> : <span className="text-7xl" aria-hidden="true">{p.categoria?.icone}</span>}
-              {p.imagem && <span className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-black/55 flex items-center justify-center text-white"><MagnifyingGlassPlus size={18} /></span>}
-              {pct && <span className="absolute top-3 left-3 text-xs font-black px-2.5 py-1 rounded-full" style={{ backgroundColor: '#DC2626', color: '#fff' }}>🔥 OFERTA -{pct}%</span>}
-            </button>
+            <div className="relative sm:w-1/2 h-72 sm:h-auto sm:min-h-[420px] flex-shrink-0" style={{ backgroundColor: BEER.painel }} {...deslize}>
+              <button
+                type="button"
+                onClick={() => atual && setZoom(true)}
+                className={`w-full h-full flex items-center justify-center ${atual ? 'cursor-zoom-in' : 'cursor-default'}`}
+                aria-label={atual ? 'Ampliar foto' : undefined}
+              >
+                {atual ? <img src={atual} alt={fotos.length > 1 ? `${p.nome} — foto ${idx + 1} de ${fotos.length}` : p.nome} className="w-full h-full object-cover" /> : <span className="text-7xl" aria-hidden="true">{p.categoria?.icone}</span>}
+              </button>
+              {atual && <span className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-black/55 flex items-center justify-center text-white pointer-events-none"><MagnifyingGlassPlus size={18} /></span>}
+              {pct && <span className="absolute top-3 left-3 text-xs font-black px-2.5 py-1 rounded-full pointer-events-none" style={{ backgroundColor: '#DC2626', color: '#fff' }}>🔥 OFERTA -{pct}%</span>}
+              {fotos.length > 1 && <SetasFotos total={fotos.length} idx={idx} onPassar={passar} onIr={setIdx} />}
+            </div>
 
             <div className="flex-1 p-5 sm:p-7 flex flex-col gap-4">
               <div>
@@ -109,12 +130,31 @@ export default function ModalProduto({ produto: p, onFechar }) {
         )}
       </div>
 
-      {zoom && p?.imagem && (
-        <div className="fixed inset-0 z-[95] bg-black/95 flex items-center justify-center cursor-zoom-out" onClick={ev => { ev.stopPropagation(); setZoom(false); }}>
-          <img src={p.imagem} alt={p.nome} className="max-w-full max-h-full object-contain" />
+      {zoom && atual && (
+        <div className="fixed inset-0 z-[95] bg-black/95 flex items-center justify-center cursor-zoom-out" onClick={ev => { ev.stopPropagation(); setZoom(false); }} {...deslize}>
+          <img src={atual} alt={p.nome} className="max-w-full max-h-full object-contain" />
+          {fotos.length > 1 && <SetasFotos total={fotos.length} idx={idx} onPassar={passar} onIr={setIdx} />}
         </div>
       )}
     </div>
+  );
+}
+
+// ‹ › e bolinhas por cima da foto (não fecham nem ampliam: param o clique)
+function SetasFotos({ total, idx, onPassar, onIr }) {
+  const parar = fn => ev => { ev.stopPropagation(); fn(); };
+  const seta = 'absolute top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center';
+  return (
+    <>
+      <button type="button" onClick={parar(() => onPassar(-1))} aria-label="Foto anterior" className={`${seta} left-2`}><CaretLeft size={20} weight="bold" /></button>
+      <button type="button" onClick={parar(() => onPassar(1))} aria-label="Próxima foto" className={`${seta} right-2`}><CaretRight size={20} weight="bold" /></button>
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {Array.from({ length: total }).map((_, i) => (
+          <button key={i} type="button" onClick={parar(() => onIr(i))} aria-label={`Foto ${i + 1} de ${total}`} aria-current={i === idx}
+            className={`h-2 rounded-full transition-all ${i === idx ? 'w-5 bg-white' : 'w-2 bg-white/50'}`} />
+        ))}
+      </div>
+    </>
   );
 }
 
