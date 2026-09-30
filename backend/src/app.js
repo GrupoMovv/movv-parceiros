@@ -89,6 +89,7 @@ app.use('/api/webhook/mercadopago',     require('./routes/webhookMercadoPago'));
 app.use('/api/interno',                 require('./routes/interno'));
 app.use('/api/parceiro/beer',          require('./routes/parceiroBeer'));
 app.use('/api/sindicato-beer',         require('./routes/sindicatoBeer'));
+app.use('/api/sindicato-pf',           require('./routes/sindicatoPf'));
 app.use('/api/sindicato-pet',          require('./routes/sindicatoPet'));
 app.use('/api/parceiro',               require('./routes/parceiroConta'));
 app.use('/api/public/parceiro',        require('./routes/publicParceiroConta'));

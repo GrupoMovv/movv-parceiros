@@ -101,6 +101,7 @@ const MASTER_MENU = [
       { label: 'Interessados em Planos', icon: Bell, to: '/sindicato/parceiro-interessados', roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Planos IUB MAIS', icon: Crown, to: '/sindicato/planos', roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Moderação Disk Bebidas', icon: Wine, to: '/sindicato/beer-moderacao', roles: ['admin'] },
+      { label: 'Verificação PF', icon: UserCheck, to: '/sindicato/verificacao-pf', roles: ['admin'], badgeKey: 'verificacaoPf' },
       { label: 'Avaliações Pet Shops', icon: PawPrint, to: '/sindicato/pet-avaliacoes', roles: ['admin'] },
       { label: 'Pré-cadastro Entregadores', icon: Bike, to: '/sindicato/entregadores', roles: ['admin'] },
     ],
@@ -205,6 +206,12 @@ export default function Sidebar({ onClose }) {
       api.get('/sindicato-parceiros-solicitacoes/count-pendentes')
         .then(res => { if (!cancelado) setBadges(b => ({ ...b, parceirosSolicitacoes: res.data.pendentes })); })
         .catch(() => {});
+      // vendedor pessoa física esperando conferência de documento (só admin)
+      if (user?.is_admin) {
+        api.get('/sindicato-pf/contagem')
+          .then(res => { if (!cancelado) setBadges(b => ({ ...b, verificacaoPf: res.data.pendentes })); })
+          .catch(() => {});
+      }
     };
     carregar();
     const interval = setInterval(carregar, 60000);

@@ -197,12 +197,16 @@ async function baixarDocumentoPrivado(publicId, formato = 'jpg') {
   return { buffer: Buffer.from(await r.arrayBuffer()), contentType: r.headers.get('content-type') || 'image/jpeg' };
 }
 
+// → true se o arquivo não existe mais lá (apagou agora ou já não estava);
+// false se não deu pra confirmar (quem chama guarda o id pra tentar de novo).
 async function deletarDocumentoPrivado(publicId) {
-  if (!publicId) return;
+  if (!publicId) return true;
   try {
-    await cloudinary.uploader.destroy(publicId, { type: 'authenticated', resource_type: 'image' });
+    const r = await cloudinary.uploader.destroy(publicId, { type: 'authenticated', resource_type: 'image', invalidate: true });
+    return r?.result === 'ok' || r?.result === 'not found';
   } catch (err) {
-    console.error('[cloudinary] Falha ao remover documento privado (ignorado):', publicId, err?.message || err);
+    console.error('[cloudinary] Falha ao remover documento privado:', publicId, err?.message || err);
+    return false;
   }
 }
 
