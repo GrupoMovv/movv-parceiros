@@ -158,6 +158,13 @@ export default function Vender() {
 
   useEffect(() => { window.scrollTo(0, 0); }, [tela]);
 
+  // Chave do lançamento do Vendedor Pessoa Física (VENDEDOR_PF_ABERTO no
+  // backend): desligada = sem "Como você vai vender?", direto pro CNPJ.
+  const [pfAberto, setPfAberto] = useState(false);
+  useEffect(() => {
+    api.get('/public/vender/pessoa-fisica/config').then(res => setPfAberto(Boolean(res.data.aberto_ao_publico))).catch(() => {});
+  }, []);
+
   useEffect(() => {
     api.get('/public/marketplace/stats').then(res => setQtdAssociados(res.data.associados)).catch(() => {});
     api.get('/public/marketplace/pioneiro-vagas').then(res => setVagasPioneiro(res.data)).catch(() => {});
@@ -339,12 +346,12 @@ export default function Vender() {
 
   if (tela === 'landing') return (
     <TelaLanding
-      onComecar={() => setTela('tipo')} faqAberta={faqAberta} setFaqAberta={setFaqAberta}
+      onComecar={() => setTela(pfAberto ? 'tipo' : 'segmento')} faqAberta={faqAberta} setFaqAberta={setFaqAberta}
       qtdAssociados={qtdAssociados} vagasPioneiro={vagasPioneiro} pioneiros={pioneiros}
     />
   );
   if (tela === 'tipo') return <TelaComoVaiVender onVoltar={() => setTela('landing')} onCnpj={() => setTela('segmento')} onCpf={() => navigate('/vender/pessoa-fisica')} />;
-  if (tela === 'segmento') return <TelaSegmento onVoltar={() => setTela('tipo')} onEscolher={escolherSegmento} />;
+  if (tela === 'segmento') return <TelaSegmento onVoltar={() => setTela(pfAberto ? 'tipo' : 'landing')} onEscolher={escolherSegmento} />;
   if (tela === 'confirmacao') return <TelaConfirmacao bebidas={segmento === 'bebidas'} onVoltar={() => navigate('/marketplace')} />;
 
   return (

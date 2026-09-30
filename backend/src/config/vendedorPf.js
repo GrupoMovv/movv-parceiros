@@ -25,6 +25,12 @@ const NIVEIS_PF = {
   },
 };
 
+// Chave do lançamento (Junior, 30/09): enquanto estiver desligada, o /vender
+// NÃO mostra "Como você vai vender?" — segue direto pro cadastro de CNPJ,
+// como antes. O endereço direto /vender/pessoa-fisica continua funcionando
+// (pra testes). Liga no Render: VENDEDOR_PF_ABERTO=true.
+const VENDEDOR_PF_ABERTO = String(process.env.VENDEDOR_PF_ABERTO || '').trim().toLowerCase() === 'true';
+
 const IDADE_MINIMA_PF = 18;
 // Cadastros PF por IP em 24h (anti-robô; mesmo espírito do /vender)
 const MAX_CADASTROS_PF_POR_IP_24H = 5;
@@ -37,5 +43,5 @@ function limiteProdutosAtivosPf(parceiro) {
 }
 
 module.exports = {
-  TERMOS_PF_VERSAO, NIVEIS_PF, IDADE_MINIMA_PF, MAX_CADASTROS_PF_POR_IP_24H, MENSAGEM_PROMOCAO_PF, limiteProdutosAtivosPf,
+  VENDEDOR_PF_ABERTO, TERMOS_PF_VERSAO, NIVEIS_PF, IDADE_MINIMA_PF, MAX_CADASTROS_PF_POR_IP_24H, MENSAGEM_PROMOCAO_PF, limiteProdutosAtivosPf,
 };

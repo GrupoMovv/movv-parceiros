@@ -28,7 +28,7 @@ const SECOES = [
   ['5. Verificação de identidade', [
     'Para prevenir fraudes, o IUB Mais+ pede foto de documento oficial com foto e foto do rosto segurando o documento.',
     'Essas imagens são usadas só para conferir que o CPF pertence a quem se cadastra, são vistas apenas pela equipe de verificação e ficam guardadas de forma privada, pelo prazo [A DEFINIR].',
-    'Enquanto a verificação não termina, os anúncios não são publicados. Se a identidade não puder ser confirmada, a conta pode ser recusada.',
+    'A verificação leva de 24 a 48 horas. Enquanto ela não termina, os anúncios não são publicados. Se a identidade não puder ser confirmada, a conta pode ser recusada.',
   ]],
   ['6. Responsabilidade do vendedor pela atividade', [
     'O vendedor é o único responsável pela legalidade da atividade que exerce e pelos produtos e serviços que oferece, inclusive origem, qualidade, segurança, higiene, conservação e entrega.',
@@ -58,13 +58,13 @@ const SECOES = [
   ['13. Dados pessoais e CPF', [
     'O IUB Mais+ trata os dados do vendedor como controlador, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018), para: criar e manter a conta; verificar identidade e prevenir fraude; publicar anúncios; permitir o contato do consumidor; cumprir obrigações legais e ordens de autoridades; e defender direitos em processos.',
     'O CPF, a data de nascimento, o endereço completo e as imagens de verificação não aparecem nos anúncios. O nome completo, a cidade e o bairro do vendedor aparecem para o consumidor. O IUB Mais+ poderá informar CPF e endereço do vendedor ao consumidor com interesse legítimo na identificação do fornecedor, ou a autoridade competente, na forma da lei.',
-    'O vendedor pode exercer os direitos de titular (confirmação, acesso, correção, eliminação e demais previstos em lei) pelo canal [CANAL DE PRIVACIDADE].',
+    'O vendedor pode exercer os direitos de titular (confirmação, acesso, correção, eliminação e demais previstos em lei) pelo e-mail junior@grupomovv.com.',
   ]],
   ['14. Compartilhamento de dados', [
     'Os dados podem ser compartilhados, apenas no necessário, com prestadores de tecnologia que operam a plataforma (hospedagem, armazenamento de imagens, mensagens), com autoridades públicas quando a lei exigir, e com o consumidor na forma do item 13. O IUB Mais+ não vende dados pessoais.',
   ]],
   ['15. Registros de acesso', [
-    'O IUB Mais+ guarda os registros de acesso à plataforma (data, hora e IP) pelo prazo previsto no Marco Civil da Internet e os fornece mediante ordem judicial.',
+    'O IUB Mais+ guarda os registros de acesso à plataforma (data, hora e IP) por 6 meses, conforme o Marco Civil da Internet, e os fornece mediante ordem judicial.',
   ]],
   ['16. Declarações do vendedor', [
     'Ao aceitar estes Termos, o vendedor declara que: (a) tem 18 anos ou mais; (b) é o titular do CPF informado; (c) as informações fornecidas são verdadeiras; (d) conhece e cumpre as regras legais da sua atividade; (e) não anunciará produtos ou serviços proibidos.',
@@ -89,7 +89,7 @@ const SECOES = [
     'Aplicam-se as leis brasileiras. Fica eleito o foro do domicílio do vendedor, salvo disposição legal em contrário.',
   ]],
   ['23. Contato', [
-    'IUB Mais+ — [RAZÃO SOCIAL], CNPJ [CNPJ], [ENDEREÇO]. Atendimento: [CANAL]. Privacidade: [E-MAIL OU CANAL DO ENCARREGADO].',
+    'IUB Mais+ — Grupo Movv Ltda, CNPJ [A CONFIRMAR], [ENDEREÇO]. Atendimento: WhatsApp (64) 99235-9408. Privacidade: junior@grupomovv.com.',
   ]],
 ];
 

@@ -5,7 +5,7 @@ const { onlyDigits, isValidCPF } = require('../utils/validators');
 const { gerarTokenParceiro } = require('../middleware/parceiroAuth');
 const { parceiroPublico } = require('./parceiroAuthController');
 const { SEGMENTOS, gerarSlugUnico, normalizarEmail, emailValido, whatsappValido, getIp } = require('./parceiroSolicitacaoController');
-const { TERMOS_PF_VERSAO, NIVEIS_PF, IDADE_MINIMA_PF, MAX_CADASTROS_PF_POR_IP_24H } = require('../config/vendedorPf');
+const { VENDEDOR_PF_ABERTO, TERMOS_PF_VERSAO, NIVEIS_PF, IDADE_MINIMA_PF, MAX_CADASTROS_PF_POR_IP_24H } = require('../config/vendedorPf');
 
 // Cadastro do Vendedor Pessoa Física (CPF) — "Como você vai vender?" →
 // "Pessoa Física" no /vender. Diferente do /vender de CNPJ (solicitação que
@@ -25,6 +25,8 @@ function idade(dataIso, hoje = new Date()) {
 // GET /api/public/vender/pessoa-fisica/config — o que a tela mostra
 function config(req, res) {
   return res.json({
+    // false = /vender esconde a opção "Pessoa Física" (chave do lançamento)
+    aberto_ao_publico: VENDEDOR_PF_ABERTO,
     termos_versao: TERMOS_PF_VERSAO,
     idade_minima: IDADE_MINIMA_PF,
     niveis: Object.entries(NIVEIS_PF).map(([codigo, n]) => ({ codigo, ...n })),
