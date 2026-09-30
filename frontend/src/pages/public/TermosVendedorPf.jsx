@@ -4,8 +4,8 @@ import BotaoVoltar from '../../components/ui/BotaoVoltar';
 // Termos do Vendedor Pessoa Física — texto da minuta revisada em 30/09/2026
 // (doc "Termos do Vendedor Pessoa Física — revisão jurídica"). A versão aqui
 // TEM que bater com TERMOS_PF_VERSAO (backend/src/config/vendedorPf.js):
-// mudou o texto, suba as duas juntas. Campos [ENTRE COLCHETES] = pendentes
-// do Junior antes do lançamento.
+// mudou o texto, suba as duas juntas. Dados da empresa conferidos na
+// Receita em 30/09/2026 (razão social ainda "Open Gestao Empresarial").
 export const TERMOS_PF_VERSAO = '2026-09-30';
 
 const SECOES = [
@@ -27,7 +27,7 @@ const SECOES = [
   ]],
   ['5. Verificação de identidade', [
     'Para prevenir fraudes, o IUB Mais+ pede foto de documento oficial com foto e foto do rosto segurando o documento.',
-    'Essas imagens são usadas só para conferir que o CPF pertence a quem se cadastra, são vistas apenas pela equipe de verificação e ficam guardadas de forma privada, pelo prazo [A DEFINIR].',
+    'Essas imagens são usadas só para conferir que o CPF pertence a quem se cadastra, ficam guardadas de forma privada, são vistas apenas pela equipe de verificação e são apagadas assim que a verificação termina. Fica guardado só o registro da conferência (resultado, data e quem conferiu).',
     'A verificação leva de 24 a 48 horas. Enquanto ela não termina, os anúncios não são publicados. Se a identidade não puder ser confirmada, a conta pode ser recusada.',
   ]],
   ['6. Responsabilidade do vendedor pela atividade', [
@@ -80,7 +80,7 @@ const SECOES = [
     'A conta é pessoal e intransferível. O vendedor deve proteger seu acesso e avisar o IUB Mais+ de qualquer uso não autorizado. O vendedor pode encerrar a conta a qualquer momento pelo painel ou pelo canal de atendimento.',
   ]],
   ['20. Alterações destes Termos', [
-    'O IUB Mais+ pode alterar estes Termos. Alterações relevantes serão avisadas com [X] dias de antecedência pelos canais cadastrados. Quem não concordar pode encerrar a conta. Cada versão fica disponível na plataforma, com a data de início de vigência.',
+    'O IUB Mais+ pode alterar estes Termos. Alterações relevantes serão avisadas com 30 dias de antecedência pelos canais cadastrados. Quem não concordar pode encerrar a conta. Cada versão fica disponível na plataforma, com a data de início de vigência.',
   ]],
   ['21. Aceite eletrônico', [
     'O aceite é feito ao marcar a caixa de aceite na tela de cadastro. O sistema registra a versão destes Termos, data, hora, IP e navegador.',
@@ -89,7 +89,9 @@ const SECOES = [
     'Aplicam-se as leis brasileiras. Fica eleito o foro do domicílio do vendedor, salvo disposição legal em contrário.',
   ]],
   ['23. Contato', [
-    'IUB Mais+ — Grupo Movv Ltda, CNPJ [A CONFIRMAR], [ENDEREÇO]. Atendimento: WhatsApp (64) 99235-9408. Privacidade: junior@grupomovv.com.',
+    // Razão social exata da Receita (consultada em 30/09/2026). Quando a
+    // Receita mudar para Grupo Movv, trocar aqui (ver memória do projeto).
+    'IUB Mais+ é operado pelo Grupo Movv (Open Gestao Empresarial Ltda), CNPJ 61.644.671/0001-80, Av. Washington Luiz, 125, Sala 1, Afonso Pena, Itumbiara/GO. Atendimento: WhatsApp (64) 99235-9408. Encarregado de dados pessoais: junior@grupomovv.com.',
   ]],
 ];
 

@@ -158,7 +158,7 @@ export default function VenderPessoaFisica() {
           {passo === 3 && (
             <>
               <h1 className="text-xl font-extrabold" style={{ color: PRETO }}>Confirme que é você</h1>
-              <p className="text-sm text-slate-600 mt-1">Só a equipe do IUB vê essas fotos, para conferir que o CPF é seu. Elas não aparecem no site.</p>
+              <p className="text-sm text-slate-600 mt-1">Só a equipe do IUB vê essas fotos, para conferir que o CPF é seu. Elas não aparecem no site e são apagadas depois da conferência.</p>
               {/* documento: câmera ou galeria; selfie: câmera (no celular) */}
               <FotoDoc titulo="Foto do documento (RG ou CNH)" dica="Frente do documento, com a foto e o CPF legíveis" arquivo={documento} onArquivo={setDocumento} />
               <FotoDoc titulo="Selfie segurando o documento" dica="Seu rosto e o documento aparecendo juntos" arquivo={selfie} onArquivo={setSelfie} captura="user" />
