@@ -10,6 +10,9 @@ const { lerAdminOpcional } = require('../middleware/auth');
 // moderação em /api/sindicato-beer (routes/sindicatoBeer.js, admin).
 // Admin logado → req.modoQa: vê também as empresas de teste.
 router.use(lerAdminOpcional);
+// Selo "visão admin" do /beer — o front só chama quando tem login de admin
+// no navegador; o motivo ajuda a entender quando não ligou.
+router.get('/modo-qa', (req, res) => res.json({ modo_qa: req.modoQa, motivo: req.modoQaMotivo }));
 router.get('/categorias', ctrl.getCategorias);
 router.get('/resumo', ctrl.getResumo);
 router.get('/vitrine', ctrl.getVitrine);

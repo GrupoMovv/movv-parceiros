@@ -56,6 +56,15 @@ export default function BeerLayout() {
     api.get('/public/beer/resumo').then(res => setResumo(res.data)).catch(() => {});
   }, [estado]);
 
+  // Visão admin: com login de admin (movv_token) NESTE domínio, o backend
+  // mostra também as empresas de teste. Cliente comum não tem movv_token,
+  // então nem pergunta e nunca vê o selo.
+  const [modoQa, setModoQa] = useState(null);
+  useEffect(() => {
+    if (estado !== 'liberado' || !localStorage.getItem('movv_token')) return;
+    api.get('/public/beer/modo-qa').then(res => setModoQa(res.data)).catch(() => {});
+  }, [estado]);
+
   return (
     <div className="min-h-screen w-full flex flex-col pb-14 sm:pb-0" style={{ backgroundColor: BEER.fundo }}>
       <TopNav
@@ -86,6 +95,8 @@ export default function BeerLayout() {
 
       {estado === 'liberado' && (
         <>
+          {/* parceiro comum do portal (não admin) não vê selo nenhum */}
+          {modoQa && modoQa.motivo !== 'nao_admin' && modoQa.motivo !== 'sem_login' && <SeloModoQa {...modoQa} />}
           <ProdutoModalContext.Provider value={ctxModal}>
             <div className="flex-1">
               <Outlet context={{ categorias, resumo }} />
@@ -107,6 +118,22 @@ export default function BeerLayout() {
   );
 }
 
+const MOTIVO_QA = {
+  login_expirado: 'seu login de admin expirou — entre de novo no painel admin e volte aqui.',
+  token_invalido: 'o login de admin deste navegador não vale mais — entre de novo no painel admin.',
+};
+
+function SeloModoQa({ modo_qa, motivo }) {
+  return (
+    <div className="sticky top-0 z-30 px-4 py-2 text-center text-xs sm:text-sm font-semibold"
+      style={modo_qa ? { backgroundColor: '#FEF3C7', color: '#92400E' } : { backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+      {modo_qa
+        ? '🧪 Visão admin — empresas de teste aparecem aqui (cliente não vê)'
+        : `🧪 Visão admin desligada: ${MOTIVO_QA[motivo] || motivo}`}
+    </div>
+  );
+}
+
 // Cabeçalho das páginas internas (Quero Agora, categoria, busca...).
 export function CabecalhoBeer({ titulo, subtitulo, voltar = '/beer', direita = null }) {
   return (
@@ -114,7 +141,7 @@ export function CabecalhoBeer({ titulo, subtitulo, voltar = '/beer', direita = n
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-9 flex items-center gap-4">
         <div className="flex-1 min-w-0">
           {voltar && <BotaoVoltar variante="claro" fallback={voltar} />}
-          <h1 className="mt-1text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{titulo}</h1>
+          <h1 className="mt-1 text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{titulo}</h1>
           {subtitulo && <p className="mt-1.5 text-sm sm:text-base" style={{ color: 'rgba(255,255,255,0.8)' }}>{subtitulo}</p>}
         </div>
         {direita}

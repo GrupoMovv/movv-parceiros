@@ -64,16 +64,24 @@ const requireInternal = (req, res, next) => {
 // a `api` do front já manda sozinha), marca req.modoQa = true — aí a rota
 // mostra também as empresas de teste (sindicato_parceiros.empresa_teste).
 // Nunca bloqueia: sem token ou token de outro tipo segue como cliente comum.
+// req.modoQaMotivo explica por que NÃO ligou (selo de diagnóstico no /beer).
 const lerAdminOpcional = async (req, res, next) => {
   req.modoQa = false;
+  req.modoQaMotivo = 'sem_login';
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
   try {
     const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
-    if (decoded.userType === 'internal' || decoded.userType === 'indicator' || !decoded.id) return next();
+    if (decoded.userType === 'internal' || decoded.userType === 'indicator' || !decoded.id) {
+      req.modoQaMotivo = 'nao_admin';
+      return next();
+    }
     const r = await db.query('SELECT is_admin, is_active FROM partners WHERE id = $1', [decoded.id]);
     req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active);
-  } catch { /* token inválido/expirado: cliente comum */ }
+    req.modoQaMotivo = req.modoQa ? 'ok' : 'nao_admin';
+  } catch (err) {
+    req.modoQaMotivo = err.name === 'TokenExpiredError' ? 'login_expirado' : 'token_invalido';
+  }
   next();
 };
 

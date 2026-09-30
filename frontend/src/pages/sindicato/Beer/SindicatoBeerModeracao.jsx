@@ -40,9 +40,17 @@ export default function SindicatoBeerModeracao() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Wine className="w-6 h-6 text-purple-600" /> Moderação Disk Bebidas</h1>
-        <p className="text-slate-500 text-sm mt-1">Produto do IUB Disk Bebidas só aparece no /beer depois de aprovado aqui. O parceiro recebe e-mail com o resultado.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Wine className="w-6 h-6 text-purple-600" /> Moderação Disk Bebidas</h1>
+          <p className="text-slate-500 text-sm mt-1">Produto do IUB Disk Bebidas só aparece no /beer depois de aprovado aqui. O parceiro recebe e-mail com o resultado.</p>
+        </div>
+        {/* Link relativo = MESMO domínio deste login de admin (o login fica
+            guardado por domínio) → o /beer abre já na visão admin, com as
+            empresas de teste. */}
+        <a href="/beer" target="_blank" rel="noopener" className="text-sm font-semibold px-4 py-2 rounded-xl border border-purple-200 text-purple-700 hover:bg-purple-50 whitespace-nowrap">
+          👁️ Ver o /beer como admin
+        </a>
       </div>
 
       <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
