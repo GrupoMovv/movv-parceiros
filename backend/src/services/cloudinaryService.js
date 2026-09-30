@@ -161,4 +161,49 @@ async function deletarFoto(publicId) {
   }
 }
 
-module.exports = { uploadFoto, deletarFoto };
+// ─── Documentos PRIVADOS (vendedor pessoa física: documento e selfie) ─────
+// type 'authenticated': o Cloudinary NÃO entrega o arquivo por URL pública —
+// só com assinatura gerada aqui no servidor. Nunca devolvemos essa URL pro
+// navegador: o admin vê a imagem por uma rota do backend que busca o
+// arquivo e repassa (baixarDocumentoPrivado). Dado sensível (LGPD, art. 11).
+// Sem transformação: o admin precisa do documento como foi enviado.
+async function uploadDocumentoPrivado(buffer, folder) {
+  if (!CONFIGURADO) throw montarErroUpload('Credenciais do Cloudinary não configuradas no servidor.', 'CONFIG_AUSENTE');
+  try {
+    const resultado = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder, resource_type: 'image', type: 'authenticated' },
+        (error, result) => (error ? reject(error) : resolve(result))
+      );
+      bufferParaStream(buffer).pipe(uploadStream);
+    });
+    // só o public_id (e o formato, pra baixar depois); a URL fica de fora
+    return { publicId: resultado.public_id, formato: resultado.format };
+  } catch (err) {
+    console.error('[CLOUDINARY ERROR privado]:', err?.message, err?.http_code);
+    throw montarErroUpload(err?.message || 'Falha desconhecida no upload', err?.http_code);
+  }
+}
+
+// Busca o arquivo privado no servidor (URL assinada que vale 60 s e nunca
+// sai daqui) → { buffer, contentType }.
+async function baixarDocumentoPrivado(publicId, formato = 'jpg') {
+  if (!CONFIGURADO) throw montarErroUpload('Credenciais do Cloudinary não configuradas no servidor.', 'CONFIG_AUSENTE');
+  const url = cloudinary.utils.private_download_url(publicId, formato, {
+    resource_type: 'image', type: 'authenticated', expires_at: Math.floor(Date.now() / 1000) + 60,
+  });
+  const r = await fetch(url);
+  if (!r.ok) throw montarErroUpload(`Download privado falhou (${r.status})`, r.status);
+  return { buffer: Buffer.from(await r.arrayBuffer()), contentType: r.headers.get('content-type') || 'image/jpeg' };
+}
+
+async function deletarDocumentoPrivado(publicId) {
+  if (!publicId) return;
+  try {
+    await cloudinary.uploader.destroy(publicId, { type: 'authenticated', resource_type: 'image' });
+  } catch (err) {
+    console.error('[cloudinary] Falha ao remover documento privado (ignorado):', publicId, err?.message || err);
+  }
+}
+
+module.exports = { uploadFoto, deletarFoto, uploadDocumentoPrivado, baixarDocumentoPrivado, deletarDocumentoPrivado };

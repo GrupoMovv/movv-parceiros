@@ -20,6 +20,9 @@ const COMECE_AGORA = [
 export default function ParceiroDashboard() {
   const { parceiro } = useOutletContext();
   const [stats, setStats] = useState(null);
+  // vendedor pessoa física: sem promoções (fase 2) e limite de ativos por nível
+  const vendeComCpf = parceiro.tipo_pessoa === 'pf';
+  const limitePf = parceiro.nivel_vendedor === 'empreendedor' ? 50 : 20;
 
   useEffect(() => {
     apiParceiro.get('/parceiro/dashboard/stats')
@@ -38,10 +41,12 @@ export default function ParceiroDashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {METRICAS.map((m) => {
+        {METRICAS.filter(m => !(vendeComCpf && m.chave === 'promocoes_ativas')).map((m) => {
           const Icone = m.icone;
           let valor = stats ? stats[m.chave] : null;
           let sub = m.sub;
+          // Pessoa física: limite de produtos ATIVOS do nível (20 Casual / 50 Empreendedor)
+          const meta = vendeComCpf && m.chave === 'produtos_cadastrados' ? limitePf : m.meta;
           // Produtos do Disk Bebidas (outra tabela) entram no total, com a divisão embaixo
           if (m.chave === 'produtos_cadastrados' && stats?.bebidas_cadastradas > 0) {
             sub = `(${valor} no catálogo · ${stats.bebidas_cadastradas} no Disk Bebidas)`;
@@ -53,7 +58,7 @@ export default function ParceiroDashboard() {
                 <Icone className="w-4.5 h-4.5" style={{ color: ROXO }} />
               </div>
               <p className="text-2xl font-extrabold" style={{ color: PRETO }}>
-                {valor === null ? '—' : m.meta ? `${valor}/${m.meta}` : valor}
+                {valor === null ? '—' : meta ? `${valor}/${meta}` : valor}
               </p>
               <p className="text-slate-500 text-xs font-medium mt-1">{m.label} {sub}</p>
             </div>

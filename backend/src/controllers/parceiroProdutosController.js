@@ -4,14 +4,35 @@ const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
 const { detectarProdutoMais18, MENSAGEM_PRODUTO_MAIS_18, verificarTermos, MENSAGEM_TERMO_PROIBIDO } = require('../config/beer');
 const { limiteProdutos, planoEfetivo } = require('../config/planos');
+const { limiteProdutosAtivosPf } = require('../config/vendedorPf');
 
 const LIMITE_FOTOS_PRODUTO = 3;
 const LIMITE_DESTAQUES = 3;
 
 // Limite de produtos por plano (Master = ilimitado) — config/planos.js é a
 // fonte única de verdade; aqui só resolve pro parceiro autenticado.
+// Pessoa física não usa esse limite: tem limite de produtos ATIVOS por
+// nível (config/vendedorPf.js), conferido em garantirVagaAtiva.
 function limiteProdutosDoParceiro(parceiro) {
+  if (parceiro?.tipo_pessoa === 'pf') return Infinity;
   return limiteProdutos(planoEfetivo(parceiro));
+}
+
+// Pessoa física: Casual 20 / Empreendedor 50 produtos ATIVOS (no ar ou na
+// fila). Sem crescer sozinho: passou do limite, ativar um só pausando outro.
+// → null (tem vaga) | mensagem de erro
+async function semVagaAtiva(parceiro, excetoId = null) {
+  const limite = limiteProdutosAtivosPf(parceiro);
+  if (limite === null) return null;
+  const r = await db.query(
+    `SELECT COUNT(*)::int n FROM sindicato_parceiro_produtos
+     WHERE parceiro_id = $1 AND ativo = true AND rascunho = false AND moderacao_status IN ('aprovado', 'pendente')
+       AND ($2::int IS NULL OR id <> $2)`,
+    [parceiro.id, excetoId]
+  );
+  return r.rows[0].n >= limite
+    ? `Seu limite é de ${limite} produtos ativos. Pause um produto para ativar outro, ou salve este como rascunho.`
+    : null;
 }
 
 function pastaProduto(parceiroId, produtoId) {
@@ -57,7 +78,8 @@ async function list(req, res) {
       `SELECT * FROM sindicato_parceiro_produtos WHERE ${condicoes.join(' AND ')} ORDER BY created_at DESC`,
       params
     );
-    const limite = limiteProdutosDoParceiro(req.parceiro);
+    // pessoa física: o limite que vale é o de produtos ATIVOS do nível
+    const limite = limiteProdutosAtivosPf(req.parceiro) ?? limiteProdutosDoParceiro(req.parceiro);
     return res.json({ produtos: result.rows, total: result.rows.length, limite: Number.isFinite(limite) ? limite : null });
   } catch (err) {
     console.error(err);
@@ -138,6 +160,11 @@ async function create(req, res) {
     const { erro, codigo, valores } = validarCampos(req.body);
     if (erro) return res.status(400).json({ error: erro, codigo });
 
+    if (valores.ativo && !valores.rascunho) {
+      const semVaga = await semVagaAtiva(req.parceiro);
+      if (semVaga) return res.status(400).json({ error: semVaga, codigo: 'LIMITE_ATIVOS_PF' });
+    }
+
     if (valores.destaque) {
       const destaques = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND destaque = true', [req.parceiro.id]);
       if (destaques.rows[0].n >= LIMITE_DESTAQUES) {
@@ -168,6 +195,12 @@ async function update(req, res) {
 
     const { erro, codigo, valores } = validarCampos(req.body);
     if (erro) return res.status(400).json({ error: erro, codigo });
+
+    const estavaAtivo = produto.ativo && !produto.rascunho;
+    if (valores.ativo && !valores.rascunho && !estavaAtivo) {
+      const semVaga = await semVagaAtiva(req.parceiro, produto.id);
+      if (semVaga) return res.status(400).json({ error: semVaga, codigo: 'LIMITE_ATIVOS_PF' });
+    }
 
     if (valores.destaque && !produto.destaque) {
       const destaques = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND destaque = true AND id != $2', [req.parceiro.id, produto.id]);
@@ -227,6 +260,12 @@ async function toggleStatus(req, res) {
   try {
     const produto = await buscarProdutoDoParceiro(req.params.id, req.parceiro.id);
     if (!produto) return res.status(404).json({ error: 'Produto não encontrado' });
+
+    // vai ficar ativo (estava pausado ou era rascunho): pessoa física precisa de vaga
+    if (!produto.ativo || produto.rascunho) {
+      const semVaga = await semVagaAtiva(req.parceiro, produto.id);
+      if (semVaga) return res.status(400).json({ error: semVaga, codigo: 'LIMITE_ATIVOS_PF' });
+    }
 
     const result = await db.query(
       'UPDATE sindicato_parceiro_produtos SET ativo = $1, rascunho = false WHERE id = $2 RETURNING *',

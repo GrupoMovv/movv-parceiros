@@ -2,6 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { authenticateParceiro } = require('../middleware/parceiroAuth');
 const ctrl = require('../controllers/parceiroPromocoesController');
+const { MENSAGEM_PROMOCAO_PF } = require('../config/vendedorPf');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -15,6 +16,15 @@ const upload = multer({
 });
 
 router.use(authenticateParceiro);
+
+// Vendedor pessoa física: promoções só numa próxima fase (Junior, 30/09) —
+// lê a lista (vazia), mas não cria, edita, ativa nem duplica.
+router.use((req, res, next) => {
+  if (req.parceiro?.tipo_pessoa === 'pf' && req.method !== 'GET') {
+    return res.status(403).json({ error: MENSAGEM_PROMOCAO_PF, codigo: 'PROMOCAO_PF_BLOQUEADA' });
+  }
+  return next();
+});
 
 router.get('/',     ctrl.list);
 router.get('/:id',  ctrl.getOne);

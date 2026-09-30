@@ -17,24 +17,46 @@ import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config
 const ABAS = [
   { label: '🏠 Dashboard', to: '/parceiro/painel', end: true },
   { label: '📦 Produtos', to: '/parceiro/painel/produtos' },
-  { label: '🎯 Promoções', to: '/parceiro/painel/promocoes' },
+  { label: '🎯 Promoções', to: '/parceiro/painel/promocoes', soCnpj: true },
   // IUB Food: só aparece pra quem tem "Alimentação" nas categorias (e_restaurante vem do /auth/me).
   { label: '🛵 Entrega', to: '/parceiro/painel/entrega', soRestaurante: true },
   { label: '🐾 Agendamentos', to: '/parceiro/painel/agendamentos', soPetAtendimento: true },
   { label: '🎟️ Fidelidade & QR', to: '/parceiro/painel/fidelidade', soPetAtendimento: true },
   // IUB Disk Bebidas: aberto pra todo parceiro — é a própria aba que oferece
   // "Quero vender no IUB Beer" pra quem ainda não entrou.
-  { label: '🍻 Meu IUB Beer', to: '/parceiro/painel/beer' },
+  { label: '🍻 Meu IUB Beer', to: '/parceiro/painel/beer', soCnpj: true },
   { label: '📊 Estatísticas', to: '/parceiro/painel/estatisticas' },
   { label: '👤 Meu Perfil', to: '/parceiro/painel/perfil' },
   { label: '⚙️ Configurações', to: '/parceiro/painel/configuracoes' },
   { label: '💎 Planos', to: '/parceiro/painel/planos' },
   { label: '💳 Assinatura', to: '/parceiro/painel/minha-assinatura' },
   { label: '🌟 Materiais', to: '/parceiro/painel/materiais' },
-  { label: '🎰 Roleta da Sorte', to: '/parceiro/painel/jogos' },
+  { label: '🎰 Roleta da Sorte', to: '/parceiro/painel/jogos', soCnpj: true },
   { label: '🎥 Lives', to: '/parceiro/painel/lives' },
-  { label: '🔥 Fecha Mês', to: '/parceiro/painel/fecha-mes' },
+  { label: '🔥 Fecha Mês', to: '/parceiro/painel/fecha-mes', soCnpj: true },
 ];
+// soCnpj: ferramentas que o vendedor pessoa física (CPF) ainda não usa —
+// promoções ficam pra próxima fase e bebida exige CNPJ (Junior, 30/09).
+
+// Vendedor pessoa física esperando o IUB conferir documento + selfie
+// (status 'em_verificacao', migration 076): monta anúncios, mas nada aparece
+// no site até a aprovação.
+function AvisoVerificacao({ parceiro }) {
+  if (parceiro.tipo_pessoa !== 'pf' || parceiro.status !== 'em_verificacao') return null;
+  const rejeitada = parceiro.identidade_status === 'rejeitada';
+  return (
+    <div className={`mb-6 rounded-2xl px-5 py-4 border ${rejeitada ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`} role="status">
+      <p className={`font-bold ${rejeitada ? 'text-red-800' : 'text-amber-900'}`}>
+        {rejeitada ? '⚠️ Não conseguimos confirmar seu documento' : '🔎 Seu cadastro está em verificação'}
+      </p>
+      <p className={`text-sm mt-1 ${rejeitada ? 'text-red-700' : 'text-amber-800'}`}>
+        {rejeitada
+          ? 'Fale com a gente pelo WhatsApp de suporte (no rodapé) para enviar o documento de novo.'
+          : 'O IUB confere seu documento e sua selfie em até 24 a 48 horas. Enquanto isso, monte seus anúncios em Produtos: eles vão para análise e aparecem no site depois da aprovação.'}
+      </p>
+    </div>
+  );
+}
 
 export default function ParceiroPainelLayout() {
   const navigate = useNavigate();
@@ -144,12 +166,14 @@ export default function ParceiroPainelLayout() {
             itens={ABAS
               .filter(aba => !aba.soRestaurante || parceiro.e_restaurante)
               .filter(aba => !aba.soPetAtendimento || parceiro.e_pet_atendimento)
+              .filter(aba => !aba.soCnpj || parceiro.tipo_pessoa !== 'pf')
               .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h } : aba))}
           />
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+        <AvisoVerificacao parceiro={parceiro} />
         <Outlet context={{ parceiro, usuario }} />
       </main>
 

@@ -23,7 +23,10 @@ const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao'];
 function parceiroPublico(p) {
   return { id: p.id, nome: p.nome, slug: p.slug, cnpj: p.cnpj, logo_url: p.logo_url, status: p.status, plano: planoEfetivo(p), e_pioneiro: p.e_pioneiro, created_at: p.created_at, e_restaurante: ehRestaurante(p.categorias), e_bebidas: ehBebidas(p.categorias),
     // aba "🐾 Agendamentos" do painel: quem atende pet (banho, veterinária...)
-    e_pet_atendimento: (p.pet_servicos || []).some(c => SERVICOS_PET.find(s => s.codigo === c)?.natureza === 'servico') };
+    e_pet_atendimento: (p.pet_servicos || []).some(c => SERVICOS_PET.find(s => s.codigo === c)?.natureza === 'servico'),
+    // vendedor pessoa física (migration 076): painel mostra "Em verificação"
+    tipo_pessoa: p.tipo_pessoa || 'pj', nivel_vendedor: p.nivel_vendedor || 'comercial', e_mei: Boolean(p.e_mei),
+    identidade_status: p.identidade_status || null };
 }
 
 async function login(req, res) {

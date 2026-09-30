@@ -339,11 +339,12 @@ export default function Vender() {
 
   if (tela === 'landing') return (
     <TelaLanding
-      onComecar={() => setTela('segmento')} faqAberta={faqAberta} setFaqAberta={setFaqAberta}
+      onComecar={() => setTela('tipo')} faqAberta={faqAberta} setFaqAberta={setFaqAberta}
       qtdAssociados={qtdAssociados} vagasPioneiro={vagasPioneiro} pioneiros={pioneiros}
     />
   );
-  if (tela === 'segmento') return <TelaSegmento onVoltar={() => setTela('landing')} onEscolher={escolherSegmento} />;
+  if (tela === 'tipo') return <TelaComoVaiVender onVoltar={() => setTela('landing')} onCnpj={() => setTela('segmento')} onCpf={() => navigate('/vender/pessoa-fisica')} />;
+  if (tela === 'segmento') return <TelaSegmento onVoltar={() => setTela('tipo')} onEscolher={escolherSegmento} />;
   if (tela === 'confirmacao') return <TelaConfirmacao bebidas={segmento === 'bebidas'} onVoltar={() => navigate('/marketplace')} />;
 
   return (
@@ -547,6 +548,45 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
 }
 
 // ─── Tela 2: Segmento ───────────────────────────────────────────────────────
+
+// "Como você vai vender?" — CPF vai pro cadastro de pessoa física
+// (/vender/pessoa-fisica); CNPJ segue o cadastro de empresa de sempre.
+function TelaComoVaiVender({ onVoltar, onCnpj, onCpf }) {
+  const opcao = 'w-full flex items-center gap-4 text-left px-5 py-5 rounded-2xl border-2 border-slate-100 hover:border-[#4C1D95] transition-colors duration-200';
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center px-6 py-12" style={{ backgroundColor: '#FAFAFA' }}>
+      <div className="w-full max-w-md">
+        <button onClick={onVoltar} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6">
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </button>
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8">
+          <h1 className="text-xl sm:text-2xl font-extrabold" style={{ color: PRETO }}>🟣 Como você vai vender?</h1>
+          <p className="text-slate-500 text-sm mt-1">Dá pra começar com CPF e passar para MEI depois.</p>
+          <div className="space-y-3 mt-6">
+            <button type="button" onClick={onCpf} className={opcao}>
+              <span className="text-3xl flex-shrink-0">👤</span>
+              <div className="min-w-0">
+                <p className="font-bold text-sm uppercase tracking-wide" style={{ color: PRETO }}>Pessoa Física</p>
+                <p className="text-slate-500 text-xs mt-0.5">Venda usando seu CPF — doces, artesanato, usados, serviços.</p>
+              </div>
+            </button>
+            <button type="button" onClick={onCnpj} className={opcao}>
+              <span className="text-3xl flex-shrink-0">🏪</span>
+              <div className="min-w-0">
+                <p className="font-bold text-sm uppercase tracking-wide" style={{ color: PRETO }}>MEI / Empresa</p>
+                <p className="text-slate-500 text-xs mt-0.5">Venda usando CNPJ — lojas, restaurantes, adegas, prestadores.</p>
+              </div>
+            </button>
+          </div>
+        </div>
+        <p className="text-center text-sm text-slate-500 mt-6">
+          Já tem cadastro?{' '}
+          <Link to="/entrar" className="font-semibold underline" style={{ color: ROXO }}>Fazer login como parceiro</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function TelaSegmento({ onVoltar, onEscolher }) {
   return (

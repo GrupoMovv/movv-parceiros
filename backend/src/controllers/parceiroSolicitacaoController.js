@@ -407,6 +407,8 @@ async function rejeitarSolicitacao(req, res) {
 }
 
 module.exports = {
+  // utilitários reaproveitados pelo cadastro de pessoa física (vendedorPfController)
+  SEGMENTOS, gerarSlugUnico, normalizarEmail, emailValido, whatsappValido, getIp,
   verificarCnpj,
   criarSolicitacao,
   listarSolicitacoes,
