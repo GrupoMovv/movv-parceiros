@@ -31,6 +31,11 @@ function removerArquivoLocalSeForCaminho(url) {
   fs.unlink(path.join(__dirname, '../..', url), () => {});
 }
 
+// Vendedor pessoa física (migration 076): todo produto passa pela fila do
+// admin antes de aparecer; mexer no conteúdo (texto, categoria, foto nova)
+// manda de volta pra fila. CNPJ publica direto, como sempre.
+const vendeComCpf = parceiro => parceiro?.tipo_pessoa === 'pf';
+
 async function buscarProdutoDoParceiro(id, parceiroId) {
   const r = await db.query('SELECT * FROM sindicato_parceiro_produtos WHERE id = $1 AND parceiro_id = $2', [id, parceiroId]);
   return r.rows[0] || null;
@@ -142,11 +147,12 @@ async function create(req, res) {
 
     const result = await db.query(
       `INSERT INTO sindicato_parceiro_produtos
-         (parceiro_id, nome, descricao, preco, preco_associado, categoria, marca, estoque_disponivel, destaque, ativo, rascunho, tempo_preparo_min)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         (parceiro_id, nome, descricao, preco, preco_associado, categoria, marca, estoque_disponivel, destaque, ativo, rascunho, tempo_preparo_min, moderacao_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [req.parceiro.id, valores.nome, valores.descricao, valores.preco, valores.precoAssociado, valores.categoria,
-        valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho, valores.tempoPreparoMin]
+        valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho, valores.tempoPreparoMin,
+        vendeComCpf(req.parceiro) ? 'pendente' : 'aprovado']
     );
     return res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -170,17 +176,26 @@ async function update(req, res) {
       }
     }
 
+    // CPF: mudou o que o moderador aprovou (ou estava rejeitado) = volta pra fila.
+    // Preço, estoque e pausar/ativar não reabrem (dia a dia do vendedor).
+    const mudouConteudo = valores.nome !== produto.nome || valores.descricao !== produto.descricao
+      || (valores.categoria || null) !== (produto.categoria || null) || (valores.marca || null) !== (produto.marca || null);
+    const voltaPraFila = vendeComCpf(req.parceiro) && (mudouConteudo || produto.moderacao_status === 'rejeitado');
+
     const result = await db.query(
       `UPDATE sindicato_parceiro_produtos SET
          nome = $1, descricao = $2, preco = $3, preco_associado = $4, categoria = $5,
          marca = $6, estoque_disponivel = $7, destaque = $8, ativo = $9, rascunho = $10,
-         tempo_preparo_min = $11
+         tempo_preparo_min = $11,
+         moderacao_status = CASE WHEN $13 THEN 'pendente' ELSE moderacao_status END,
+         moderacao_motivo = CASE WHEN $13 THEN NULL ELSE moderacao_motivo END
        WHERE id = $12 RETURNING *`,
       [valores.nome, valores.descricao, valores.preco, valores.precoAssociado, valores.categoria,
         valores.marca, valores.estoqueDisponivel, valores.destaque, valores.ativo, valores.rascunho,
         // Chave ausente no body (cliente antigo/cache do PWA) mantém o valor
         // atual em vez de apagar — só um "" explícito limpa o override.
-        req.body.tempo_preparo_min === undefined ? produto.tempo_preparo_min : valores.tempoPreparoMin, produto.id]
+        req.body.tempo_preparo_min === undefined ? produto.tempo_preparo_min : valores.tempoPreparoMin, produto.id,
+        voltaPraFila]
     );
     return res.json(result.rows[0]);
   } catch (err) {
@@ -242,7 +257,13 @@ async function uploadFotos(req, res) {
       fotos.push({ url, publicId, ordem: ordem++ });
     }
 
-    const result = await db.query('UPDATE sindicato_parceiro_produtos SET fotos = $1 WHERE id = $2 RETURNING *', [JSON.stringify(fotos), produto.id]);
+    // CPF: foto nova volta pra fila (reordenar/excluir não)
+    const result = await db.query(
+      `UPDATE sindicato_parceiro_produtos SET fotos = $1,
+         moderacao_status = CASE WHEN $3 THEN 'pendente' ELSE moderacao_status END
+       WHERE id = $2 RETURNING *`,
+      [JSON.stringify(fotos), produto.id, vendeComCpf(req.parceiro)]
+    );
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);

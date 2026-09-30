@@ -65,7 +65,7 @@ async function getProdutos(req, res) {
        LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = fmp.produto_id
        JOIN sindicato_parceiros pa ON pa.id = fmp.parceiro_id
        WHERE fmp.fecha_mes_id = $1 AND fmp.status = 'confirmado'
-         AND (fmp.e_produto_bonus = true OR pr.ativo = true) AND pa.status = 'ativo' AND NOT pa.empresa_teste
+         AND (fmp.e_produto_bonus = true OR (pr.ativo = true AND pr.moderacao_status = 'aprovado')) AND pa.status = 'ativo' AND NOT pa.empresa_teste
        ORDER BY pa.plano = 'master' DESC, desconto_pct DESC`,
       [evento.id]
     );

@@ -5,7 +5,10 @@ const TIPO = 'parceiro';
 const EXPIRA_EM = '24h';
 // 'pausado' é reversível pelo próprio parceiro (Zona de Perigo das
 // Configurações) — precisa continuar logando pra poder reativar sozinho.
-const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
+// 'em_verificacao' = vendedor pessoa física esperando o admin conferir o
+// documento (migration 076): entra no painel e monta anúncios, mas não
+// aparece em nada público (as listagens exigem 'ativo').
+const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao'];
 
 function gerarTokenParceiro({ parceiroId, usuarioId, cargo }) {
   return jwt.sign(
@@ -40,7 +43,9 @@ async function authenticateParceiro(req, res, next) {
     const parceiroResult = await db.query(
       // pet_servicos: aba "🐾 Agendamentos" (e_pet_atendimento no /me) e as
       // regras de fidelidade do Pet — sem ele o menu do pet shop some.
-      'SELECT id, slug, nome, logo_url, status, plano, e_pioneiro, created_at, plano_iniciado_em, categorias, plano_expira_em, cortesia_interna, pet_servicos FROM sindicato_parceiros WHERE id = $1',
+      // tipo_pessoa/nivel_vendedor/identidade_status: vendedor pessoa física
+      // (migration 076) — produto de CPF entra em moderação.
+      'SELECT id, slug, nome, logo_url, status, plano, e_pioneiro, created_at, plano_iniciado_em, categorias, plano_expira_em, cortesia_interna, pet_servicos, tipo_pessoa, nivel_vendedor, e_mei, identidade_status FROM sindicato_parceiros WHERE id = $1',
       [usuario.parceiro_id]
     );
     const parceiro = parceiroResult.rows[0];

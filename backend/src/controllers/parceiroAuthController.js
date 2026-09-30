@@ -12,7 +12,9 @@ const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 // 'pausado' é reversível pelo próprio parceiro (Zona de Perigo das
 // Configurações) — precisa continuar conseguindo logar pra poder reativar.
 // Qualquer outro status (ex.: bloqueado pelo Sindicato) barra o login mesmo.
-const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado'];
+// 'em_verificacao' = pessoa física esperando conferência do documento
+// (migration 076). Mesma lista do middleware/parceiroAuth.js.
+const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao'];
 
 // `plano` aqui já é o EFETIVO (aplica o seed de demonstração por cima do
 // plano real) — front nunca precisa saber da lista de seed, só lê

@@ -24,7 +24,7 @@ const SELECT_PRODUTO = `
 const FROM_PRODUTO_ATIVO = `
   FROM sindicato_parceiro_produtos pr
   JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-  WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste
+  WHERE pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo' AND NOT pa.empresa_teste
 `;
 
 // Bloco 10: "Ofertas da semana" passou a ser 100% movida a promoção de
@@ -125,7 +125,7 @@ async function getMaisVendidos(req, res) {
        JOIN sindicato_parceiro_produtos pr ON pr.id = c.produto_id
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
        WHERE c.tipo = 'clique_whatsapp' AND c.criado_em >= NOW() - INTERVAL '7 days'
-         AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste
+         AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo' AND NOT pa.empresa_teste
        GROUP BY pr.id, pa.nome, pa.slug
        ORDER BY cliques DESC, pr.created_at DESC
        LIMIT 24`
@@ -220,7 +220,7 @@ async function getProdutosPorCategoria(req, res) {
     }
 
     const params = [parceiroIds];
-    let where = `WHERE pr.parceiro_id = ANY($1) AND pr.ativo = true AND pr.rascunho = false`;
+    let where = `WHERE pr.parceiro_id = ANY($1) AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado'`;
 
     if (preco_min) { params.push(parseFloat(preco_min)); where += ` AND pr.preco >= $${params.length}`; }
     if (preco_max) { params.push(parseFloat(preco_max)); where += ` AND pr.preco <= $${params.length}`; }
@@ -229,7 +229,7 @@ async function getProdutosPorCategoria(req, res) {
 
     const subcategoriasResult = await db.query(
       `SELECT DISTINCT pr.categoria FROM sindicato_parceiro_produtos pr
-       WHERE pr.parceiro_id = ANY($1) AND pr.ativo = true AND pr.rascunho = false AND pr.categoria IS NOT NULL
+       WHERE pr.parceiro_id = ANY($1) AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pr.categoria IS NOT NULL
        ORDER BY pr.categoria ASC`,
       [parceiroIds]
     );
@@ -492,7 +492,7 @@ async function getServicoPorSlug(req, res) {
     const itensResult = await db.query(
       `SELECT id, nome, preco, preco_associado
        FROM sindicato_parceiro_produtos
-       WHERE parceiro_id = $1 AND ativo = true AND rascunho = false
+       WHERE parceiro_id = $1 AND ativo = true AND rascunho = false AND moderacao_status = 'aprovado'
        ORDER BY destaque DESC, created_at DESC`,
       [parceiro.id]
     );
@@ -604,7 +604,7 @@ async function getFoodPorSlug(req, res) {
     const itensResult = await db.query(
       `SELECT id, nome, descricao, preco, preco_associado, fotos, estoque_disponivel, tempo_preparo_min
        FROM sindicato_parceiro_produtos
-       WHERE parceiro_id = $1 AND ativo = true AND rascunho = false
+       WHERE parceiro_id = $1 AND ativo = true AND rascunho = false AND moderacao_status = 'aprovado'
        ORDER BY destaque DESC, created_at DESC`,
       [parceiro.id]
     );

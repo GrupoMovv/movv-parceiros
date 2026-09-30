@@ -227,7 +227,13 @@ async function pausarConta(req, res) {
     const senhaOk = await verificarSenhaAtual(req.parceiroUsuario.id, req.body.senha);
     if (!senhaOk) return res.status(401).json({ error: 'Senha incorreta' });
 
-    await db.query('UPDATE sindicato_parceiros SET status = $1, updated_at = NOW() WHERE id = $2', ['pausado', req.parceiro.id]);
+    // só pausa quem está ativo: pausar e reativar não pode virar atalho pra
+    // sair de 'em_verificacao' (pessoa física com documento não conferido)
+    const r = await db.query(
+      "UPDATE sindicato_parceiros SET status = 'pausado', updated_at = NOW() WHERE id = $1 AND status = 'ativo' RETURNING id",
+      [req.parceiro.id]
+    );
+    if (!r.rows[0]) return res.status(409).json({ error: 'Só dá pra pausar uma loja que está ativa.' });
     await registrarAuditoria(req.parceiro.id, req.parceiroUsuario.id, 'conta_pausada', null, req);
     return res.json({ ok: true, status: 'pausado' });
   } catch (err) {
@@ -238,9 +244,17 @@ async function pausarConta(req, res) {
 
 // POST /api/parceiro/conta/reativar — sem senha: reverter uma pausa é a
 // direção segura, não precisa da mesma fricção de quem tá desativando.
+// Só volta de 'pausado' (nunca de 'em_verificacao' ou outro status), e
+// pessoa física só com a identidade aprovada pelo admin.
 async function reativarConta(req, res) {
   try {
-    await db.query('UPDATE sindicato_parceiros SET status = $1, updated_at = NOW() WHERE id = $2', ['ativo', req.parceiro.id]);
+    const r = await db.query(
+      `UPDATE sindicato_parceiros SET status = 'ativo', updated_at = NOW()
+       WHERE id = $1 AND status = 'pausado' AND (tipo_pessoa = 'pj' OR identidade_status = 'aprovada')
+       RETURNING id`,
+      [req.parceiro.id]
+    );
+    if (!r.rows[0]) return res.status(409).json({ error: 'Não dá pra reativar agora: só uma loja pausada, e com o cadastro já conferido pelo IUB.' });
     await registrarAuditoria(req.parceiro.id, req.parceiroUsuario.id, 'conta_reativada', null, req);
     return res.json({ ok: true, status: 'ativo' });
   } catch (err) {

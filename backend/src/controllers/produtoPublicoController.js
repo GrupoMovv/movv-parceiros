@@ -65,7 +65,7 @@ async function getProduto(req, res) {
          pa.bairro AS parceiro_bairro, pa.cidade AS parceiro_cidade, pa.whatsapp AS parceiro_whatsapp
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`,
+       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo'`,
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
@@ -83,7 +83,7 @@ async function getOutrosDoParceiro(req, res) {
 
     const result = await db.query(
       `SELECT id, nome, preco, preco_associado, fotos FROM sindicato_parceiro_produtos
-       WHERE parceiro_id = $1 AND id != $2 AND ativo = true AND rascunho = false
+       WHERE parceiro_id = $1 AND id != $2 AND ativo = true AND rascunho = false AND moderacao_status = 'aprovado'
        ORDER BY created_at DESC LIMIT 6`,
       [atual.rows[0].parceiro_id, req.params.id]
     );
@@ -128,7 +128,7 @@ async function getMensagemWhatsapp(req, res) {
       `SELECT pr.nome, pr.preco, pr.preco_associado, pa.whatsapp AS parceiro_whatsapp
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`,
+       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo'`,
       [req.params.id]
     );
     const produto = result.rows[0];

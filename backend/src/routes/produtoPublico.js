@@ -33,7 +33,7 @@ router.get('/produto/:id', async (req, res) => {
       `SELECT pr.nome, pr.descricao, pr.preco, pr.fotos, pa.nome AS parceiro_nome
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`,
+       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo'`,
       [id]
     );
     const produto = result.rows[0];

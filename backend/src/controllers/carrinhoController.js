@@ -54,7 +54,7 @@ async function montarGrupos(produtoIds, associado) {
             pa.whatsapp AS parceiro_whatsapp, pa.logo_url AS parceiro_logo_url
      FROM sindicato_parceiro_produtos pr
      JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-     WHERE pr.id = ANY($1) AND pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo'`,
+     WHERE pr.id = ANY($1) AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo'`,
     [produtoIds]
   );
 

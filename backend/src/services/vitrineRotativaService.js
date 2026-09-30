@@ -74,7 +74,7 @@ async function gerarRotacao() {
             pa.plano_expira_em, pa.cortesia_interna
      FROM sindicato_parceiro_produtos pr
      JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-     WHERE pr.ativo = true AND pr.rascunho = false AND pa.status = 'ativo' AND NOT pa.empresa_teste
+     WHERE pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo' AND NOT pa.empresa_teste
        AND pr.estoque_disponivel = true
        AND pr.preco IS NOT NULL
        AND pr.fotos IS NOT NULL AND jsonb_array_length(pr.fotos) > 0
