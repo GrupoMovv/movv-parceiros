@@ -18,6 +18,7 @@ const mascaraCpf = v => soDigitos(v).slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2'
 const mascaraFone = v => soDigitos(v).slice(0, 11).replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d{1,4})$/, '$1-$2');
 
 const PASSOS = ['Como vende', 'Aceite', 'Seus dados', 'Documento'];
+const FORMATOS_OK = ['image/jpeg', 'image/png', 'image/webp']; // mesmos do backend (routes/vender.js)
 
 export default function VenderPessoaFisica() {
   const navigate = useNavigate();
@@ -161,7 +162,7 @@ export default function VenderPessoaFisica() {
               <p className="text-sm text-slate-600 mt-1">Só a equipe do IUB vê essas fotos, para conferir que o CPF é seu. Elas não aparecem no site e são apagadas depois da conferência.</p>
               {/* documento: câmera ou galeria; selfie: câmera (no celular) */}
               <FotoDoc titulo="Foto do documento (RG ou CNH)" dica="Frente do documento, com a foto e o CPF legíveis" arquivo={documento} onArquivo={setDocumento} />
-              <FotoDoc titulo="Selfie segurando o documento" dica="Seu rosto e o documento aparecendo juntos" arquivo={selfie} onArquivo={setSelfie} captura="user" />
+              <FotoDoc titulo="Selfie segurando o documento" dica="Segure o documento abaixo do queixo, como no desenho" arquivo={selfie} onArquivo={setSelfie} captura="user" guia={<GuiaSelfie />} />
               <p className="text-xs text-slate-500 mt-4">Plano {niv?.label} · {brl(niv?.preco_sindicalizada)} ou {brl(niv?.preco_nao_sindicalizada)} por mês.</p>
               <button type="button" disabled={enviando || !documento || !selfie} onClick={enviar} className="w-full mt-5 py-3 rounded-xl text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2" style={{ backgroundColor: ROXO }}>
                 {enviando && <Loader2 className="w-4 h-4 animate-spin" />} {enviando ? 'Enviando…' : 'Criar meu cadastro'}
@@ -177,7 +178,41 @@ export default function VenderPessoaFisica() {
   );
 }
 
-function FotoDoc({ titulo, dica, arquivo, onArquivo, captura }) {
+// Boneco-guia da selfie (padrão de app de banco): pessoa de frente, segurando
+// o documento aberto logo abaixo do queixo — rosto e documento inteiros.
+function GuiaSelfie() {
+  const roxo = '#4C1D95', lilas = '#DDD6FE', lilasForte = '#C4B5FD';
+  return (
+    <div className="w-28 flex-shrink-0 flex flex-col items-center">
+      <svg viewBox="0 0 112 150" className="w-full h-auto rounded-2xl" style={{ backgroundColor: '#F5F3FF' }} role="img" aria-label="Exemplo: pessoa de frente segurando o documento abaixo do queixo">
+        {/* moldura tracejada do rosto, como no app de banco */}
+        <ellipse cx="56" cy="58" rx="30" ry="36" fill="none" stroke={roxo} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.5" />
+        {/* ombros e pescoço */}
+        <path d="M10 150 C14 122 32 112 56 112 C80 112 98 122 102 150 Z" fill={lilasForte} />
+        <rect x="48" y="80" width="16" height="16" rx="5" fill={lilas} />
+        {/* cabeça */}
+        <circle cx="56" cy="58" r="22" fill={lilas} stroke={roxo} strokeWidth="1.5" />
+        <path d="M34 54 C36 38 48 32 58 33 C70 34 78 42 78 54 C72 46 62 44 52 45 C44 46 38 49 34 54 Z" fill={roxo} opacity="0.85" />
+        <circle cx="48" cy="60" r="2" fill={roxo} />
+        <circle cx="64" cy="60" r="2" fill={roxo} />
+        <path d="M49 69 Q56 74 63 69" fill="none" stroke={roxo} strokeWidth="1.5" strokeLinecap="round" />
+        {/* documento logo abaixo do queixo */}
+        <rect x="28" y="84" width="56" height="34" rx="4" fill="#fff" stroke={roxo} strokeWidth="1.5" />
+        <rect x="33" y="90" width="13" height="16" rx="2" fill={lilasForte} />
+        <line x1="50" y1="93" x2="78" y2="93" stroke={roxo} strokeWidth="1.5" opacity="0.6" />
+        <line x1="50" y1="99" x2="74" y2="99" stroke={roxo} strokeWidth="1.5" opacity="0.4" />
+        <line x1="50" y1="105" x2="77" y2="105" stroke={roxo} strokeWidth="1.5" opacity="0.4" />
+        <line x1="33" y1="112" x2="78" y2="112" stroke={roxo} strokeWidth="1.5" opacity="0.3" />
+        {/* mãos segurando as pontas */}
+        <rect x="21" y="96" width="12" height="16" rx="6" fill={lilas} stroke={roxo} strokeWidth="1.2" />
+        <rect x="79" y="96" width="12" height="16" rx="6" fill={lilas} stroke={roxo} strokeWidth="1.2" />
+      </svg>
+      <p className="text-[10px] leading-tight text-center text-slate-500 mt-1.5">Rosto e documento inteiros, sem reflexo</p>
+    </div>
+  );
+}
+
+function FotoDoc({ titulo, dica, arquivo, onArquivo, captura, guia = null }) {
   const [preview, setPreview] = useState(null);
   useEffect(() => {
     if (!arquivo) { setPreview(null); return undefined; }
@@ -189,10 +224,25 @@ function FotoDoc({ titulo, dica, arquivo, onArquivo, captura }) {
     <label className="block mt-4 cursor-pointer">
       <span className="block text-sm font-semibold" style={{ color: PRETO }}>{titulo}</span>
       <span className="block text-xs text-slate-500">{dica}</span>
-      <div className="mt-2 h-40 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50">
-        {preview ? <img src={preview} alt="" className="w-full h-full object-contain" /> : <span className="flex flex-col items-center gap-1 text-slate-400 text-xs"><Camera className="w-6 h-6" /> Tirar foto ou escolher</span>}
+      <div className="mt-2 flex gap-3 items-start">
+        {guia}
+        <div className="flex-1 h-40 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50">
+          {preview ? <img src={preview} alt="" className="w-full h-full object-contain" /> : <span className="flex flex-col items-center gap-1 text-slate-400 text-xs text-center px-2"><Camera className="w-6 h-6" /> {captura === 'user' ? 'Tirar a selfie' : 'Tirar foto ou escolher da galeria'}</span>}
+        </div>
       </div>
-      <input type="file" accept="image/jpeg,image/png,image/webp" capture={captura} className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (f) onArquivo(f); }} />
+      {/* accept="image/*" (não a lista de formatos): com tipos específicos o
+          Android só oferece "arquivos" — com image/* aparece a câmera também */}
+      <input type="file" accept="image/*" capture={captura} className="sr-only" onChange={e => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        // o servidor aceita JPG, PNG e WEBP (câmera do celular já sai em JPG)
+        if (!FORMATOS_OK.includes(f.type)) {
+          toast.error('Essa foto está num formato que não aceitamos. Tire pela câmera ou escolha uma foto JPG ou PNG.', { duration: 6000 });
+          e.target.value = '';
+          return;
+        }
+        onArquivo(f);
+      }} />
     </label>
   );
 }
