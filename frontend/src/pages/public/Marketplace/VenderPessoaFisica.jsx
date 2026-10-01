@@ -120,7 +120,8 @@ export default function VenderPessoaFisica() {
                 <input type="checkbox" checked={aceite} onChange={e => setAceite(e.target.checked)} className="w-5 h-5 mt-0.5 accent-violet-700 flex-shrink-0" />
                 <span className="text-sm text-slate-700">
                   Tenho {cfg.idade_minima} anos ou mais, o CPF informado é meu e li e aceito os{' '}
-                  <Link to="/termos/vendedor-pessoa-fisica" target="_blank" className="font-semibold underline" style={{ color: ROXO }}>Termos do Vendedor Pessoa Física</Link>, inclusive como o IUB trata meus dados (item 13).
+                  <Link to="/termos/vendedor-pessoa-fisica" target="_blank" className="font-semibold underline" style={{ color: ROXO }}>Termos do Vendedor Pessoa Física</Link> e a{' '}
+                  <Link to="/politica-privacidade" target="_blank" className="font-semibold underline" style={{ color: ROXO }}>Política de Privacidade</Link>.
                 </span>
               </label>
               <button type="button" disabled={!aceite} onClick={() => setPasso(2)} className="w-full mt-6 py-3 rounded-xl text-white font-bold disabled:opacity-40" style={{ backgroundColor: ROXO }}>CONTINUAR COM CPF</button>

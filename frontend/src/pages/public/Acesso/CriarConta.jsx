@@ -250,6 +250,10 @@ export default function CriarConta() {
           )}
 
           <BotaoPrimario carregando={enviando}>CRIAR CONTA</BotaoPrimario>
+          <p className="text-xs text-center text-slate-500">
+            Ao criar a conta, você declara que leu a{' '}
+            <Link to="/politica-privacidade" target="_blank" className="font-semibold underline">Política de Privacidade</Link>.
+          </p>
         </form>
       </Cartao>
 
