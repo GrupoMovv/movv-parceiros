@@ -8,6 +8,7 @@ import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Marketplace/theme';
 import ModalPix from '../../components/parceiro/assinatura/ModalPix';
 import ModalCartao from '../../components/parceiro/assinatura/ModalCartao';
+import PlanosPf from './PlanosPf';
 import { formatarBRL, dataBR } from '../../components/parceiro/assinatura/assinaturaUtils';
 import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config/contato';
 import { precosDoPlano, economiaMensal } from '../../utils/precoPlanos';
@@ -134,7 +135,14 @@ function marcarModalVisto(chave) {
   try { sessionStorage.setItem(chave, '1'); } catch { /* sem storage: só não persiste */ }
 }
 
+// Vendedor com CPF tem planos próprios (Vendedor Casual / Empreendedor).
 export default function ParceiroPlanos() {
+  const { parceiro, usuario } = useOutletContext();
+  if (parceiro?.tipo_pessoa === 'pf') return <PlanosPf usuario={usuario} />;
+  return <PlanosEmpresa />;
+}
+
+function PlanosEmpresa() {
   const { parceiro, usuario } = useOutletContext();
   // Assinatura online (Mercado Pago). Sem credenciais configuradas no
   // servidor (opcoes.pronto = false) a tela continua no modo antigo de

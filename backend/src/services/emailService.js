@@ -1,5 +1,5 @@
 const { Resend } = require('resend');
-const { PLANOS, precoPlano } = require('../config/planos');
+const { PLANOS, precoPlano, ehPlanoPf } = require('../config/planos');
 const { formatarPrecoBRL } = require('../utils/planos');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -402,7 +402,7 @@ async function enviarPlanoExpirandoBreve({ nome, nomeFantasia, email, plano, dat
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Seu plano expira em breve</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! O plano <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> expira em <strong>${dataFmt}</strong>.</p>
     <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
-      <p style="margin:0;color:#7a5e00;font-size:13px;">Depois dessa data, sua loja volta automaticamente pro plano Grátis e perde os benefícios de ${cfg.nome}.</p>
+      <p style="margin:0;color:#7a5e00;font-size:13px;">${ehPlanoPf(plano) ? `Depois dessa data, seus anúncios saem do site até você renovar.` : `Depois dessa data, sua loja volta automaticamente pro plano Grátis e perde os benefícios de ${cfg.nome}.`}</p>
     </div>
     ${botao('Renovar Meu Plano', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);
@@ -413,8 +413,8 @@ async function enviarPlanoExpirado({ nome, nomeFantasia, email, planoAnterior })
   const cfgAnterior = PLANOS[planoAnterior] || PLANOS.gratis;
   const html = template(`
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Seu plano expirou</h2>
-    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. O plano <strong>${cfgAnterior.nome}</strong> da <strong>${nomeFantasia}</strong> expirou e sua loja voltou pro plano Grátis.</p>
-    <p style="color:#555;line-height:1.6;">Seus produtos continuam no ar normalmente — só os benefícios exclusivos do ${cfgAnterior.nome} (vitrine rotativa maior, selo, analytics avançado) que pararam.</p>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. O plano <strong>${cfgAnterior.nome}</strong> da <strong>${nomeFantasia}</strong> ${ehPlanoPf(planoAnterior) ? 'expirou e seus anúncios saíram do site.' : 'expirou e sua loja voltou pro plano Grátis.'}</p>
+    <p style="color:#555;line-height:1.6;">${ehPlanoPf(planoAnterior) ? 'Seus produtos continuam salvos no painel e voltam a aparecer assim que você renovar.' : `Seus produtos continuam no ar normalmente — só os benefícios exclusivos do ${cfgAnterior.nome} (vitrine rotativa maior, selo, analytics avançado) que pararam.`}</p>
     ${botao('Renovar Meu Plano', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);
   return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfgAnterior.nome} expirou`, html });
@@ -565,7 +565,7 @@ async function enviarAssinaturaCancelada({ nome, nomeFantasia, email, plano, ace
   const html = template(`
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Assinatura cancelada — sentiremos sua falta</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. A assinatura do <strong>${cfg.nome}</strong> da <strong>${nomeFantasia}</strong> foi cancelada e <strong>não haverá novas cobranças</strong>.</p>
-    ${acessoAte ? `<p style="color:#555;line-height:1.6;">Os benefícios continuam até <strong>${dataBR(acessoAte)}</strong>. Depois disso sua loja volta pro plano Grátis — seus produtos continuam no ar.</p>` : ''}
+    ${acessoAte ? `<p style="color:#555;line-height:1.6;">Os benefícios continuam até <strong>${dataBR(acessoAte)}</strong>. ${ehPlanoPf(plano) ? "Depois disso seus anúncios saem do site até você assinar de novo." : "Depois disso sua loja volta pro plano Grátis — seus produtos continuam no ar."}</p>` : ''}
     <p style="color:#555;line-height:1.6;font-size:13px;">Mudou de ideia? É só assinar de novo quando quiser.</p>
     ${botao('Ver Planos', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);

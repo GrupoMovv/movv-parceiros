@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiParceiro, { getParceiroToken, setParceiroToken } from '../../services/apiParceiro';
@@ -42,6 +42,18 @@ const ABAS = [
 // (status 'em_verificacao', migration 076): monta anúncios, mas nada aparece
 // no site até a aprovação.
 function AvisoVerificacao({ parceiro }) {
+  if (parceiro.tipo_pessoa === 'pf' && parceiro.status === 'aguardando_plano') {
+    // aprovado, mas sem plano pago: nada aparece no site (statusPf.js)
+    return (
+      <div className="mb-6 rounded-2xl px-5 py-4 border bg-violet-50 border-violet-200 flex flex-wrap items-center justify-between gap-3" role="status">
+        <div>
+          <p className="font-bold text-violet-900">📢 Seus anúncios ainda não aparecem no site</p>
+          <p className="text-sm mt-1 text-violet-800">Seu cadastro foi aprovado. Escolha um plano para seus produtos aparecerem na busca e na categoria.</p>
+        </div>
+        <Link to="/parceiro/painel/planos" className="text-sm font-bold px-4 py-2.5 rounded-xl text-white bg-violet-700">Ver planos</Link>
+      </div>
+    );
+  }
   if (parceiro.tipo_pessoa !== 'pf' || parceiro.status !== 'em_verificacao') return null;
   const rejeitada = parceiro.identidade_status === 'rejeitada';
   return (

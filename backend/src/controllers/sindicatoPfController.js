@@ -2,6 +2,7 @@ const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
 const { sendWhatsAppMessage } = require('../services/zapApiService');
 const { NIVEIS_PF } = require('../config/vendedorPf');
+const { sincronizarStatusPf } = require('../services/statusPf');
 
 // Fila de verificação do Vendedor Pessoa Física (/sindicato/verificacao-pf,
 // só admin). Aprovar = parceiro vira 'ativo'; rejeitar = identidade
@@ -124,11 +125,13 @@ async function decidir(req, res, acao) {
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [p.id, acao, acao === 'rejeitada' ? motivo : null, req.user?.id || null, adminNome, fotos.todas]
       );
+      // Aprovado sem plano pago = 'aguardando_plano' (só aparece no site depois de assinar).
+      if (acao === 'aprovada') await sincronizarStatusPf(client, p.id);
     });
 
     const nome = primeiroNome(p.razao_social || p.nome);
     const texto = acao === 'aprovada'
-      ? `🎉 Olá ${nome}! Seu cadastro de vendedor no IUB Mais+ foi APROVADO.\n\nJá pode publicar seus produtos no painel — cada anúncio passa por uma conferência rápida antes de aparecer no site.\n\nIUB Mais+`
+      ? `🎉 Olá ${nome}! Seu cadastro de vendedor no IUB Mais+ foi APROVADO.\n\nAgora é só escolher seu plano no painel (aba Planos) — seus anúncios aparecem no site depois da assinatura, e cada um passa por uma conferência rápida antes.\n\nIUB Mais+`
       : `Olá ${nome}, sobre seu cadastro de vendedor no IUB Mais+: por enquanto não conseguimos aprovar.\n\nMotivo: ${motivo}\n\nSe quiser enviar os documentos de novo, é só responder aqui.\n\nIUB Mais+`;
     const enviado = await avisarWhatsapp(p.whatsapp, texto);
     if (enviado) await db.query(`UPDATE pf_verificacao_log SET whatsapp_enviado = true WHERE id = (SELECT MAX(id) FROM pf_verificacao_log WHERE parceiro_id = $1)`, [p.id]);

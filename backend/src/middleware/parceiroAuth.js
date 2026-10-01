@@ -8,7 +8,7 @@ const EXPIRA_EM = '24h';
 // 'em_verificacao' = vendedor pessoa física esperando o admin conferir o
 // documento (migration 076): entra no painel e monta anúncios, mas não
 // aparece em nada público (as listagens exigem 'ativo').
-const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao'];
+const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao', 'aguardando_plano'];
 
 function gerarTokenParceiro({ parceiroId, usuarioId, cargo }) {
   return jwt.sign(

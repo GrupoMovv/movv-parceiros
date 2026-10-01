@@ -98,7 +98,7 @@ export default function VenderPessoaFisica() {
                     style={{ borderColor: nivel === n.codigo ? ROXO : '#F1F5F9', backgroundColor: nivel === n.codigo ? '#F5F3FF' : '#fff' }}>
                     <p className="font-bold" style={{ color: PRETO }}>{n.selo}</p>
                     <p className="text-sm text-slate-600">{n.resumo} · até {n.max_produtos_ativos} produtos ativos</p>
-                    <p className="text-xs text-slate-500 mt-1">{brl(n.preco_sindicalizada)}/mês para filiado SECI · {brl(n.preco_nao_sindicalizada)}/mês para os demais</p>
+                    <p className="text-xs text-slate-500 mt-1">{brl(n.preco_mensal)}/mês · assinatura depois da aprovação do cadastro</p>
                   </button>
                 ))}
               </div>
@@ -164,7 +164,7 @@ export default function VenderPessoaFisica() {
               {/* documento: câmera ou galeria; selfie: câmera (no celular) */}
               <FotoDoc titulo="Foto do documento (RG ou CNH)" dica="Frente do documento, com a foto e o CPF legíveis" arquivo={documento} onArquivo={setDocumento} />
               <FotoDoc titulo="Selfie segurando o documento" dica="Segure o documento abaixo do queixo, como no desenho" arquivo={selfie} onArquivo={setSelfie} captura="user" guia={<GuiaSelfie />} />
-              <p className="text-xs text-slate-500 mt-4">Plano {niv?.label} · {brl(niv?.preco_sindicalizada)} ou {brl(niv?.preco_nao_sindicalizada)} por mês.</p>
+              <p className="text-xs text-slate-500 mt-4">Plano {niv?.label} · {brl(niv?.preco_mensal)} por mês, assinado no painel depois da aprovação.</p>
               <button type="button" disabled={enviando || !documento || !selfie} onClick={enviar} className="w-full mt-5 py-3 rounded-xl text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2" style={{ backgroundColor: ROXO }}>
                 {enviando && <Loader2 className="w-4 h-4 animate-spin" />} {enviando ? 'Enviando…' : 'Criar meu cadastro'}
               </button>

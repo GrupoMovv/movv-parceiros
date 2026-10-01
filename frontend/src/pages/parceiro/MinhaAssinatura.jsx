@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2, CreditCard, QrCode, CalendarClock, Gift, AlertTriangle } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
@@ -13,6 +13,8 @@ const ROTULO_PAGAMENTO = { aprovado: '✅ Pago', rejeitado: '❌ Recusado', reem
 // restantes / ativa / cancelada), forma de pagamento, próxima cobrança,
 // últimos 6 pagamentos, renovar PIX e cancelar.
 export default function MinhaAssinatura() {
+  // vendedor com CPF: sem plano pago os anúncios saem do site (não existe 'Grátis')
+  const vendeComCpf = useOutletContext()?.parceiro?.tipo_pessoa === 'pf';
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(false);
   const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
@@ -73,8 +75,10 @@ export default function MinhaAssinatura() {
 
       {!dados.cortesia_interna && !a && (
         <Cartao>
-          <p className="font-bold" style={{ color: PRETO }}>Você está no plano {dados.plano_atual_nome || 'Grátis'}</p>
-          <p className="text-sm text-slate-500 mt-1">Assine um plano pago pra aparecer mais no marketplace — no cartão tem desconto e dias grátis pra testar.</p>
+          <p className="font-bold" style={{ color: PRETO }}>{vendeComCpf ? 'Você ainda não tem plano' : `Você está no plano ${dados.plano_atual_nome || 'Grátis'}`}</p>
+          <p className="text-sm text-slate-500 mt-1">{vendeComCpf
+            ? 'Assine um plano pra seus anúncios aparecerem no site — no cartão tem desconto e dias grátis pra testar.'
+            : 'Assine um plano pago pra aparecer mais no marketplace — no cartão tem desconto e dias grátis pra testar.'}</p>
           <Link to="/parceiro/painel/planos" className="inline-block mt-4 text-sm font-bold px-5 py-2.5 rounded-xl text-white" style={{ backgroundColor: ROXO }}>Ver planos</Link>
         </Cartao>
       )}
@@ -91,7 +95,7 @@ export default function MinhaAssinatura() {
               <StatusBadge assinatura={a} />
             </div>
 
-            <MensagemStatus assinatura={a} />
+            <MensagemStatus assinatura={a} vendeComCpf={vendeComCpf} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
               <Info icone={a.metodo === 'pix' ? QrCode : CreditCard} rotulo="Forma de pagamento">
@@ -152,8 +156,8 @@ export default function MinhaAssinatura() {
             <p className="text-sm text-slate-600 mt-2">
               {a.metodo === 'cartao_recorrente' ? 'Não haverá mais cobranças no cartão. ' : ''}
               {a.acesso_ate && diasAte(a.acesso_ate) > 0
-                ? <>Os benefícios do <strong>{a.plano_nome}</strong> continuam até <strong>{dataBR(a.acesso_ate)}</strong>; depois a loja volta pro Grátis (seus produtos continuam no ar).</>
-                : 'A loja segue no plano Grátis (seus produtos continuam no ar).'}
+                ? <>Os benefícios do <strong>{a.plano_nome}</strong> continuam até <strong>{dataBR(a.acesso_ate)}</strong>; {vendeComCpf ? 'depois seus anúncios saem do site até você assinar de novo.' : 'depois a loja volta pro Grátis (seus produtos continuam no ar).'}</>
+                : vendeComCpf ? 'Seus anúncios saem do site até você assinar de novo.' : 'A loja segue no plano Grátis (seus produtos continuam no ar).'}
             </p>
             <div className="flex flex-col gap-2 mt-5">
               <button type="button" onClick={cancelar} disabled={cancelando}
@@ -206,7 +210,7 @@ function StatusBadge({ assinatura: a }) {
 }
 
 // Textos combinados por caso (trial / cartão ativo / PIX ativo / cancelada).
-function MensagemStatus({ assinatura: a }) {
+function MensagemStatus({ assinatura: a, vendeComCpf }) {
   let texto = null;
   if (a.status === 'trial' && a.credito) {
     texto = `Plano trocado: os dias que você já tinha pago no plano anterior foram aproveitados. Primeira cobrança do ${a.plano_nome} (${formatarBRL(a.valor_mensal)}) em ${dataBR(a.trial_ate)}.`;
@@ -228,7 +232,9 @@ function MensagemStatus({ assinatura: a }) {
       ? `Assinatura cancelada — sem novas cobranças. Os benefícios continuam até ${dataBR(a.acesso_ate)}.`
       : 'Assinatura cancelada.';
   } else if (a.status === 'vencida') {
-    texto = 'O período pago terminou e a loja voltou pro plano Grátis. Assine de novo quando quiser.';
+    texto = vendeComCpf
+      ? 'O período pago terminou e seus anúncios saíram do site. Assine de novo quando quiser.'
+      : 'O período pago terminou e a loja voltou pro plano Grátis. Assine de novo quando quiser.';
   } else if (a.status === 'pausada') {
     texto = 'Assinatura pausada no Mercado Pago. Fale com a gente se precisar de ajuda.';
   }

@@ -36,7 +36,8 @@ function forcaSenha(senha) {
   return Math.min(pontos, 3);
 }
 
-const PLANO_LABEL = { gratis: 'Grátis — Parceiro IUB', oficial: 'Oficial', premium: 'Premium', master: 'Master' };
+const PLANO_LABEL = { gratis: 'Grátis — Parceiro IUB', oficial: 'Oficial', premium: 'Premium', master: 'Master', pf_casual: 'Vendedor Casual', pf_empreendedor: 'Empreendedor' };
+const STATUS_LABEL = { ativo: 'Ativo', pausado: 'Pausado', em_verificacao: 'Em verificação', aguardando_plano: 'Fora do site — sem plano' };
 
 export default function ParceiroConfiguracoes() {
   const { parceiro } = useOutletContext();
@@ -321,12 +322,12 @@ function SecaoPlano({ parceiro, status, interesses }) {
     <Card titulo="Assinatura" icone={CreditCard}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <p className="font-bold text-base" style={{ color: PRETO }}>{PLANO_LABEL[parceiro?.plano] || 'Grátis — Parceiro IUB'}</p>
+          <p className="font-bold text-base" style={{ color: PRETO }}>{parceiro?.tipo_pessoa === 'pf' && parceiro?.plano === 'gratis' ? 'Sem plano — anúncios fora do site' : PLANO_LABEL[parceiro?.plano] || 'Grátis — Parceiro IUB'}</p>
           <p className="text-slate-500 text-xs mt-1">
             Cadastrado em {parceiro?.created_at ? new Date(parceiro.created_at).toLocaleDateString('pt-BR') : '—'}
           </p>
           <span className={`inline-block mt-2 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ${status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-            {status === 'ativo' ? 'Ativo' : 'Pausado'}
+            {STATUS_LABEL[status] || status}
           </span>
           {planoInteresse && (
             <p className="text-xs mt-2" style={{ color: '#92700C' }}>
@@ -362,11 +363,11 @@ function SecaoZonaPerigo({ status, onStatusMudou }) {
           >
             Pausar minha conta temporariamente
           </button>
-        ) : (
+        ) : status === 'pausado' && (
           <button
             type="button"
             onClick={async () => {
-              try { await apiParceiro.post('/parceiro/conta/reativar'); onStatusMudou('ativo'); toast.success('Conta reativada!'); }
+              try { const { data } = await apiParceiro.post('/parceiro/conta/reativar'); onStatusMudou(data.status || 'ativo'); toast.success('Conta reativada!'); }
               catch { toast.error('Erro ao reativar conta'); }
             }}
             className="text-sm font-semibold px-5 py-3 rounded-xl text-white transition-colors text-left"

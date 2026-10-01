@@ -6,6 +6,7 @@ const { enviarRecuperacaoSenhaParceiro } = require('../services/emailService');
 const { planoEfetivo } = require('../config/planos');
 const { ehRestaurante, ehBebidas } = require('../utils/categorias');
 const { SERVICOS_PET } = require('../config/pet');
+const { limiteProdutosAtivosPf } = require('../config/vendedorPf');
 
 const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 
@@ -14,7 +15,7 @@ const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 // Qualquer outro status (ex.: bloqueado pelo Sindicato) barra o login mesmo.
 // 'em_verificacao' = pessoa física esperando conferência do documento
 // (migration 076). Mesma lista do middleware/parceiroAuth.js.
-const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao'];
+const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao', 'aguardando_plano'];
 
 // `plano` aqui já é o EFETIVO (aplica o seed de demonstração por cima do
 // plano real) — front nunca precisa saber da lista de seed, só lê
@@ -26,7 +27,9 @@ function parceiroPublico(p) {
     e_pet_atendimento: (p.pet_servicos || []).some(c => SERVICOS_PET.find(s => s.codigo === c)?.natureza === 'servico'),
     // vendedor pessoa física (migration 076): painel mostra "Em verificação"
     tipo_pessoa: p.tipo_pessoa || 'pj', nivel_vendedor: p.nivel_vendedor || 'comercial', e_mei: Boolean(p.e_mei),
-    identidade_status: p.identidade_status || null };
+    identidade_status: p.identidade_status || null,
+    // limite de produtos ATIVOS do PF (Casual 10 / Empreendedor 30) — fonte: config/planos.js
+    limite_produtos_ativos_pf: limiteProdutosAtivosPf(p) };
 }
 
 async function login(req, res) {

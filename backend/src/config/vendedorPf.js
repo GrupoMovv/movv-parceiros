@@ -1,29 +1,23 @@
-// Vendedor Pessoa Física (CPF) — decisões do Junior de 30/09/2026. Fonte
+// Vendedor Pessoa Física (CPF) — decisões do Junior de 30/09 e 01/10/2026. Fonte
 // única desses números: backend e (via /public/vender/pessoa-fisica/config)
 // a tela de cadastro.
+const { PLANOS } = require('./planos');
 
 // Versão do texto dos Termos do Vendedor Pessoa Física aceito no cadastro.
 // Mudou o texto → mude a versão (o aceite gravado aponta pra ela).
 const TERMOS_PF_VERSAO = '2026-09-30';
 
+// Preço e limite de produtos ATIVOS de cada nível vêm do plano PF dele em
+// config/planos.js (pf_casual / pf_empreendedor) — fonte única, preço único
+// sem desconto SECI (Junior, 01/10/2026).
 const NIVEIS_PF = {
-  casual: {
-    label: 'Vendedor Casual',
-    selo: '🏠 Vendedor Casual',
-    resumo: 'Vende de vez em quando',
-    max_produtos_ativos: 20,
-    preco_sindicalizada: 19.90,
-    preco_nao_sindicalizada: 29.90,
-  },
-  empreendedor: {
-    label: 'Empreendedor',
-    selo: '🚀 Empreendedor',
-    resumo: 'Vende sempre',
-    max_produtos_ativos: 50,
-    preco_sindicalizada: 34.90,
-    preco_nao_sindicalizada: 54.90,
-  },
+  casual: { label: 'Vendedor Casual', selo: '🏠 Vendedor Casual', resumo: 'Vende de vez em quando', plano: 'pf_casual' },
+  empreendedor: { label: 'Empreendedor', selo: '🚀 Empreendedor', resumo: 'Vende sempre', plano: 'pf_empreendedor' },
 };
+for (const n of Object.values(NIVEIS_PF)) {
+  n.max_produtos_ativos = PLANOS[n.plano].max_produtos;
+  n.preco_mensal = PLANOS[n.plano].preco_nao_sindicalizada;
+}
 
 // Chave do lançamento (Junior, 30/09): enquanto estiver desligada, o /vender
 // NÃO mostra "Como você vai vender?" — segue direto pro cadastro de CNPJ,

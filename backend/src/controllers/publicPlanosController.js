@@ -6,6 +6,7 @@ const { verificarSindicalizacao } = require('../services/sindicalizacaoService')
 function montarPlanos(sindicalizada) {
   const planos = {};
   for (const [chave, cfg] of Object.entries(PLANOS)) {
+    if (cfg.pessoa === 'pf') continue; // tabela de empresa (CNPJ); PF tem a própria em /parceiro/assinatura/opcoes
     const precoAtual = sindicalizada ? cfg.preco_sindicalizada : cfg.preco_nao_sindicalizada;
     const precoAlternativo = sindicalizada ? cfg.preco_nao_sindicalizada : cfg.preco_sindicalizada;
     const economiaMensal = Math.max(0, Math.round((cfg.preco_nao_sindicalizada - cfg.preco_sindicalizada) * 100) / 100);

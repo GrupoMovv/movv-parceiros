@@ -143,6 +143,65 @@ const PLANOS = {
     max_ia_mes: 500,
     max_voz_dia: null, // ilimitado
   },
+  // Vendedor Pessoa Física (CPF) — decisões do Junior de 01/10/2026: preço
+  // ÚNICO (sem consultar a Base SECI: os dois preços são iguais de
+  // propósito), só pra PF (pessoa: 'pf'), e o plano pago define o
+  // nivel_vendedor (config/vendedorPf.js). PF sem plano vigente fica com
+  // status 'aguardando_plano' = nada dele aparece no site (statusPf.js).
+  pf_casual: {
+    nome: 'Vendedor Casual',
+    pessoa: 'pf',
+    nivel_vendedor: 'casual',
+    preco_sindicalizada: 19.90,
+    preco_nao_sindicalizada: 19.90,
+    max_produtos: 10, // ATIVOS (limiteProdutosAtivosPf)
+    max_produtos_rotativa: 0,
+    max_destaques_beer: 0,
+    participa_fecha_mes: false,
+    max_produtos_bonus_fecha_mes: 0,
+    tem_selo: false,
+    selo_nome: 'Vendedor Casual',
+    selo_cor: 'cinza',
+    analytics_avancado: false,
+    aparece_destaques_parceiros: false,
+    push_notification: false,
+    instagram_integrado: false,
+    banner_personalizado: false,
+    materiais_educativos: false,
+    grupo_vip: false,
+    boost_busca: 0,
+    max_jogos: 0,
+    peso_roleta: 0,
+    max_ia_mes: 10,
+    max_voz_dia: 20,
+  },
+  pf_empreendedor: {
+    nome: 'Empreendedor',
+    pessoa: 'pf',
+    nivel_vendedor: 'empreendedor',
+    preco_sindicalizada: 34.90,
+    preco_nao_sindicalizada: 34.90,
+    max_produtos: 30, // ATIVOS (limiteProdutosAtivosPf)
+    max_produtos_rotativa: 0,
+    max_destaques_beer: 0,
+    participa_fecha_mes: false,
+    max_produtos_bonus_fecha_mes: 0,
+    tem_selo: false,
+    selo_nome: 'Empreendedor',
+    selo_cor: 'cinza',
+    analytics_avancado: false,
+    aparece_destaques_parceiros: false,
+    push_notification: false,
+    instagram_integrado: false,
+    banner_personalizado: false,
+    materiais_educativos: false,
+    grupo_vip: false,
+    boost_busca: 0,
+    max_jogos: 0,
+    peso_roleta: 0,
+    max_ia_mes: 30,
+    max_voz_dia: 20,
+  },
 };
 
 // Promoção Pioneiro: os primeiros N parceiros que virarem plano pago ganham
@@ -221,6 +280,14 @@ const DESCONTO_CARTAO_RECORRENTE = 0.05;
 const TRIAL_ASSINATURA_DIAS = 7;
 const METODOS_ASSINATURA = ['pix', 'cartao_recorrente'];
 const PLANOS_PAGOS = Object.keys(PLANOS).filter(p => PLANOS[p].preco_sindicalizada > 0);
+const ehPlanoPf = plano => PLANOS[plano]?.pessoa === 'pf';
+// Planos que ESTE tipo de vendedor pode assinar: CPF só os de PF, CNPJ só os de empresa.
+function planosPagosPara(tipoPessoa) {
+  return PLANOS_PAGOS.filter(p => ehPlanoPf(p) === (tipoPessoa === 'pf'));
+}
+function planoPfDoNivel(nivel) {
+  return Object.keys(PLANOS).find(p => ehPlanoPf(p) && PLANOS[p].nivel_vendedor === nivel) || null;
+}
 
 // Conta em CENTAVOS inteiros: em float, 34.90 * 0.95 = 33.1549999... e
 // arredondaria pra 33,15 — o preço combinado é 33,16 (meio centavo pra cima).
@@ -249,4 +316,7 @@ module.exports = {
   TRIAL_ASSINATURA_DIAS,
   METODOS_ASSINATURA,
   PLANOS_PAGOS,
+  ehPlanoPf,
+  planosPagosPara,
+  planoPfDoNivel,
 };

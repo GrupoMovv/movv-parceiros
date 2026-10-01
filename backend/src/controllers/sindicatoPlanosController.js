@@ -1,7 +1,8 @@
 const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
-const { PLANOS, planoValido, PIONEIRO_VAGAS_TOTAL, precoPlano } = require('../config/planos');
+const { PLANOS, planoValido, PIONEIRO_VAGAS_TOTAL, precoPlano, ehPlanoPf } = require('../config/planos');
 const { verificarSindicalizacao } = require('../services/sindicalizacaoService');
+const { sincronizarStatusPf } = require('../services/statusPf');
 
 function quemAlterou(req) {
   return req.user?.email || req.user?.name || 'admin';
@@ -51,15 +52,20 @@ async function alterarPlano(req, res) {
       return res.status(400).json({ error: 'Motivo inválido' });
     }
 
-    const atual = await db.query('SELECT plano, e_pioneiro, cnpj FROM sindicato_parceiros WHERE id = $1', [id]);
+    const atual = await db.query('SELECT plano, e_pioneiro, cnpj, tipo_pessoa FROM sindicato_parceiros WHERE id = $1', [id]);
     if (!atual.rows[0]) return res.status(404).json({ error: 'Parceiro não encontrado' });
+    // CPF só recebe plano de PF (ou Grátis = sem plano); CNPJ nunca recebe plano de PF.
+    const vendeComCpf = atual.rows[0].tipo_pessoa === 'pf';
+    if (plano_novo !== 'gratis' && ehPlanoPf(plano_novo) !== vendeComCpf) {
+      return res.status(400).json({ error: vendeComCpf ? 'Vendedor com CPF só pode ter plano Vendedor Casual ou Empreendedor' : 'Plano de pessoa física não vale pra empresa' });
+    }
     const planoAnterior = atual.rows[0].plano;
 
     // Promoção Pioneiro: primeiro upgrade de Grátis pra plano pago, se ainda
     // sobrar vaga entre os primeiros PIONEIRO_VAGAS_TOTAL — vitalício, então
     // só marca uma vez (nunca desmarca num downgrade/cancelamento depois).
     let virouPioneiro = false;
-    if (motivo === 'upgrade' && planoAnterior === 'gratis' && plano_novo !== 'gratis' && !atual.rows[0].e_pioneiro) {
+    if (motivo === 'upgrade' && planoAnterior === 'gratis' && plano_novo !== 'gratis' && !atual.rows[0].e_pioneiro && !vendeComCpf) {
       const contagem = await db.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiros WHERE e_pioneiro = true');
       virouPioneiro = contagem.rows[0].n < PIONEIRO_VAGAS_TOTAL;
     }
@@ -70,7 +76,7 @@ async function alterarPlano(req, res) {
     let precoCobrado = null;
     let eraSindicalizada = null;
     if (plano_novo !== 'gratis') {
-      const { sindicalizada } = await verificarSindicalizacao(atual.rows[0].cnpj);
+      const { sindicalizada } = vendeComCpf ? { sindicalizada: false } : await verificarSindicalizacao(atual.rows[0].cnpj);
       eraSindicalizada = sindicalizada;
       precoCobrado = precoPlano(plano_novo, sindicalizada);
     }
@@ -90,6 +96,11 @@ async function alterarPlano(req, res) {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [id, planoAnterior, plano_novo, motivo, observacoes?.trim() || null, quemAlterou(req), precoCobrado, eraSindicalizada]
       );
+      if (vendeComCpf) {
+        // plano PF define o nível; com ou sem plano, acerta se aparece no site
+        if (ehPlanoPf(plano_novo)) await client.query('UPDATE sindicato_parceiros SET nivel_vendedor = $1 WHERE id = $2', [PLANOS[plano_novo].nivel_vendedor, id]);
+        await sincronizarStatusPf(client, id);
+      }
     });
 
     // Preparado, não disparado ainda (ver emailService) — troca manual de

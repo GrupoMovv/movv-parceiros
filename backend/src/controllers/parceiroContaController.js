@@ -4,6 +4,7 @@ const db = require('../config/database');
 const cloudinaryService = require('../services/cloudinaryService');
 const emailService = require('../services/emailService');
 const { ipCliente } = require('../utils/ipCliente');
+const { sincronizarStatusPf } = require('../services/statusPf');
 
 const JANELA_RATE_LIMIT_SENHA_MS = 15 * 60 * 1000;
 const MAX_TENTATIVAS_SENHA = 3;
@@ -255,8 +256,10 @@ async function reativarConta(req, res) {
       [req.parceiro.id]
     );
     if (!r.rows[0]) return res.status(409).json({ error: 'Não dá pra reativar agora: só uma loja pausada, e com o cadastro já conferido pelo IUB.' });
+    // PF sem plano pago volta como 'aguardando_plano' (fora do site até assinar)
+    const status = (await sincronizarStatusPf(db, req.parceiro.id)) || 'ativo';
     await registrarAuditoria(req.parceiro.id, req.parceiroUsuario.id, 'conta_reativada', null, req);
-    return res.json({ ok: true, status: 'ativo' });
+    return res.json({ ok: true, status });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao reativar conta' });

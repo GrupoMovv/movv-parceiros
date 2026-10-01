@@ -1,8 +1,9 @@
 const { Payment, PreApproval } = require('mercadopago');
 const db = require('../config/database');
 const mp = require('../config/mercadopago');
-const { PLANOS, PLANOS_PAGOS, PIONEIRO_VAGAS_TOTAL, precoAssinatura, TRIAL_ASSINATURA_DIAS, DESCONTO_CARTAO_RECORRENTE, planoEfetivo } = require('../config/planos');
+const { PLANOS, PIONEIRO_VAGAS_TOTAL, precoAssinatura, TRIAL_ASSINATURA_DIAS, DESCONTO_CARTAO_RECORRENTE, planoEfetivo, ehPlanoPf, planosPagosPara } = require('../config/planos');
 const { verificarSindicalizacao } = require('./sindicalizacaoService');
+const { sincronizarStatusPf, tirarDoArPfSemPlano } = require('./statusPf');
 const emailService = require('./emailService');
 
 // Assinatura dos planos pelo Mercado Pago. Fase B: PIX mensal, pago NA
@@ -90,11 +91,36 @@ async function contatoDoParceiro(parceiroId, cx = db) {
   return r.rows[0] || null;
 }
 
+// Vendedor PF (CPF) paga preço único: nunca consulta a Base SECI.
+async function sindicalizacaoDoParceiro(parceiro) {
+  if (parceiro?.tipo_pessoa === 'pf' || !parceiro?.cnpj) return { sindicalizada: false };
+  return verificarSindicalizacao(parceiro.cnpj);
+}
+
+// Trava comum de PIX e cartão: plano tem que ser do tipo do vendedor, e PF
+// só assina depois da identidade aprovada (não cobra quem vai ser recusado).
+function exigirPlanoPermitido(parceiro, plano) {
+  if (!planosPagosPara(parceiro.tipo_pessoa).includes(plano)) throw new ErroAssinatura(400, 'PLANO_INVALIDO', 'Plano inválido');
+  if (parceiro.tipo_pessoa === 'pf' && parceiro.identidade_status !== 'aprovada') {
+    throw new ErroAssinatura(409, 'PF_EM_VERIFICACAO', 'Seu cadastro ainda está em verificação. Você poderá assinar assim que o IUB aprovar seu documento.');
+  }
+}
+
+// Documento do pagador que vai pro MP: CNPJ da empresa ou CPF do vendedor PF.
+function documentoPagador(parceiro) {
+  const cnpj = String(parceiro?.cnpj || '').replace(/\D/g, '');
+  if (cnpj.length === 14) return { type: 'CNPJ', number: cnpj };
+  const cpf = String(parceiro?.cpf || '').replace(/\D/g, '');
+  if (cpf.length === 11) return { type: 'CPF', number: cpf };
+  return null;
+}
+
 // Preço que ESTE parceiro paga em cada plano/método (sindicalização conta).
 async function opcoesDoParceiro(parceiroId) {
-  const r = await db.query('SELECT cnpj, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId]);
+  const r = await db.query('SELECT cnpj, cortesia_interna, tipo_pessoa, identidade_status FROM sindicato_parceiros WHERE id = $1', [parceiroId]);
   const parceiro = r.rows[0];
-  const { sindicalizada } = parceiro?.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
+  const { sindicalizada } = await sindicalizacaoDoParceiro(parceiro);
+  const vendeComCpf = parceiro?.tipo_pessoa === 'pf';
   return {
     pronto: mp.PRONTO,
     ambiente: mp.AMBIENTE,
@@ -105,12 +131,16 @@ async function opcoesDoParceiro(parceiroId) {
       ate: c.ate, plano_anterior: c.planoAnterior, plano_anterior_nome: PLANOS[c.planoAnterior]?.nome, janela_ate: c.janelaAte,
     }),
     sindicalizada,
+    vende_com_cpf: vendeComCpf,
+    // PF só assina depois que o IUB aprova o documento
+    aguardando_verificacao: vendeComCpf && parceiro.identidade_status !== 'aprovada',
     trial_dias_cartao: TRIAL_ASSINATURA_DIAS,
     desconto_cartao_pct: Math.round(DESCONTO_CARTAO_RECORRENTE * 100),
     pix_validade_min: PIX_VALIDADE_MIN,
-    planos: PLANOS_PAGOS.map(plano => ({
+    planos: planosPagosPara(parceiro?.tipo_pessoa).map(plano => ({
       plano,
       nome: PLANOS[plano].nome,
+      max_produtos: PLANOS[plano].max_produtos,
       pix: precoAssinatura(plano, sindicalizada, 'pix'),
       cartao_recorrente: precoAssinatura(plano, sindicalizada, 'cartao_recorrente'),
     })),
@@ -146,7 +176,7 @@ function pixDaLinha(pag) {
 // Cria o PIX no MP pra uma linha de sindicato_pagamentos já gravada.
 // Idempotency key = id da nossa linha: retry da mesma chamada nunca vira
 // duas cobranças no MP.
-async function gerarPixNoMp(pagamento, { plano, email, cnpj, descricao }) {
+async function gerarPixNoMp(pagamento, { plano, email, documento, descricao }) {
   const expira = new Date(Date.now() + PIX_VALIDADE_MIN * 60 * 1000);
   const body = {
     transaction_amount: Number(pagamento.valor),
@@ -156,9 +186,7 @@ async function gerarPixNoMp(pagamento, { plano, email, cnpj, descricao }) {
     external_reference: referenciaExterna(pagamento.id),
     payer: {
       email,
-      ...(cnpj && String(cnpj).replace(/\D/g, '').length === 14
-        ? { identification: { type: 'CNPJ', number: String(cnpj).replace(/\D/g, '') } }
-        : {}),
+      ...(documento ? { identification: documento } : {}),
     },
     metadata: { pagamento_id: pagamento.id, assinatura_id: pagamento.assinatura_id, ambiente: mp.AMBIENTE },
     ...(NOTIFICATION_URL ? { notification_url: NOTIFICATION_URL } : {}),
@@ -204,19 +232,19 @@ async function cancelarPixNoMp(mpPaymentId) {
 // clicou de novo no mesmo plano.
 async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
   exigirPronto();
-  if (!PLANOS_PAGOS.includes(plano)) throw new ErroAssinatura(400, 'PLANO_INVALIDO', 'Plano inválido');
   if (!email) throw new ErroAssinatura(400, 'SEM_EMAIL', 'Seu usuário não tem e-mail cadastrado.');
 
-  const pr = await db.query('SELECT id, cnpj, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId]);
+  const pr = await db.query('SELECT id, cnpj, cpf, tipo_pessoa, identidade_status, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId]);
   const parceiro = pr.rows[0];
   if (!parceiro) throw new ErroAssinatura(404, 'NAO_ENCONTRADO', 'Parceiro não encontrado');
   if (parceiro.cortesia_interna) {
     throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS — não precisa assinar.');
   }
+  exigirPlanoPermitido(parceiro, plano);
 
   await cancelarCartoesSoltos(parceiroId);
   const credito = await creditoTrocaDePlano(parceiroId);
-  const { sindicalizada } = parceiro.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
+  const { sindicalizada } = await sindicalizacaoDoParceiro(parceiro);
   const valor = precoAssinatura(plano, sindicalizada, 'pix');
 
   const { pagamento, reaproveitado, pixParaCancelar } = await transacao(async cx => {
@@ -274,7 +302,7 @@ async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
 
   let comQr;
   try {
-    comQr = await gerarPixNoMp(pagamento, { plano, email, cnpj: parceiro.cnpj });
+    comQr = await gerarPixNoMp(pagamento, { plano, email, documento: documentoPagador(parceiro) });
   } catch (err) {
     await db.query("UPDATE sindicato_assinaturas SET status = 'cancelada', data_cancelamento = NOW(), updated_at = NOW() WHERE id = $1", [pagamento.assinatura_id]);
     throw err;
@@ -287,7 +315,7 @@ async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
 async function renovarPix({ parceiroId, email }) {
   exigirPronto();
   const a = (await db.query(
-    `SELECT a.*, p.cnpj FROM sindicato_assinaturas a JOIN sindicato_parceiros p ON p.id = a.parceiro_id
+    `SELECT a.*, p.cnpj, p.cpf FROM sindicato_assinaturas a JOIN sindicato_parceiros p ON p.id = a.parceiro_id
       WHERE a.parceiro_id = $1 AND a.status = 'ativa' AND a.metodo_pagamento = 'pix'`,
     [parceiroId]
   )).rows[0];
@@ -310,7 +338,7 @@ async function renovarPix({ parceiroId, email }) {
      VALUES ($1, $2, 'pix', 'pendente', $3) RETURNING *`,
     [a.id, a.valor_mensal, mp.AMBIENTE]
   )).rows[0];
-  const comQr = await gerarPixNoMp(pag, { plano: a.plano_nome, email, cnpj: a.cnpj, descricao: `IUB MAIS+ — ${PLANOS[a.plano_nome].nome} (renovação mensal)` });
+  const comQr = await gerarPixNoMp(pag, { plano: a.plano_nome, email, documento: documentoPagador(a), descricao: `IUB MAIS+ — ${PLANOS[a.plano_nome].nome} (renovação mensal)` });
   return { ...pixDaLinha(comQr), assinatura_id: a.id, plano: a.plano_nome, reaproveitado: false };
 }
 
@@ -319,10 +347,11 @@ async function renovarPix({ parceiroId, email }) {
 // Só registra histórico quando o plano MUDA — renovação fica em
 // sindicato_pagamentos.
 async function aplicarPlanoNoParceiro(cx, assinatura, planoExpiraEm, motivo = 'assinatura_ativa') {
-  const atual = (await cx.query('SELECT plano, e_pioneiro FROM sindicato_parceiros WHERE id = $1 FOR UPDATE', [assinatura.parceiro_id])).rows[0];
+  const atual = (await cx.query('SELECT plano, e_pioneiro, tipo_pessoa FROM sindicato_parceiros WHERE id = $1 FOR UPDATE', [assinatura.parceiro_id])).rows[0];
   const mudou = atual.plano !== assinatura.plano_nome;
   let virouPioneiro = false;
-  if (mudou && atual.plano === 'gratis' && !atual.e_pioneiro) {
+  // Pioneiro é selo de empresa parceira: vendedor PF não ocupa as vagas.
+  if (mudou && atual.plano === 'gratis' && !atual.e_pioneiro && atual.tipo_pessoa !== 'pf') {
     const n = (await cx.query('SELECT COUNT(*)::int AS n FROM sindicato_parceiros WHERE e_pioneiro = true')).rows[0].n;
     virouPioneiro = n < PIONEIRO_VAGAS_TOTAL;
   }
@@ -336,6 +365,14 @@ async function aplicarPlanoNoParceiro(cx, assinatura, planoExpiraEm, motivo = 'a
       WHERE id = $7`,
     [assinatura.plano_nome, planoExpiraEm, mudou, assinatura.valor_mensal, assinatura.era_sindicalizada, virouPioneiro, assinatura.parceiro_id]
   );
+  // PF: o plano pago define o nível (Casual/Empreendedor) e põe no ar.
+  if (ehPlanoPf(assinatura.plano_nome)) {
+    await cx.query(
+      "UPDATE sindicato_parceiros SET nivel_vendedor = $1 WHERE id = $2 AND tipo_pessoa = 'pf'",
+      [PLANOS[assinatura.plano_nome].nivel_vendedor, assinatura.parceiro_id]
+    );
+    await sincronizarStatusPf(cx, assinatura.parceiro_id);
+  }
   if (mudou) {
     await cx.query(
       `INSERT INTO sindicato_plano_historico (parceiro_id, plano_anterior, plano_novo, motivo, observacoes, alterado_por, preco_cobrado, era_sindicalizada)
@@ -632,23 +669,23 @@ function erroCartaoMp(err) {
 // POST /parceiro/assinatura/criar-cartao-recorrente
 async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmail, bandeira, final4 }) {
   exigirPronto();
-  if (!PLANOS_PAGOS.includes(plano)) throw new ErroAssinatura(400, 'PLANO_INVALIDO', 'Plano inválido');
   if (typeof cardToken !== 'string' || !/^[A-Za-z0-9-]{16,64}$/.test(cardToken)) {
     throw new ErroAssinatura(400, 'TOKEN_INVALIDO', 'Dados do cartão inválidos. Preencha o cartão de novo.');
   }
   const email = String(payerEmail || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ErroAssinatura(400, 'EMAIL_INVALIDO', 'Informe um e-mail válido.');
 
-  const parceiro = (await db.query('SELECT id, cnpj, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId])).rows[0];
+  const parceiro = (await db.query('SELECT id, cnpj, tipo_pessoa, identidade_status, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId])).rows[0];
   if (!parceiro) throw new ErroAssinatura(404, 'NAO_ENCONTRADO', 'Parceiro não encontrado');
   if (parceiro.cortesia_interna) {
     throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS — não precisa assinar.');
   }
+  exigirPlanoPermitido(parceiro, plano);
 
   await cancelarCartoesSoltos(parceiroId);
   const comTrial = await trialDisponivel(parceiroId);
   const credito = await creditoTrocaDePlano(parceiroId);
-  const { sindicalizada } = parceiro.cnpj ? await verificarSindicalizacao(parceiro.cnpj) : { sindicalizada: false };
+  const { sindicalizada } = await sindicalizacaoDoParceiro(parceiro);
   const valor = precoAssinatura(plano, sindicalizada, 'cartao_recorrente');
 
   // Dias sem cobrança = o maior entre o trial (1ª assinatura de cartão) e
@@ -967,6 +1004,7 @@ async function rotinaDiaria() {
            VALUES ($1, $2, 'gratis', $3, $4, 'rotina_assinaturas')`,
           [p.id, p.plano, a ? 'assinatura_encerrada' : 'downgrade', a ? `Fim do período pago da assinatura #${a.id}` : 'Prazo do plano (plano_expira_em) terminou']
         );
+        await sincronizarStatusPf(cx, p.id); // PF sem plano sai do ar
         return true;
       });
       if (temAssinatura === null) continue;
@@ -979,6 +1017,13 @@ async function rotinaDiaria() {
     } catch (err) {
       res.erros.push(`parceiro ${p.id}: ${err.message}`);
     }
+  }
+
+  // 2b. Rede de segurança: PF 'ativo' sem plano vigente sai do ar.
+  try {
+    res.pf_fora_do_ar = (await tirarDoArPfSemPlano(db)).length;
+  } catch (err) {
+    res.erros.push(`pf sem plano: ${err.message}`);
   }
 
   // 3. Lembrete de renovar o PIX (uma vez por período: a chave do lembrete

@@ -18,8 +18,9 @@ function limiteProdutosDoParceiro(parceiro) {
   return limiteProdutos(planoEfetivo(parceiro));
 }
 
-// Pessoa física: Casual 20 / Empreendedor 50 produtos ATIVOS (no ar ou na
-// fila). Sem crescer sozinho: passou do limite, ativar um só pausando outro.
+// Pessoa física: limite de produtos ATIVOS (no ar ou na fila) do plano PF —
+// Casual 10 / Empreendedor 30 (config/planos.js). Sem crescer sozinho:
+// passou do limite, ativar um só pausando outro.
 // → null (tem vaga) | mensagem de erro
 async function semVagaAtiva(parceiro, excetoId = null) {
   const limite = limiteProdutosAtivosPf(parceiro);

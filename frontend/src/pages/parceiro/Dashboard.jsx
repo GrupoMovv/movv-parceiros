@@ -22,7 +22,7 @@ export default function ParceiroDashboard() {
   const [stats, setStats] = useState(null);
   // vendedor pessoa física: sem promoções (fase 2) e limite de ativos por nível
   const vendeComCpf = parceiro.tipo_pessoa === 'pf';
-  const limitePf = parceiro.nivel_vendedor === 'empreendedor' ? 50 : 20;
+  const limitePf = parceiro.limite_produtos_ativos_pf;
 
   useEffect(() => {
     apiParceiro.get('/parceiro/dashboard/stats')
