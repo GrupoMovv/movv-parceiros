@@ -11,6 +11,7 @@ import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useCarrinho } from './CarrinhoContext';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
+import BotaoComprar, { useDisponibilidade } from '../../../components/BotaoComprar';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -34,6 +35,8 @@ export default function ProdutoDetalhe() {
   const { adicionar: adicionarCarrinho, remover: removerCarrinho, estaNoCarrinho } = useCarrinho();
 
   const ehAssociado = ehAssociadoSeci;
+  // Pedido pelo site: só aparece se a loja vende pelo site agora
+  const dispCompra = useDisponibilidade('produto', id);
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
   function carregarProduto() {
@@ -247,6 +250,10 @@ export default function ProdutoDetalhe() {
             Chamar no WhatsApp
           </button>
 
+          {produto.estoque_disponivel && (
+            <BotaoComprar tipo="produto" id={produto.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} className="mt-2.5" />
+          )}
+
           <button
             type="button"
             onClick={handleCarrinho}
@@ -337,12 +344,15 @@ export default function ProdutoDetalhe() {
       )}
 
       {/* whatsapp fixo mobile */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40 flex gap-2">
+        {dispCompra?.pode && produto.estoque_disponivel && (
+          <div className="flex-1"><BotaoComprar tipo="produto" id={produto.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} compacto /></div>
+        )}
         <button
           type="button"
           onClick={handleWhatsappClick}
           disabled={!whatsappHabilitado || carregandoWhatsapp}
-          className={`w-full flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado ? '' : 'opacity-50'}`}
+          className={`flex-1 flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado ? '' : 'opacity-50'}`}
           style={{ backgroundColor: '#25D366' }}
         >
           {carregandoWhatsapp ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <MessageCircle className="w-4.5 h-4.5" />}

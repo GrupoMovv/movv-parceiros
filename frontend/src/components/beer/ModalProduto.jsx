@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, WhatsappLogo, MapPin, Clock, Wine, MagnifyingGlassPlus, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import BadgeAberto from './BadgeAberto';
+import BotaoComprar from '../BotaoComprar';
 import { formatarBRL } from '../../utils/iubFood';
 import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
 
@@ -117,6 +118,8 @@ export default function ModalProduto({ produto: p, onFechar }) {
               </div>
 
               <div className="mt-auto sticky bottom-0 pt-2 pb-1 sm:static" style={{ background: `linear-gradient(to top, ${BEER.card} 70%, transparent)` }}>
+                {/* Pedido pelo site (só aparece se a adega vende pelo site agora) */}
+                <BotaoComprar tipo="beer" id={p.id} urlLoja={`/beer/estabelecimento/${e.slug}`} className="mb-2 rounded-2xl" />
                 {link ? (
                   <a href={link} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center gap-2 text-base font-black py-4 rounded-2xl" style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}>
                     <WhatsappLogo size={22} weight="fill" /> PEDIR AGORA (via WhatsApp)

@@ -3,6 +3,7 @@ import { ImageOff } from 'lucide-react';
 import { Fire, ShoppingCart, Check } from '@phosphor-icons/react';
 import { DOURADO, DOURADO_ESCURO, PRETO } from '../theme';
 import { useCarrinho } from '../CarrinhoContext';
+import BotaoComprar from '../../../../components/BotaoComprar';
 
 const VERMELHO = '#DC2626';
 
@@ -74,6 +75,12 @@ export default function CardProdutoFechaMes({ produto }) {
           <p className="font-black text-lg leading-tight" style={{ color: VERMELHO }}>{formatarPreco(produto.preco_fecha_mes)}</p>
         </div>
 
+        {produto.e_produto_bonus && produto.fecha_mes_produto_id && (
+          // bônus não tem página: o Comprar fica no card (o card é um Link — não deixa o clique abrir a loja)
+          <span className="mt-2 block" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+            <BotaoComprar tipo="fecha_mes" id={produto.fecha_mes_produto_id} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} mini />
+          </span>
+        )}
         {produto.e_produto_bonus ? (
           <span className="mt-2 flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-md border" style={{ borderColor: DOURADO_ESCURO, color: DOURADO_ESCURO }}>
             Ver na loja

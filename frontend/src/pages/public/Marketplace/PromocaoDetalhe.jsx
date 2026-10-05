@@ -9,6 +9,7 @@ import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
+import BotaoComprar, { useDisponibilidade } from '../../../components/BotaoComprar';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -40,6 +41,7 @@ function useContagemDetalhada(dataFim) {
 
 export default function PromocaoDetalhe() {
   const { id } = useParams();
+  const dispCompra = useDisponibilidade('promocao', id);
   const { associado, ehAssociadoSeci } = useAssociadoSessao();
   const navigate = useNavigate();
   const location = useLocation();
@@ -275,6 +277,10 @@ export default function PromocaoDetalhe() {
             {esgotada ? 'Vagas esgotadas' : expirada ? 'Promoção encerrada' : 'Chamar no WhatsApp'}
           </button>
 
+          {!esgotada && !expirada && (
+            <BotaoComprar tipo="promocao" id={promocao.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${promocao.parceiro_slug}`} className="mt-2.5" />
+          )}
+
           <button onClick={handleCompartilhar} className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 mt-3">
             <Share2 className="w-4 h-4" /> Compartilhar
           </button>
@@ -325,12 +331,15 @@ export default function PromocaoDetalhe() {
       )}
 
       {/* whatsapp fixo mobile */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40 flex gap-2">
+        {dispCompra?.pode && !esgotada && !expirada && (
+          <div className="flex-1"><BotaoComprar tipo="promocao" id={promocao.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${promocao.parceiro_slug}`} compacto /></div>
+        )}
         <button
           type="button"
           onClick={handleWhatsappClick}
           disabled={!whatsappHabilitado || carregandoWhatsapp || esgotada || expirada}
-          className={`w-full flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado && !esgotada && !expirada ? '' : 'opacity-50'}`}
+          className={`flex-1 flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado && !esgotada && !expirada ? '' : 'opacity-50'}`}
           style={{ backgroundColor: '#25D366' }}
         >
           {carregandoWhatsapp ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <MessageCircle className="w-4.5 h-4.5" />}

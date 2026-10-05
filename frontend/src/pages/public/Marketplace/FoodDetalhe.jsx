@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, ShoppingCart, Check } from 'lucide-react';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
@@ -8,6 +9,8 @@ import { DIAS, formatarBRL, horarioConfigurado, statusFuncionamento, textoTaxaEn
 import { useCarrinho } from './CarrinhoContext';
 import SeloPlano from './components/SeloPlano';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
+import { useDisponibilidade, colocarNaSacola } from '../../../components/BotaoComprar';
+import { quantidadeNaSacola, aoMudarSacola, lerSacola } from '../Pedido/sacola';
 
 // Recalcula aberto/fechado sozinho — cliente que deixa a página aberta
 // esperando o restaurante abrir vê o botão liberar sem recarregar.
@@ -32,6 +35,11 @@ export default function FoodDetalhe() {
   const [naoEncontrado, setNaoEncontrado] = useState(false);
   const agora = useAgora();
   const { adicionar, remover, estaNoCarrinho, totalItens } = useCarrinho();
+  // Pedido pelo site: a loja vende pelo site agora? (pergunta com 1 item do cardápio)
+  const itemReferencia = restaurante?.cardapio?.find(i => i.estoque_disponivel !== false)?.id;
+  const dispCompra = useDisponibilidade(itemReferencia ? 'produto' : null, itemReferencia);
+  const [naSacola, setNaSacola] = useState(quantidadeNaSacola);
+  useEffect(() => aoMudarSacola(() => setNaSacola(quantidadeNaSacola())), []);
 
   useEffect(() => {
     setCarregando(true);
@@ -205,7 +213,20 @@ export default function FoodDetalhe() {
                       <p className="text-sm font-black" style={{ color: ROXO_ESCURO }}>{formatarBRL(item.preco_associado ?? item.preco)}</p>
                       {item.tempo_preparo_min && <p className="text-[10px] text-slate-400">⏱️ ~{item.tempo_preparo_min} min</p>}
                     </div>
-                    <div className="mt-auto pt-2">
+                    <div className="mt-auto pt-2 space-y-1.5">
+                      {dispCompra?.pode && item.estoque_disponivel !== false && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const d = { loja: dispCompra.loja, item: { nome: item.nome, foto_url: fotoItem || null } };
+                            if (colocarNaSacola(d, 'produto', item.id, `/food/${slug}`)) toast.success(`${item.nome} no pedido`);
+                          }}
+                          className="w-full text-[11px] font-bold py-1.5 px-1 rounded-lg text-white"
+                          style={{ backgroundColor: ROXO }}
+                        >
+                          + Pedido
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={botao.desabilitado}
@@ -233,6 +254,15 @@ export default function FoodDetalhe() {
           pro carrinho vem primeiro (é de lá que sai o pedido agrupado). */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-slate-100 px-5 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="flex gap-2 w-full max-w-2xl mx-auto">
+          {naSacola > 0 && lerSacola()?.loja?.id === dispCompra?.loja?.id && (
+            <Link
+              to="/pedido/finalizar"
+              className="flex items-center justify-center gap-2 flex-1 text-sm sm:text-base font-black px-4 py-3.5 rounded-2xl text-white shadow-lg"
+              style={{ backgroundColor: ROXO }}
+            >
+              Finalizar pedido ({naSacola})
+            </Link>
+          )}
           {totalItens > 0 && (
             <Link
               to="/marketplace/carrinho"
