@@ -2,6 +2,8 @@ const db = require('../config/database');
 const pedidoLoja = require('../services/pedidoLoja');
 const { rotuloStatus } = require('../config/pedidos');
 const { ipCliente } = require('../utils/ipCliente');
+const pedidoAvisos = require('../services/pedidoAvisos');
+const { linkWhatsapp, manualClienteParaLoja } = require('../services/pedidoMensagens');
 
 // Pedido pelo site — lado do CLIENTE (/api/public/pedidos, sessão do /meu).
 // Regras e preço em services/pedidoLoja.js.
@@ -30,6 +32,9 @@ async function viewCliente(pedido) {
     [pedido.parceiro_id, pedido.catalogo]
   )).rows[0] || {};
   const mostraPix = ['aceito', 'pago_saiu'].includes(pedido.status);
+  // Z-API não avisou a loja: botão manual pro cliente, só com o número do
+  // pedido (o link com token da loja NUNCA aparece pro cliente).
+  const avisoFalhou = pedido.status === 'enviado' && await pedidoAvisos.avisoLojaFalhou(pedido.id);
   const { token_loja: _t, associado_id: _a, ...p } = pedido; // eslint-disable-line no-unused-vars
   return {
     ...p,
@@ -38,6 +43,8 @@ async function viewCliente(pedido) {
     pix_nome_recebedor: mostraPix ? p.pix_nome_recebedor : null,
     status_texto: rotuloStatus(p.status, p.modo_recebimento),
     loja: { nome: loja.nome, slug: loja.slug, whatsapp: loja.whatsapp || null },
+    aviso_loja_falhou: avisoFalhou,
+    link_manual_loja: avisoFalhou && loja.whatsapp ? linkWhatsapp(loja.whatsapp, manualClienteParaLoja(pedido)) : null,
     itens,
   };
 }

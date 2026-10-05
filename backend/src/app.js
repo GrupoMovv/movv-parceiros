@@ -103,6 +103,7 @@ app.use('/api/public/conta',           require('./routes/conta'));
 app.use('/api/public/pet',             require('./routes/pet'));
 app.use('/api/public/meus-pets',       require('./routes/meusPets'));
 app.use('/api/public/pedidos',         require('./routes/pedidos'));
+app.use('/api/public/pedido-loja',     require('./routes/pedidoLoja'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
 app.use('/',                           require('./routes/produtoPublico'));

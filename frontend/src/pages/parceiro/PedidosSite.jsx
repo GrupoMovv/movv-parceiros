@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2, CheckCircle2, XCircle, PauseCircle, PlayCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, PauseCircle, PlayCircle, Send } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { DIAS, textoTaxaEntrega } from '../../utils/iubFood';
@@ -25,6 +25,8 @@ export default function PedidosSite() {
   const [form, setForm] = useState({ pix_tipo: 'cnpj', pix_chave: '', pix_nome_recebedor: '', aceite_automatico: false });
   const [confirmo, setConfirmo] = useState(false);
   const [erroCampo, setErroCampo] = useState({});
+  const [testando, setTestando] = useState(false);
+  const [resultadoTeste, setResultadoTeste] = useState(null);
 
   function aplicar(c) {
     setConfig(c);
@@ -59,6 +61,18 @@ export default function PedidosSite() {
       toast.error(r.error || 'Erro ao salvar');
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function enviarTeste() {
+    setTestando(true);
+    try {
+      const res = await apiParceiro.post('/parceiro/pedidos/config/teste');
+      setResultadoTeste(res.data.envios);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao mandar o teste');
+    } finally {
+      setTestando(false);
     }
   }
 
@@ -162,6 +176,37 @@ export default function PedidosSite() {
             </span>
           </span>
         </label>
+      </Secao>
+
+      <Secao titulo="Avisos no WhatsApp" subtitulo="Cada pedido novo chega no WhatsApp com um link que abre o pedido, sem login.">
+        <p className="text-sm" style={{ color: PRETO }}>
+          Os avisos chegam em: <strong>{config.whatsapps_aviso.length ? config.whatsapps_aviso.join(' e ') : 'nenhum WhatsApp cadastrado'}</strong>
+        </p>
+        <ol className="mt-4 space-y-3 text-sm text-slate-700 list-decimal pl-5">
+          <li>
+            <strong>Salve o número do IUB MAIS+ nos seus contatos</strong>
+            {config.numero_avisos ? <> ({config.numero_avisos})</> : null}, com o nome "IUB MAIS+ Pedidos".
+            Link que chega de número desconhecido pode vir sem dar para clicar.
+          </li>
+          <li>
+            <strong>Mande um aviso de teste</strong> e toque no link da mensagem para ver se abre.
+            {!config.numero_avisos && ' Quando chegar, salve o número que mandou.'}
+          </li>
+        </ol>
+        <button type="button" onClick={enviarTeste} disabled={testando || !config.whatsapps_aviso.length}
+          className="mt-4 flex items-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-xl border-2 disabled:opacity-50"
+          style={{ borderColor: ROXO, color: ROXO }}>
+          {testando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Enviar aviso de teste
+        </button>
+        {resultadoTeste && (
+          <ul className="mt-3 space-y-1 text-sm">
+            {resultadoTeste.map(r => (
+              <li key={r.whatsapp} className={r.enviado ? 'text-emerald-700' : 'text-red-600'}>
+                {r.enviado ? `✅ Enviado para ${r.whatsapp}. Chegou? Toque no link.` : `❌ Não conseguimos enviar para ${r.whatsapp}. Confira o número ou fale com o suporte.`}
+              </li>
+            ))}
+          </ul>
+        )}
       </Secao>
 
       <Secao titulo="Confira antes de ligar" subtitulo="É isso que o cliente vê no pedido. Algo errado? Ajuste e volte aqui.">

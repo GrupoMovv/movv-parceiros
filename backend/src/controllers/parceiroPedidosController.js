@@ -3,6 +3,9 @@ const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { horarioConfigurado } = require('../config/beer');
 const { carregarLoja, modosDisponiveis } = require('../services/pedidoLoja');
 const { pedidosSiteLiberado } = require('../config/pedidos');
+const pedidoAvisos = require('../services/pedidoAvisos');
+const { normalizarWhatsapp } = require('../services/whatsappVerificacao');
+const { testeLoja } = require('../services/pedidoMensagens');
 
 // Pedido pelo site — lado da LOJA (/api/parceiro/pedidos). Parte 4: ligar
 // o recurso, chave Pix, aceite automático e pausa rápida.
@@ -46,10 +49,28 @@ function requisitos(loja) {
   return { lista, catalogos: [vendeGeral && 'geral', vendeBeer && 'beer'].filter(Boolean), modos, podeLigar: lista.every(r => r.ok) };
 }
 
+function mascarar(n) {
+  return n.length >= 10 ? `(${n.slice(0, 2)}) *****-${n.slice(-4)}` : n;
+}
+
+// WhatsApps que recebem o aviso de pedido: o da loja (catálogo geral) e o
+// do estabelecimento do Disk Bebidas, sem repetir.
+function whatsappsAviso(loja) {
+  const r = requisitos(loja);
+  const nums = [];
+  if (r.catalogos.includes('geral')) nums.push(normalizarWhatsapp(loja.whatsapp));
+  if (r.catalogos.includes('beer')) nums.push(normalizarWhatsapp(loja.beer?.whatsapp));
+  return [...new Set(nums.filter(n => n.length >= 10))];
+}
+
 function viewConfig(loja) {
   const req = requisitos(loja);
   return {
     liberado: pedidosSiteLiberado(loja),
+    // número do chip que manda os avisos (opcional, pra loja salvar nos contatos)
+    numero_avisos: (process.env.ZAPI_NUMERO_EXIBICAO || '').trim() || null,
+    // pra onde vão os avisos de pedido (Disk Bebidas: o WhatsApp do estabelecimento)
+    whatsapps_aviso: whatsappsAviso(loja).map(mascarar),
     ativo: loja.pedidos_site_ativo,
     pausado: loja.pedidos_pausados,
     aceite_automatico: loja.pedidos_aceite_automatico,
@@ -147,4 +168,28 @@ async function pausar(req, res) {
   }
 }
 
-module.exports = { getConfig, salvarConfig, pausar, normalizarChavePix, requisitos };
+// POST /config/teste — manda o aviso de teste pros WhatsApps de pedido, pra
+// loja confirmar que chega e que o link abre. 1 por minuto por loja.
+const ultimoTeste = new Map();
+async function enviarTeste(req, res) {
+  try {
+    const agora = Date.now();
+    const desde = agora - (ultimoTeste.get(req.parceiro.id) || 0);
+    if (desde < 60000) {
+      const aguarde = Math.ceil((60000 - desde) / 1000);
+      return res.status(429).json({ error: `Aguarde ${aguarde}s para mandar outro teste.`, aguarde_seg: aguarde });
+    }
+    const loja = await carregarLoja(req.parceiro.id);
+    const nums = whatsappsAviso(loja);
+    if (!nums.length) return res.status(409).json({ error: 'Cadastre o WhatsApp da loja primeiro.' });
+    ultimoTeste.set(req.parceiro.id, agora);
+    const envios = [];
+    for (const n of nums) envios.push({ whatsapp: mascarar(n), enviado: await pedidoAvisos.enviar(n, testeLoja(loja.nome)) });
+    return res.json({ envios });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao mandar o aviso de teste' });
+  }
+}
+
+module.exports = { getConfig, salvarConfig, pausar, enviarTeste, normalizarChavePix, requisitos };

@@ -8,5 +8,6 @@ router.use(authenticateParceiro);
 router.get('/config', ctrl.getConfig);
 router.put('/config', ctrl.salvarConfig);
 router.patch('/config/pausa', ctrl.pausar);
+router.post('/config/teste', ctrl.enviarTeste);
 
 module.exports = router;

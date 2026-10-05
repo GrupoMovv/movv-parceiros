@@ -116,6 +116,7 @@ import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
 import ParceiroPedidosSite from './pages/parceiro/PedidosSite';
+import PedidoLoja from './pages/public/PedidoLoja';
 import ParceiroFidelidadePet from './pages/parceiro/FidelidadePet';
 import AtenderPet from './pages/public/Pet/AtenderPet';
 import BalcaoPet from './pages/public/Pet/BalcaoPet';
@@ -274,6 +275,7 @@ export default function App() {
         {/* Pet parte 5: QR do pet (pet shop lê) e QR do balcão (cliente lê) */}
         <Route path="/atender/:token"     element={<AtenderPet />} />
         <Route path="/balcao/:token"      element={<BalcaoPet />} />
+        <Route path="/pedido-loja/:token" element={<PedidoLoja />} />
         <Route path="/jogar/roleta"       element={<Roleta />} />
         <Route path="/jogar/memoria"      element={<MemoriaNiveis />} />
         <Route path="/jogar/memoria/:nivel" element={<Memoria />} />

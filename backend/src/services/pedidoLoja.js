@@ -10,6 +10,7 @@ const { fechaMesHabilitadoGlobalmente, obterProximoEvento } = require('./fechaMe
 const { situacaoDoAssociado } = require('./beneficioAssociado');
 const { whatsappConfirmado, normalizarWhatsapp } = require('./whatsappVerificacao');
 const { onlyDigits } = require('../utils/validators');
+const pedidoAvisos = require('./pedidoAvisos');
 
 // Pedido pelo site (botão Comprar) — núcleo. O DINHEIRO NÃO PASSA PELO IUB:
 // o cliente paga no Pix da loja; aqui só se registra e acompanha.
@@ -397,8 +398,9 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
   if (catalogo === 'beer') await conferirIdadeBeer(associado, entrada, ip, userAgent);
 
   const automatico = Boolean(loja.pedidos_aceite_automatico);
+  let criado;
   try {
-    return await db.transacao(async (client) => {
+    criado = await db.transacao(async (client) => {
       const p = (await client.query(
         `INSERT INTO loja_pedidos (
            parceiro_id, associado_id, catalogo, beer_estabelecimento_id, status,
@@ -450,6 +452,9 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
     }
     throw err;
   }
+  // Depois do COMMIT: aviso pra loja (e pro cliente, no aceite automático).
+  const avisos = await pedidoAvisos.avisarNovoPedido(criado.pedido);
+  return { ...criado, avisos };
 }
 
 // ── Mudança de status ──────────────────────────────────────────────────
@@ -499,7 +504,8 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
     }
     return r.rows[0] || null;
   });
-  if (pedido) return { pedido };
+  // Depois do COMMIT: aviso pro cliente (só nas mudanças que avisam).
+  if (pedido) return { pedido, aviso: await pedidoAvisos.avisarMudanca(pedido) };
 
   const atual = (await db.query('SELECT status, associado_id, parceiro_id, created_at FROM loja_pedidos WHERE id = $1', [pedidoId])).rows[0];
   const dono = atual && (ator === 'sistema' || (ator === 'cliente' && atual.associado_id === associadoId) || (ator === 'loja' && atual.parceiro_id === parceiroId));
