@@ -52,6 +52,14 @@ async function dadosLoja(pedido) {
   };
 }
 
+// Aceito: a mensagem completa e, logo em seguida, a chave Pix sozinha
+// (só se a primeira chegou — sem ela a chave solta não faz sentido).
+async function avisarAceito(pedido, texto) {
+  const ok = await registrarEEnviar(pedido.id, 'aceito', 'cliente', pedido.cliente_whatsapp, texto);
+  if (ok && pedido.pix_chave) await registrarEEnviar(pedido.id, 'aceito_pix', 'cliente', pedido.cliente_whatsapp, msg.chavePixSozinha(pedido));
+  return ok;
+}
+
 async function itensDo(pedidoId) {
   return (await db.query('SELECT nome, quantidade, subtotal FROM loja_pedido_itens WHERE pedido_id = $1 ORDER BY id', [pedidoId])).rows;
 }
@@ -63,7 +71,7 @@ async function avisarNovoPedido(pedido) {
   const lojaAvisada = await registrarEEnviar(pedido.id, 'novo', 'loja', loja.whatsapp, msg.novoPedidoLoja(pedido, await itensDo(pedido.id)));
   let clienteAvisado = null;
   if (pedido.status === 'aceito') {
-    clienteAvisado = await registrarEEnviar(pedido.id, 'aceito', 'cliente', pedido.cliente_whatsapp, msg.aceitoCliente(pedido, loja.nome));
+    clienteAvisado = await avisarAceito(pedido, msg.aceitoCliente(pedido, loja.nome));
   }
   return { loja: lojaAvisada, cliente: clienteAvisado };
 }
@@ -84,7 +92,9 @@ async function avisarMudanca(pedido) {
   const loja = await dadosLoja(pedido);
   const texto = await textoMudanca(pedido, loja);
   if (!texto) return { avisado: null, texto: null };
-  const avisado = await registrarEEnviar(pedido.id, pedido.status, 'cliente', pedido.cliente_whatsapp, texto);
+  const avisado = pedido.status === 'aceito'
+    ? await avisarAceito(pedido, texto)
+    : await registrarEEnviar(pedido.id, pedido.status, 'cliente', pedido.cliente_whatsapp, texto);
   return { avisado, texto };
 }
 

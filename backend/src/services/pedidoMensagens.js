@@ -23,9 +23,9 @@ function linhasItens(itens) {
 }
 
 function recebimento(p) {
-  return p.modo_recebimento === 'entrega'
-    ? `🛵 Entrega: ${p.endereco}, ${p.numero}${p.bairro ? ` — ${p.bairro}` : ''}`
-    : '🏪 Retirada na loja';
+  if (p.modo_recebimento !== 'entrega') return '🏪 Retirada na loja';
+  const partes = [`${p.endereco}, ${p.numero}`, p.complemento, p.bairro].filter(Boolean).join(' — ');
+  return `🛵 Entrega: ${partes}` + (p.referencia ? `\n📍 Referência: ${p.referencia}` : '');
 }
 
 // ── Loja ──────────────────────────────────────────────────────────────
@@ -71,9 +71,14 @@ function aceitoCliente(p, nomeLoja) {
     'Pague no Pix da loja:',
     `${ROTULO_PIX[p.pix_tipo] || 'Chave'}: ${p.pix_chave}`,
     p.pix_nome_recebedor ? `Nome: ${p.pix_nome_recebedor}` : null, '',
-    `O pagamento é direto para a loja (o IUB MAIS+ não recebe esse valor). Pague em até ${PRAZO_PAGO_MIN / 60} horas; quando a loja confirmar o Pix, você recebe outro aviso.`, '',
+    `Confira o nome antes de pagar. A loja só prepara o pedido depois de confirmar o Pix. O pagamento é direto para a loja (o IUB MAIS+ não recebe esse valor). Prazo: ${PRAZO_PAGO_MIN / 60} horas.`, '',
     `Acompanhe: ${linkMeuPedido(p.id)}`,
   ].filter(l => l !== null).join('\n');
+}
+
+// Segunda mensagem, logo depois do aceito: só a chave, pra copiar com um toque.
+function chavePixSozinha(p) {
+  return String(p.pix_chave || '');
 }
 
 function recusadoCliente(p, nomeLoja) {
@@ -129,6 +134,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, testeLoja, aceitoCliente, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, testeLoja, aceitoCliente, chavePixSozinha, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

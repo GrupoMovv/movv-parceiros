@@ -11,6 +11,30 @@ const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency
 
 const MOTIVOS_RECUSA = ['Fora da área de entrega', 'Produto em falta', 'Loja fechando agora'];
 
+function telefoneBR(d) {
+  const s = String(d || '').replace(/\D/g, '');
+  return s.length === 11 ? `(${s.slice(0, 2)}) ${s.slice(2, 7)}-${s.slice(7)}` : s.length === 10 ? `(${s.slice(0, 2)}) ${s.slice(2, 6)}-${s.slice(6)}` : s;
+}
+
+// "Enviar para o entregador": WhatsApp sem destinatário (a loja escolhe o
+// contato), só com o necessário pra entrega — SEM o link do pedido.
+function linkEntregador(p) {
+  const e = p.endereco || {};
+  const cep = String(e.cep || '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
+  const linhas = [
+    `🛵 Entrega — pedido #${p.id} (${p.loja_nome})`, '',
+    `Cliente: ${p.cliente.nome}`,
+    `Telefone: ${telefoneBR(p.cliente.whatsapp)}`,
+    `Endereço: ${[`${e.endereco}, ${e.numero}`, e.complemento, e.bairro, e.cidade && `${e.cidade}/${e.estado}`, cep && `CEP ${cep}`].filter(Boolean).join(' — ')}`,
+    e.referencia ? `Referência: ${e.referencia}` : null, '',
+    'Itens:',
+    ...p.itens.map(i => `${i.quantidade}x ${i.nome}`),
+    `Total: ${brl(p.total)} (já pago no Pix)`,
+    p.aviso_idade ? '⚠️ Bebida alcoólica: conferir documento (18+) na entrega.' : null,
+  ].filter(l => l !== null);
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(linhas.join('\n'))}`;
+}
+
 // /pedido-loja/:token — o link do aviso de WhatsApp da LOJA, sem login.
 // No máximo 2 toques: Aceitar (ou Recusar) e "Pago, saiu". /pedido-loja/teste
 // é o link do "Enviar aviso de teste" do painel.
@@ -136,6 +160,13 @@ export default function PedidoLoja() {
           <WhatsappLogo size={18} weight="fill" /> Chamar o cliente
         </a>
       </Bloco>
+
+      {pedido.status === 'pago_saiu' && !retirada && (
+        <a href={linkEntregador(pedido)} target="_blank" rel="noreferrer"
+          className="mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold border-2 border-emerald-600 text-emerald-700">
+          <Truck className="w-5 h-5" /> Enviar para o entregador
+        </a>
+      )}
 
       {pedido.resposta && <p className="mt-4 text-sm text-slate-600">Recado: {pedido.resposta}</p>}
 
