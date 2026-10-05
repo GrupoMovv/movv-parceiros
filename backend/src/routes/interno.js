@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const router = require('express').Router();
 const assinaturaService = require('../services/assinaturaService');
 const carteirinhaAvisos = require('../services/carteirinhaAvisosService');
+const pedidoPrazos = require('../services/pedidoPrazos');
 
 // Rotinas internas disparadas por agendador externo (Render Cron Job) —
 // o projeto não roda cron dentro do processo (o serviço web pode dormir no
@@ -48,6 +49,21 @@ router.post('/carteirinhas/rotina', exigirSegredo, async (req, res) => {
     return res.json({ ok: true, ...r, duracao_ms: Date.now() - inicio });
   } catch (err) {
     console.error('[rotina carteirinhas] falhou:', err);
+    return res.status(500).json({ error: 'rotina falhou', detalhe: err.message });
+  }
+});
+
+// POST /api/interno/pedidos/prazos — prazos do pedido pelo site. O timer do
+// servidor já roda a cada minuto; esta rota é reserva (Cron do Render a cada
+// 5 min, se um dia o timer for desligado). Idempotente.
+//   curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" https://<backend>/api/interno/pedidos/prazos
+router.post('/pedidos/prazos', exigirSegredo, async (req, res) => {
+  const inicio = Date.now();
+  try {
+    const r = await pedidoPrazos.rodarPrazos();
+    return res.json({ ok: true, ...r, duracao_ms: Date.now() - inicio });
+  } catch (err) {
+    console.error('[prazos pedidos] rota falhou:', err);
     return res.status(500).json({ error: 'rotina falhou', detalhe: err.message });
   }
 });

@@ -9,6 +9,9 @@ db.pool.connect()
     app.listen(PORT, () => {
       console.log(`Servidor rodando na porta ${PORT}`);
       console.log('Rotas registradas: auth, partners, referrals, commissions, payments, products, reports');
+      // Prazos do pedido pelo site (expira, cancela sem Pix, fecha entregue).
+      // PEDIDOS_PRAZOS_TIMER=false desliga (aí só pela rota /api/interno).
+      if (process.env.PEDIDOS_PRAZOS_TIMER !== 'false') require('./services/pedidoPrazos').iniciarTimer();
     });
   })
   .catch((err) => {

@@ -73,16 +73,17 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 | 4. Configuração da loja | Aba "Pedidos pelo site": Pix validado, aceite automático, pausa, confirmação da configuração. Aba "Entrega e horários" para toda empresa. Trava `PEDIDOS_SITE_LIBERADO` | No ar (`25b09d5`) |
 | Ajustes | Migration 081 (limite só de não pagos) e promoção com 1 unidade por pedido | No ar (`ddded99`) |
 | 5. Avisos e link da loja | Textos em `services/pedidoMensagens.js` (aprovados pelo Junior), envio e registro em `services/pedidoAvisos.js` (cada aviso uma vez só), página `/pedido-loja/:token` (Aceitar/Recusar, Pago saiu, Cancelar, Enviar para o entregador), botão de aviso de teste no painel, migration 082 (#1001) | No ar (`5143a96`, `412171f`) |
+| 6a. Comprar e Finalizar | Botão Comprar (produto, promoção, Fecha Mês, Beer, Food), sacola, Finalizar com WhatsApp confirmado, endereço e +18; "Minha lista" (antigo carrinho) | No ar |
+| 6b. Preço por pessoa | O preço principal de cada card e página é o que aquela pessoa paga (`precoPessoa.js`, mesma regra do servidor); selo "-X% SECI" | No ar |
+| 7. Aba Pedidos no painel | Para responder / Em andamento / Encerrados, contador, som e "(n) Novo pedido" no título | No ar (`218ffa6`, `6e709d6`) |
+| 8. `/meu/pedidos` | Lista e acompanhamento, Pix, "Recebi meu pedido", cancelar enquanto a loja não aceitou, "Chamar a loja" | No ar (`9af4f68`) |
+| QR Pix | Copia e cola e QR com o valor (BR Code do Banco Central, `utils/pixBrCode.js`), só enquanto o pedido está aceito | Commit local |
+| 9. Prazos | `services/pedidoPrazos.js`: timer no servidor a cada minuto + `POST /api/interno/pedidos/prazos` (reserva, com `CRON_SECRET`). `PEDIDOS_PRAZOS_TIMER=false` desliga o timer | Commit local |
 
 ## O que falta
 
 | Parte | O que vai entrar |
 |---|---|
-| 6. Comprar e Finalizar | Botão Comprar nas páginas (produto, promoção, Fecha Mês, Beer), tela de finalizar com WhatsApp confirmado, endereço e +18, e os preços das páginas alinhados com a regra do servidor |
-| 7. Aba Pedidos no painel | Para responder / Em andamento / Encerrados, com contador |
-| 8. `/meu/pedidos` | Acompanhar, ver Pix e total, "Recebi", "Chamar a loja" |
-| QR Pix | QR e copia-e-cola com o valor (padrão do Banco Central, sem Mercado Pago) |
-| 9. Prazos | Timer no backend + `/api/interno` para Cron: expira em 10 min, cancela aceito sem pago em 2h, fecha entregue em 3h/12h, avisos sem duplicar |
 | 10. Teste ponta a ponta | Com a Adega Teste em modo QA, Política de Privacidade e termos atualizados, limpeza dos pedidos de teste (numeração volta para 1001), **raiz e marca do iubmais.com.br**, troca das variáveis (ver "Domínio oficial") e depois `PEDIDOS_SITE_LIBERADO=true` |
 
 ## Domínio oficial (antes de ligar `PEDIDOS_SITE_LIBERADO`)
