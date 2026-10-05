@@ -15,11 +15,24 @@ cleanupOutdatedCaches();
 self.skipWaiting();
 self.clients.claim();
 
-// SPA: qualquer navegação (recarregar numa rota tipo /marketplace/produto/5
-// offline) cai no index.html precacheado, não em 404 — sem isso só a home
-// funcionaria offline.
+// SPA: toda navegação busca o index.html NA REDE primeiro — é ele que diz
+// qual build está no ar. Antes respondia com o index.html precacheado: quem
+// tinha a versão antiga guardada abria um link de rota nova (ex.: o
+// /pedido-loja do aviso de WhatsApp) e via o 404 do app até o SW se
+// atualizar (05/10/2026). O precacheado fica só pra sem rede ou rede lenta
+// (mais de 5s): aí qualquer rota ainda abre offline, como antes.
 if (precacheManifest.length > 0) {
-  registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')));
+  const indexPrecacheado = createHandlerBoundToURL('/index.html');
+  registerRoute(new NavigationRoute(async (opcoes) => {
+    try {
+      const resposta = await Promise.race([
+        fetch(opcoes.request),
+        new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error('rede lenta')), 5000)),
+      ]);
+      if (resposta.ok) return resposta;
+    } catch { /* sem rede ou lenta: cai no precacheado */ }
+    return indexPrecacheado(opcoes);
+  }));
 }
 
 // API sempre busca da rede primeiro (preço/estoque não pode ficar velho);
