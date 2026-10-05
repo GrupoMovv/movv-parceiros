@@ -1,6 +1,6 @@
 # Pedido pelo site (botão Comprar) — IUB MAIS+
 
-Resumo do projeto para consulta. Atualizado em 05/10/2026.
+Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 
 ## Escopo (versão 1)
 
@@ -51,6 +51,16 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026.
 - **Limite de pedidos:** conta só os **não pagos** (`enviado` e `aceito`). Depois de "pago, saiu", o cliente pode fazer outro pedido na mesma loja.
 - **Trava de lançamento:** até `PEDIDOS_SITE_LIBERADO=true` no Render, só a empresa de teste consegue ligar o recurso, e a aba nem aparece para as outras lojas.
 - **Fora de escopo, anotado no TODO.md:** "Recupera Carrinho" (contador para a loja e oferta com cupom para quem autorizou; plano pago).
+- **Avisos (parte 5), poucas mensagens para não arriscar o chip do Z-API:**
+  - loja: só "novo pedido", com o link sem login;
+  - cliente: aceito (total + Pix), recusado, expirado, cancelado (pela loja ou pelo sistema), "saiu para entrega" ou "pronto para retirar". Não avisa "entregue" nem quando o próprio cliente cancela;
+  - no aceito, a chave Pix vai **sozinha numa segunda mensagem**, para copiar com um toque. O texto pede para conferir o nome antes de pagar e diz que a loja só prepara depois de confirmar o Pix;
+  - pedido do Disk Bebidas avisa o WhatsApp do **estabelecimento Beer**;
+  - o link com token da loja **nunca** vai para o cliente. Se o Z-API falhar ao avisar a loja, o cliente ganha um botão manual só com o número do pedido;
+  - ativação: passo "salve o número do IUB MAIS+ nos contatos" (número em `ZAPI_NUMERO_EXIBICAO`, no Render) e botão "Enviar aviso de teste".
+- **Link da loja:** depois de "Pago, saiu", botão "Enviar para o entregador" com nome, telefone, endereço completo, itens e total (já pago), **sem** o link do pedido.
+- **Número do pedido começa em 1001** (migration 082).
+- **Links das mensagens** usam a variável `FRONTEND_URL` (hoje https://movv-parceiros.onrender.com). Quando o domínio iubmais.com.br entrar, basta trocar a variável.
 - **Não marcar como confirmado** o WhatsApp de quem usou o "esqueci a senha": aquele fluxo não guarda para qual número o código foi.
 
 ## O que cada parte entregou
@@ -61,13 +71,13 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026.
 | 2. WhatsApp confirmado | Código de 6 números pelo Z-API (10 min, 1 por minuto, 3 por hora, 5 tentativas). Confirmado = número verificado igual ao atual. Bloco em Meus Dados | No ar (`09be737`). Falta o Junior testar com o Z-API real |
 | 3. Núcleo no backend | `services/pedidoLoja.js`: regra única de "pode comprar", preço no servidor, cotação, criação com cópia dos itens, +18 do Beer no servidor, limites, mudanças de status atômicas, reserva de vaga de promoção. Rotas do cliente em `/api/public/pedidos` | No ar (`3ddccf3`, `3f1467b`) |
 | 4. Configuração da loja | Aba "Pedidos pelo site": Pix validado, aceite automático, pausa, confirmação da configuração. Aba "Entrega e horários" para toda empresa. Trava `PEDIDOS_SITE_LIBERADO` | No ar (`25b09d5`) |
-| Ajustes | Migration 081 (limite só de não pagos) e promoção com 1 unidade por pedido | Commit local (`ddded99`), aguardando push |
+| Ajustes | Migration 081 (limite só de não pagos) e promoção com 1 unidade por pedido | No ar (`ddded99`) |
+| 5. Avisos e link da loja | Textos em `services/pedidoMensagens.js` (aprovados pelo Junior), envio e registro em `services/pedidoAvisos.js` (cada aviso uma vez só), página `/pedido-loja/:token` (Aceitar/Recusar, Pago saiu, Cancelar, Enviar para o entregador), botão de aviso de teste no painel, migration 082 (#1001) | No ar (`5143a96`, `412171f`) |
 
 ## O que falta
 
 | Parte | O que vai entrar |
 |---|---|
-| 5. Avisos e link da loja | Aviso pelo Z-API para a loja e para o cliente a cada mudança, com fallback manual. Página pública do pedido pelo token (Aceitar/Recusar, "Pago, saiu", Cancelar) |
 | 6. Comprar e Finalizar | Botão Comprar nas páginas (produto, promoção, Fecha Mês, Beer), tela de finalizar com WhatsApp confirmado, endereço e +18, e os preços das páginas alinhados com a regra do servidor |
 | 7. Aba Pedidos no painel | Para responder / Em andamento / Encerrados, com contador |
 | 8. `/meu/pedidos` | Acompanhar, ver Pix e total, "Recebi", "Chamar a loja" |
