@@ -1,7 +1,8 @@
 const db = require('../config/database');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { horarioConfigurado } = require('../config/beer');
-const { carregarLoja, modosDisponiveis } = require('../services/pedidoLoja');
+const { carregarLoja, modosDisponiveis, transicionar, ErroPedido } = require('../services/pedidoLoja');
+const { viewLoja, respostaAcao } = require('./pedidoLinkLojaController');
 const { pedidosSiteLiberado } = require('../config/pedidos');
 const pedidoAvisos = require('../services/pedidoAvisos');
 const { normalizarWhatsapp } = require('../services/whatsappVerificacao');
@@ -213,4 +214,69 @@ async function enviarTeste(req, res) {
   }
 }
 
-module.exports = { getConfig, salvarConfig, pausar, enviarTeste, normalizarChavePix, requisitos };
+// ── Aba Pedidos (parte 7) ──────────────────────────────────────────────
+// Mesmas abas da agenda do PET: Para responder / Em andamento / Encerrados.
+const FILTROS_PEDIDOS = {
+  responder: ['enviado'],
+  andamento: ['aceito', 'pago_saiu'],
+  encerrados: ['entregue', 'recusado', 'cancelado', 'expirado'],
+};
+
+// GET /  ?filtro=responder|andamento|encerrados
+async function listarPedidos(req, res) {
+  try {
+    const filtro = FILTROS_PEDIDOS[req.query.filtro] ? req.query.filtro : 'responder';
+    const r = await db.query(
+      `SELECT * FROM loja_pedidos WHERE parceiro_id = $1 AND status = ANY($2)
+       ORDER BY ${filtro === 'encerrados' ? 'COALESCE(encerrado_em, created_at) DESC' : 'created_at ASC'} LIMIT 60`,
+      [req.parceiro.id, FILTROS_PEDIDOS[filtro]]
+    );
+    const contagem = (await db.query(
+      `SELECT COUNT(*) FILTER (WHERE status = 'enviado')::int AS responder,
+              COUNT(*) FILTER (WHERE status IN ('aceito', 'pago_saiu'))::int AS andamento
+       FROM loja_pedidos WHERE parceiro_id = $1`,
+      [req.parceiro.id]
+    )).rows[0];
+    const pedidos = [];
+    for (const p of r.rows) pedidos.push(await viewLoja(p));
+    return res.json({ pedidos, contagem });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao carregar os pedidos' });
+  }
+}
+
+// GET /:id
+async function verPedido(req, res) {
+  try {
+    const p = (await db.query('SELECT * FROM loja_pedidos WHERE id = $1 AND parceiro_id = $2', [req.params.id, req.parceiro.id])).rows[0];
+    if (!p) return res.status(404).json({ error: 'Pedido não encontrado' });
+    return res.json(await viewLoja(p));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao carregar o pedido' });
+  }
+}
+
+// POST /:id/:acao  (aceitar | recusar | pago_saiu | cancelar) — mesmas regras do link sem login
+async function agirPedido(req, res) {
+  try {
+    const acao = req.params.acao;
+    if (!['aceitar', 'recusar', 'pago_saiu', 'cancelar'].includes(acao)) return res.status(400).json({ error: 'Ação inválida.' });
+    const { pedido, aviso } = await transicionar(Number(req.params.id), 'loja', acao, {
+      parceiroId: req.parceiro.id,
+      resposta: ['recusar', 'cancelar'].includes(acao) ? req.body?.resposta : undefined,
+      confirmoCancelarPago: acao === 'cancelar' && req.body?.confirmo_cancelar_pago === true,
+    });
+    return res.json(await respostaAcao(pedido, aviso));
+  } catch (err) {
+    if (err instanceof ErroPedido) return res.status(err.status).json({ error: err.message, code: err.code, ...err.extra });
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos atualizar o pedido agora.' });
+  }
+}
+
+module.exports = {
+  getConfig, salvarConfig, pausar, enviarTeste, normalizarChavePix, requisitos,
+  listarPedidos, verPedido, agirPedido,
+};

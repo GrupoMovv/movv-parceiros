@@ -20,7 +20,14 @@ async function buscarPorToken(token) {
   return r.rows[0] || null;
 }
 
+// 'enviado' depois dos 10 min: o servidor não aceita mais (a rotina de prazos
+// vai expirar) — sem botões, pra loja não tocar num Aceitar que vai falhar.
+function prazoEsgotado(p) {
+  return p.status === 'enviado' && Date.now() > new Date(p.created_at).getTime() + PRAZO_RESPOSTA_MIN * 60000;
+}
+
 function acoesDisponiveis(p) {
+  if (prazoEsgotado(p)) return [];
   if (p.status === 'enviado') return ['aceitar', 'recusar'];
   if (p.status === 'aceito') return ['pago_saiu', 'cancelar'];
   if (p.status === 'pago_saiu') return ['cancelar'];
@@ -48,6 +55,7 @@ async function viewLoja(p) {
     observacao: p.observacao, resposta: p.resposta,
     itens, subtotal: p.subtotal, valor_entrega: p.valor_entrega, total: p.total,
     acoes: acoesDisponiveis(p),
+    prazo_esgotado: prazoEsgotado(p),
   };
 }
 
@@ -74,12 +82,7 @@ async function agir(req, res) {
       parceiroId: p.parceiro_id, resposta: ['recusar', 'cancelar'].includes(acao) ? req.body?.resposta : undefined,
       confirmoCancelarPago: acao === 'cancelar' && req.body?.confirmo_cancelar_pago === true,
     });
-    return res.json({
-      ...(await viewLoja(pedido)),
-      cliente_avisado: aviso?.avisado ?? null,
-      // Z-API falhou: a loja manda a mesma mensagem pelo WhatsApp dela
-      link_manual_cliente: aviso?.avisado === false ? linkWhatsapp(pedido.cliente_whatsapp, aviso.texto) : null,
-    });
+    return res.json(await respostaAcao(pedido, aviso));
   } catch (err) {
     if (err instanceof pedidoLoja.ErroPedido) return res.status(err.status).json({ error: err.message, code: err.code, ...err.extra });
     console.error(err);
@@ -87,4 +90,14 @@ async function agir(req, res) {
   }
 }
 
-module.exports = { ver, agir, buscarPorToken, viewLoja };
+// Resposta de uma ação da loja (link ou painel): o pedido atualizado e, se o
+// Z-API falhou, o botão manual pra loja avisar o cliente pelo WhatsApp dela.
+async function respostaAcao(pedido, aviso) {
+  return {
+    ...(await viewLoja(pedido)),
+    cliente_avisado: aviso?.avisado ?? null,
+    link_manual_cliente: aviso?.avisado === false ? linkWhatsapp(pedido.cliente_whatsapp, aviso.texto) : null,
+  };
+}
+
+module.exports = { ver, agir, buscarPorToken, viewLoja, respostaAcao };

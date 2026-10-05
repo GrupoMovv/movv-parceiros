@@ -20,7 +20,8 @@ const ABAS = [
   { label: '🎯 Promoções', to: '/parceiro/painel/promocoes', soCnpj: true },
   // Entrega e horários: qualquer empresa (o pedido pelo site usa pra qualquer loja, não só restaurante).
   { label: '🛵 Entrega e horários', to: '/parceiro/painel/entrega', soCnpj: true },
-  { label: '🛒 Pedidos pelo site', to: '/parceiro/painel/pedidos-site', soCnpj: true, soPedidosSite: true },
+  { label: '📦 Pedidos', to: '/parceiro/painel/pedidos', soCnpj: true, soPedidosSite: true },
+  { label: '⚙️ Configurar pedidos', to: '/parceiro/painel/pedidos-site', soCnpj: true, soPedidosSite: true },
   { label: '🐾 Agendamentos', to: '/parceiro/painel/agendamentos', soPetAtendimento: true },
   { label: '🎟️ Fidelidade & QR', to: '/parceiro/painel/fidelidade', soPetAtendimento: true },
   // IUB Disk Bebidas: aberto pra todo parceiro — é a própria aba que oferece

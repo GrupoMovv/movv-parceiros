@@ -116,6 +116,7 @@ import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
 import ParceiroPedidosSite from './pages/parceiro/PedidosSite';
+import ParceiroPedidosRecebidos from './pages/parceiro/PedidosRecebidos';
 import PedidoLoja from './pages/public/PedidoLoja';
 import FinalizarPedido from './pages/public/Pedido/FinalizarPedido';
 import ParceiroFidelidadePet from './pages/parceiro/FidelidadePet';
@@ -324,6 +325,7 @@ export default function App() {
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
           <Route path="agendamentos" element={<ParceiroAgendamentosPet />} />
           <Route path="pedidos-site" element={<ParceiroPedidosSite />} />
+          <Route path="pedidos" element={<ParceiroPedidosRecebidos />} />
           <Route path="fidelidade" element={<ParceiroFidelidadePet />} />
           <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="minha-assinatura" element={<ParceiroMinhaAssinatura />} />
