@@ -115,6 +115,14 @@ export default function ProdutoDetalhe() {
   if (!produto) return <ProdutoSkeleton />;
 
   const whatsappHabilitado = Boolean(produto.parceiro_whatsapp) && produto.estoque_disponivel;
+  const podeComprar = Boolean(dispCompra?.pode && produto.estoque_disponivel);
+  // Com pedido pelo site o WhatsApp é só pra dúvida (mensagem de dúvida, não de pedido)
+  const linkDuvida = produto.parceiro_whatsapp
+    ? linkWhatsappComTexto(produto.parceiro_whatsapp, `Olá! Vi o produto ${produto.nome} no IUB MAIS+ e tenho uma dúvida.`)
+    : null;
+  function registrarCliqueWhatsapp() {
+    api.post(`/public/produtos/${id}/visualizacao`, { tipo: 'clique_whatsapp', associado_hash: associadoHash }).catch(() => {});
+  }
 
   const temPrecoAssociado = Boolean(produto.preco_associado);
   const economia = temPrecoAssociado ? parseFloat(produto.preco) - parseFloat(produto.preco_associado) : 0;
@@ -238,20 +246,29 @@ export default function ProdutoDetalhe() {
             {produto.estoque_disponivel ? '● Disponível' : '● Indisponível no momento'}
           </p>
 
-          {/* CTA whatsapp — inline (desktop / mobile no fluxo normal) */}
-          <button
-            type="button"
-            onClick={handleWhatsappClick}
-            disabled={!whatsappHabilitado || carregandoWhatsapp}
-            className={`mt-6 w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-xl transition-all duration-300 ease-out ${whatsappHabilitado ? 'hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
-            style={{ backgroundColor: '#25D366', boxShadow: whatsappHabilitado ? `0 4px 20px ${DOURADO}33` : 'none' }}
-          >
-            {carregandoWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
-            Chamar no WhatsApp
-          </button>
-
-          {produto.estoque_disponivel && (
-            <BotaoComprar tipo="produto" id={produto.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} className="mt-2.5" />
+          {/* UM botão principal: com pedido pelo site, Comprar (WhatsApp vira
+              só "tirar dúvida"); sem, o WhatsApp de sempre. */}
+          {podeComprar ? (
+            <>
+              <BotaoComprar tipo="produto" id={produto.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} className="mt-6" />
+              {produto.parceiro_whatsapp && (
+                <a href={linkDuvida} target="_blank" rel="noreferrer" onClick={registrarCliqueWhatsapp}
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 underline underline-offset-4">
+                  <MessageCircle className="w-4 h-4" /> Tirar dúvida no WhatsApp
+                </a>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleWhatsappClick}
+              disabled={!whatsappHabilitado || carregandoWhatsapp}
+              className={`mt-6 w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-xl transition-all duration-300 ease-out ${whatsappHabilitado ? 'hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+              style={{ backgroundColor: '#25D366', boxShadow: whatsappHabilitado ? `0 4px 20px ${DOURADO}33` : 'none' }}
+            >
+              {carregandoWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
+              Chamar no WhatsApp
+            </button>
           )}
 
           <button
@@ -345,9 +362,9 @@ export default function ProdutoDetalhe() {
 
       {/* whatsapp fixo mobile */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40 flex gap-2">
-        {dispCompra?.pode && produto.estoque_disponivel && (
+        {podeComprar ? (
           <div className="flex-1"><BotaoComprar tipo="produto" id={produto.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} compacto /></div>
-        )}
+        ) : (
         <button
           type="button"
           onClick={handleWhatsappClick}
@@ -358,6 +375,7 @@ export default function ProdutoDetalhe() {
           {carregandoWhatsapp ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <MessageCircle className="w-4.5 h-4.5" />}
           Chamar no WhatsApp
         </button>
+        )}
       </div>
 
     </div>

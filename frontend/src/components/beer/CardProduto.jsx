@@ -1,4 +1,7 @@
-import { WhatsappLogo, Lightning, Star } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { WhatsappLogo, Lightning, Star, ShoppingBag } from '@phosphor-icons/react';
+import { useLojaVendendo } from '../../pages/public/Pedido/lojasSite';
+import { colocarNaSacola } from '../BotaoComprar';
 import BadgeAberto from './BadgeAberto';
 import { formatarBRL } from '../../utils/iubFood';
 import { BEER, linkPedido, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
@@ -17,6 +20,9 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
   const e = p.estabelecimento || {};
   const destaque = variante === 'destaque';
   const oferta = variante === 'oferta';
+  const navigate = useNavigate();
+  // pedido pelo site: a adega vende agora? (uma chamada pra todos os cards da tela)
+  const vende = useLojaVendendo('beer', e.id);
 
   return (
     <article
@@ -74,7 +80,21 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
         )}
 
         <div className="mt-auto pt-3">
-          {link ? (
+          {vende?.pode ? (
+            // Adega vende pelo site agora: UM botão principal, o pedido pelo site
+            <button
+              type="button"
+              onClick={ev => {
+                ev.stopPropagation();
+                const d = { loja: vende.loja, item: { nome: p.nome, foto_url: p.imagem || null } };
+                if (colocarNaSacola(d, 'beer', p.id, `/beer/estabelecimento/${e.slug}`)) navigate('/pedido/finalizar');
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-black py-2.5 rounded-xl transition-opacity hover:opacity-90"
+              style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}
+            >
+              <ShoppingBag size={16} weight="fill" /> Pedir agora · {formatarBRL(p.preco)}
+            </button>
+          ) : link ? (
             <a
               href={link}
               target="_blank"

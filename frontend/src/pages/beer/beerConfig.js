@@ -77,6 +77,16 @@ export function linkPedido(produto, { agora = false } = {}) {
   return `https://api.whatsapp.com/send?phone=${comDdi}&text=${encodeURIComponent(msg)}`;
 }
 
+// Quando a adega vende pelo site, o WhatsApp vira só "tirar dúvida" (o
+// pedido é pelo botão Pedir agora). Mensagem de dúvida, não de pedido.
+export function linkDuvida(produto) {
+  const digitos = String(produto.estabelecimento?.whatsapp || '').replace(/\D/g, '');
+  if (!digitos) return null;
+  const comDdi = digitos.startsWith('55') && digitos.length > 11 ? digitos : `55${digitos}`;
+  const msg = `Olá! Vi ${produto.nome} no IUB DISK BEBIDAS e tenho uma dúvida.`;
+  return `https://api.whatsapp.com/send?phone=${comDdi}&text=${encodeURIComponent(msg)}`;
+}
+
 // % de desconto arredondado ("-22%") — só com oferta ativa.
 export function percentualDesconto(produto) {
   if (!produto.em_oferta || !produto.preco_original) return null;

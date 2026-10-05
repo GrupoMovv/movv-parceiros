@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, ShoppingCart, Check } from 'lucide-react';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
@@ -9,6 +8,7 @@ import { DIAS, formatarBRL, horarioConfigurado, statusFuncionamento, textoTaxaEn
 import { useCarrinho } from './CarrinhoContext';
 import SeloPlano from './components/SeloPlano';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
+import { useAssociadoSessao } from './useAssociadoSessao';
 import { useDisponibilidade, colocarNaSacola } from '../../../components/BotaoComprar';
 import { quantidadeNaSacola, aoMudarSacola, lerSacola } from '../Pedido/sacola';
 
@@ -39,6 +39,8 @@ export default function FoodDetalhe() {
   const itemReferencia = restaurante?.cardapio?.find(i => i.estoque_disponivel !== false)?.id;
   const dispCompra = useDisponibilidade(itemReferencia ? 'produto' : null, itemReferencia);
   const [naSacola, setNaSacola] = useState(quantidadeNaSacola);
+  const navigate = useNavigate();
+  const { ehAssociadoSeci } = useAssociadoSessao();
   useEffect(() => aoMudarSacola(() => setNaSacola(quantidadeNaSacola())), []);
 
   useEffect(() => {
@@ -72,6 +74,15 @@ export default function FoodDetalhe() {
   const mensagemWppBase = `Olá! Vi o ${restaurante.nome} no IUB MAIS+ e quero fazer um pedido.`;
   const linkWppBase = restaurante.whatsapp ? linkWhatsappComTexto(restaurante.whatsapp, mensagemWppBase) : null;
   const foto = restaurante.fotos_estabelecimento?.[0]?.url || restaurante.logo_url;
+  // Pedido pelo site: restaurante vende agora? Então o WhatsApp é só pra dúvida.
+  const vendeSite = Boolean(dispCompra?.pode);
+  const linkDuvida = restaurante.whatsapp
+    ? linkWhatsappComTexto(restaurante.whatsapp, `Olá! Vi o ${restaurante.nome} no IUB MAIS+ e tenho uma dúvida.`)
+    : null;
+  // Preço que ESTA pessoa paga (mesma regra do servidor: associado com
+  // benefício ativo paga o menor; o resumo do pedido confere no servidor)
+  const precoPessoa = item => (ehAssociadoSeci && item.preco_associado != null
+    ? Math.min(Number(item.preco), Number(item.preco_associado)) : Number(item.preco));
 
   // null = restaurante ainda não configurou horário: não mostra badge nem
   // bloqueia pedido (não dá pra afirmar que está fechado).
@@ -213,20 +224,25 @@ export default function FoodDetalhe() {
                       <p className="text-sm font-black" style={{ color: ROXO_ESCURO }}>{formatarBRL(item.preco_associado ?? item.preco)}</p>
                       {item.tempo_preparo_min && <p className="text-[10px] text-slate-400">⏱️ ~{item.tempo_preparo_min} min</p>}
                     </div>
-                    <div className="mt-auto pt-2 space-y-1.5">
-                      {dispCompra?.pode && item.estoque_disponivel !== false && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const d = { loja: dispCompra.loja, item: { nome: item.nome, foto_url: fotoItem || null } };
-                            if (colocarNaSacola(d, 'produto', item.id, `/food/${slug}`)) toast.success(`${item.nome} no pedido`);
-                          }}
-                          className="w-full text-[11px] font-bold py-1.5 px-1 rounded-lg text-white"
-                          style={{ backgroundColor: ROXO }}
-                        >
-                          + Pedido
-                        </button>
-                      )}
+                    <div className="mt-auto pt-2">
+                      {vendeSite ? (
+                        // Restaurante vende pelo site agora: UM botão por item, o pedido pelo site
+                        item.estoque_disponivel === false ? (
+                          <span className="w-full flex justify-center text-[11px] font-bold py-2 rounded-lg border border-slate-200 text-slate-400 bg-slate-100">Esgotado</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const d = { loja: dispCompra.loja, item: { nome: item.nome, foto_url: fotoItem || null } };
+                              if (colocarNaSacola(d, 'produto', item.id, `/food/${slug}`)) navigate('/pedido/finalizar');
+                            }}
+                            className="w-full text-[11px] font-black py-2 px-1 rounded-lg"
+                            style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+                          >
+                            Pedir agora · {formatarBRL(precoPessoa(item))}
+                          </button>
+                        )
+                      ) : (
                       <button
                         type="button"
                         disabled={botao.desabilitado}
@@ -240,6 +256,7 @@ export default function FoodDetalhe() {
                         {botao.noCarrinho ? <Check className="w-3 h-3" /> : !botao.desabilitado && <ShoppingCart className="w-3 h-3" />}
                         {botao.texto}
                       </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -253,16 +270,27 @@ export default function FoodDetalhe() {
           precisar rolar de volta pro topo. Com item no carrinho, o atalho
           pro carrinho vem primeiro (é de lá que sai o pedido agrupado). */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-slate-100 px-5 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        {vendeSite ? (
+          // Vende pelo site: o pedido é pelos botões dos itens; aqui só o
+          // atalho pro pedido em andamento e o WhatsApp pra dúvida.
+          <div className="w-full max-w-2xl mx-auto">
+            {naSacola > 0 && lerSacola()?.loja?.id === dispCompra?.loja?.id && (
+              <Link
+                to="/pedido/finalizar"
+                className="flex items-center justify-center gap-2 w-full text-sm sm:text-base font-black px-4 py-3.5 rounded-2xl shadow-lg"
+                style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+              >
+                Finalizar pedido ({naSacola})
+              </Link>
+            )}
+            {linkDuvida && (
+              <a href={linkDuvida} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 underline underline-offset-4 py-2">
+                <MessageCircle className="w-4 h-4" /> Tirar dúvida no WhatsApp
+              </a>
+            )}
+          </div>
+        ) : (
         <div className="flex gap-2 w-full max-w-2xl mx-auto">
-          {naSacola > 0 && lerSacola()?.loja?.id === dispCompra?.loja?.id && (
-            <Link
-              to="/pedido/finalizar"
-              className="flex items-center justify-center gap-2 flex-1 text-sm sm:text-base font-black px-4 py-3.5 rounded-2xl text-white shadow-lg"
-              style={{ backgroundColor: ROXO }}
-            >
-              Finalizar pedido ({naSacola})
-            </Link>
-          )}
           {totalItens > 0 && (
             <Link
               to="/marketplace/carrinho"
@@ -286,6 +314,7 @@ export default function FoodDetalhe() {
             <p className="flex-1 text-center text-xs text-slate-400 py-3">WhatsApp em breve pra esse restaurante.</p>
           )}
         </div>
+        )}
       </div>
     </div>
   );

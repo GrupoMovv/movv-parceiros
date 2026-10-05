@@ -270,6 +270,23 @@ async function disponibilidade(entrada, { associado = null, qa = false } = {}) {
   }
 }
 
+// Várias lojas de uma vez (cards de listagem): { [id]: { pode, loja? } }.
+// catalogo 'beer' = ids de beer_estabelecimentos; 'geral' = ids de parceiros.
+async function lojasVendendo(catalogo, ids, { qa = false } = {}) {
+  const unicos = [...new Set(ids.map(Number).filter(n => Number.isInteger(n) && n > 0))].slice(0, 60);
+  if (!unicos.length) return {};
+  const parceiros = catalogo === 'beer'
+    ? (await db.query('SELECT id, parceiro_id FROM beer_estabelecimentos WHERE id = ANY($1)', [unicos])).rows
+    : unicos.map(id => ({ id, parceiro_id: id }));
+  const saida = {};
+  for (const { id, parceiro_id: parceiroId } of parceiros) {
+    const loja = await carregarLoja(parceiroId);
+    const motivo = motivoLojaNaoVende(loja, catalogo, { qa });
+    saida[id] = motivo ? { pode: false } : { pode: true, loja: { id: loja.id, nome: loja.nome, slug: loja.slug, catalogo } };
+  }
+  return saida;
+}
+
 function semInterno({ estoque_max, catalogo, ...item }) { // eslint-disable-line no-unused-vars
   return item;
 }
@@ -521,5 +538,5 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
 
 module.exports = {
   ErroPedido, carregarLoja, motivoLojaNaoVende, modosDisponiveis, taxaEntrega, resumoLoja, whatsappDaLoja,
-  resolverItem, disponibilidade, cotar, criarPedido, transicionar, gerarTokenLoja,
+  resolverItem, disponibilidade, lojasVendendo, cotar, criarPedido, transicionar, gerarTokenLoja,
 };

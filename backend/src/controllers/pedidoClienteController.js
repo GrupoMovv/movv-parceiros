@@ -62,6 +62,20 @@ async function disponibilidade(req, res) {
   }
 }
 
+// GET /lojas?beer=1,2&geral=3 — cards: quais lojas vendem pelo site agora
+async function lojas(req, res) {
+  try {
+    const lista = v => String(v || '').split(',').filter(Boolean);
+    const [beer, geral] = await Promise.all([
+      pedidoLoja.lojasVendendo('beer', lista(req.query.beer), { qa: req.modoQa }),
+      pedidoLoja.lojasVendendo('geral', lista(req.query.geral), { qa: req.modoQa }),
+    ]);
+    return res.json({ beer, geral });
+  } catch (err) {
+    return responderErro(res, err, 'Não conseguimos verificar agora.');
+  }
+}
+
 // POST /cotacao — resumo com preço do servidor (Finalizar pedido)
 async function cotacao(req, res) {
   try {
@@ -151,6 +165,6 @@ async function enderecosRecentes(req, res) {
 }
 
 module.exports = {
-  disponibilidade, cotacao, criar, listar, detalhe, enderecosRecentes,
+  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes,
   cancelar: acao('cancelar'), recebi: acao('recebi'), viewCliente,
 };

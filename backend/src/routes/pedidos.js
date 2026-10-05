@@ -11,6 +11,7 @@ router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 120 }));
 router.use(lerAdminOpcionalCabecalho);
 
 router.get('/disponibilidade', lerPainelPublicoOpcional, ctrl.disponibilidade);
+router.get('/lojas', ctrl.lojas);
 
 router.use(authenticatePainelPublico);
 router.get('/', ctrl.listar);

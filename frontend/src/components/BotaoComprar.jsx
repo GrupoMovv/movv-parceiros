@@ -37,7 +37,7 @@ export function colocarNaSacola(disp, tipo, id, urlLoja) {
 // vende pelo site (o WhatsApp continua). Mostra o preço que ESTA pessoa
 // paga (calculado pelo servidor — é o mesmo que vai no pedido).
 // disp: a página já consultou (ex.: botão no meio + barra fixa no celular).
-export default function BotaoComprar({ tipo, id, urlLoja, className = '', style, compacto = false, mini = false, disp: dispPagina }) {
+export default function BotaoComprar({ tipo, id, urlLoja, className = '', style, compacto = false, mini = false, rotulo = 'Comprar', disp: dispPagina }) {
   const navigate = useNavigate();
   const proprio = useDisponibilidade(dispPagina === undefined ? tipo : null, dispPagina === undefined ? id : null);
   const disp = dispPagina === undefined ? proprio : dispPagina;
@@ -53,7 +53,7 @@ export default function BotaoComprar({ tipo, id, urlLoja, className = '', style,
     <button type="button" onClick={comprar}
       className={`w-full flex items-center justify-center gap-2 font-bold text-white ${mini ? 'text-xs py-1.5 rounded-md' : compacto ? 'text-sm py-3 rounded-xl' : 'text-base py-4 rounded-xl'} ${className}`}
       style={{ backgroundColor: '#5B21B6', ...style }}>
-      <ShoppingBag className={mini ? 'w-3 h-3' : 'w-5 h-5'} /> Comprar{mini ? '' : ` · ${brl(disp.item.preco_unitario)}`}
+      <ShoppingBag className={mini ? 'w-3 h-3' : 'w-5 h-5'} /> {rotulo}{mini ? '' : ` · ${brl(disp.item.preco_unitario)}`}
     </button>
   );
 }

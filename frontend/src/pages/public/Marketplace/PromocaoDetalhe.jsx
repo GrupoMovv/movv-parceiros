@@ -140,6 +140,11 @@ export default function PromocaoDetalhe() {
   const vagasRestantes = promocao.limite_usos ? promocao.limite_usos - promocao.usos_atuais : null;
   const esgotada = vagasRestantes !== null && vagasRestantes <= 0;
   const expirada = contagem?.expirado && Date.now() > fim;
+  const podeComprar = Boolean(dispCompra?.pode && !esgotada && !expirada);
+  // Com pedido pelo site o WhatsApp é só pra dúvida
+  const linkDuvida = promocao.parceiro_whatsapp
+    ? linkWhatsappComTexto(promocao.parceiro_whatsapp, `Olá! Vi a promoção ${promocao.titulo} no IUB MAIS+ e tenho uma dúvida.`)
+    : null;
 
   return (
     <div className="min-h-screen w-full bg-white pb-24 sm:pb-10">
@@ -266,19 +271,28 @@ export default function PromocaoDetalhe() {
             <span className="inline-block mt-4 text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-500">{promocao.categoria}</span>
           )}
 
-          <button
-            type="button"
-            onClick={handleWhatsappClick}
-            disabled={!whatsappHabilitado || carregandoWhatsapp || esgotada || expirada}
-            className={`mt-6 w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-xl transition-all duration-300 ease-out ${whatsappHabilitado && !esgotada && !expirada ? 'hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
-            style={{ backgroundColor: '#25D366', boxShadow: whatsappHabilitado ? `0 4px 20px ${DOURADO}33` : 'none' }}
-          >
-            {carregandoWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
-            {esgotada ? 'Vagas esgotadas' : expirada ? 'Promoção encerrada' : 'Chamar no WhatsApp'}
-          </button>
-
-          {!esgotada && !expirada && (
-            <BotaoComprar tipo="promocao" id={promocao.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${promocao.parceiro_slug}`} className="mt-2.5" />
+          {/* UM botão principal: com pedido pelo site, Comprar (WhatsApp só pra dúvida) */}
+          {podeComprar ? (
+            <>
+              <BotaoComprar tipo="promocao" id={promocao.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${promocao.parceiro_slug}`} className="mt-6" />
+              {linkDuvida && (
+                <a href={linkDuvida} target="_blank" rel="noreferrer"
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 underline underline-offset-4">
+                  <MessageCircle className="w-4 h-4" /> Tirar dúvida no WhatsApp
+                </a>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleWhatsappClick}
+              disabled={!whatsappHabilitado || carregandoWhatsapp || esgotada || expirada}
+              className={`mt-6 w-full flex items-center justify-center gap-2 text-white font-bold text-base py-4 rounded-xl transition-all duration-300 ease-out ${whatsappHabilitado && !esgotada && !expirada ? 'hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+              style={{ backgroundColor: '#25D366', boxShadow: whatsappHabilitado ? `0 4px 20px ${DOURADO}33` : 'none' }}
+            >
+              {carregandoWhatsapp ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
+              {esgotada ? 'Vagas esgotadas' : expirada ? 'Promoção encerrada' : 'Chamar no WhatsApp'}
+            </button>
           )}
 
           <button onClick={handleCompartilhar} className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 mt-3">
@@ -332,19 +346,20 @@ export default function PromocaoDetalhe() {
 
       {/* whatsapp fixo mobile */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-100 z-40 flex gap-2">
-        {dispCompra?.pode && !esgotada && !expirada && (
+        {podeComprar ? (
           <div className="flex-1"><BotaoComprar tipo="promocao" id={promocao.id} disp={dispCompra} urlLoja={`/marketplace/parceiro/${promocao.parceiro_slug}`} compacto /></div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleWhatsappClick}
+            disabled={!whatsappHabilitado || carregandoWhatsapp || esgotada || expirada}
+            className={`flex-1 flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado && !esgotada && !expirada ? '' : 'opacity-50'}`}
+            style={{ backgroundColor: '#25D366' }}
+          >
+            {carregandoWhatsapp ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <MessageCircle className="w-4.5 h-4.5" />}
+            {esgotada ? 'Vagas esgotadas' : expirada ? 'Promoção encerrada' : 'Chamar no WhatsApp'}
+          </button>
         )}
-        <button
-          type="button"
-          onClick={handleWhatsappClick}
-          disabled={!whatsappHabilitado || carregandoWhatsapp || esgotada || expirada}
-          className={`flex-1 flex items-center justify-center gap-2 text-white font-bold text-sm py-3.5 rounded-xl ${whatsappHabilitado && !esgotada && !expirada ? '' : 'opacity-50'}`}
-          style={{ backgroundColor: '#25D366' }}
-        >
-          {carregandoWhatsapp ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <MessageCircle className="w-4.5 h-4.5" />}
-          {esgotada ? 'Vagas esgotadas' : expirada ? 'Promoção encerrada' : 'Chamar no WhatsApp'}
-        </button>
       </div>
 
     </div>

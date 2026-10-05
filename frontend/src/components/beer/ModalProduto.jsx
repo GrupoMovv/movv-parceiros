@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, WhatsappLogo, MapPin, Clock, Wine, MagnifyingGlassPlus, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import BadgeAberto from './BadgeAberto';
-import BotaoComprar from '../BotaoComprar';
+import BotaoComprar, { useDisponibilidade } from '../BotaoComprar';
 import { formatarBRL } from '../../utils/iubFood';
-import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
+import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, linkDuvida, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
 
 // Modal do produto (aberto pelo ?p=ID que o BeerLayout controla). Celular:
 // tela cheia; desktop: janela sobre a página. Várias fotos: setas, bolinhas,
@@ -12,6 +12,8 @@ import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, percentualDesconto, textoDias 
 // fecham. `produto` null = ainda carregando (link direto).
 export default function ModalProduto({ produto: p, onFechar }) {
   const [zoom, setZoom] = useState(false);
+  // pedido pelo site: se a adega vende agora, ele é o botão principal
+  const disp = useDisponibilidade(p?.id ? 'beer' : null, p?.id);
   const fotos = p?.fotos?.length ? p.fotos : (p?.imagem ? [p.imagem] : []);
   const [idx, setIdx] = useState(0);
   useEffect(() => { setIdx(0); }, [p?.id]);
@@ -118,9 +120,18 @@ export default function ModalProduto({ produto: p, onFechar }) {
               </div>
 
               <div className="mt-auto sticky bottom-0 pt-2 pb-1 sm:static" style={{ background: `linear-gradient(to top, ${BEER.card} 70%, transparent)` }}>
-                {/* Pedido pelo site (só aparece se a adega vende pelo site agora) */}
-                <BotaoComprar tipo="beer" id={p.id} urlLoja={`/beer/estabelecimento/${e.slug}`} className="mb-2 rounded-2xl" />
-                {link ? (
+                {disp?.pode ? (
+                  // Adega vende pelo site agora: UM botão principal + WhatsApp só pra dúvida
+                  <>
+                    <BotaoComprar tipo="beer" id={p.id} disp={disp} rotulo="Pedir agora" urlLoja={`/beer/estabelecimento/${e.slug}`}
+                      className="rounded-2xl font-black" style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }} />
+                    {linkDuvida(p) && (
+                      <a href={linkDuvida(p)} target="_blank" rel="noopener noreferrer" className="mt-3 w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold underline underline-offset-4" style={{ color: BEER.lavanda }}>
+                        <WhatsappLogo size={14} weight="fill" /> Tirar dúvida no WhatsApp
+                      </a>
+                    )}
+                  </>
+                ) : link ? (
                   <a href={link} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center gap-2 text-base font-black py-4 rounded-2xl" style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}>
                     <WhatsappLogo size={22} weight="fill" /> PEDIR AGORA (via WhatsApp)
                   </a>
