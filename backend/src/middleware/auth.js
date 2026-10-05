@@ -65,16 +65,15 @@ const requireInternal = (req, res, next) => {
 // mostra também as empresas de teste (sindicato_parceiros.empresa_teste).
 // Nunca bloqueia: sem token ou token de outro tipo segue como cliente comum.
 // req.modoQaMotivo explica por que NÃO ligou (selo de diagnóstico no /beer).
-const lerAdminOpcional = async (req, res, next) => {
+async function marcarModoQa(req, token) {
   req.modoQa = false;
   req.modoQaMotivo = 'sem_login';
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+  if (!token) return;
   try {
-    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.userType === 'internal' || decoded.userType === 'indicator' || !decoded.id) {
       req.modoQaMotivo = 'nao_admin';
-      return next();
+      return;
     }
     const r = await db.query('SELECT is_admin, is_active FROM partners WHERE id = $1', [decoded.id]);
     req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active);
@@ -82,7 +81,20 @@ const lerAdminOpcional = async (req, res, next) => {
   } catch (err) {
     req.modoQaMotivo = err.name === 'TokenExpiredError' ? 'login_expirado' : 'token_invalido';
   }
+}
+
+const lerAdminOpcional = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  await marcarModoQa(req, authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
   next();
 };
 
-module.exports = { authenticate, requireAdmin, requireInternal, lerAdminOpcional };
+// Mesmo "olho de admin", mas com o JWT do admin no header x-admin-token —
+// pra rotas em que o Authorization já é a sessão do CLIENTE (pedido pelo
+// site: o admin testa comprando da empresa de teste logado como cliente).
+const lerAdminOpcionalCabecalho = async (req, res, next) => {
+  await marcarModoQa(req, String(req.headers['x-admin-token'] || '') || null);
+  next();
+};
+
+module.exports = { authenticate, requireAdmin, requireInternal, lerAdminOpcional, lerAdminOpcionalCabecalho };
