@@ -96,6 +96,8 @@ import MeuPainel from './pages/public/Cadastro/MeuPainel';
 import MeuDados from './pages/public/Cadastro/MeuDados';
 import MeuDependentes from './pages/public/Cadastro/MeuDependentes';
 import MeusPets from './pages/public/Cadastro/MeusPets';
+import MeusPedidos from './pages/public/Cadastro/MeusPedidos';
+import MeuPedidoDetalhe from './pages/public/Cadastro/MeuPedidoDetalhe';
 import MinhasCarteirinhas from './pages/public/Cadastro/MinhasCarteirinhas';
 import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
 import ParceiroPainelLayout from './pages/parceiro/PainelLayout';
@@ -293,6 +295,8 @@ export default function App() {
           <Route path="carteirinhas" element={<MinhasCarteirinhas />} />
           <Route path="cupons" element={<MeuCupons />} />
           <Route path="pets" element={<MeusPets />} />
+          <Route path="pedidos" element={<MeusPedidos />} />
+          <Route path="pedidos/:id" element={<MeuPedidoDetalhe />} />
           {/* Qualquer sub-rota não mapeada aqui (ex.: /meu/login, que
               nunca existiu mas as pessoas tentam por analogia com
               /parceiro/login) cai no catch-all global (path="*" lá

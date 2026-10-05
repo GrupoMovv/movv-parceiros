@@ -21,6 +21,7 @@ const LINKS = [
   { to: '/meu/dados', label: 'Meus Dados', icon: User },
   { to: '/meu/dependentes', label: 'Dependentes', icon: Users2, soAssociado: true },
   { to: '/meu/carteirinhas', label: 'Carteirinhas', icon: CreditCard, soAssociado: true },
+  { to: '/meu/pedidos', label: '🛍️ Meus Pedidos', icon: ShoppingBag },
   { to: '/meu/cupons', label: '🎁 Meus Cupons', icon: Gift },
   { to: '/meu/pets', label: '🐾 Meus Pets', icon: PawPrint },
 ];
@@ -33,17 +34,17 @@ export default function MeuPainelLayout() {
   const [menuAberto, setMenuAberto] = useState(false);
 
   const recarregar = useCallback(async () => {
-    if (!getPainelToken()) { navigate('/entrar?voltar=/meu', { replace: true }); return; }
+    if (!getPainelToken()) { navigate(`/entrar?voltar=${encodeURIComponent(location.pathname)}`, { replace: true }); return; }
     try {
       const res = await apiPainel.get('/public/painel/me');
       setDados(res.data);
     } catch {
       setPainelToken(null);
-      navigate('/entrar?voltar=/meu', { replace: true });
+      navigate(`/entrar?voltar=${encodeURIComponent(location.pathname)}`, { replace: true });
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   useEffect(() => { recarregar(); }, [recarregar]);
 
