@@ -85,6 +85,34 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 | 9. Prazos | Timer no backend + `/api/interno` para Cron: expira em 10 min, cancela aceito sem pago em 2h, fecha entregue em 3h/12h, avisos sem duplicar |
 | 10. Teste ponta a ponta | Com a Adega Teste em modo QA, Política de Privacidade e termos atualizados, e depois `PEDIDOS_SITE_LIBERADO=true` |
 
+## Domínio oficial (antes de ligar `PEDIDOS_SITE_LIBERADO`)
+
+Decisão do Junior (05/10/2026): ir direto para **iubmais.com.br**, sem passar por portal.grupomovv.com.br. Mensagem pedindo Pix com link `onrender.com` parece golpe.
+
+- **Site:** `iubmais.com.br` e `www.iubmais.com.br` → site estático `movv-parceiros` no Render.
+- **API:** `api.iubmais.com.br` → web service `movv-backend` no Render (o link da carteirinha para de sair como `onrender.com`).
+- **Os endereços antigos continuam funcionando para sempre:** `movv-parceiros.onrender.com`, `movv-backend.onrender.com` e `portal.grupomovv.com.br`. Há links e QR codes já enviados com eles. Não remover o domínio portal do Render.
+
+**Ordem:**
+1. Agora: domínio no Render + registros no DNS do Registro.br (a zona usa `a.auto.dns.br`/`b.auto.dns.br`, sem ALIAS no domínio raiz):
+
+   | Tipo | Nome | Valor |
+   |---|---|---|
+   | A | `iubmais.com.br` (raiz) | `216.24.57.1` |
+   | CNAME | `www` | `movv-parceiros.onrender.com` |
+   | CNAME | `api` | `movv-backend.onrender.com` |
+
+   Sem registro AAAA (o Render só usa IPv4). Se houver CAA, liberar Let's Encrypt e Google Trust Services. O Render emite o certificado sozinho depois de verificar.
+2. CORS já aceita `https://iubmais.com.br` e `https://www.iubmais.com.br` (commit `3e9051a`), sem tirar os antigos.
+3. **Depois do teste real com a Adega e antes de ligar a trava** (variáveis no Render, sem código):
+   - backend: `FRONTEND_URL=https://iubmais.com.br` e `BACKEND_URL=https://api.iubmais.com.br`;
+   - site estático: `VITE_API_URL=https://api.iubmais.com.br/api` (exige novo build do site).
+4. Junto com o passo 3, trocar o que está escrito fixo no código: link `portal.grupomovv.com.br/entrar` na mensagem de aprovação do /vender (`parceiroSolicitacaoController.js`), `MaterialApoio.jsx`, `MyEmployees.jsx` e a imagem de prévia do `index.html`.
+
+**O que a troca de `FRONTEND_URL` muda:** links das mensagens do pedido, avisos do Pet e da carteirinha, lembrete de assinatura e retorno do Mercado Pago, uns 20 links de e-mail (senha, confirmação, planos), o redirecionamento de `/carteirinha/:hash` e `/produto/:id` e a imagem de prévia. **`BACKEND_URL`** muda o link da carteirinha nas mensagens de WhatsApp (produto, promoção, carrinho) e nos e-mails de dependente.
+
+**Efeito no cliente:** o navegador guarda login e sacola por domínio. Quem usa o site pelo endereço antigo precisa entrar de novo no domínio novo (a sacola não passa junto).
+
 ## Como testar
 
 - Sem banco de staging: os testes rodam num **banco descartável** (PGlite com todas as migrations) e no app real do backend, com o Z-API só gravando as mensagens. Nunca no banco de produção.
