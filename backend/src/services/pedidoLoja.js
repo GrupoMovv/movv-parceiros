@@ -479,10 +479,17 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
 // permitido (dois cliques, loja e rotina ao mesmo tempo: só um vence).
 // dono: { associadoId } pro cliente, { parceiroId } pra loja, nada pro sistema.
 // Devolve { pedido, de } ou lança ErroPedido.
-async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiroId = null, resposta = null } = {}) {
+async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiroId = null, resposta = null, confirmoCancelarPago = false } = {}) {
   const regra = TRANSICOES[ator]?.[acao];
   if (!regra) throw new ErroPedido(400, 'ACAO_INVALIDA', 'Ação inválida.');
-  const params = [pedidoId, regra.de, regra.para];
+  // Loja cancelando DEPOIS de "pago, saiu": o cliente já recebeu "a loja
+  // confirmou seu Pix". Só com confirmação explícita e motivo (Junior, 05/10).
+  let de = regra.de;
+  if (ator === 'loja' && acao === 'cancelar' && !confirmoCancelarPago) de = de.filter(st => st !== 'pago_saiu');
+  if (ator === 'loja' && acao === 'cancelar' && confirmoCancelarPago && !String(resposta || '').trim()) {
+    throw new ErroPedido(400, 'MOTIVO', 'Diga o motivo do cancelamento (o cliente vê).', { campo: 'resposta' });
+  }
+  const params = [pedidoId, de, regra.para];
   const sets = ['status = $3', 'updated_at = NOW()'];
   const filtros = ['id = $1', 'status = ANY($2)'];
   if (ator === 'cliente') { params.push(associadoId); filtros.push(`associado_id = $${params.length}`); }
@@ -529,6 +536,9 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
   if (!dono) throw new ErroPedido(404, 'NAO_ENCONTRADO', 'Pedido não encontrado.');
   if (acao === 'aceitar' && atual.status === 'enviado') {
     throw new ErroPedido(409, 'PRAZO_ESGOTADO', `Passaram os ${PRAZO_RESPOSTA_MIN} minutos para aceitar este pedido.`);
+  }
+  if (ator === 'loja' && acao === 'cancelar' && atual.status === 'pago_saiu') {
+    throw new ErroPedido(409, 'CONFIRME_CANCELAR_PAGO', 'Você já confirmou o Pix deste pedido. Confirme o cancelamento e combine a devolução com o cliente.', { status: atual.status });
   }
   if (ator === 'cliente' && acao === 'cancelar') {
     throw new ErroPedido(409, 'NAO_PODE_CANCELAR', 'A loja já aceitou o pedido. Para cancelar, chame a loja no WhatsApp.', { status: atual.status });

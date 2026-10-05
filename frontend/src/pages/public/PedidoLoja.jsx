@@ -10,6 +10,9 @@ const PRETO = '#0F172A';
 const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const MOTIVOS_RECUSA = ['Fora da área de entrega', 'Produto em falta', 'Loja fechando agora'];
+// Cancelar antes do Pix confirmado / depois de "Pago, saiu" (motivos diferentes)
+const MOTIVOS_CANCELAR = ['Pix não caiu', 'Cliente desistiu', 'Produto em falta'];
+const MOTIVOS_CANCELAR_PAGO = ['Marquei pago por engano', 'Não consegui entregar', 'Cliente desistiu'];
 
 function telefoneBR(d) {
   const s = String(d || '').replace(/\D/g, '');
@@ -26,7 +29,9 @@ function linkEntregador(p) {
     `Cliente: ${p.cliente.nome}`,
     `Telefone: ${telefoneBR(p.cliente.whatsapp)}`,
     `Endereço: ${[`${e.endereco}, ${e.numero}`, e.complemento, e.bairro, e.cidade && `${e.cidade}/${e.estado}`, cep && `CEP ${cep}`].filter(Boolean).join(' — ')}`,
-    e.referencia ? `Referência: ${e.referencia}` : null, '',
+    e.referencia ? `Referência: ${e.referencia}` : null,
+    // rota com um toque (Google Maps abre no app de mapa do celular)
+    `Mapa: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([`${e.endereco}, ${e.numero}`, e.bairro, e.cidade && `${e.cidade} - ${e.estado}`, cep].filter(Boolean).join(', '))}`, '',
     'Itens:',
     ...p.itens.map(i => `${i.quantidade}x ${i.nome}`),
     `Total: ${brl(p.total)} (já pago no Pix)`,
@@ -45,6 +50,7 @@ export default function PedidoLoja() {
   const [agindo, setAgindo] = useState(null);
   const [motivoAberto, setMotivoAberto] = useState(null); // 'recusar' | 'cancelar'
   const [motivo, setMotivo] = useState('');
+  const [confirmoPago, setConfirmoPago] = useState(false);
   const [manualCliente, setManualCliente] = useState(null);
   const [agora, setAgora] = useState(Date.now());
 
@@ -70,9 +76,12 @@ export default function PedidoLoja() {
   async function agir(acao) {
     setAgindo(acao);
     try {
-      const res = await api.post(`/public/pedido-loja/${token}/${acao}`, { resposta: motivo || undefined });
+      const res = await api.post(`/public/pedido-loja/${token}/${acao}`, {
+        resposta: motivo || undefined,
+        confirmo_cancelar_pago: acao === 'cancelar' && pedido.status === 'pago_saiu' ? confirmoPago : undefined,
+      });
       setPedido(res.data);
-      setMotivoAberto(null); setMotivo('');
+      setMotivoAberto(null); setMotivo(''); setConfirmoPago(false);
       setManualCliente(res.data.link_manual_cliente);
       if (res.data.link_manual_cliente) toast('Não conseguimos avisar o cliente. Use o botão verde.', { icon: '⚠️' });
       else toast.success('Pronto! O cliente foi avisado.');
@@ -100,6 +109,7 @@ export default function PedidoLoja() {
 
   const restante = pedido.responder_ate ? Math.max(0, Math.floor((new Date(pedido.responder_ate).getTime() - agora) / 1000)) : null;
   const retirada = pedido.modo_recebimento === 'retirada';
+  const depoisDoPago = pedido.status === 'pago_saiu';
   const e = pedido.endereco;
 
   return (
@@ -173,19 +183,27 @@ export default function PedidoLoja() {
       {motivoAberto ? (
         <Bloco titulo={motivoAberto === 'recusar' ? 'Por que vai recusar?' : 'Por que vai cancelar?'}>
           <div className="flex flex-wrap gap-2">
-            {(motivoAberto === 'recusar' ? MOTIVOS_RECUSA : ['Pix não caiu', 'Cliente desistiu', 'Produto em falta']).map(m => (
+            {(motivoAberto === 'recusar' ? MOTIVOS_RECUSA : depoisDoPago ? MOTIVOS_CANCELAR_PAGO : MOTIVOS_CANCELAR).map(m => (
               <button key={m} type="button" onClick={() => setMotivo(m)}
                 className={`text-xs font-semibold px-3 py-2 rounded-full border ${motivo === m ? 'border-violet-700 bg-violet-50 text-violet-800' : 'border-slate-200 text-slate-600'}`}>{m}</button>
             ))}
           </div>
           <textarea value={motivo} onChange={ev => setMotivo(ev.target.value.slice(0, 200))} rows={2} placeholder="Ou escreva aqui (o cliente vê)"
             className="mt-3 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          {depoisDoPago && motivoAberto === 'cancelar' && (
+            // Confirmação extra: o cliente já recebeu "a loja confirmou seu Pix"
+            <label className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-900 cursor-pointer">
+              <input type="checkbox" checked={confirmoPago} onChange={ev => setConfirmoPago(ev.target.checked)} className="mt-0.5" />
+              <span>Entendi: o cliente já recebeu o aviso de que o Pix foi confirmado. Vou combinar a devolução com ele.</span>
+            </label>
+          )}
           <div className="flex gap-3 mt-3">
-            <button type="button" onClick={() => agir(motivoAberto)} disabled={Boolean(agindo)}
+            <button type="button" onClick={() => agir(motivoAberto)}
+              disabled={Boolean(agindo) || (depoisDoPago && motivoAberto === 'cancelar' && (!confirmoPago || !motivo.trim()))}
               className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 disabled:opacity-60">
               {agindo ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (motivoAberto === 'recusar' ? 'Recusar pedido' : 'Cancelar pedido')}
             </button>
-            <button type="button" onClick={() => { setMotivoAberto(null); setMotivo(''); }} className="px-4 py-3 rounded-xl font-semibold text-slate-600 border border-slate-200">Voltar</button>
+            <button type="button" onClick={() => { setMotivoAberto(null); setMotivo(''); setConfirmoPago(false); }} className="px-4 py-3 rounded-xl font-semibold text-slate-600 border border-slate-200">Voltar</button>
           </div>
         </Bloco>
       ) : (

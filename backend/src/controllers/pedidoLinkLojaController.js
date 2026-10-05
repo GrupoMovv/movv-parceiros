@@ -72,6 +72,7 @@ async function agir(req, res) {
     if (!p) return res.status(404).json({ error: 'Link inválido ou vencido.', code: 'LINK_INVALIDO' });
     const { pedido, aviso } = await pedidoLoja.transicionar(p.id, 'loja', acao, {
       parceiroId: p.parceiro_id, resposta: ['recusar', 'cancelar'].includes(acao) ? req.body?.resposta : undefined,
+      confirmoCancelarPago: acao === 'cancelar' && req.body?.confirmo_cancelar_pago === true,
     });
     return res.json({
       ...(await viewLoja(pedido)),

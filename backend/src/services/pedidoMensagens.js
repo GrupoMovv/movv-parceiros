@@ -100,6 +100,15 @@ function expiradoCliente(p, nomeLoja, whatsappLoja) {
 // Cancelado pela loja ou pelo sistema (aceito sem Pix confirmado em 2h).
 // Quem cancelou foi o próprio cliente: sem aviso.
 function canceladoCliente(p, nomeLoja, whatsappLoja) {
+  // Cancelado depois de "pago, saiu": a loja já tinha confirmado o Pix
+  if (p.pago_saiu_em) {
+    return [
+      `🚫 *Pedido #${p.id} cancelado* — ${nomeLoja}`,
+      p.resposta ? `Motivo: ${p.resposta}` : null, '',
+      'A loja cancelou depois de confirmar seu Pix. Fale com ela para combinar a devolução do valor:',
+      whatsappLoja ? linkWhatsapp(whatsappLoja) : null,
+    ].filter(l => l !== null).join('\n');
+  }
   const motivo = p.encerrado_por === 'sistema'
     ? `A loja não confirmou o pagamento em ${PRAZO_PAGO_MIN / 60} horas.`
     : (p.resposta ? `Motivo: ${p.resposta}` : 'A loja cancelou o pedido.');
