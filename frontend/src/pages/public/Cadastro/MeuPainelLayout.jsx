@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X, Gift, PawPrint } from 'lucide-react';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
+import { limparSacola } from '../Pedido/sacola';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
 import MascoteIubMais from '../../../components/MascoteIubMais';
 import { assetUrl } from '../../../services/api';
@@ -52,6 +53,7 @@ export default function MeuPainelLayout() {
   // mostrando dados da sessão que acabou de sair.
   function handleSair() {
     setPainelToken(null);
+    limparSacola(); // celular compartilhado: o próximo não herda o pedido em montagem
     try { sessionStorage.clear(); } catch { /* indisponível, ignora */ }
     window.location.href = '/marketplace';
   }

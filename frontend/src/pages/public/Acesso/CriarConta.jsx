@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowRight, CircleNotch } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import InputDataBR from '../Cadastro/InputDataBR';
 import { entrarNoPainelSeguro } from '../../../utils/entrarNoPainelSeguro';
 import { soDigitos, validCPF, validCNPJ, maskCpf, maskCnpj, maskTelefone, telefoneValido } from '../../../utils/documentos';
+import { destinoSeguro } from './Entrar';
 import { CascaAcesso, Cartao, Campo, InputSenha, BotaoPrimario, BotaoWhatsapp, Aviso } from './AcessoUi';
 
 const SENHA_MIN = 6;
@@ -26,6 +27,10 @@ function maskCep(v) {
 // carteirinha. O servidor decide o cenário; aqui só mostra o resultado.
 export default function CriarConta() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // veio do meio de uma compra (/entrar?voltar=...): volta pra lá depois do cadastro
+  const voltar = destinoSeguro(params.get('voltar'));
+  const linkEntrar = voltar === '/marketplace' ? '/entrar' : `/entrar?voltar=${encodeURIComponent(voltar)}`;
   const [form, setForm] = useState(VAZIO);
   const [aceite, setAceite] = useState(false);
   const [erros, setErros] = useState({});
@@ -130,7 +135,7 @@ export default function CriarConta() {
         toast.success(r.cenario === 'associado_antigo'
           ? `Você já era associado, ${r.nome_curto}! Senha criada. 🎉`
           : `Conta criada! Bem-vindo(a), ${r.nome_curto}! 🎉`);
-        navigate('/marketplace', { replace: true });
+        navigate(voltar, { replace: true });
         return;
       }
       setResultado(r);
@@ -147,7 +152,7 @@ export default function CriarConta() {
     }
   }
 
-  if (resultado) return <TelaResultado r={resultado} onContinuar={() => navigate('/marketplace', { replace: true })} />;
+  if (resultado) return <TelaResultado r={resultado} voltando={voltar !== '/marketplace'} onContinuar={() => navigate(voltar, { replace: true })} />;
 
   const falarComSindicato = ['SEM_NASCIMENTO', 'INATIVO', 'BLOQUEADO'].includes(falha?.code);
 
@@ -244,7 +249,7 @@ export default function CriarConta() {
               <Aviso tipo={falarComSindicato ? 'alerta' : falha.code ? 'info' : 'erro'} titulo={falha.error} />
               {falarComSindicato && <BotaoWhatsapp mensagem="Olá! Sou associado SECI e não estou conseguindo criar minha conta no IUB MAIS+." />}
               {falha.code === 'JA_TEM_CONTA' && (
-                <Link to="/entrar" className="w-full min-h-[52px] flex items-center justify-center rounded-2xl font-black text-white" style={{ backgroundColor: '#4C1D95' }}>ENTRAR</Link>
+                <Link to={linkEntrar} className="w-full min-h-[52px] flex items-center justify-center rounded-2xl font-black text-white" style={{ backgroundColor: '#4C1D95' }}>ENTRAR</Link>
               )}
             </div>
           )}
@@ -258,7 +263,7 @@ export default function CriarConta() {
       </Cartao>
 
       <p className="text-center text-white/80 text-sm mt-6">
-        Já tem conta? <Link to="/entrar" className="font-bold text-white underline underline-offset-4">Entrar</Link>
+        Já tem conta? <Link to={linkEntrar} className="font-bold text-white underline underline-offset-4">Entrar</Link>
       </p>
     </CascaAcesso>
   );
@@ -295,7 +300,7 @@ const RESULTADOS = {
   },
 };
 
-function TelaResultado({ r, onContinuar }) {
+function TelaResultado({ r, onContinuar, voltando = false }) {
   const c = RESULTADOS[r.cenario];
   return (
     <CascaAcesso titulo={`${c.emoji} ${c.titulo}`} mascote voltarPara="/marketplace">
@@ -303,7 +308,7 @@ function TelaResultado({ r, onContinuar }) {
         <p className="text-slate-700">{c.texto(r)}</p>
         {c.aviso && <Aviso tipo="info" titulo={c.aviso} />}
         <BotaoPrimario type="button" onClick={onContinuar}>
-          IR PRO MARKETPLACE <ArrowRight size={18} weight="bold" />
+          {voltando ? 'CONTINUAR' : 'IR PRO MARKETPLACE'} <ArrowRight size={18} weight="bold" />
         </BotaoPrimario>
         {r.cenario === 'associado' && (
           <Link to="/meu/carteirinhas" className="block text-sm font-semibold text-violet-800 underline underline-offset-4 min-h-[44px] leading-[44px]">

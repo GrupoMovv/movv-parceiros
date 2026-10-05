@@ -26,6 +26,8 @@ export default function Entrar() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const voltar = destinoSeguro(params.get('voltar'));
+  // criar conta no meio de uma compra volta pro mesmo lugar (ex.: Finalizar pedido)
+  const linkCriarConta = voltar === '/marketplace' ? '/criar-conta' : `/criar-conta?voltar=${encodeURIComponent(voltar)}`;
 
   const [login, setLogin] = useState('');
   const [senha, setSenha] = useState('');
@@ -114,7 +116,7 @@ export default function Entrar() {
             <div className="space-y-3">
               <Aviso tipo={falha.code === 'NAO_ENCONTRADO' ? 'info' : 'erro'} titulo={falha.error} />
               {falha.code === 'NAO_ENCONTRADO' && (
-                <Link to="/criar-conta" className="w-full min-h-[52px] flex items-center justify-center rounded-2xl font-black text-white" style={{ backgroundColor: '#4C1D95' }}>
+                <Link to={linkCriarConta} className="w-full min-h-[52px] flex items-center justify-center rounded-2xl font-black text-white" style={{ backgroundColor: '#4C1D95' }}>
                   CRIAR MINHA CONTA
                 </Link>
               )}
@@ -133,7 +135,7 @@ export default function Entrar() {
       </Cartao>
 
       <p className="text-center text-white/80 text-sm mt-6">
-        Não tem conta? <Link to="/criar-conta" className="font-bold text-white underline underline-offset-4">Criar conta grátis</Link>
+        Não tem conta? <Link to={linkCriarConta} className="font-bold text-white underline underline-offset-4">Criar conta grátis</Link>
       </p>
       <p className="text-center text-white/60 text-xs mt-2">
         Empresa sem cadastro? <Link to="/vender" className="font-semibold text-white/80 underline underline-offset-2">Cadastre grátis no IUB MAIS+</Link>

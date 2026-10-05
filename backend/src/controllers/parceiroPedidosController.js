@@ -33,20 +33,41 @@ function normalizarChavePix(tipo, chave) {
 }
 
 // Catálogos em que a loja pode vender pelo site e o que falta pra ligar.
+// Cada catálogo confere o PRÓPRIO horário e o PRÓPRIO atendimento: o pedido
+// do Disk Bebidas usa o horário e a retirada do estabelecimento Beer, e o
+// do catálogo geral usa os da loja. Antes uma adega só de bebidas "ligava"
+// com a retirada do catálogo geral e o botão nunca aparecia (05/10).
+// Catálogo geral = loja de produtos COM produto ativo (tipo_negocio nasce
+// 'produto' pra todo mundo, inclusive adega que só vende no Beer).
 function requisitos(loja) {
-  const vendeGeral = loja.tipo_negocio === 'produto';
+  const vendeGeral = loja.tipo_negocio === 'produto' && loja.qtd_produtos_gerais > 0;
   const vendeBeer = Boolean(loja.beer?.ativo);
-  const horarioOk = (vendeGeral && horarioConfigurado(loja.horario_funcionamento))
-    || (vendeBeer && horarioConfigurado(loja.beer.horario_funcionamento));
-  const modos = [...new Set([...(vendeGeral ? modosDisponiveis(loja, 'geral') : []), ...(vendeBeer ? modosDisponiveis(loja, 'beer') : [])])];
+  const modosGeral = vendeGeral ? modosDisponiveis(loja, 'geral') : [];
+  const modosBeer = vendeBeer ? modosDisponiveis(loja, 'beer') : [];
+  const horarioGeralOk = !vendeGeral || horarioConfigurado(loja.horario_funcionamento);
+  const horarioBeerOk = !vendeBeer || horarioConfigurado(loja.beer.horario_funcionamento);
+  const modos = [...new Set([...modosGeral, ...modosBeer])];
   const lista = [
     { chave: 'cnpj', ok: loja.tipo_pessoa === 'pj', texto: 'Empresa com CNPJ (vendedor pessoa física atende só pelo WhatsApp)' },
-    { chave: 'tipo', ok: vendeGeral || vendeBeer, texto: 'Loja de produtos ou do Disk Bebidas (serviços atendem pelo WhatsApp)' },
-    { chave: 'horario', ok: horarioOk, texto: 'Horário de funcionamento cadastrado', link: vendeBeer && !vendeGeral ? '/parceiro/painel/beer' : '/parceiro/painel/entrega' },
-    { chave: 'atendimento', ok: modos.length > 0, texto: 'Entrega e/ou retirada marcada', link: '/parceiro/painel/entrega' },
+    { chave: 'tipo', ok: vendeGeral || vendeBeer, texto: 'Produtos ativos na loja ou Disk Bebidas ativo (serviços atendem pelo WhatsApp)', link: '/parceiro/painel/produtos' },
+    { chave: 'horario', ok: horarioGeralOk, texto: 'Horário de funcionamento da loja cadastrado', link: '/parceiro/painel/entrega' },
+    { chave: 'horario_beer', ok: horarioBeerOk, texto: 'Horário do Disk Bebidas cadastrado', link: '/parceiro/painel/beer' },
+    { chave: 'atendimento', ok: !vendeGeral || modosGeral.length > 0, texto: 'Loja: entrega e/ou retirada marcada', link: '/parceiro/painel/entrega' },
+    { chave: 'atendimento_beer', ok: !vendeBeer || modosBeer.length > 0, texto: 'Disk Bebidas: entrega (aba Entrega e horários) e/ou retirada (aba Meu IUB Beer) marcada', link: '/parceiro/painel/entrega' },
     { chave: 'whatsapp', ok: Boolean(onlyDigits(loja.whatsapp).length >= 10 || (vendeBeer && onlyDigits(loja.beer?.whatsapp).length >= 10)), texto: 'WhatsApp da loja cadastrado (é por ele que chega o aviso do pedido)', link: '/parceiro/painel/perfil' },
   ];
   return { lista, catalogos: [vendeGeral && 'geral', vendeBeer && 'beer'].filter(Boolean), modos, podeLigar: lista.every(r => r.ok) };
+}
+
+// Loja + quantos produtos do catálogo geral ela tem no ar (define se vende no geral)
+async function carregarLojaPainel(parceiroId) {
+  const loja = await carregarLoja(parceiroId);
+  if (!loja) return loja;
+  loja.qtd_produtos_gerais = (await db.query(
+    "SELECT COUNT(*)::int AS n FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND ativo AND NOT rascunho AND moderacao_status = 'aprovado'",
+    [parceiroId]
+  )).rows[0].n;
+  return loja;
 }
 
 function mascarar(n) {
@@ -92,7 +113,7 @@ function viewConfig(loja) {
 // GET /config
 async function getConfig(req, res) {
   try {
-    return res.json(viewConfig(await carregarLoja(req.parceiro.id)));
+    return res.json(viewConfig(await carregarLojaPainel(req.parceiro.id)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao carregar a configuração de pedidos' });
@@ -104,7 +125,7 @@ async function getConfig(req, res) {
 async function salvarConfig(req, res) {
   try {
     const b = req.body || {};
-    const loja = await carregarLoja(req.parceiro.id);
+    const loja = await carregarLojaPainel(req.parceiro.id);
     const ativo = b.ativo === true;
     const aceite = b.aceite_automatico === true;
     let pix = { tipo: loja.pix_tipo, chave: loja.pix_chave, nome: loja.pix_nome_recebedor };
@@ -145,7 +166,7 @@ async function salvarConfig(req, res) {
       [ativo, aceite, pix.tipo, pix.chave, pix.nome, req.parceiro.id]
     );
     if (!r.rows[0]) return res.status(404).json({ error: 'Loja não encontrada' });
-    return res.json(viewConfig(await carregarLoja(req.parceiro.id)));
+    return res.json(viewConfig(await carregarLojaPainel(req.parceiro.id)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao salvar a configuração de pedidos' });
@@ -161,7 +182,7 @@ async function pausar(req, res) {
       [req.body?.pausado === true, req.parceiro.id]
     );
     if (!r.rows[0]) return res.status(409).json({ error: 'Ligue o recebimento de pedidos primeiro.' });
-    return res.json(viewConfig(await carregarLoja(req.parceiro.id)));
+    return res.json(viewConfig(await carregarLojaPainel(req.parceiro.id)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao pausar pedidos' });
@@ -179,7 +200,7 @@ async function enviarTeste(req, res) {
       const aguarde = Math.ceil((60000 - desde) / 1000);
       return res.status(429).json({ error: `Aguarde ${aguarde}s para mandar outro teste.`, aguarde_seg: aguarde });
     }
-    const loja = await carregarLoja(req.parceiro.id);
+    const loja = await carregarLojaPainel(req.parceiro.id);
     const nums = whatsappsAviso(loja);
     if (!nums.length) return res.status(409).json({ error: 'Cadastre o WhatsApp da loja primeiro.' });
     ultimoTeste.set(req.parceiro.id, agora);

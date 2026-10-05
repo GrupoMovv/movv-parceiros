@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
+import { limparSacola } from '../Pedido/sacola';
 
 // Sessão do associado no Marketplace — usada em toda página pública que
 // precisa saber "esse visitante é associado SECI ativo?" (Marketplace,
@@ -61,6 +62,7 @@ export function useAssociadoSessao() {
 
   const logout = useCallback(() => {
     setPainelToken(null);
+    limparSacola(); // Sair de propósito limpa o pedido em montagem (sessão vencida, não)
     setAssociado(null);
   }, []);
 
