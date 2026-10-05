@@ -10,7 +10,11 @@ const app = express();
 // X-Forwarded-For — base dos limites por IP (ver utils/ipCliente.js).
 app.set('trust proxy', Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10));
 
+// Domínios antigos ficam pra sempre: links e QR codes já enviados apontam
+// pra eles. iubmais.com.br = domínio oficial (com e sem www).
 const allowedOrigins = [
+  'https://iubmais.com.br',
+  'https://www.iubmais.com.br',
   'https://portal.grupomovv.com.br',
   'https://movv-parceiros.onrender.com',
   'http://localhost:5173',
@@ -26,7 +30,9 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  // x-admin-token: modo QA do pedido pelo site (admin testando a empresa de
+  // teste com a sessão do cliente no Authorization — routes/pedidos.js)
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token'],
 };
 
 // Responde preflight OPTIONS em todas as rotas
