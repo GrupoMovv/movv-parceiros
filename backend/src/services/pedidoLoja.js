@@ -1,8 +1,8 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const {
-  PRAZO_RESPOSTA_MIN, MAX_PEDIDOS_ABERTOS, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM,
-  STATUS_ABERTOS, TRANSICOES,
+  PRAZO_RESPOSTA_MIN, MAX_PEDIDOS_ABERTOS, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM, MAX_QUANTIDADE_PROMOCAO,
+  STATUS_NAO_PAGOS, TRANSICOES,
 } = require('../config/pedidos');
 const { horarioConfigurado, turnoAtual, abertoEfetivo, diaDeHoje, idadeEmAnos, IDADE_MINIMA } = require('../config/beer');
 const { ehHojeODiaDoEvento } = require('../config/fechaMes');
@@ -308,6 +308,9 @@ async function cotar(associado, entrada, { qa = false } = {}) {
     if (vistos.has(chave)) throw new ErroPedido(400, 'ITEM_REPETIDO', 'O mesmo produto apareceu duas vezes. Ajuste a quantidade.');
     vistos.add(chave);
     const item = await resolverItem(e, ctx);
+    if (item.origem === 'promocao' && quantidade > MAX_QUANTIDADE_PROMOCAO) {
+      throw new ErroPedido(400, 'QUANTIDADE', `Promoção: ${MAX_QUANTIDADE_PROMOCAO} unidade por pedido.`, { item: e });
+    }
     if (item.estoque_max != null && quantidade > item.estoque_max) {
       throw new ErroPedido(409, 'QUANTIDADE', `Só tem ${item.estoque_max} unidade(s) de ${item.nome} no Fecha Mês.`, { item: e });
     }
@@ -386,10 +389,10 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
 
   const abertos = (await db.query(
     'SELECT COUNT(*)::int AS n FROM loja_pedidos WHERE associado_id = $1 AND status = ANY($2)',
-    [associado.id, STATUS_ABERTOS]
+    [associado.id, STATUS_NAO_PAGOS]
   )).rows[0].n;
   if (abertos >= MAX_PEDIDOS_ABERTOS) {
-    throw new ErroPedido(409, 'LIMITE_PEDIDOS', `Você já tem ${MAX_PEDIDOS_ABERTOS} pedidos em andamento. Espere algum terminar.`);
+    throw new ErroPedido(409, 'LIMITE_PEDIDOS', `Você já tem ${MAX_PEDIDOS_ABERTOS} pedidos esperando a loja ou o Pix. Espere algum andar.`);
   }
   if (catalogo === 'beer') await conferirIdadeBeer(associado, entrada, ip, userAgent);
 
@@ -442,8 +445,8 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
       return { pedido: p, itens };
     });
   } catch (err) {
-    if (err.code === '23505' && /uq_loja_pedidos_aberto_por_loja/.test(err.constraint || err.message)) {
-      throw new ErroPedido(409, 'JA_TEM_PEDIDO_NA_LOJA', 'Você já tem um pedido em andamento nessa loja. Acompanhe em Meus pedidos.');
+    if (err.code === '23505' && /uq_loja_pedidos_nao_pago_por_loja/.test(err.constraint || err.message)) {
+      throw new ErroPedido(409, 'JA_TEM_PEDIDO_NA_LOJA', 'Você já tem um pedido esperando a loja ou o Pix nessa loja. Acompanhe em Meus pedidos.');
     }
     throw err;
   }

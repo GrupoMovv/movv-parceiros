@@ -9,8 +9,13 @@ const PRAZO_ENTREGUE_ENTREGA_MIN = 180; // pago_saiu (entrega)  -> entregue sozi
 const PRAZO_ENTREGUE_RETIRADA_MIN = 720;// pago_saiu (retirada) -> entregue sozinho
 const LINK_LOJA_HORAS_APOS_FIM = 24;    // link sem login vale até encerrar + 24h
 
-// Limites por cliente (o "1 por loja" também é garantido no banco por índice único)
+// Limites por cliente: contam só pedidos AINDA NÃO PAGOS (enviado/aceito) —
+// depois de "pago, saiu" o cliente já pode pedir de novo (Junior, 05/10).
+// O "1 por loja" também é garantido no banco (índice único, migration 081).
 const MAX_PEDIDOS_ABERTOS = 3;
+const STATUS_NAO_PAGOS = ['enviado', 'aceito'];
+// Item de promoção: 1 unidade por pedido (a promoção não tem limite próprio por pedido)
+const MAX_QUANTIDADE_PROMOCAO = 1;
 const MAX_ITENS_DIFERENTES = 30;
 const MAX_QUANTIDADE_ITEM = 99;
 
@@ -64,6 +69,6 @@ function pedidosSiteLiberado(parceiro) {
 module.exports = {
   pedidosSiteLiberado,
   PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN, LINK_LOJA_HORAS_APOS_FIM,
-  MAX_PEDIDOS_ABERTOS, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM,
+  MAX_PEDIDOS_ABERTOS, STATUS_NAO_PAGOS, MAX_QUANTIDADE_PROMOCAO, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM,
   STATUS_ABERTOS, STATUS_ENCERRADOS, TRANSICOES, rotuloStatus,
 };
