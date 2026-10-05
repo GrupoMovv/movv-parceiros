@@ -18,8 +18,9 @@ const ABAS = [
   { label: '🏠 Dashboard', to: '/parceiro/painel', end: true },
   { label: '📦 Produtos', to: '/parceiro/painel/produtos' },
   { label: '🎯 Promoções', to: '/parceiro/painel/promocoes', soCnpj: true },
-  // IUB Food: só aparece pra quem tem "Alimentação" nas categorias (e_restaurante vem do /auth/me).
-  { label: '🛵 Entrega', to: '/parceiro/painel/entrega', soRestaurante: true },
+  // Entrega e horários: qualquer empresa (o pedido pelo site usa pra qualquer loja, não só restaurante).
+  { label: '🛵 Entrega e horários', to: '/parceiro/painel/entrega', soCnpj: true },
+  { label: '🛒 Pedidos pelo site', to: '/parceiro/painel/pedidos-site', soCnpj: true, soPedidosSite: true },
   { label: '🐾 Agendamentos', to: '/parceiro/painel/agendamentos', soPetAtendimento: true },
   { label: '🎟️ Fidelidade & QR', to: '/parceiro/painel/fidelidade', soPetAtendimento: true },
   // IUB Disk Bebidas: aberto pra todo parceiro — é a própria aba que oferece
@@ -179,6 +180,7 @@ export default function ParceiroPainelLayout() {
               .filter(aba => !aba.soRestaurante || parceiro.e_restaurante)
               .filter(aba => !aba.soPetAtendimento || parceiro.e_pet_atendimento)
               .filter(aba => !aba.soCnpj || parceiro.tipo_pessoa !== 'pf')
+              .filter(aba => !aba.soPedidosSite || parceiro.pedidos_site_liberado)
               .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h } : aba))}
           />
         </div>

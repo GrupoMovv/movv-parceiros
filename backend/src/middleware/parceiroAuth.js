@@ -45,7 +45,7 @@ async function authenticateParceiro(req, res, next) {
       // regras de fidelidade do Pet — sem ele o menu do pet shop some.
       // tipo_pessoa/nivel_vendedor/identidade_status: vendedor pessoa física
       // (migration 076) — produto de CPF entra em moderação.
-      'SELECT id, slug, nome, logo_url, status, plano, e_pioneiro, created_at, plano_iniciado_em, categorias, plano_expira_em, cortesia_interna, pet_servicos, tipo_pessoa, nivel_vendedor, e_mei, identidade_status FROM sindicato_parceiros WHERE id = $1',
+      'SELECT id, slug, nome, logo_url, status, plano, e_pioneiro, created_at, plano_iniciado_em, categorias, plano_expira_em, cortesia_interna, pet_servicos, tipo_pessoa, nivel_vendedor, e_mei, identidade_status, empresa_teste FROM sindicato_parceiros WHERE id = $1',
       [usuario.parceiro_id]
     );
     const parceiro = parceiroResult.rows[0];

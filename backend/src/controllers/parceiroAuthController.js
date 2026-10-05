@@ -15,6 +15,8 @@ const RESET_TOKEN_VALIDADE_MS = 60 * 60 * 1000; // 1h
 // Qualquer outro status (ex.: bloqueado pelo Sindicato) barra o login mesmo.
 // 'em_verificacao' = pessoa física esperando conferência do documento
 // (migration 076). Mesma lista do middleware/parceiroAuth.js.
+const { pedidosSiteLiberado } = require('../config/pedidos');
+
 const STATUS_PERMITEM_LOGIN = ['ativo', 'pausado', 'em_verificacao', 'aguardando_plano'];
 
 // `plano` aqui já é o EFETIVO (aplica o seed de demonstração por cima do
@@ -29,7 +31,9 @@ function parceiroPublico(p) {
     tipo_pessoa: p.tipo_pessoa || 'pj', nivel_vendedor: p.nivel_vendedor || 'comercial', e_mei: Boolean(p.e_mei),
     identidade_status: p.identidade_status || null,
     // limite de produtos ATIVOS do PF (Casual 10 / Empreendedor 30) — fonte: config/planos.js
-    limite_produtos_ativos_pf: limiteProdutosAtivosPf(p) };
+    limite_produtos_ativos_pf: limiteProdutosAtivosPf(p),
+    // aba "🛒 Pedidos pelo site" (config/pedidos.js: só empresa de teste até o lançamento)
+    pedidos_site_liberado: pedidosSiteLiberado(p) };
 }
 
 async function login(req, res) {

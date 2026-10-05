@@ -115,6 +115,7 @@ import ParceiroBeer from './pages/parceiro/Beer';
 import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
+import ParceiroPedidosSite from './pages/parceiro/PedidosSite';
 import ParceiroFidelidadePet from './pages/parceiro/FidelidadePet';
 import AtenderPet from './pages/public/Pet/AtenderPet';
 import BalcaoPet from './pages/public/Pet/BalcaoPet';
@@ -318,6 +319,7 @@ export default function App() {
           <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
           <Route path="agendamentos" element={<ParceiroAgendamentosPet />} />
+          <Route path="pedidos-site" element={<ParceiroPedidosSite />} />
           <Route path="fidelidade" element={<ParceiroFidelidadePet />} />
           <Route path="planos" element={<ParceiroPlanos />} />
           <Route path="minha-assinatura" element={<ParceiroMinhaAssinatura />} />

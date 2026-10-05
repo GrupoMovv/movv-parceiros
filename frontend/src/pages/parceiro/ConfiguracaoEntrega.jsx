@@ -10,8 +10,8 @@ const campoCls = 'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm 
 
 function vazioSeNulo(v) { return v === null || v === undefined ? '' : String(v); }
 
-// /parceiro/painel/entrega — IUB Food: delivery/retirada, horários, taxa e
-// tempo de preparo. Horário é a MESMA coluna horario_funcionamento que Meu
+// /parceiro/painel/entrega — delivery/retirada, horários, taxa e tempo de
+// preparo (IUB Food e pedido pelo site de qualquer loja). Horário é a MESMA coluna horario_funcionamento que Meu
 // Perfil edita (migration 025) — mudar aqui muda lá e vice-versa.
 export default function ConfiguracaoEntrega() {
   const [carregando, setCarregando] = useState(true);
@@ -51,7 +51,7 @@ export default function ConfiguracaoEntrega() {
   }
 
   function validar() {
-    if (!delivery && !retirada) return 'Marque pelo menos delivery ou retirada';
+    if (!delivery && !retirada) return 'Marque pelo menos entrega ou retirada';
     for (const d of DIAS) {
       const info = horario[d.chave];
       if (info?.aberto && (!info.abre || !info.fecha)) return `Preencha abre/fecha de ${d.label}`;
@@ -95,13 +95,13 @@ export default function ConfiguracaoEntrega() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-xl font-bold" style={{ color: PRETO }}>Entrega e horários</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Como o cliente recebe seu pedido no IUB Food.</p>
+        <p className="text-slate-500 text-sm mt-0.5">Como o cliente recebe seu pedido e quando sua loja está aberta.</p>
       </div>
 
       <Secao titulo="Forma de atendimento" subtitulo="Pode marcar as duas.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <OpcaoAtendimento ativo={delivery} onChange={setDelivery} icone={Truck} titulo="Delivery" descricao="Entrega no endereço do cliente" />
-          <OpcaoAtendimento ativo={retirada} onChange={setRetirada} icone={Store} titulo="Retirada" descricao="Cliente busca no local" />
+          <OpcaoAtendimento ativo={delivery} onChange={setDelivery} icone={Truck} titulo="Entrega" descricao="Você leva até o endereço do cliente" />
+          <OpcaoAtendimento ativo={retirada} onChange={setRetirada} icone={Store} titulo="Retirada na loja" descricao="Cliente busca no local" />
         </div>
       </Secao>
 
@@ -165,7 +165,7 @@ export default function ConfiguracaoEntrega() {
         </Secao>
       )}
 
-      <Secao titulo="Tempo de preparo" subtitulo="Aparece pro cliente como “Pronto em ~30 min”. Dá pra mudar por produto no cadastro de cada um.">
+      <Secao titulo="Tempo para ficar pronto" subtitulo="Aparece pro cliente como “Pronto em ~30 min”. Dá pra mudar por produto no cadastro de cada um.">
         <div className="flex items-center gap-2 max-w-[240px]">
           <input type="number" inputMode="numeric" min={1} max={300} value={tempoPreparo}
             onChange={e => setTempoPreparo(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="30" className={campoCls} />

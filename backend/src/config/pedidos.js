@@ -54,7 +54,15 @@ function rotuloStatus(status, modo) {
   return r[status] || status;
 }
 
+// Lançamento: até o Junior ligar PEDIDOS_SITE_LIBERADO=true no Render, só a
+// empresa de teste (modo QA) consegue ligar o recurso — evita loja real
+// receber pedido antes dos avisos e do botão Comprar estarem no ar.
+function pedidosSiteLiberado(parceiro) {
+  return Boolean(parceiro?.empresa_teste) || process.env.PEDIDOS_SITE_LIBERADO === 'true';
+}
+
 module.exports = {
+  pedidosSiteLiberado,
   PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN, LINK_LOJA_HORAS_APOS_FIM,
   MAX_PEDIDOS_ABERTOS, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM,
   STATUS_ABERTOS, STATUS_ENCERRADOS, TRANSICOES, rotuloStatus,
