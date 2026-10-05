@@ -221,9 +221,14 @@ export default function FoodDetalhe() {
                     <p className="text-xs font-semibold leading-snug line-clamp-2 mt-1.5" style={{ color: GRAFITE }}>{item.nome}</p>
                     {item.descricao && <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{item.descricao}</p>}
                     <div className="flex items-baseline justify-between gap-1 mt-1">
-                      <p className="text-sm font-black" style={{ color: ROXO_ESCURO }}>{formatarBRL(item.preco_associado ?? item.preco)}</p>
+                      {/* o que ESTA pessoa paga (o mesmo valor do botão e do pedido) */}
+                      <p className="text-sm font-black" style={{ color: ROXO_ESCURO }}>{formatarBRL(precoPessoa(item))}</p>
                       {item.tempo_preparo_min && <p className="text-[10px] text-slate-400">⏱️ ~{item.tempo_preparo_min} min</p>}
                     </div>
+                    {/* quem não é associado vê o preço de associado como chamada, não como preço */}
+                    {!ehAssociadoSeci && item.preco_associado != null && Number(item.preco_associado) < Number(item.preco) && (
+                      <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarBRL(item.preco_associado)} para associado SECI</p>
+                    )}
                     <div className="mt-auto pt-2">
                       {vendeSite ? (
                         // Restaurante vende pelo site agora: UM botão por item, o pedido pelo site
