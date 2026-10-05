@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, LogOut, Search, MapPin, CreditCard, Users2, ChevronDown, User } from 'lucide-react';
-import { ShoppingCart } from '@phosphor-icons/react';
+import { ListChecks, ShoppingBag } from '@phosphor-icons/react';
+import { useQuantidadeSacola } from '../../Pedido/sacola';
 import { ROXO, ROXO_ESCURO, DOURADO } from '../theme';
 import MenuHorizontalMobile from './MenuHorizontalMobile';
 import BadgeMenu from './BadgeMenu';
@@ -42,6 +43,7 @@ export default function TopNav({
   const location = useLocation();
   const navigate = useNavigate();
   const { totalItens: itensCarrinho, pulsar: carrinhoPulsando } = useCarrinho();
+  const qtdPedido = useQuantidadeSacola();
   // Contagem/estado de favoritos calculados aqui dentro (não via prop) —
   // toda página que renderiza TopNav precisava lembrar de somar
   // parceiros+produtos favoritos "na mão", e a maioria esquecia (só
@@ -149,16 +151,30 @@ export default function TopNav({
 
         <Link
           to="/marketplace/carrinho"
-          aria-label="Meu carrinho"
+          aria-label="Minha lista"
+          title="Minha lista"
           className={`hidden sm:flex relative w-9 h-9 rounded-full flex-shrink-0 items-center justify-center hover:bg-white/10 transition-colors duration-200 ${carrinhoPulsando ? 'animate-carrinho-pulso' : ''}`}
         >
-          <ShoppingCart size={18} weight="duotone" color="#fff" />
+          <ListChecks size={18} weight="duotone" color="#fff" />
           {itensCarrinho > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
               {itensCarrinho}
             </span>
           )}
         </Link>
+
+        {/* Pedido pelo site em montagem: só aparece com item */}
+        {qtdPedido > 0 && (
+          <Link
+            to="/pedido/finalizar"
+            aria-label={`Pedido (${qtdPedido})`}
+            title="Meu pedido"
+            className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-full flex-shrink-0 text-xs font-bold"
+            style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+          >
+            <ShoppingBag size={16} weight="fill" /> Pedido ({qtdPedido})
+          </Link>
+        )}
 
         {/* Só desktop — no mobile o atalho de Jogar mora na primeira pill
             do menu horizontal rolável (ver itensMenuMobile), pra não

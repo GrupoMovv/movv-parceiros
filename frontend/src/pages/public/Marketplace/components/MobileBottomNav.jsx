@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { House, Heart, UserCircle, ShoppingCart } from '@phosphor-icons/react';
+import { House, Heart, UserCircle, ListChecks, ShoppingBag } from '@phosphor-icons/react';
+import { useQuantidadeSacola } from '../../Pedido/sacola';
 import { ROXO } from '../theme';
 import { useCarrinho } from '../CarrinhoContext';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
@@ -14,6 +15,8 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
   const naFavoritos = location.pathname === '/favoritos';
   const naJogar = location.pathname.startsWith('/jogar');
   const { totalItens } = useCarrinho();
+  const qtdPedido = useQuantidadeSacola();
+  const noPedido = location.pathname === '/pedido/finalizar';
   // Mesma lógica do TopNav — favorito calculado aqui, não via prop (ver
   // comentário lá: contagem espalhada por prop em cada página é fácil de
   // esquecer de atualizar).
@@ -62,15 +65,27 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
           <span className="text-[10px] font-medium" style={{ color: naFavoritos ? '#EF4444' : '#94A3B8' }}>Favoritos</span>
         </Link>
 
+        {/* Minha lista = o antigo carrinho (lista de interesses, envia pra loja no WhatsApp) */}
         <Link to="/marketplace/carrinho" className="relative flex-1 flex flex-col items-center justify-center gap-0.5">
-          <ShoppingCart size={20} weight={noCarrinho ? 'fill' : 'regular'} color={noCarrinho ? ROXO : '#94A3B8'} />
+          <ListChecks size={20} weight={noCarrinho ? 'fill' : 'regular'} color={noCarrinho ? ROXO : '#94A3B8'} />
           {totalItens > 0 && (
             <span className="absolute top-1 right-[27%] min-w-[13px] h-[13px] px-0.5 rounded-full text-[8px] font-bold flex items-center justify-center text-white" style={{ backgroundColor: '#FFB800', color: '#0F0F14' }}>
               {totalItens}
             </span>
           )}
-          <span className="text-[10px] font-medium" style={{ color: noCarrinho ? ROXO : '#94A3B8' }}>Carrinho</span>
+          <span className="text-[10px] font-medium whitespace-nowrap" style={{ color: noCarrinho ? ROXO : '#94A3B8' }}>Minha lista</span>
         </Link>
+
+        {/* Pedido pelo site em montagem (sacola): só aparece com item */}
+        {qtdPedido > 0 && (
+          <Link to="/pedido/finalizar" className="relative flex-1 flex flex-col items-center justify-center gap-0.5">
+            <ShoppingBag size={20} weight={noPedido ? 'fill' : 'regular'} color={ROXO} />
+            <span className="absolute top-1 right-[27%] min-w-[13px] h-[13px] px-0.5 rounded-full text-[8px] font-bold flex items-center justify-center text-white" style={{ backgroundColor: ROXO }}>
+              {qtdPedido}
+            </span>
+            <span className="text-[10px] font-semibold" style={{ color: ROXO }}>Pedido</span>
+          </Link>
+        )}
 
         {nomeAssociado ? (
           <Link to="/meu" className="flex-1 flex flex-col items-center justify-center gap-0.5">

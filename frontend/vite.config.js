@@ -68,7 +68,7 @@ export default defineConfig({
             icons: [{ src: '/icons/shortcut-ofertas.png', sizes: '96x96' }],
           },
           {
-            name: 'Meu Carrinho',
+            name: 'Minha lista',
             url: '/marketplace/carrinho',
             icons: [{ src: '/icons/shortcut-carrinho.png', sizes: '96x96' }],
           },

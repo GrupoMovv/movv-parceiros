@@ -34,7 +34,7 @@ export default function CarrinhoPage() {
   }
 
   async function handleLimpar() {
-    if (!window.confirm('Remover todos os produtos do carrinho?')) return;
+    if (!window.confirm('Remover todos os produtos da lista?')) return;
     await limpar();
   }
 
@@ -59,7 +59,7 @@ export default function CarrinhoPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-8 w-full py-6 flex-1">
         <h1 className="flex items-center gap-2 text-xl sm:text-2xl font-bold tracking-tight mb-6" style={{ color: PRETO }}>
           <ShoppingCart size={24} weight="duotone" color={ROXO} />
-          Meu Carrinho {!carregando && `(${totalItens} produto${totalItens === 1 ? '' : 's'})`}
+          Minha lista {!carregando && `(${totalItens} produto${totalItens === 1 ? '' : 's'})`}
         </h1>
 
         {carregando ? (
@@ -67,7 +67,7 @@ export default function CarrinhoPage() {
         ) : grupos.length === 0 ? (
           <div className="flex flex-col items-center text-center py-20 gap-3">
             <ShoppingCart size={56} weight="light" className="text-slate-200" />
-            <p className="font-bold text-lg" style={{ color: PRETO }}>Seu carrinho está vazio</p>
+            <p className="font-bold text-lg" style={{ color: PRETO }}>Sua lista está vazia</p>
             <p className="text-slate-400 text-sm max-w-xs">Adicione produtos que você gostou pra conversar com os parceiros depois.</p>
             <Link to="/marketplace" className="mt-2 text-sm font-semibold px-6 py-3 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
               Explorar produtos
@@ -135,7 +135,7 @@ export default function CarrinhoPage() {
                       className="w-full flex items-center justify-center gap-2 text-sm font-bold text-white py-3 rounded-xl transition-transform hover:scale-[1.01]"
                       style={{ backgroundColor: '#25D366' }}
                     >
-                      <MessageCircle className="w-4 h-4" /> Chamar {grupo.parceiro_nome} no WhatsApp
+                      <MessageCircle className="w-4 h-4" /> Enviar lista para a loja no WhatsApp
                     </button>
                   </div>
                 </div>
@@ -144,11 +144,11 @@ export default function CarrinhoPage() {
 
             <div className="mt-8 rounded-2xl bg-slate-50 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-slate-500 text-center sm:text-left">
-                <strong style={{ color: PRETO }}>{totalItens}</strong> produto{totalItens === 1 ? '' : 's'} de <strong style={{ color: PRETO }}>{totalParceiros}</strong> parceiro{totalParceiros === 1 ? '' : 's'} no seu carrinho
+                <strong style={{ color: PRETO }}>{totalItens}</strong> produto{totalItens === 1 ? '' : 's'} de <strong style={{ color: PRETO }}>{totalParceiros}</strong> parceiro{totalParceiros === 1 ? '' : 's'} na sua lista
               </p>
               <div className="flex items-center gap-4">
                 <button onClick={handleLimpar} className="text-sm font-semibold text-slate-500 hover:text-red-500 transition-colors whitespace-nowrap">
-                  Limpar carrinho
+                  Limpar lista
                 </button>
                 <Link to="/marketplace" className="text-sm font-semibold underline whitespace-nowrap" style={{ color: ROXO }}>
                   Continuar comprando

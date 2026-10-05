@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, CheckCircle2,
+  ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, CheckCircle2, Bookmark,
 } from 'lucide-react';
-import { Diamond, ShoppingCart } from '@phosphor-icons/react';
+import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
@@ -271,14 +271,24 @@ export default function ProdutoDetalhe() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={handleCarrinho}
-            className={`mt-2.5 w-full flex items-center justify-center gap-2 font-bold text-sm py-3 rounded-xl border transition-colors ${noCarrinho ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'hover:bg-purple-50'}`}
-            style={noCarrinho ? {} : { borderColor: ROXO, color: ROXO }}
-          >
-            {noCarrinho ? <><CheckCircle2 className="w-4 h-4" /> No carrinho</> : <><ShoppingCart className="w-4 h-4" /> Adicionar ao carrinho</>}
-          </button>
+          {/* Minha lista (o antigo carrinho): com Comprar, pequeno embaixo da
+              dúvida, sem disputar; sem Comprar, a lista é o caminho de compra
+              (envia pra loja no WhatsApp) e continua como botão. */}
+          {podeComprar ? (
+            <button type="button" onClick={handleCarrinho}
+              className={`mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-semibold py-1.5 ${noCarrinho ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>
+              {noCarrinho ? <><CheckCircle2 className="w-3.5 h-3.5" /> Na lista</> : <><Bookmark className="w-3.5 h-3.5" /> Salvar na lista</>}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCarrinho}
+              className={`mt-2.5 w-full flex items-center justify-center gap-2 font-bold text-sm py-3 rounded-xl border transition-colors ${noCarrinho ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'hover:bg-purple-50'}`}
+              style={noCarrinho ? {} : { borderColor: ROXO, color: ROXO }}
+            >
+              {noCarrinho ? <><CheckCircle2 className="w-4 h-4" /> Na lista</> : <><Bookmark className="w-4 h-4" /> Salvar na lista</>}
+            </button>
+          )}
 
           <div className="flex items-center gap-3 mt-3">
             <button onClick={() => alternarFavorito(produto.id)} className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700">

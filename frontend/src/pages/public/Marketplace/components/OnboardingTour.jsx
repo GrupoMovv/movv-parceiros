@@ -20,8 +20,8 @@ const SLIDES = [
   },
   {
     icon: ShoppingCart,
-    titulo: 'Carrinho e aproveita!',
-    texto: 'Monte sua lista de interesse no carrinho e chame o parceiro direto pelo WhatsApp quando quiser fechar.',
+    titulo: 'Salve na sua lista!',
+    texto: 'Salve produtos na Minha lista e envie a lista pra loja no WhatsApp quando quiser fechar. Loja com o botão Comprar recebe o pedido direto pelo site.',
   },
 ];
 

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
-import { Diamond, ShoppingCart, Check } from '@phosphor-icons/react';
+import { Diamond, Check, BookmarkSimple } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
 import { useCarrinho } from '../CarrinhoContext';
 
@@ -97,7 +97,7 @@ export default function CardProduto({ produto, badge, className = '', style }) {
           }`}
           style={noCarrinho ? {} : { borderColor: ROXO, color: ROXO }}
         >
-          {noCarrinho ? <><Check size={12} weight="bold" /> No carrinho</> : <><ShoppingCart size={12} weight="bold" /> Adicionar</>}
+          {noCarrinho ? <><Check size={12} weight="bold" /> Na lista</> : <><BookmarkSimple size={12} weight="bold" /> Salvar</>}
         </button>
       </div>
     </Link>

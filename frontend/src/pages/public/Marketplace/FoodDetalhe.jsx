@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, ShoppingCart, Check } from 'lucide-react';
+import { MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, Check, Bookmark, ListChecks } from 'lucide-react';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
@@ -96,8 +96,8 @@ export default function FoodDetalhe() {
   function botaoItem(item) {
     if (item.estoque_disponivel === false) return { desabilitado: true, texto: 'Esgotado' };
     if (status && !status.aberto) return { desabilitado: true, texto: `Fechado · abre ${status.proximaAbertura}` };
-    if (estaNoCarrinho(item.id)) return { noCarrinho: true, texto: 'No carrinho' };
-    return { texto: 'Adicionar ao carrinho' };
+    if (estaNoCarrinho(item.id)) return { noCarrinho: true, texto: 'Na lista' };
+    return { texto: 'Salvar na lista' };
   }
 
   return (
@@ -258,7 +258,7 @@ export default function FoodDetalhe() {
                         }`}
                         style={botao.desabilitado || botao.noCarrinho ? undefined : { borderColor: ROXO, color: ROXO }}
                       >
-                        {botao.noCarrinho ? <Check className="w-3 h-3" /> : !botao.desabilitado && <ShoppingCart className="w-3 h-3" />}
+                        {botao.noCarrinho ? <Check className="w-3 h-3" /> : !botao.desabilitado && <Bookmark className="w-3 h-3" />}
                         {botao.texto}
                       </button>
                       )}
@@ -302,7 +302,7 @@ export default function FoodDetalhe() {
               className="flex items-center justify-center gap-2 flex-1 text-sm sm:text-base font-black px-4 py-3.5 rounded-2xl text-white shadow-lg transition-transform hover:scale-[1.02]"
               style={{ backgroundColor: ROXO }}
             >
-              <ShoppingCart className="w-5 h-5" /> Carrinho ({totalItens})
+              <ListChecks className="w-5 h-5" /> Minha lista ({totalItens})
             </Link>
           )}
           {linkWppBase ? (

@@ -57,7 +57,7 @@ const SECOES = [
     'Alguns prestadores (como Cloudinary, OpenAI e Resend) guardam ou processam dados fora do Brasil. Nesses casos a transferência é feita para cumprir o contrato com você e com prestadores que adotam medidas de segurança compatíveis com a LGPD (art. 33).',
   ]],
   ['10. Cookies e armazenamento no navegador', [
-    'O IUB Mais+ não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento do seu navegador só para manter você conectado, guardar o carrinho e lembrar preferências simples (som e recordes dos jogos, avisos já vistos, instalação do app). Esses dados ficam no seu aparelho. Ao sair da conta, o acesso é apagado do navegador.',
+    'O IUB Mais+ não usa cookies de publicidade nem ferramentas de rastreamento de terceiros. Usamos o armazenamento do seu navegador só para manter você conectado, guardar a sua lista e o pedido em montagem e lembrar preferências simples (som e recordes dos jogos, avisos já vistos, instalação do app). Esses dados ficam no seu aparelho. Ao sair da conta, o acesso e o pedido em montagem são apagados do navegador.',
   ]],
   ['11. Por quanto tempo guardamos', [
     'Dados da conta: enquanto ela estiver ativa. Documento e selfie: até o fim da verificação. Registros de acesso: 6 meses (Marco Civil da Internet). Dados de pagamentos e cobranças: 5 anos (obrigações fiscais).',

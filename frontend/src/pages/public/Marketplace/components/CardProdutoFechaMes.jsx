@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
-import { Fire, ShoppingCart, Check } from '@phosphor-icons/react';
+import { Fire, Check, BookmarkSimple } from '@phosphor-icons/react';
 import { DOURADO, DOURADO_ESCURO, PRETO } from '../theme';
 import { useCarrinho } from '../CarrinhoContext';
 import BotaoComprar from '../../../../components/BotaoComprar';
@@ -94,7 +94,7 @@ export default function CardProdutoFechaMes({ produto }) {
             }`}
             style={noCarrinho ? {} : { borderColor: DOURADO_ESCURO, color: DOURADO_ESCURO }}
           >
-            {noCarrinho ? <><Check size={12} weight="bold" /> No carrinho</> : <><ShoppingCart size={12} weight="bold" /> Adicionar</>}
+            {noCarrinho ? <><Check size={12} weight="bold" /> Na lista</> : <><BookmarkSimple size={12} weight="bold" /> Salvar</>}
           </button>
         )}
       </div>

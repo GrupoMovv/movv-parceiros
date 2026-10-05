@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 // "Sacola" do pedido pelo site (botão Comprar): itens de UMA loja só, no
 // localStorage. Separada do carrinho (que é lista de interesses e chama a
 // loja no WhatsApp). Preço NÃO fica aqui: quem calcula é o servidor
@@ -63,4 +65,11 @@ export function aoMudarSacola(fn) {
   window.addEventListener(EVENTO, fn);
   window.addEventListener('storage', fn);
   return () => { window.removeEventListener(EVENTO, fn); window.removeEventListener('storage', fn); };
+}
+
+// Quantos itens tem na sacola agora (atualiza sozinho) — barra "Pedido (n)".
+export function useQuantidadeSacola() {
+  const [n, setN] = useState(quantidadeNaSacola);
+  useEffect(() => aoMudarSacola(() => setN(quantidadeNaSacola())), []);
+  return n;
 }
