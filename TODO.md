@@ -141,3 +141,13 @@ original:
 - Página híbrida com abas Produtos/Serviços internas (hoje um parceiro
   híbrido como `diroma-fiori` aparece na listagem de serviços
   normalmente, mas não tem uma página só dele combinando os dois)
+
+## Recupera Carrinho (anotado 05/10/2026 — não fazer agora)
+
+Recurso de **plano pago**. Depende do "Pedido pelo site" (botão Comprar) pronto.
+1. **Contador no painel da loja:** quantos clientes têm produtos dela no
+   carrinho (`sindicato_associado_carrinho` + localStorage de visitante não
+   conta), sem identificar ninguém — só o número.
+2. **Oferta com cupom:** botão pra loja mandar oferta com cupom só pra
+   clientes que autorizaram receber ofertas (`sindicato_associados.receber_whatsapp`
+   ou um opt-in próprio — decidir). Nunca expor quem são os clientes à loja.
