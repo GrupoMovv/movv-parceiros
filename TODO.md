@@ -162,3 +162,19 @@ Recurso de **plano pago**. Depende do "Pedido pelo site" (botão Comprar) pronto
   estilo do bloco Dependentes: nome, foto, próximo agendamento e atalhos para
   ver a ficha e agendar. Para quem não tem pet, o bloco vira convite para
   cadastrar.
+
+## PRAZO 30/10/2026 (próximo Fecha Mês): preço do evento e "Comprar" nos cards de lista
+
+Anotado 05/10/2026. Tem que estar no ar ANTES do Fecha Mês de 30/10 (última sexta do mês).
+
+- **Preço do Fecha Mês nos cards:** hoje, no dia do evento, o preço do Fecha Mês
+  aparece só na vitrine do Fecha Mês e na página do produto. Os cards da página
+  inicial, das categorias e da busca ainda mostram o preço normal (o pedido
+  pelo site já cobra o do evento). Levar `preco_fecha_mes` às consultas de
+  listagem (`SELECT_PRODUTO` em `marketplaceHomeController.js`,
+  `vitrineRotativaService.js`, busca/categoria) e usar `precoDoProduto` dos cards.
+- **"Comprar · R$ X" nos cards:** nos mesmos cards o único botão hoje é
+  "Salvar". Para loja que vende pelo site agora, o botão do card vira
+  "Comprar · R$ X" (põe no pedido e abre o Finalizar) e o Salvar vira ícone
+  pequeno. Usar a consulta em lote `GET /public/pedidos/lojas?geral=...`
+  (mesma dos cards do Disk Bebidas) pra não fazer uma chamada por card.
