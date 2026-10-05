@@ -28,8 +28,8 @@ export default defineConfig({
         type: 'module',
       },
       manifest: {
-        name: 'IUB MAIS - Marketplace de Itumbiara',
-        short_name: 'IUB MAIS',
+        name: 'IUB MAIS+ - Marketplace de Itumbiara',
+        short_name: 'IUB MAIS+',
         description: 'Marketplace de Itumbiara - Produtos e serviços locais com preços especiais pra associados SECI',
         start_url: '/marketplace',
         scope: '/',

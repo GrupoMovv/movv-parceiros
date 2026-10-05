@@ -143,6 +143,19 @@ import IndicadorMaterialApoio from './pages/indicador/MaterialApoio';
 import IndicadorMeusPagamentos from './pages/indicador/MeusPagamentos';
 import IndicadorPerfil from './pages/indicador/Perfil';
 
+// No domínio da marca (iubmais.com.br), a raiz é o marketplace. A equipe
+// logada no portal continua indo para o painel (o /login manda para "/").
+// Nos outros endereços (portal.grupomovv.com.br, onrender.com) nada muda.
+const DOMINIOS_IUB = ['iubmais.com.br', 'www.iubmais.com.br'];
+function RaizPorDominio({ children }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (location.pathname === '/' && !loading && !user && DOMINIOS_IUB.includes(window.location.hostname)) {
+    return <Navigate to="/marketplace" replace />;
+  }
+  return children;
+}
+
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -340,7 +353,7 @@ export default function App() {
           <RequireAuth><TrocarSenhaObrigatorio /></RequireAuth>
         } />
 
-        <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
+        <Route path="/" element={<RaizPorDominio><RequireAuth><Layout /></RequireAuth></RaizPorDominio>}>
           <Route index element={<HomeRedirect />} />
           <Route path="extrato"              element={<Statement />} />
           <Route path="meus-funcionarios"   element={<RequireAccounting><MyEmployees /></RequireAccounting>} />

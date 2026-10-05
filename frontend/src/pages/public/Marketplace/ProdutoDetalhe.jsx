@@ -55,7 +55,7 @@ export default function ProdutoDetalhe() {
 
   useEffect(() => {
     if (!produto) return;
-    document.title = `${produto.nome} — ${produto.parceiro_nome} | IUB MAIS`;
+    document.title = `${produto.nome} — ${produto.parceiro_nome} | IUB MAIS+`;
     api.post(`/public/produtos/${id}/visualizacao`, { tipo: 'ver_produto', associado_hash: associadoHash }).catch(() => {});
     api.get(`/public/produtos/${id}/outros-do-parceiro`).then(res => setOutros(res.data.produtos)).catch(() => {});
   }, [produto, id, associadoHash]);

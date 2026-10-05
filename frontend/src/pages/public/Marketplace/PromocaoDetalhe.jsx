@@ -70,7 +70,7 @@ export default function PromocaoDetalhe() {
 
   useEffect(() => {
     if (!promocao) return;
-    document.title = `${promocao.titulo} — ${promocao.parceiro_nome} | IUB MAIS`;
+    document.title = `${promocao.titulo} — ${promocao.parceiro_nome} | IUB MAIS+`;
     api.post(`/public/promocoes/${id}/visualizacao`, { tipo: 'ver_promocao', associado_hash: associadoHash }).catch(() => {});
   }, [promocao, id, associadoHash]);
 
