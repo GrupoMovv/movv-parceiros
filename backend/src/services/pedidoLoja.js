@@ -418,6 +418,17 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
           catalogo === 'beer', automatico, observacao, gerarTokenLoja(),
         ]
       )).rows[0];
+      // Promoção com limite: reserva 1 vaga por pedido já na criação (mesma
+      // "vaga" do clique no WhatsApp da promoção). Atômico: com a última vaga,
+      // só um pedido passa. Devolvida em recusado/expirado/cancelado.
+      for (const i of resumo.itens.filter(x => x.promocao_id)) {
+        const vaga = await client.query(
+          `UPDATE sindicato_parceiro_promocoes SET usos_atuais = usos_atuais + 1
+           WHERE id = $1 AND (limite_usos IS NULL OR usos_atuais < limite_usos) RETURNING id`,
+          [i.promocao_id]
+        );
+        if (!vaga.rows[0]) throw new ErroPedido(409, 'ITEM_INDISPONIVEL', `As vagas da promoção "${i.nome}" acabaram.`);
+      }
       const itens = [];
       for (const i of resumo.itens) {
         itens.push((await client.query(
@@ -472,8 +483,20 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
     params.push(String(resposta).trim().slice(0, 500) || null); sets.push(`resposta = $${params.length}`);
   }
 
-  const r = await db.query(`UPDATE loja_pedidos SET ${sets.join(', ')} WHERE ${filtros.join(' AND ')} RETURNING *`, params);
-  if (r.rows[0]) return { pedido: r.rows[0] };
+  const devolveVaga = ['recusado', 'expirado', 'cancelado'].includes(regra.para);
+  const pedido = await db.transacao(async (client) => {
+    const r = await client.query(`UPDATE loja_pedidos SET ${sets.join(', ')} WHERE ${filtros.join(' AND ')} RETURNING *`, params);
+    if (r.rows[0] && devolveVaga) {
+      // Devolve a vaga reservada das promoções do pedido (1 por pedido).
+      await client.query(
+        `UPDATE sindicato_parceiro_promocoes SET usos_atuais = GREATEST(usos_atuais - 1, 0)
+         WHERE id IN (SELECT DISTINCT promocao_id FROM loja_pedido_itens WHERE pedido_id = $1 AND promocao_id IS NOT NULL)`,
+        [pedidoId]
+      );
+    }
+    return r.rows[0] || null;
+  });
+  if (pedido) return { pedido };
 
   const atual = (await db.query('SELECT status, associado_id, parceiro_id, created_at FROM loja_pedidos WHERE id = $1', [pedidoId])).rows[0];
   const dono = atual && (ator === 'sistema' || (ator === 'cliente' && atual.associado_id === associadoId) || (ator === 'loja' && atual.parceiro_id === parceiroId));
