@@ -4,6 +4,7 @@ const { rotuloStatus } = require('../config/pedidos');
 const { ipCliente } = require('../utils/ipCliente');
 const pedidoAvisos = require('../services/pedidoAvisos');
 const { linkWhatsapp, manualClienteParaLoja } = require('../services/pedidoMensagens');
+const { gerarBrCode } = require('../utils/pixBrCode');
 
 // Pedido pelo site — lado do CLIENTE (/api/public/pedidos, sessão do /meu).
 // Regras e preço em services/pedidoLoja.js.
@@ -26,7 +27,7 @@ async function viewCliente(pedido) {
     [pedido.id]
   )).rows;
   const loja = (await db.query(
-    `SELECT pa.nome, pa.slug, CASE WHEN $2 = 'beer' THEN be.whatsapp ELSE pa.whatsapp END AS whatsapp
+    `SELECT pa.nome, pa.slug, pa.cidade, CASE WHEN $2 = 'beer' THEN be.whatsapp ELSE pa.whatsapp END AS whatsapp
      FROM sindicato_parceiros pa LEFT JOIN beer_estabelecimentos be ON be.parceiro_id = pa.id
      WHERE pa.id = $1`,
     [pedido.parceiro_id, pedido.catalogo]
@@ -41,6 +42,10 @@ async function viewCliente(pedido) {
     pix_chave: mostraPix ? p.pix_chave : null,
     pix_tipo: mostraPix ? p.pix_tipo : null,
     pix_nome_recebedor: mostraPix ? p.pix_nome_recebedor : null,
+    // QR e copia e cola com o valor: só enquanto falta pagar
+    pix_copia_e_cola: p.status === 'aceito' && p.pix_chave
+      ? gerarBrCode({ chave: p.pix_chave, nome: p.pix_nome_recebedor || loja.nome, cidade: loja.cidade, valor: p.total, txid: `IUB${p.id}` })
+      : null,
     status_texto: rotuloStatus(p.status, p.modo_recebimento),
     loja: { nome: loja.nome, slug: loja.slug, whatsapp: loja.whatsapp || null },
     aviso_loja_falhou: avisoFalhou,

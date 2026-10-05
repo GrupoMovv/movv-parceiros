@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2, ChevronLeft, Copy, CheckCircle2, AlertTriangle, Truck, Store } from 'lucide-react';
 import { WhatsappLogo } from '@phosphor-icons/react';
+import { QRCodeSVG } from 'qrcode.react';
 import apiPainel from '../../../services/apiPainel';
 import { COR_STATUS } from './MeusPedidos';
 
@@ -63,6 +64,11 @@ export default function MeuPedidoDetalhe() {
   async function copiarPix() {
     try { await navigator.clipboard.writeText(p.pix_chave); toast.success('Chave Pix copiada!'); }
     catch { toast('Toque e segure a chave para copiar.'); }
+  }
+
+  async function copiarCopiaECola() {
+    try { await navigator.clipboard.writeText(p.pix_copia_e_cola); toast.success('Código Pix copiado! Cole no app do banco.'); }
+    catch { toast('Toque e segure o código para copiar.'); }
   }
 
   if (erro) return <p className="text-center text-sm text-slate-500 py-12">{erro} <Link to="/meu/pedidos" className="underline">Ver meus pedidos</Link></p>;
@@ -129,7 +135,22 @@ export default function MeuPedidoDetalhe() {
           <p className="text-2xl font-extrabold mt-2" style={{ color: NAVY }}>{brl(p.total)}</p>
           <p className="text-sm text-slate-600 mt-2">{ROTULO_PIX[p.pix_tipo] || 'Chave'}: <strong className="break-all select-all">{p.pix_chave}</strong></p>
           {p.pix_nome_recebedor && <p className="text-sm text-slate-600">Nome: {p.pix_nome_recebedor}</p>}
-          {p.status === 'aceito' && (
+          {p.status === 'aceito' && p.pix_copia_e_cola && (
+            <div className="mt-4 space-y-3">
+              <button type="button" onClick={copiarCopiaECola} className="flex items-center justify-center gap-2 w-full text-sm font-bold px-4 py-3 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
+                <Copy className="w-4 h-4" /> Copiar Pix copia e cola · {brl(p.total)}
+              </button>
+              <p className="text-xs text-slate-500">No app do banco, escolha <strong>Pix copia e cola</strong> e cole. O valor já vai preenchido.</p>
+              <div className="flex flex-col items-center gap-2 pt-1">
+                <div className="bg-white p-2 rounded-xl border border-slate-200"><QRCodeSVG value={p.pix_copia_e_cola} size={168} level="M" /></div>
+                <p className="text-xs text-slate-500 text-center">Ou leia o QR com o app do banco em outro celular.</p>
+              </div>
+              <button type="button" onClick={copiarPix} className="text-xs font-semibold underline" style={{ color: ROXO }}>
+                Copiar só a chave Pix
+              </button>
+            </div>
+          )}
+          {p.status === 'aceito' && !p.pix_copia_e_cola && (
             <button type="button" onClick={copiarPix} className="mt-3 flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
               <Copy className="w-4 h-4" /> Copiar chave Pix
             </button>
