@@ -94,7 +94,7 @@ Decisão do Junior (05/10/2026): ir direto para **iubmais.com.br**, sem passar p
 - **Os endereços antigos continuam funcionando para sempre:** `movv-parceiros.onrender.com`, `movv-backend.onrender.com` e `portal.grupomovv.com.br`. Há links e QR codes já enviados com eles. Não remover o domínio portal do Render.
 
 **Ordem:**
-1. Agora: domínio no Render + registros no DNS do Registro.br (a zona usa `a.auto.dns.br`/`b.auto.dns.br`, sem ALIAS no domínio raiz):
+1. Agora: domínio no Render + registros no DNS do Registro.br (a zona usa `e.sec.dns.br`/`f.sec.dns.br`, sem ALIAS no domínio raiz; publicado e com HTTPS em 05/10):
 
    | Tipo | Nome | Valor |
    |---|---|---|
