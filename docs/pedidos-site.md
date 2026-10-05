@@ -83,7 +83,7 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 | 8. `/meu/pedidos` | Acompanhar, ver Pix e total, "Recebi", "Chamar a loja" |
 | QR Pix | QR e copia-e-cola com o valor (padrão do Banco Central, sem Mercado Pago) |
 | 9. Prazos | Timer no backend + `/api/interno` para Cron: expira em 10 min, cancela aceito sem pago em 2h, fecha entregue em 3h/12h, avisos sem duplicar |
-| 10. Teste ponta a ponta | Com a Adega Teste em modo QA, Política de Privacidade e termos atualizados, e depois `PEDIDOS_SITE_LIBERADO=true` |
+| 10. Teste ponta a ponta | Com a Adega Teste em modo QA, Política de Privacidade e termos atualizados, limpeza dos pedidos de teste (numeração volta para 1001), **raiz e marca do iubmais.com.br**, troca das variáveis (ver "Domínio oficial") e depois `PEDIDOS_SITE_LIBERADO=true` |
 
 ## Domínio oficial (antes de ligar `PEDIDOS_SITE_LIBERADO`)
 
@@ -104,10 +104,15 @@ Decisão do Junior (05/10/2026): ir direto para **iubmais.com.br**, sem passar p
 
    Sem registro AAAA (o Render só usa IPv4). Se houver CAA, liberar Let's Encrypt e Google Trust Services. O Render emite o certificado sozinho depois de verificar.
 2. CORS já aceita `https://iubmais.com.br` e `https://www.iubmais.com.br` (commit `3e9051a`), sem tirar os antigos.
-3. **Depois do teste real com a Adega e antes de ligar a trava** (variáveis no Render, sem código):
+3. **Raiz e marca do domínio (antes da troca das variáveis):** hoje `iubmais.com.br/` cai no login do portal interno ("Movv Parceiros"), porque a rota `/` do `App.jsx` é do portal (`RequireAuth`).
+   - no `iubmais.com.br` (e `www`), a raiz leva para `/marketplace`; quem já está logado no portal da equipe continua indo para o painel de sempre (o login manda para `/` depois de entrar);
+   - no `portal.grupomovv.com.br` e no `onrender.com`, nada muda;
+   - `/login` continua existindo nos dois domínios, para a equipe;
+   - prévia de link: `og:image` do `index.html` passa a usar `https://iubmais.com.br/iub-logo-og.png` (já responde 200). Título da aba, `og:title` e ícone já são do IUB.
+4. **Depois do teste real com a Adega e antes de ligar a trava** (variáveis no Render, sem código):
    - backend: `FRONTEND_URL=https://iubmais.com.br` e `BACKEND_URL=https://api.iubmais.com.br`;
    - site estático: `VITE_API_URL=https://api.iubmais.com.br/api` (exige novo build do site).
-4. Junto com o passo 3, trocar o que está escrito fixo no código: link `portal.grupomovv.com.br/entrar` na mensagem de aprovação do /vender (`parceiroSolicitacaoController.js`), `MaterialApoio.jsx`, `MyEmployees.jsx` e a imagem de prévia do `index.html`.
+5. Junto com o passo 4, trocar o que está escrito fixo no código: link `portal.grupomovv.com.br/entrar` na mensagem de aprovação do /vender (`parceiroSolicitacaoController.js`), `MaterialApoio.jsx`, `MyEmployees.jsx` e a imagem de prévia do `index.html`.
 
 **O que a troca de `FRONTEND_URL` muda:** links das mensagens do pedido, avisos do Pet e da carteirinha, lembrete de assinatura e retorno do Mercado Pago, uns 20 links de e-mail (senha, confirmação, planos), o redirecionamento de `/carteirinha/:hash` e `/produto/:id` e a imagem de prévia. **`BACKEND_URL`** muda o link da carteirinha nas mensagens de WhatsApp (produto, promoção, carrinho) e nos e-mails de dependente.
 
