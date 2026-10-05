@@ -151,3 +151,14 @@ Recurso de **plano pago**. Depende do "Pedido pelo site" (botão Comprar) pronto
 2. **Oferta com cupom:** botão pra loja mandar oferta com cupom só pra
    clientes que autorizaram receber ofertas (`sindicato_associados.receber_whatsapp`
    ou um opt-in próprio — decidir). Nunca expor quem são os clientes à loja.
+
+## IUB Pet fácil de achar (anotado 05/10/2026 — não fazer agora)
+
+- **Marketplace:** hoje o Pet é só um dos doze ícones de categoria. Avaliar
+  um atalho "IUB Pet" na barra de cima, ao lado do IUB Food, e um bloco de
+  chamada na página inicial.
+- **Painel do cliente (/meu):** hoje o Pet só aparece no menu lateral, que no
+  celular fica recolhido. Criar um bloco "Meus Pets" no corpo do painel, no
+  estilo do bloco Dependentes: nome, foto, próximo agendamento e atalhos para
+  ver a ficha e agendar. Para quem não tem pet, o bloco vira convite para
+  cadastrar.
