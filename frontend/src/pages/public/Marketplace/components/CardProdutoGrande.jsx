@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
 import { Diamond, Check, BookmarkSimple } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
+import { useEhAssociado, precoDoProduto } from '../precoPessoa';
 import { useCarrinho } from '../CarrinhoContext';
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -23,11 +24,13 @@ function ehNovo(criadoEm) {
 // mudar o tamanho aqui nunca afeta essas outras telas.
 export default function CardProdutoGrande({ produto, badge, className = '', style }) {
   const foto = produto.fotos?.[0]?.url;
-  const temPrecoAssociado = Boolean(produto.preco_associado);
+  // preço que ESTA pessoa paga (mesma regra do servidor — precoPessoa.js)
+  const ehAssociado = useEhAssociado();
+  const pp = precoDoProduto(produto, ehAssociado);
   const mostrarNovo = badge === 'novo' && ehNovo(produto.created_at);
-  const descontoPct = temPrecoAssociado
-    ? Math.round((1 - parseFloat(produto.preco_associado) / parseFloat(produto.preco)) * 100)
-    : produto.desconto_pct;
+  // selo: o desconto que a pessoa tem AGORA; quem não é associado vê "-X% SECI"
+  const descontoPct = pp.descontoPct ?? produto.desconto_pct;
+  const pctSeci = pp.chamadaAssociado ? Math.round((1 - pp.chamadaAssociado / Number(produto.preco)) * 100) : null;
   const { adicionar, remover, estaNoCarrinho } = useCarrinho();
   const noCarrinho = estaNoCarrinho(produto.id);
 
@@ -64,6 +67,11 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
             -{descontoPct}% OFF
           </span>
         )}
+
+        {!(descontoPct > 0) && pctSeci > 0 && (
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}>-{pctSeci}% SECI</span>
+
+        )}
         {mostrarNovo && (
           <span className="absolute top-1.5 right-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide text-white" style={{ backgroundColor: '#16A34A' }}>
             Novo
@@ -78,16 +86,20 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
         </p>
 
         <div className="mt-1.5">
-          {temPrecoAssociado ? (
+          {pp.riscado ? (
             <>
-              <p className="text-gray-400 text-xs line-through">{formatarPreco(produto.preco)}</p>
-              <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(produto.preco_associado)}</p>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-1" style={{ color: DOURADO }}>
-                <Diamond size={10} weight="fill" /> assoc
+              <p className="text-gray-400 text-xs line-through">{formatarPreco(pp.riscado)}</p>
+              <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5" style={{ color: DOURADO }}>
+                <Diamond size={10} weight="fill" /> {pp.tipo === 'fecha_mes' ? 'Fecha Mês' : 'assoc'}
               </span>
             </>
           ) : (
-            <p className="font-bold text-lg leading-tight text-gray-900">{formatarPreco(produto.preco)}</p>
+            <p className="font-bold text-lg leading-tight text-gray-900">{formatarPreco(pp.principal)}</p>
+          )}
+          {/* quem não é associado vê o preço de associado como chamada, não como preço */}
+          {pp.chamadaAssociado && (
+            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</span>
           )}
         </div>
 

@@ -547,6 +547,6 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
 }
 
 module.exports = {
-  ErroPedido, carregarLoja, motivoLojaNaoVende, modosDisponiveis, taxaEntrega, resumoLoja, whatsappDaLoja,
+  ErroPedido, edicaoFechaMesDeHoje, carregarLoja, motivoLojaNaoVende, modosDisponiveis, taxaEntrega, resumoLoja, whatsappDaLoja,
   resolverItem, disponibilidade, lojasVendendo, cotar, criarPedido, transicionar, gerarTokenLoja,
 };

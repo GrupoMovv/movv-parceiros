@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
+import { useEhAssociado, precoDaPromocao } from '../precoPessoa';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -32,6 +33,8 @@ function useContagemRegressiva(dataFim) {
 export default function CardPromocao({ produto: promocao, className = '', style }) {
   const contagem = useContagemRegressiva(promocao.data_fim);
   const vagasRestantes = promocao.limite_usos ? promocao.limite_usos - promocao.usos_atuais : null;
+  const ehAssociado = useEhAssociado();
+  const pp = precoDaPromocao(promocao, ehAssociado);
 
   return (
     <Link
@@ -71,9 +74,19 @@ export default function CardPromocao({ produto: promocao, className = '', style 
           {promocao.titulo}
         </p>
 
+        {/* preço que ESTA pessoa paga: associado com o menor; os demais o "por"
+            e o de associado como chamada (precoPessoa.js) */}
         <div className="mt-1.5">
           <p className="text-gray-400 text-xs line-through">{formatarPreco(promocao.preco_de)}</p>
-          <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(promocao.preco_por)}</p>
+          <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
+          {pp.tipo === 'associado' && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5" style={{ color: DOURADO }}>
+              <Diamond size={10} weight="fill" /> assoc
+            </span>
+          )}
+          {pp.chamadaAssociado && (
+            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</span>
+          )}
         </div>
       </div>
     </Link>

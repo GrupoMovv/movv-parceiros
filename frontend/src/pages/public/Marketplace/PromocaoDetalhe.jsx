@@ -8,6 +8,7 @@ import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useAssociadoSessao } from './useAssociadoSessao';
+import { precoDaPromocao } from './precoPessoa';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import BotaoComprar, { useDisponibilidade } from '../../../components/BotaoComprar';
 
@@ -130,8 +131,10 @@ export default function PromocaoDetalhe() {
   if (!promocao) return <PromocaoSkeleton />;
 
   const whatsappHabilitado = Boolean(promocao.parceiro_whatsapp);
-  const temPrecoAssociado = Boolean(promocao.preco_associado);
-  const economia = parseFloat(promocao.preco_de) - parseFloat(promocao.preco_por);
+  // preço que ESTA pessoa paga: associado com o menor ("por" ou o de associado
+  // da promoção); os demais o "por", com o de associado como chamada
+  const pp = precoDaPromocao(promocao, ehAssociado);
+  const economia = parseFloat(promocao.preco_de) - pp.principal;
   const descontoPct = Math.round((economia / parseFloat(promocao.preco_de)) * 100);
 
   const inicio = new Date(promocao.data_inicio).getTime();
@@ -234,13 +237,18 @@ export default function PromocaoDetalhe() {
 
           <div className="mt-5">
             <p className="text-slate-400 text-lg line-through">{formatarPreco(promocao.preco_de)}</p>
-            <p className="text-4xl font-extrabold" style={{ color: ROXO }}>{formatarPreco(promocao.preco_por)}</p>
+            <p className="text-4xl font-extrabold" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
+            {pp.tipo === 'associado' && (
+              <span className="inline-block mt-2 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+                Seu preço de associado
+              </span>
+            )}
             <p className="text-sm font-semibold mt-2" style={{ color: '#166534' }}>Você economiza {formatarPreco(economia)}!</p>
 
-            {temPrecoAssociado && (
+            {pp.chamadaAssociado && (
               <div className="mt-3 rounded-2xl p-4" style={{ backgroundColor: `${DOURADO}15`, border: `1px solid ${DOURADO}55` }}>
                 <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: '#92700C' }}>
-                  <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(promocao.preco_associado)}
+                  <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(pp.chamadaAssociado)}
                 </p>
                 {!ehAssociado && (
                   <div className="flex flex-wrap gap-2 mt-3">

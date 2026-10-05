@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
+import { useEhAssociado, precoDoProduto } from '../precoPessoa';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -13,10 +14,12 @@ function formatarPreco(v) {
 // CardProduto, que é um <Link> só).
 export default function CardVitrineRotativa({ produto }) {
   const foto = produto.fotos?.[0]?.url;
-  const temPrecoAssociado = Boolean(produto.preco_associado);
-  const descontoPct = temPrecoAssociado
-    ? Math.round((1 - parseFloat(produto.preco_associado) / parseFloat(produto.preco)) * 100)
-    : null;
+  // preço que ESTA pessoa paga (mesma regra do servidor — precoPessoa.js)
+  const ehAssociado = useEhAssociado();
+  const pp = precoDoProduto(produto, ehAssociado);
+  // selo: o desconto que a pessoa tem AGORA; quem não é associado vê "-X% SECI"
+  const descontoPct = pp.descontoPct ?? null;
+  const pctSeci = pp.chamadaAssociado ? Math.round((1 - pp.chamadaAssociado / Number(produto.preco)) * 100) : null;
 
   return (
     <div className="flex flex-col bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200 h-full">
@@ -46,17 +49,21 @@ export default function CardVitrineRotativa({ produto }) {
       </Link>
 
       <div className="mt-1.5">
-        {temPrecoAssociado ? (
-          <>
-            <p className="text-gray-400 text-xs line-through">{formatarPreco(produto.preco)}</p>
-            <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(produto.preco_associado)}</p>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-1" style={{ color: DOURADO }}>
-              <Diamond size={10} weight="fill" /> assoc
-            </span>
-          </>
-        ) : (
-          <p className="font-bold text-lg leading-tight text-gray-900">{formatarPreco(produto.preco)}</p>
-        )}
+        {pp.riscado ? (
+            <>
+              <p className="text-gray-400 text-xs line-through">{formatarPreco(pp.riscado)}</p>
+              <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5" style={{ color: DOURADO }}>
+                <Diamond size={10} weight="fill" /> {pp.tipo === 'fecha_mes' ? 'Fecha Mês' : 'assoc'}
+              </span>
+            </>
+          ) : (
+            <p className="font-bold text-lg leading-tight text-gray-900">{formatarPreco(pp.principal)}</p>
+          )}
+          {/* quem não é associado vê o preço de associado como chamada, não como preço */}
+          {pp.chamadaAssociado && (
+            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</span>
+          )}
       </div>
     </div>
   );

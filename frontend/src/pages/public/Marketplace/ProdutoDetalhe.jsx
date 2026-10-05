@@ -9,6 +9,7 @@ import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
+import { precoDoProduto } from './precoPessoa';
 import { useCarrinho } from './CarrinhoContext';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import BotaoComprar, { useDisponibilidade } from '../../../components/BotaoComprar';
@@ -124,8 +125,10 @@ export default function ProdutoDetalhe() {
     api.post(`/public/produtos/${id}/visualizacao`, { tipo: 'clique_whatsapp', associado_hash: associadoHash }).catch(() => {});
   }
 
-  const temPrecoAssociado = Boolean(produto.preco_associado);
-  const economia = temPrecoAssociado ? parseFloat(produto.preco) - parseFloat(produto.preco_associado) : 0;
+  // preço que ESTA pessoa paga agora (normal, associado ou Fecha Mês do dia):
+  // mesma regra do servidor (precoPessoa.js) — é o valor do Comprar e do pedido
+  const pp = precoDoProduto(produto, ehAssociado);
+  const economia = pp.riscado ? pp.riscado - pp.principal : (pp.chamadaAssociado ? Number(produto.preco) - pp.chamadaAssociado : 0);
   const favorito = ehFavorito(produto.id);
   const descricaoLonga = (produto.descricao || '').length > 180;
   const noCarrinho = estaNoCarrinho(produto.id);
@@ -201,21 +204,32 @@ export default function ProdutoDetalhe() {
           </Link>
 
           <div className="mt-5">
-            {temPrecoAssociado && ehAssociado ? (
+            {pp.tipo === 'fecha_mes' ? (
               <div>
-                <p className="text-slate-400 text-lg line-through">{formatarPreco(produto.preco)}</p>
-                <p className="text-4xl font-extrabold" style={{ color: ROXO }}>{formatarPreco(produto.preco_associado)}</p>
+                <p className="text-slate-400 text-lg line-through">{formatarPreco(pp.riscado)}</p>
+                <p className="text-4xl font-extrabold" style={{ color: '#DC2626' }}>{formatarPreco(pp.principal)}</p>
+                <span className="inline-block mt-2 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full text-white" style={{ backgroundColor: '#DC2626' }}>
+                  Fecha Mês · só hoje
+                </span>
+                {pp.chamadaAssociado && (
+                  <p className="text-sm font-semibold mt-2" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</p>
+                )}
+              </div>
+            ) : pp.tipo === 'associado' ? (
+              <div>
+                <p className="text-slate-400 text-lg line-through">{formatarPreco(pp.riscado)}</p>
+                <p className="text-4xl font-extrabold" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
                 <span className="inline-block mt-2 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
                   Desconto exclusivo associado
                 </span>
                 <p className="text-sm font-semibold mt-2" style={{ color: '#166534' }}>Você está economizando {formatarPreco(economia)}!</p>
               </div>
-            ) : temPrecoAssociado ? (
+            ) : pp.chamadaAssociado ? (
               <div>
                 <p className="text-4xl font-extrabold" style={{ color: PRETO }}>{formatarPreco(produto.preco)}</p>
                 <div className="mt-3 rounded-2xl p-4" style={{ backgroundColor: `${DOURADO}15`, border: `1px solid ${DOURADO}55` }}>
                   <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: '#92700C' }}>
-                    <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(produto.preco_associado)} <span className="font-normal">(economize {formatarPreco(economia)})</span>
+                    <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(pp.chamadaAssociado)} <span className="font-normal">(economize {formatarPreco(economia)})</span>
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {!associado && (
@@ -349,7 +363,7 @@ export default function ProdutoDetalhe() {
                 </div>
                 <div className="p-2.5">
                   <p className="text-xs font-semibold truncate" style={{ color: PRETO }}>{p.nome}</p>
-                  <p className="text-xs font-bold mt-0.5" style={{ color: ROXO }}>{formatarPreco(p.preco)}</p>
+                  <p className="text-xs font-bold mt-0.5" style={{ color: ROXO }}>{formatarPreco(precoDoProduto(p, ehAssociado).principal)}</p>
                 </div>
               </Link>
             ))}

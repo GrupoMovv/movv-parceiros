@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
+const { edicaoFechaMesDeHoje } = require('../services/pedidoLoja');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_produto', 'clique_whatsapp'];
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
@@ -69,7 +70,21 @@ async function getProduto(req, res) {
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
-    return res.json(result.rows[0]);
+    // Fecha Mês: no dia do evento a página mostra o preço do evento (o
+    // pedido pelo site cobra o menor preço com direito — pedidoLoja.js)
+    const produto = result.rows[0];
+    produto.preco_fecha_mes = null;
+    const edicao = await edicaoFechaMesDeHoje();
+    if (edicao) {
+      const fm = await db.query(
+        `SELECT preco_fecha_mes FROM sindicato_fecha_mes_produtos
+         WHERE fecha_mes_id = $1 AND produto_id = $2 AND status = 'confirmado' AND NOT e_produto_bonus
+           AND (estoque_disponivel IS NULL OR estoque_disponivel > 0)`,
+        [edicao, produto.id]
+      );
+      produto.preco_fecha_mes = fm.rows[0]?.preco_fecha_mes ?? null;
+    }
+    return res.json(produto);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar produto' });
