@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2, Save, Camera } from 'lucide-react';
+import { Loader2, Save, Camera, CheckCircle2 } from 'lucide-react';
 import apiPainel from '../../../services/apiPainel';
 import { assetUrl } from '../../../services/api';
 import { dataISOParaBR } from './InputDataBR';
 import CapturaFoto from './CapturaFoto';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
+import ConfirmarWhatsapp from '../../../components/ConfirmarWhatsapp';
 
 const NAVY = '#0B1F3A';
 const GOLD = '#D4AF37';
@@ -38,6 +39,8 @@ export default function MeuDados() {
   const [salvando, setSalvando] = useState(false);
   const [trocandoFoto, setTrocandoFoto] = useState(false);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
+
+  const whatsappMudou = form.whatsapp.replace(/\D/g, '') !== String(dados.whatsapp || '').replace(/\D/g, '');
 
   function campo(nome, valor) {
     setForm(f => ({ ...f, [nome]: valor }));
@@ -148,6 +151,16 @@ export default function MeuDados() {
         <h2 className="text-xs font-bold uppercase tracking-wide text-slate-400">Contato</h2>
         <Campo label="E-mail"><input type="email" className="input" value={form.email} onChange={e => campo('email', e.target.value)} /></Campo>
         <Campo label="WhatsApp"><input type="text" inputMode="numeric" className="input" value={form.whatsapp} onChange={e => campo('whatsapp', maskWhatsapp(e.target.value))} /></Campo>
+        {whatsappMudou ? (
+          <p className="text-xs text-slate-500">Salve as alterações para confirmar o WhatsApp novo.</p>
+        ) : dados.whatsapp_confirmado ? (
+          <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> WhatsApp confirmado</p>
+        ) : dados.whatsapp ? (
+          <div className="rounded-xl bg-slate-50 p-3 space-y-2">
+            <p className="text-xs text-slate-600">Confirme seu WhatsApp para poder fazer pedidos pelo site.</p>
+            <ConfirmarWhatsapp onConfirmado={() => setDados(d => ({ ...d, whatsapp_confirmado: true }))} />
+          </div>
+        ) : null}
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-3">

@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { onlyDigits } = require('../utils/validators');
 const { situacaoDoAssociado } = require('./beneficioAssociado');
+const { whatsappConfirmado } = require('./whatsappVerificacao');
 
 // Mostra só os 3 primeiros e os 2 últimos dígitos — o acesso já é protegido
 // por token/sessão, isso aqui é só pra pessoa confirmar que é o cadastro
@@ -34,6 +35,8 @@ async function montarViewAssociado(associado) {
     cpf_parcial: maskCpfParcial(associado.cpf),
     data_nascimento: associado.data_nascimento,
     whatsapp: associado.whatsapp,
+    // número atual confirmado por código (pedido pelo site exige)
+    whatsapp_confirmado: whatsappConfirmado(associado),
     email: associado.email,
     foto_url: associado.foto_url,
     categoria_profissional: associado.categoria_profissional,

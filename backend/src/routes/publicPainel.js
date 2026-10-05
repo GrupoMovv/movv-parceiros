@@ -29,6 +29,9 @@ const somenteAssociadoSeci = (req, res, next) => {
 router.get('/me',    ctrl.getMe);
 router.put('/me',    ctrl.updateMe);
 router.put('/perfil', ctrl.updateMe);
+// Confirmar o WhatsApp por código (pedido pelo site). Limites de envio no serviço.
+router.post('/whatsapp/enviar-codigo', ctrl.enviarCodigoWhatsapp);
+router.post('/whatsapp/confirmar', ctrl.confirmarWhatsapp);
 // Ativar desconto (cliente) / renovar carteirinha (associado) pelo CNPJ.
 router.post('/empresa', contaCtrl.vincularEmpresa);
 router.post('/reenviar-carteirinha', somenteAssociadoSeci, ctrl.reenviarCarteirinha);

@@ -6,6 +6,8 @@ const { montarViewAssociado } = require('../services/associadoPublicoView');
 const emailService = require('../services/emailService');
 const fotoAssociadoService = require('../services/fotoAssociadoService');
 const { onlyDigits, isValidCPF } = require('../utils/validators');
+const whatsappVerificacao = require('../services/whatsappVerificacao');
+const { ipCliente } = require('../utils/ipCliente');
 
 const MAX_DEPENDENTES_ATIVOS = 5;
 
@@ -344,7 +346,30 @@ async function uploadFotoDependente(req, res) {
   }
 }
 
+// POST /api/public/painel/whatsapp/enviar-codigo — código de 6 números pro
+// WhatsApp do cadastro (pedido pelo site exige WhatsApp confirmado).
+async function enviarCodigoWhatsapp(req, res) {
+  try {
+    const r = await whatsappVerificacao.enviarCodigo(req.painelAssociado, ipCliente(req));
+    return res.status(r.status).json(r.body);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos enviar o código agora. Tente de novo em instantes.' });
+  }
+}
+
+// POST /api/public/painel/whatsapp/confirmar  { pedido, codigo }
+async function confirmarWhatsapp(req, res) {
+  try {
+    const r = await whatsappVerificacao.confirmarCodigo(req.painelAssociado, req.body?.pedido, req.body?.codigo);
+    return res.status(r.status).json(r.body);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos confirmar agora. Tente de novo em instantes.' });
+  }
+}
+
 module.exports = {
-  getMe, updateMe, reenviarCarteirinha, uploadFoto, updateDependentes, uploadFotoDependente,
+  getMe, updateMe, enviarCodigoWhatsapp, confirmarWhatsapp, reenviarCarteirinha, uploadFoto, updateDependentes, uploadFotoDependente,
   adicionarDependente, editarDependente, removerDependente,
 };
