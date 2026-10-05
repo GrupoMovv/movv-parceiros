@@ -17,6 +17,30 @@ const COR_STATUS = {
   entregue: ['#DCFCE7', '#166534'], recusado: ['#FEE2E2', '#991B1B'], cancelado: ['#F1F5F9', '#475569'], expirado: ['#F1F5F9', '#475569'],
 };
 
+// Dois bipes curtos gerados no navegador (sem arquivo de som). O navegador só
+// deixa tocar depois que a pessoa já clicou na página — no painel isso já
+// aconteceu ao abrir a aba Pedidos.
+function tocarAviso() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    [0, 0.25].forEach(inicio => {
+      const osc = ctx.createOscillator();
+      const ganho = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      ganho.gain.setValueAtTime(0.0001, ctx.currentTime + inicio);
+      ganho.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + inicio + 0.02);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + inicio + 0.18);
+      osc.connect(ganho).connect(ctx.destination);
+      osc.start(ctx.currentTime + inicio);
+      osc.stop(ctx.currentTime + inicio + 0.2);
+    });
+    setTimeout(() => ctx.close(), 800);
+  } catch { /* sem áudio: fica só o título */ }
+}
+
 function hora(iso) {
   const d = new Date(iso);
   return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`;
@@ -33,17 +57,38 @@ export default function PedidosRecebidos() {
   const abaRef = useRef(aba);
   abaRef.current = aba;
 
+  const [pendentes, setPendentes] = useState(0);
+  const pendentesRef = useRef(null);
+
+  // Pedido novo com o painel aberto (loja no computador): som curto + "(n)"
+  // no título da aba do navegador — percebe sem olhar o WhatsApp.
+  function conferirNovos(contagem) {
+    const n = contagem?.responder || 0;
+    if (pendentesRef.current !== null && n > pendentesRef.current) tocarAviso();
+    pendentesRef.current = n;
+    setPendentes(n);
+  }
+
   function carregar(filtro = abaRef.current, silencioso = false) {
     if (!silencioso) setDados(null);
     apiParceiro.get('/parceiro/pedidos', { params: { filtro } })
-      .then(r => { if (filtro === abaRef.current) setDados(r.data); })
+      .then(r => { conferirNovos(r.data.contagem); if (filtro === abaRef.current) setDados(r.data); })
       .catch(() => { if (!silencioso) { toast.error('Erro ao carregar os pedidos'); setDados({ pedidos: [], contagem: {} }); } });
   }
   useEffect(() => { carregar(aba); setAberto(null); }, [aba]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const t = setInterval(() => { if (!aberto) carregar(abaRef.current, true); }, 30000);
+    // com um pedido aberto, só confere se chegou outro (não mexe na lista)
+    const t = setInterval(() => {
+      if (!aberto) carregar(abaRef.current, true);
+      else apiParceiro.get('/parceiro/pedidos', { params: { filtro: 'responder' } }).then(r => conferirNovos(r.data.contagem)).catch(() => {});
+    }, 30000);
     return () => clearInterval(t);
   }, [aberto]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const original = document.title;
+    if (pendentes > 0) document.title = `(${pendentes}) ${pendentes === 1 ? 'Novo pedido' : 'Novos pedidos'} · IUB MAIS+`;
+    return () => { document.title = original; };
+  }, [pendentes]);
 
   if (aberto) {
     return (
