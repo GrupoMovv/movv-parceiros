@@ -65,3 +65,6 @@ backend/backups/*.json
 
 # Planilhas de dados pessoais usadas em importações pontuais (NUNCA versionar)
 backend/scripts/data/
+
+# Testes locais do pedido pelo site (tokens de teste) — nunca commitar
+e2e.json
