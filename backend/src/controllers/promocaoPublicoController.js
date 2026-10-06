@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
+const { lojaVisivel } = require('../utils/lojaVisivel');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_promocao', 'clique_whatsapp'];
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
@@ -34,17 +35,18 @@ const SELECT_PROMOCAO = `
   pa.categoria_principal AS parceiro_categoria, pa.endereco AS parceiro_endereco,
   pa.bairro AS parceiro_bairro, pa.cidade AS parceiro_cidade, pa.whatsapp AS parceiro_whatsapp
 `;
-const FROM_PROMOCAO_ATIVA = `
+// Loja de teste só no modo QA (utils/lojaVisivel.js)
+const fromPromocaoAtiva = (qa = false) => `
   FROM sindicato_parceiro_promocoes pm
   JOIN sindicato_parceiros pa ON pa.id = pm.parceiro_id
   LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = pm.produto_id
-  WHERE pm.ativo = true AND pm.rascunho = false AND pa.status = 'ativo'
+  WHERE pm.ativo = true AND pm.rascunho = false AND ${lojaVisivel(qa)}
 `;
 
 async function getPromocao(req, res) {
   try {
     const result = await db.query(
-      `SELECT ${SELECT_PROMOCAO} ${FROM_PROMOCAO_ATIVA} AND pm.id = $1`,
+      `SELECT ${SELECT_PROMOCAO} ${fromPromocaoAtiva(req.modoQa)} AND pm.id = $1`,
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Promoção não encontrada' });
@@ -118,7 +120,7 @@ async function getMensagemWhatsapp(req, res) {
   try {
     const result = await db.query(
       `SELECT pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, pm.data_fim, pa.whatsapp AS parceiro_whatsapp
-       ${FROM_PROMOCAO_ATIVA} AND pm.id = $1`,
+       ${fromPromocaoAtiva(req.modoQa)} AND pm.id = $1`,
       [req.params.id]
     );
     const promocao = result.rows[0];

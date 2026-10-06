@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { lojaVisivel } = require('../utils/lojaVisivel');
 const cloudinaryService = require('../services/cloudinaryService');
 const {
   SERVICOS_PET, PORTES_PET, LIMITE_PETS_POR_CONTA,
@@ -212,7 +213,7 @@ async function pedirHorario(req, res) {
     if (!pet) return res.status(400).json({ error: 'Escolha um dos seus pets' });
 
     const parceiro = (await db.query(
-      "SELECT id, nome, pet_servicos, pet_portes FROM sindicato_parceiros WHERE slug = $1 AND status = 'ativo'", [String(b.parceiro_slug || '')]
+      `SELECT id, nome, pet_servicos, pet_portes FROM sindicato_parceiros WHERE slug = $1 AND ${lojaVisivel(req.modoQa, '')}`, [String(b.parceiro_slug || '')]
     )).rows[0];
     if (!parceiro) return res.status(404).json({ error: 'Pet shop não encontrado' });
 

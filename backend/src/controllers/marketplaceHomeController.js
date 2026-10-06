@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
 const { PLANOS, PIONEIRO_VAGAS_TOTAL, planoEfetivo, sqlPlanoVigente } = require('../config/planos');
 const { normalizarCategoria, ehRestaurante } = require('../utils/categorias');
+const { lojaVisivel } = require('../utils/lojaVisivel');
 
 const PLANOS_COM_DESTAQUE = Object.entries(PLANOS).filter(([, cfg]) => cfg.aparece_destaques_parceiros).map(([plano]) => plano);
 
@@ -20,6 +21,11 @@ function sqlBoostBusca(alias = 'pa.') {
 const SELECT_PRODUTO = `
   pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos, pr.created_at,
   pa.nome AS parceiro_nome, pa.slug AS parceiro_slug
+`;
+const fromProdutoAtivo = (qa = false) => `
+  FROM sindicato_parceiro_produtos pr
+  JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
+  WHERE pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND ${lojaVisivel(qa)}
 `;
 const FROM_PRODUTO_ATIVO = `
   FROM sindicato_parceiro_produtos pr
@@ -201,7 +207,7 @@ async function getProdutosPorCategoria(req, res) {
     const categoriaHome = CATEGORIAS_HOME.find(c => c.slug === slug);
     if (slug !== 'todas' && !categoriaHome) return res.status(404).json({ error: 'Categoria não encontrada' });
 
-    const parceirosResult = await db.query(`SELECT id, bairro, categorias FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste`);
+    const parceirosResult = await db.query(`SELECT id, bairro, categorias FROM sindicato_parceiros WHERE ${lojaVisivel(req.modoQa, '')}`);
     let parceiros = parceirosResult.rows;
     if (categoriaHome) {
       const alvo = normalizarCategoria(categoriaHome.label);
@@ -355,7 +361,7 @@ async function getParceiroPlanoPorSlug(req, res) {
   try {
     const result = await db.query(
       `SELECT slug, plano, e_pioneiro, banner_personalizado_url, instagram_username
-       FROM sindicato_parceiros WHERE slug = $1 AND status = 'ativo'`,
+       FROM sindicato_parceiros WHERE slug = $1 AND ${lojaVisivel(req.modoQa, '')}`,
       [req.params.slug]
     );
     if (!result.rows[0]) return res.json({ parceiro: null });
@@ -447,7 +453,7 @@ async function getServicos(req, res) {
       `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
               preco_medio, duracao_media, modalidades
        FROM sindicato_parceiros
-       WHERE status = 'ativo' AND NOT empresa_teste AND tipo_negocio IN ('servico', 'hibrido')
+       WHERE ${lojaVisivel(req.modoQa, '')} AND tipo_negocio IN ('servico', 'hibrido')
        ORDER BY ${sqlBoostBusca('')} DESC, nome ASC`
     );
     const servicos = result.rows
@@ -475,7 +481,7 @@ async function getServicoPorSlug(req, res) {
               preco_medio, duracao_media, modalidades, horario_atendimento, fotos_estabelecimento,
               pet_servicos, pet_portes, pet_racas
        FROM sindicato_parceiros
-       WHERE slug = $1 AND status = 'ativo'
+       WHERE slug = $1 AND ${lojaVisivel(req.modoQa, '')}
          AND (tipo_negocio IN ('servico', 'hibrido') OR pet_servicos <> '{}')`,
       [req.params.slug]
     );
@@ -521,7 +527,7 @@ async function getBusca(req, res) {
     const like = `%${termo}%`;
     const produtosResult = await db.query(
       `SELECT ${SELECT_PRODUTO}
-       ${FROM_PRODUTO_ATIVO}
+       ${fromProdutoAtivo(req.modoQa)}
          AND (pr.nome ILIKE $1 OR pr.descricao ILIKE $1)
        ORDER BY pr.destaque DESC, pr.created_at DESC
        LIMIT 24`,
@@ -530,7 +536,7 @@ async function getBusca(req, res) {
     const parceirosResult = await db.query(
       `SELECT id, slug, nome, logo_url, categoria_principal, categorias, plano, tipo_negocio
        FROM sindicato_parceiros
-       WHERE status = 'ativo' AND NOT empresa_teste AND nome ILIKE $1
+       WHERE ${lojaVisivel(req.modoQa, '')} AND nome ILIKE $1
        ORDER BY nome ASC
        LIMIT 12`,
       [like]
@@ -593,7 +599,7 @@ async function getFoodPorSlug(req, res) {
               descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
               preco_medio, duracao_media, horario_atendimento, fotos_estabelecimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
-       WHERE slug = $1 AND status = 'ativo'`,
+       WHERE slug = $1 AND ${lojaVisivel(req.modoQa, '')}`,
       [req.params.slug]
     );
     const parceiro = result.rows[0];

@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
 const { edicaoFechaMesDeHoje } = require('../services/pedidoLoja');
+const { lojaVisivel } = require('../utils/lojaVisivel');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_produto', 'clique_whatsapp'];
 const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
@@ -66,7 +67,7 @@ async function getProduto(req, res) {
          pa.bairro AS parceiro_bairro, pa.cidade AS parceiro_cidade, pa.whatsapp AS parceiro_whatsapp
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo'`,
+       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND ${lojaVisivel(req.modoQa)}`,
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
@@ -93,7 +94,10 @@ async function getProduto(req, res) {
 
 async function getOutrosDoParceiro(req, res) {
   try {
-    const atual = await db.query('SELECT parceiro_id FROM sindicato_parceiro_produtos WHERE id = $1', [req.params.id]);
+    const atual = await db.query(
+      `SELECT pr.parceiro_id FROM sindicato_parceiro_produtos pr JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
+       WHERE pr.id = $1 AND ${lojaVisivel(req.modoQa)}`, [req.params.id]
+    );
     if (!atual.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
 
     const result = await db.query(
@@ -143,7 +147,7 @@ async function getMensagemWhatsapp(req, res) {
       `SELECT pr.nome, pr.preco, pr.preco_associado, pa.whatsapp AS parceiro_whatsapp
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
-       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo'`,
+       WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND ${lojaVisivel(req.modoQa)}`,
       [req.params.id]
     );
     const produto = result.rows[0];

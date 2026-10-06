@@ -34,10 +34,11 @@ export function setPainelToken(token) {
 apiPainel.interceptors.request.use(config => {
   const token = getPainelToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  // Pedido pelo site: admin logado no mesmo navegador = modo QA (compra da
-  // empresa de teste). Só nas rotas de pedido, num header próprio.
+  // Admin logado no mesmo navegador = modo QA (compra da empresa de teste,
+  // horário no pet shop de teste). Só nessas rotas, num header próprio.
   const admin = localStorage.getItem('movv_token');
-  if (admin && String(config.url || '').startsWith('/public/pedidos')) config.headers['x-admin-token'] = admin;
+  const url = String(config.url || '');
+  if (admin && (url.startsWith('/public/pedidos') || url.startsWith('/public/meus-pets'))) config.headers['x-admin-token'] = admin;
   return config;
 });
 

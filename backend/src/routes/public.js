@@ -8,6 +8,10 @@ const marketplaceHomeCtrl = require('../controllers/marketplaceHomeController');
 const promocaoCtrl = require('../controllers/promocaoPublicoController');
 const fechaMesCtrl = require('../controllers/fechaMesPublicoController');
 const { ipCliente } = require('../utils/ipCliente');
+const { lerAdminOpcional } = require('../middleware/auth');
+// Admin logado no mesmo navegador = modo QA: estas rotas mostram também as
+// empresas de teste (utils/lojaVisivel.js). Nunca bloqueia.
+const qa = lerAdminOpcional;
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
@@ -135,17 +139,17 @@ router.get('/marketplace/banner-exclusivos', marketplaceHomeCtrl.getBannerExclus
 router.get('/marketplace/novidades', marketplaceHomeCtrl.getNovidades);
 router.get('/marketplace/mais-vendidos', marketplaceHomeCtrl.getMaisVendidos);
 router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);
-router.get('/marketplace/categoria/:slug/produtos', marketplaceHomeCtrl.getProdutosPorCategoria);
+router.get('/marketplace/categoria/:slug/produtos', qa, marketplaceHomeCtrl.getProdutosPorCategoria);
 router.get('/marketplace/parceiros', marketplaceHomeCtrl.getParceiros);
 router.get('/marketplace/parceiros-destaques', marketplaceHomeCtrl.getParceirosDestaques);
 router.get('/marketplace/pioneiro-vagas', marketplaceHomeCtrl.getPioneiroVagas);
 router.get('/marketplace/pioneiros', marketplaceHomeCtrl.getPioneiros);
-router.get('/marketplace/parceiro-plano/:slug', marketplaceHomeCtrl.getParceiroPlanoPorSlug);
-router.get('/marketplace/servicos', marketplaceHomeCtrl.getServicos);
-router.get('/servicos/:slug', marketplaceHomeCtrl.getServicoPorSlug);
-router.get('/marketplace/busca', marketplaceHomeCtrl.getBusca);
+router.get('/marketplace/parceiro-plano/:slug', qa, marketplaceHomeCtrl.getParceiroPlanoPorSlug);
+router.get('/marketplace/servicos', qa, marketplaceHomeCtrl.getServicos);
+router.get('/servicos/:slug', qa, marketplaceHomeCtrl.getServicoPorSlug);
+router.get('/marketplace/busca', qa, marketplaceHomeCtrl.getBusca);
 router.get('/marketplace/food', marketplaceHomeCtrl.getFood);
-router.get('/food/:slug', marketplaceHomeCtrl.getFoodPorSlug);
+router.get('/food/:slug', qa, marketplaceHomeCtrl.getFoodPorSlug);
 router.get('/parceiros/master-por-categoria', marketplaceHomeCtrl.getMasterPorCategoria);
 router.get('/cupons/disponiveis', marketplaceHomeCtrl.getCuponsDisponiveis);
 
@@ -174,13 +178,13 @@ router.get('/marketplace/empresas-parceiras', async (req, res) => {
   }
 });
 
-router.get('/produtos/:id', produtoCtrl.getProduto);
-router.get('/produtos/:id/outros-do-parceiro', produtoCtrl.getOutrosDoParceiro);
-router.get('/produtos/:id/mensagem-whatsapp', produtoCtrl.getMensagemWhatsapp);
+router.get('/produtos/:id', qa, produtoCtrl.getProduto);
+router.get('/produtos/:id/outros-do-parceiro', qa, produtoCtrl.getOutrosDoParceiro);
+router.get('/produtos/:id/mensagem-whatsapp', qa, produtoCtrl.getMensagemWhatsapp);
 router.post('/produtos/:id/visualizacao', produtoCtrl.registrarEvento);
 
-router.get('/promocoes/:id', promocaoCtrl.getPromocao);
-router.get('/promocoes/:id/mensagem-whatsapp', promocaoCtrl.getMensagemWhatsapp);
+router.get('/promocoes/:id', qa, promocaoCtrl.getPromocao);
+router.get('/promocoes/:id/mensagem-whatsapp', qa, promocaoCtrl.getMensagemWhatsapp);
 router.post('/promocoes/:id/visualizacao', promocaoCtrl.registrarEvento);
 
 router.get('/carteirinha/:hash', async (req, res) => {

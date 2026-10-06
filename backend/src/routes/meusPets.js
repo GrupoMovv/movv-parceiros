@@ -2,6 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { simpleRateLimit } = require('../middleware/rateLimit');
 const { authenticatePainelPublico } = require('../middleware/painelPublicoAuth');
+const { lerAdminOpcionalCabecalho } = require('../middleware/auth');
 const ctrl = require('../controllers/meusPetsController');
 
 const upload = multer({
@@ -16,6 +17,9 @@ const upload = multer({
 // Pet parte 3 — ficha do pet e pedidos de horário do CLIENTE (conta do /meu).
 router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 120 }));
 router.use(authenticatePainelPublico);
+// Admin logado no mesmo navegador (header x-admin-token) = modo QA: pode pedir
+// horário no pet shop de teste (utils/lojaVisivel.js)
+router.use(lerAdminOpcionalCabecalho);
 
 // "/agendamentos" antes de "/:id" (senão casa como id)
 router.get('/agendamentos',                 ctrl.meusPedidos);
