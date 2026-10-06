@@ -2,7 +2,8 @@ const { PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN } = require('../config/pedidos');
 
 // Textos de WhatsApp do pedido pelo site. Poucas mensagens de propósito
 // (Junior, 05/10: não arriscar o chip do Z-API):
-//   loja:    só "novo pedido", com o link sem login
+//   loja:    "novo pedido", com o link sem login, e UM lembrete de conferir
+//            o Pix se o pedido aceito ficar 30 min sem "pago" (Junior, 06/10)
 //   cliente: aceito (total + Pix), recusado, expirado, cancelado,
 //            saiu para entrega / pronto para retirar. "Entregue" não avisa.
 // O link com token da loja NUNCA vai em mensagem pro cliente.
@@ -50,6 +51,22 @@ function novoPedidoLoja(p, itens) {
     p.aviso_idade ? `⚠️ Bebida alcoólica: confira a idade (18+) do cliente na ${p.modo_recebimento === 'retirada' ? 'retirada' : 'entrega'}.` : null,
     '', acao, linkLoja(p.token_loja),
   ].filter(l => l !== null).join('\n');
+}
+
+// Aceito há 30 min sem "pago": o cliente pode ter pago e a loja esquecido
+// de marcar — sem isso o sistema cancela em 2h e o cliente recebe
+// "cancelado" mesmo tendo pago.
+function lembretePixLoja(p) {
+  const cancelaEm = new Date(new Date(p.aceito_em).getTime() + PRAZO_PAGO_MIN * 60000)
+    .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  const botao = p.modo_recebimento === 'retirada' ? 'Pago, pode retirar' : 'Pago, saiu para entrega';
+  return [
+    `⏰ *Pedido #${p.id} aguardando confirmação do Pix*`,
+    `Total: ${brl(p.total)} · Cliente: ${p.cliente_nome}`, '',
+    `Confira se o Pix caiu na sua conta. Se caiu, toque em *${botao}*. Se não caiu, você pode cancelar.`,
+    `Sem confirmação, o pedido é cancelado sozinho às ${cancelaEm}.`,
+    linkLoja(p.token_loja),
+  ].join('\n');
 }
 
 function testeLoja(nomeLoja) {
@@ -143,6 +160,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, testeLoja, aceitoCliente, chavePixSozinha, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, lembretePixLoja, testeLoja, aceitoCliente, chavePixSozinha, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

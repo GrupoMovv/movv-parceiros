@@ -5,6 +5,7 @@
 // Prazos (minutos)
 const PRAZO_RESPOSTA_MIN = 10;          // enviado sem resposta -> expirado
 const PRAZO_PAGO_MIN = 120;             // aceito sem "pago" -> cancelado pelo sistema
+const LEMBRETE_PIX_MIN = 30;            // aceito sem "pago" -> UM lembrete pra loja conferir o Pix
 const PRAZO_ENTREGUE_ENTREGA_MIN = 180; // pago_saiu (entrega)  -> entregue sozinho
 const PRAZO_ENTREGUE_RETIRADA_MIN = 720;// pago_saiu (retirada) -> entregue sozinho
 const LINK_LOJA_HORAS_APOS_FIM = 24;    // link sem login vale até encerrar + 24h
@@ -68,7 +69,7 @@ function pedidosSiteLiberado(parceiro) {
 
 module.exports = {
   pedidosSiteLiberado,
-  PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN, LINK_LOJA_HORAS_APOS_FIM,
+  PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, LEMBRETE_PIX_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN, LINK_LOJA_HORAS_APOS_FIM,
   MAX_PEDIDOS_ABERTOS, STATUS_NAO_PAGOS, MAX_QUANTIDADE_PROMOCAO, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM,
   STATUS_ABERTOS, STATUS_ENCERRADOS, TRANSICOES, rotuloStatus,
 };

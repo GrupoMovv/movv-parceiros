@@ -1,7 +1,8 @@
 const db = require('../config/database');
 const pedidoLoja = require('./pedidoLoja');
+const pedidoAvisos = require('./pedidoAvisos');
 const {
-  PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN,
+  PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, LEMBRETE_PIX_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN,
 } = require('../config/pedidos');
 
 // Prazos do pedido pelo site (parte 9). Roda pelo timer do próprio servidor
@@ -10,6 +11,7 @@ const {
 // um UPDATE condicionado ao status (transicionar) e cada aviso é registrado
 // uma vez só (loja_pedido_avisos, UNIQUE).
 //   enviado sem resposta em 10 min          -> expirado  (avisa o cliente)
+//   aceito sem "pago" há 30 min             -> UM lembrete pra loja conferir o Pix
 //   aceito sem "pago" em 2h                 -> cancelado (avisa o cliente)
 //   pago_saiu há 3h (entrega)/12h (retirada) -> entregue (sem aviso)
 const REGRAS = [
@@ -30,7 +32,23 @@ const REGRAS = [
 const LOTE = 50;
 
 async function rodarPrazos() {
-  const resultado = {};
+  const resultado = { lembrete_pix: 0 };
+  // Lembrete antes dos prazos: quem já passou das 2h é cancelado, não lembrado.
+  const lembrar = (await db.query(
+    `SELECT * FROM loja_pedidos p
+     WHERE p.status = 'aceito'
+       AND p.aceito_em <= NOW() - make_interval(mins => ${LEMBRETE_PIX_MIN})
+       AND p.aceito_em > NOW() - make_interval(mins => ${PRAZO_PAGO_MIN})
+       AND NOT EXISTS (SELECT 1 FROM loja_pedido_avisos a WHERE a.pedido_id = p.id AND a.tipo = 'lembrete_pix' AND a.destino = 'loja')
+     ORDER BY p.id LIMIT ${LOTE}`
+  )).rows;
+  for (const pedido of lembrar) {
+    try {
+      if ((await pedidoAvisos.lembrarPixLoja(pedido)) !== null) resultado.lembrete_pix++;
+    } catch (err) {
+      console.error(`[prazos pedidos] lembrete #${pedido.id} falhou:`, err.message);
+    }
+  }
   for (const { acao, sql } of REGRAS) {
     const ids = (await db.query(`SELECT id FROM loja_pedidos WHERE ${sql} ORDER BY id LIMIT ${LOTE}`)).rows.map(r => r.id);
     let feitos = 0;

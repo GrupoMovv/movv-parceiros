@@ -104,4 +104,11 @@ async function avisoLojaFalhou(pedidoId) {
   return r.rows[0] ? !r.rows[0].enviado : false;
 }
 
-module.exports = { enviar, registrarEEnviar, dadosLoja, avisarNovoPedido, avisarMudanca, avisoLojaFalhou };
+// Aceito há 30 min sem "pago" → UM lembrete pra loja (registro 'lembrete_pix'
+// impede repetir, mesmo com a rotina rodando a cada minuto).
+async function lembrarPixLoja(pedido) {
+  const loja = await dadosLoja(pedido);
+  return registrarEEnviar(pedido.id, 'lembrete_pix', 'loja', loja.whatsapp, msg.lembretePixLoja(pedido));
+}
+
+module.exports = { enviar, registrarEEnviar, dadosLoja, avisarNovoPedido, avisarMudanca, avisoLojaFalhou, lembrarPixLoja };

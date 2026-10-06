@@ -52,7 +52,7 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 - **Trava de lançamento:** até `PEDIDOS_SITE_LIBERADO=true` no Render, só a empresa de teste consegue ligar o recurso, e a aba nem aparece para as outras lojas.
 - **Fora de escopo, anotado no TODO.md:** "Recupera Carrinho" (contador para a loja e oferta com cupom para quem autorizou; plano pago).
 - **Avisos (parte 5), poucas mensagens para não arriscar o chip do Z-API:**
-  - loja: só "novo pedido", com o link sem login;
+  - loja: "novo pedido", com o link sem login, e **um** lembrete se o pedido aceito ficar 30 min sem "pago" ("confira o Pix ou cancele", com o horário em que o sistema cancela). Decidido em 06/10: evita cancelar em 2h o pedido de quem pagou e a loja esqueceu de marcar;
   - cliente: aceito (total + Pix), recusado, expirado, cancelado (pela loja ou pelo sistema), "saiu para entrega" ou "pronto para retirar". Não avisa "entregue" nem quando o próprio cliente cancela;
   - no aceito, a chave Pix vai **sozinha numa segunda mensagem**, para copiar com um toque. O texto pede para conferir o nome antes de pagar e diz que a loja só prepara depois de confirmar o Pix;
   - pedido do Disk Bebidas avisa o WhatsApp do **estabelecimento Beer**;
