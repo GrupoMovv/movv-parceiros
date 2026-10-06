@@ -87,7 +87,11 @@ export default function MeuPainelLayout() {
       {menuAberto && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenuAberto(false)} />
-          <Sidebar dados={dados} onSair={handleSair} onNavegar={() => setMenuAberto(false)} />
+          {/* relative + z-10: sem isso a camada escura (absolute) fica POR CIMA
+              do menu e nenhum item recebe o toque */}
+          <div className="relative z-10 h-full overflow-y-auto">
+            <Sidebar dados={dados} onSair={handleSair} onNavegar={() => setMenuAberto(false)} />
+          </div>
           <button type="button" onClick={() => setMenuAberto(false)} aria-label="Fechar" className="absolute top-4 right-4 text-white">
             <X className="w-5 h-5" />
           </button>
