@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle, ArrowRight, Storefront, TrendUp, Bank, Buildings } from '@phosphor-icons/react';
+import { Check, Bell, BellRinging, Sparkle, Diamond, Fire, MagnifyingGlass, SealCheck, WarningCircle, ArrowRight, Storefront, TrendUp, Bank, Buildings, X } from '@phosphor-icons/react';
 import api from '../../services/api';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, ROXO_ESCURO, DOURADO, DOURADO_ESCURO, PRETO } from '../public/Marketplace/theme';
@@ -878,6 +878,15 @@ function CascaModal({ children, onFechar }) {
         className="relative bg-white w-full h-full overflow-y-auto sm:h-auto sm:max-h-[92vh] sm:max-w-[500px] sm:rounded-3xl shadow-2xl p-6 sm:p-7 animate-scale-in"
         onClick={e => e.stopPropagation()}
       >
+        {/* Fechar sempre visível (no celular o aviso ocupa a tela inteira e rola) */}
+        <div className="sticky top-0 z-10 flex justify-end -mt-2 -mr-2 mb-1 pointer-events-none">
+          <button
+            type="button" onClick={onFechar}
+            className="pointer-events-auto inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-sm"
+          >
+            <X size={14} weight="bold" /> Agora não
+          </button>
+        </div>
         {children}
       </div>
     </div>,
