@@ -5,7 +5,7 @@ const { formatarPrecoBRL } = require('../utils/planos');
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Grupo Movv <noreply@grupomovv.com.br>';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'contato@grupomovv.com.br';
-const PORTAL_URL = process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br';
+const PORTAL_URL = process.env.FRONTEND_URL || 'https://iubmais.com.br';
 
 async function enviar({ to, subject, html }) {
   try {
@@ -327,7 +327,7 @@ async function enviarConfirmacaoExclusaoParceiro({ nome, nomeFantasia, email, to
 }
 
 async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
-  const backendUrl = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+  const backendUrl = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
   const linkCarteirinha = `${backendUrl}/carteirinha/${carteirinhaHash}`;
   const linkMarketplace = `${PORTAL_URL}/marketplace?associado=${carteirinhaHash}`;
   const primeiroNome = String(nome || '').trim().split(/\s+/)[0];
@@ -346,7 +346,7 @@ async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
 // inicial do titular (edição no painel) — no cadastro inicial o email de
 // boas-vindas acima já cobre a família toda, então não duplica aqui.
 async function enviarNovoDependente({ nomeTitular, email, dependenteNome, dependenteCarteirinhaHash, titularCarteirinhaHash }) {
-  const backendUrl = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+  const backendUrl = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
   const linkCarteirinhaDependente = `${backendUrl}/carteirinha/${dependenteCarteirinhaHash}`;
   const linkMarketplace = `${PORTAL_URL}/marketplace?associado=${titularCarteirinhaHash}`;
   const primeiroNome = String(nomeTitular || '').trim().split(/\s+/)[0];

@@ -8,7 +8,7 @@ const { PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN } = require('../config/pedidos');
 //            saiu para entrega / pronto para retirar. "Entregue" não avisa.
 // O link com token da loja NUNCA vai em mensagem pro cliente.
 
-const FRONT = () => (process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br').replace(/\/$/, '');
+const FRONT = () => (process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/\/$/, '');
 const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const linkLoja = token => `${FRONT()}/pedido-loja/${token}`;
 const linkMeuPedido = id => `${FRONT()}/meu/pedidos/${id}`;

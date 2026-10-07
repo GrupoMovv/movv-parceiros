@@ -359,7 +359,7 @@ async function aprovarSolicitacao(req, res) {
       + (sol.segmento === 'bebidas'
         ? `Seu IUB Disk Bebidas 🍻 já está ativo — cadastre suas bebidas na aba "Meu IUB Beer" do painel.\n\n`
         : `Já pode começar a anunciar seus produtos.\n\n`)
-      + `🔗 Link: portal.grupomovv.com.br/entrar\n`
+      + `🔗 Link: ${(process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/^https?:\/\//, '').replace(/\/$/, '')}/entrar\n`
       + `📧 Email: ${sol.email}\n`
       + `🔑 Senha: ${senha}\n\n`
       + `Dúvidas? Só chamar aqui.\nIUB MAIS`;

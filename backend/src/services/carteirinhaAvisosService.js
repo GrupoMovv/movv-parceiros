@@ -7,7 +7,7 @@ const { HOJE_SP } = require('./beneficioAssociado');
 // de enviar — o UNIQUE (associado, tipo, validade) garante que nunca sai
 // duplicado, nem com duas rotinas rodando juntas. Se o envio falha, o
 // registro é apagado e a rotina do dia seguinte tenta de novo.
-const URL_PAINEL = `${(process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br').replace(/\/$/, '')}/meu`;
+const URL_PAINEL = `${(process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/\/$/, '')}/meu`;
 const LOTE_MAX = 200;
 const PAUSA_ENTRE_ENVIOS_MS = 400;
 

@@ -29,7 +29,7 @@ const NOTIFICATION_URL = (process.env.MP_NOTIFICATION_URL || '').trim() || undef
 // alguns dias. O plano segue valendo CARENCIA_CARTAO_DIAS além do período
 // pra não cair entre a data da cobrança e o webhook/retentativa chegarem.
 const CARENCIA_CARTAO_DIAS = 3;
-const URL_MINHA_ASSINATURA = `${(process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br').replace(/\/$/, '')}/parceiro/painel/minha-assinatura`;
+const URL_MINHA_ASSINATURA = `${(process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/\/$/, '')}/parceiro/painel/minha-assinatura`;
 
 class ErroAssinatura extends Error {
   constructor(status, codigo, mensagem, extra = {}) {

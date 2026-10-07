@@ -7,7 +7,7 @@ const { SERVICOS_PET, PERIODOS_PET } = require('../config/pet');
 // WhatsApp falhar (instância desconectada, número errado), a tela oferece o
 // link wa.me manual. Devolve true/false pra tela saber qual caso foi.
 
-const FRONT = (process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br').replace(/\/$/, '');
+const FRONT = (process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/\/$/, '');
 const URL_PAINEL_PETSHOP = `${FRONT}/parceiro/painel/agendamentos`;
 const URL_MEUS_PETS = `${FRONT}/meu/pets`;
 

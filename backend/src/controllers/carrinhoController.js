@@ -12,7 +12,7 @@ async function buscarAssociadoAtivoPorHash(hash) {
   return a ? { ...a, beneficio_ativo: true } : null;
 }
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
 
 // Preço de associado na mensagem pro parceiro SÓ com benefício ativo agora
 // (associado em dia, com carteirinha). Visitante sem login, cliente,

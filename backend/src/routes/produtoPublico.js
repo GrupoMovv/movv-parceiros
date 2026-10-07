@@ -6,8 +6,8 @@
 const router = require('express').Router();
 const db = require('../config/database');
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://portal.grupomovv.com.br';
-const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://iubmais.com.br';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
 
 const BOT_UA_REGEX = /whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|discordbot|pinterest|redditbot|skypeuripreview|vkshare|w3c_validator|applebot|embedly|quora link preview|outbrain|nuzzel|ia_archiver/i;
 

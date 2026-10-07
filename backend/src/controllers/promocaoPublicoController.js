@@ -4,7 +4,7 @@ const { ipCliente } = require('../utils/ipCliente');
 const { lojaVisivel } = require('../utils/lojaVisivel');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_promocao', 'clique_whatsapp'];
-const BACKEND_URL = process.env.BACKEND_URL || 'https://movv-backend.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
 
 async function buscarAssociadoIdPorHash(hash) {
   if (!hash) return null;
