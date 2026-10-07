@@ -173,7 +173,7 @@ async function resolverItem(entrada, ctx) {
   if (entrada.tipo === 'promocao') {
     const r = await db.query(
       `SELECT pm.id, pm.parceiro_id, pm.titulo, pm.foto_url, pm.preco_de, pm.preco_por, pm.preco_associado,
-              pm.produto_id, pr.fotos
+              pm.produto_id, pm.exclusivo_associado, pr.fotos
        FROM sindicato_parceiro_promocoes pm
        LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = pm.produto_id
        WHERE pm.id = $1 AND pm.ativo = true AND pm.rascunho = false
@@ -183,6 +183,11 @@ async function resolverItem(entrada, ctx) {
     );
     const p = r.rows[0];
     if (!p || !temPreco(p.preco_por)) throw indisponivel();
+    // Promoção exclusiva: só quem tem o benefício ativo compra (antes o
+    // servidor ignorava a marca e qualquer pessoa comprava — correção 07/10).
+    if (p.exclusivo_associado && !ctx.associadoAtivo) {
+      throw new ErroPedido(403, 'SO_ASSOCIADO', 'Esta promoção é exclusiva para associados com o benefício ativo.');
+    }
     const escolhido = menorPreco([
       { preco: p.preco_por, tipo: 'promocao' },
       ctx.associadoAtivo ? { preco: p.preco_associado, tipo: 'associado' } : null,
