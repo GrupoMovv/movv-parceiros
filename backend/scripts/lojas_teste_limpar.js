@@ -45,6 +45,9 @@ async function main() {
     for (const d of deps.filter(x => x.ao_apagar !== 'c')) {
       await c.query(`DELETE FROM ${d.tabela} WHERE ${d.coluna} = ANY($1)`, [ids]);
     }
+    // histórico de preços (migration 083) não tem chave estrangeira: sai à parte
+    const h = await c.query("SELECT to_regclass('precos_historico') IS NOT NULL AS existe");
+    if (h.rows[0].existe) await c.query('DELETE FROM precos_historico WHERE parceiro_id = ANY($1)', [ids]);
     const r = await c.query('DELETE FROM sindicato_parceiros WHERE id = ANY($1) AND empresa_teste AND id <> 47', [ids]);
     console.log(`Apagadas ${r.rowCount} lojas de teste e tudo ligado a elas.`);
   });
