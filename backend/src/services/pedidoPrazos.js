@@ -64,6 +64,8 @@ function iniciarTimer(intervaloMs = 60 * 1000) {
       rodando = false;
     }
   };
+  // Linha fixa nos Logs do Render: confirma que a rotina subiu com o servidor.
+  console.log(`[prazos pedidos] timer ligado (a cada ${Math.round(intervaloMs / 1000)}s)`);
   const t = setInterval(passo, intervaloMs);
   t.unref?.();
   setTimeout(passo, 15 * 1000).unref?.();
