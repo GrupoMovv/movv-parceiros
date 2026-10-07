@@ -139,10 +139,13 @@ CREATE INDEX IF NOT EXISTS idx_loja_pedidos_associado ON loja_pedidos(associado_
 -- rotina de prazos: só olha pedidos em aberto
 CREATE INDEX IF NOT EXISTS idx_loja_pedidos_abertos ON loja_pedidos(status, updated_at)
   WHERE status IN ('enviado', 'aceito', 'pago_saiu');
--- No máximo 1 pedido aberto por cliente em cada loja (o banco garante,
--- mesmo com dois cliques ao mesmo tempo). O limite de 3 no total fica no backend.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_loja_pedidos_aberto_por_loja ON loja_pedidos(associado_id, parceiro_id)
-  WHERE status IN ('enviado', 'aceito', 'pago_saiu');
+-- Limite "1 pedido por cliente em cada loja": o índice único fica na 081
+-- (uq_loja_pedidos_nao_pago_por_loja, conta só enviado/aceito). Esta
+-- migration criava a regra antiga (uq_loja_pedidos_aberto_por_loja, que
+-- contava também pago_saiu); como o run.js roda todas as migrations a cada
+-- deploy, ela voltava a ser criada e falhava com pedidos reais (cliente com
+-- um pedido pago e outro aceito na mesma loja) — deploy do backend quebrado
+-- de 06/10 a 07/10. NÃO recriar aqui.
 
 -- Itens: cópia de nome, preço e foto do momento da compra (os produtos
 -- estão em tabelas diferentes e podem mudar ou sumir — por isso SET NULL).
