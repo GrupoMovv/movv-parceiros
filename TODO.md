@@ -221,3 +221,13 @@ outro (o Clube grátis do sindicalizado continua valendo sem a autorização).
      lembrete (como a renovação Pix dos planos).
    - Onde entra: /meu, área da carteirinha ("Pagar minha contribuição"),
      com status, comprovantes e cancelamento; relatório para o Renan.
+
+## Clube MAIS+: contar a economia das compras no balcão (cartão do Clube)
+
+Decisão do Junior (07/10/2026): o contador de economia do Clube conta só
+os pedidos pelo site. Fica para depois: registrar o uso no balcão quando a
+loja lê o QR do cartão do Clube (loja confirma "compra de R$ X com Y% do
+Clube"), para somar no "Você economizou" do membro e no total da loja.
+Cuidados: o QR mostra só nome e validade (a loja nunca vê a origem
+sindicato/assinatura); evitar registro falso (só usuário logado da loja,
+um registro por leitura).
