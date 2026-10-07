@@ -61,10 +61,10 @@ function lembretePixLoja(p) {
     .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
   const botao = p.modo_recebimento === 'retirada' ? 'Pago, pode retirar' : 'Pago, saiu para entrega';
   return [
-    `⏰ *Pedido #${p.id} aguardando confirmação do Pix*`,
+    `⏰ *Pedido #${p.id} aguardando o Pix*`,
     `Total: ${brl(p.total)} · Cliente: ${p.cliente_nome}`, '',
-    `Confira se o Pix caiu na sua conta. Se caiu, toque em *${botao}*. Se não caiu, você pode cancelar.`,
-    `Sem confirmação, o pedido é cancelado sozinho às ${cancelaEm}.`,
+    `Confira se o Pix caiu na sua conta. Se caiu, toque em *${botao}*.`,
+    `Se ainda não caiu, não precisa fazer nada: sem confirmação, o pedido é cancelado sozinho às ${cancelaEm}.`,
     linkLoja(p.token_loja),
   ].join('\n');
 }
