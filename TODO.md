@@ -178,3 +178,46 @@ Anotado 05/10/2026. Tem que estar no ar ANTES do Fecha Mês de 30/10 (última se
   "Comprar · R$ X" (põe no pedido e abre o Finalizar) e o Salvar vira ícone
   pequeno. Usar a consulta em lote `GET /public/pedidos/lojas?geral=...`
   (mesma dos cards do Disk Bebidas) pra não fazer uma chamada por card.
+
+## Blindagem do custeio do sindicato (área da carteirinha SECI) — depende de advogado
+
+Pedido do Junior em 07/10/2026. NÃO fazer antes do parecer jurídico. Fica
+na área da carteirinha SECI, separado do Clube MAIS+: um não condiciona o
+outro (o Clube grátis do sindicalizado continua valendo sem a autorização).
+
+1. **Autorização individual do desconto da contribuição**, na ativação da
+   carteirinha, com registro de versão do texto, data, hora e IP, e opção
+   de retirar.
+   - Viável, mesmo padrão do termo do vendedor PF (`config/vendedorPf.js`
+     TERMOS_PF_VERSAO + colunas termos_pf_*), mas numa tabela própria com
+     histórico: `contribuicao_autorizacoes` (associado_id, texto_versao,
+     aceito_em, ip, user_agent, revogado_em, revogado_ip). Retirar = grava
+     revogado_em (nunca apaga). Nova versão do texto = novo aceite.
+   - Onde entra no fluxo (todos ativam a carteirinha hoje):
+     `contaController.vincularEmpresa` (/meu, CNPJ em dia → tipo_acesso
+     'seci'), criação de conta (`contaController` ~:307),
+     `publicCadastroController` (/cadastrar) e `cadastrarAssociadoController`
+     (cadastro feito pelo Sindicato). Passo opcional e destacado na tela de
+     sucesso da ativação; "retirar" em /meu/dados, junto da carteirinha.
+   - LGPD: filiação sindical é dado sensível (art. 5º II / art. 11) —
+     consentimento específico e destacado; nada disso vai para loja nem
+     para o Clube. O texto e a base legal saem do parecer.
+   - Falta definir: quem recebe a autorização (o sindicato precisa de
+     relatório/exportação para a empresa ou o RH descontar?) e como o
+     sindicato é avisado de uma revogação.
+
+2. **Canal de pagamento direto do associado** (Pix automático ou cartão
+   recorrente), reaproveitando a cobrança recorrente da assinatura do Clube.
+   - Viável depois da parte (d2) do Clube (assinatura R$ 9,90): a mesma
+     estrutura de cobrança recorrente (Mercado Pago, como nos planos das
+     lojas — `assinaturaService`: preapproval no cartão, Pix com renovação)
+     serve para a contribuição, com outro valor e outro "produto".
+   - Ponto crítico: o dinheiro é do SINDICATO. Precisa cair na conta do
+     sindicato (credenciais Mercado Pago próprias do SECI, ou split), não na
+     do Grupo Movv — senão o Grupo recebe e repassa dinheiro do sindicato
+     (fiscal/contábil). Confirmar com advogado e contador.
+   - Pix Automático (Banco Central, 2025): conferir se o Mercado Pago já
+     oferece para esse uso; senão, cartão recorrente + Pix mensal com
+     lembrete (como a renovação Pix dos planos).
+   - Onde entra: /meu, área da carteirinha ("Pagar minha contribuição"),
+     com status, comprovantes e cancelamento; relatório para o Renan.
