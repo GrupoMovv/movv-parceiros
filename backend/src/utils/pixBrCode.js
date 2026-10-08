@@ -46,4 +46,16 @@ function gerarBrCode({ chave, nome, cidade, valor, txid }) {
   return texto + crc16(texto);
 }
 
-module.exports = { gerarBrCode, crc16 };
+// Código do pedido (o mesmo no QR da tela do pedido e na mensagem do
+// WhatsApp). null se não houver chave ou se não der para gerar.
+function copiaEColaDoPedido(p, loja = {}) {
+  if (!p?.pix_chave) return null;
+  try {
+    const codigo = gerarBrCode({ chave: p.pix_chave, nome: p.pix_nome_recebedor || loja.nome, cidade: loja.cidade, valor: p.total, txid: `IUB${p.id}` });
+    return codigo && /^[\x20-\x7E]+$/.test(codigo) ? codigo : null; // só caracteres simples, sem quebra de linha
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { gerarBrCode, crc16, copiaEColaDoPedido };

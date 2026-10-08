@@ -81,7 +81,19 @@ function testeLoja(nomeLoja) {
 
 // ── Cliente ───────────────────────────────────────────────────────────
 
-function aceitoCliente(p, nomeLoja) {
+// Aceito. Com o código Pix copia e cola (valor já preenchido) a 2ª mensagem
+// leva o código; sem ele (não deu para gerar), volta ao formato com a chave.
+function aceitoCliente(p, nomeLoja, copiaECola = null) {
+  if (copiaECola) {
+    return [
+      `✅ *Pedido #${p.id} aceito!* — ${nomeLoja}`, '',
+      `Total: *${brl(p.total)}*`,
+      'Pague com o *Pix copia e cola* da próxima mensagem. O valor já vem preenchido.',
+      `Recebedor: ${p.pix_nome_recebedor || nomeLoja}`, '',
+      `Confira o nome antes de pagar. A loja só prepara o pedido depois de confirmar o Pix. O pagamento é direto para a loja (o IUB MAIS+ não recebe esse valor). Prazo: ${PRAZO_PAGO_MIN / 60} horas.`, '',
+      `Ver o QR e acompanhar o pedido: ${linkMeuPedido(p.id)}`,
+    ].join('\n');
+  }
   return [
     `✅ *Pedido #${p.id} aceito!* — ${nomeLoja}`, '',
     `Total: *${brl(p.total)}*`,
@@ -93,9 +105,10 @@ function aceitoCliente(p, nomeLoja) {
   ].filter(l => l !== null).join('\n');
 }
 
-// Segunda mensagem, logo depois do aceito: só a chave, pra copiar com um toque.
-function chavePixSozinha(p) {
-  return String(p.pix_chave || '');
+// Segunda mensagem, logo depois do aceito, sozinha pra copiar com um toque:
+// o código copia e cola (com o valor) ou, se não houver, a chave.
+function pixParaColar(p, copiaECola = null) {
+  return String(copiaECola || p.pix_chave || '').trim();
 }
 
 function recusadoCliente(p, nomeLoja) {
@@ -160,6 +173,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, lembretePixLoja, testeLoja, aceitoCliente, chavePixSozinha, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, lembretePixLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

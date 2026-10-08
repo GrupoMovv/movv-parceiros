@@ -4,7 +4,7 @@ const { rotuloStatus } = require('../config/pedidos');
 const { ipCliente } = require('../utils/ipCliente');
 const pedidoAvisos = require('../services/pedidoAvisos');
 const { linkWhatsapp, manualClienteParaLoja } = require('../services/pedidoMensagens');
-const { gerarBrCode } = require('../utils/pixBrCode');
+const { copiaEColaDoPedido } = require('../utils/pixBrCode');
 
 // Pedido pelo site — lado do CLIENTE (/api/public/pedidos, sessão do /meu).
 // Regras e preço em services/pedidoLoja.js.
@@ -44,7 +44,7 @@ async function viewCliente(pedido) {
     pix_nome_recebedor: mostraPix ? p.pix_nome_recebedor : null,
     // QR e copia e cola com o valor: só enquanto falta pagar
     pix_copia_e_cola: p.status === 'aceito' && p.pix_chave
-      ? gerarBrCode({ chave: p.pix_chave, nome: p.pix_nome_recebedor || loja.nome, cidade: loja.cidade, valor: p.total, txid: `IUB${p.id}` })
+      ? copiaEColaDoPedido(p, loja)
       : null,
     status_texto: rotuloStatus(p.status, p.modo_recebimento),
     loja: { nome: loja.nome, slug: loja.slug, whatsapp: loja.whatsapp || null },
