@@ -146,7 +146,7 @@ export default function FinalizarPedido() {
                   {comErro ? <p className="text-xs text-red-600">{erroCotacao.error}</p> : s && (
                     <p className="text-xs text-slate-500">
                       {brl(s.preco_unitario)} cada
-                      {s.tipo_preco === 'associado' && ' · preço de associado'}
+                      {s.tipo_preco === 'associado' && ' · preço Clube'}
                       {s.tipo_preco === 'fecha_mes' && ' · Fecha Mês'}
                       {s.tipo_preco === 'promocao' && ' · promoção'}
                       {s.tipo_preco === 'oferta' && ' · oferta'}

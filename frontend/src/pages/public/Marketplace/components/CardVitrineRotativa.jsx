@@ -62,7 +62,7 @@ export default function CardVitrineRotativa({ produto }) {
           )}
           {/* quem não é associado vê o preço de associado como chamada, não como preço */}
           {pp.chamadaAssociado && (
-            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</span>
+            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} no Clube MAIS+</span>
           )}
       </div>
     </div>

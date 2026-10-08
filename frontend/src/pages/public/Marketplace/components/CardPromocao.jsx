@@ -58,7 +58,7 @@ export default function CardPromocao({ produto: promocao, className = '', style 
         )}
         {promocao.exclusivo_associado && (
           <span className="absolute top-1.5 right-1.5 flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide text-white" style={{ backgroundColor: ROXO }}>
-            <Diamond size={10} weight="fill" /> SECI
+            <Diamond size={10} weight="fill" /> Só Clube
           </span>
         )}
         {(contagem || vagasRestantes !== null) && (
@@ -85,7 +85,7 @@ export default function CardPromocao({ produto: promocao, className = '', style 
             </span>
           )}
           {pp.chamadaAssociado && (
-            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</span>
+            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} no Clube MAIS+</span>
           )}
         </div>
       </div>

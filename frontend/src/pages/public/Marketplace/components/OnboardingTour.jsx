@@ -6,7 +6,7 @@ const SLIDES = [
   {
     icon: Diamond,
     titulo: 'Bem-vindo ao IUB MAIS!',
-    texto: 'Você entrou com sua carteirinha SECI — seus preços de associado já aparecem em tudo, automaticamente.',
+    texto: 'Você é do Clube MAIS+ — seus preços Clube já aparecem em tudo, automaticamente.',
   },
   {
     icon: Tag,

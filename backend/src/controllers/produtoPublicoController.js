@@ -43,14 +43,14 @@ function montarMensagemWhatsapp(produto, associado) {
 
   if (temPrecoAssociado && associado) {
     const diferenca = parseFloat(produto.preco) - parseFloat(produto.preco_associado);
-    linhas.push(`💎 Preço Associado: ${formatarPrecoBRL(produto.preco_associado)} (economia de ${formatarPrecoBRL(diferenca)})`);
+    linhas.push(`💎 Preço Clube MAIS+: ${formatarPrecoBRL(produto.preco_associado)} (economia de ${formatarPrecoBRL(diferenca)})`);
   }
 
   if (associado) {
-    linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou associado SECI ativo', `🔗 Minha carteirinha: ${BACKEND_URL}/carteirinha/${associado.carteirinha_hash}`);
+    linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou do Clube MAIS+', `🔗 Meu cartão do Clube: ${BACKEND_URL}/clube/${associado.carteirinha_hash}`);
   }
 
-  linhas.push('', associado && temPrecoAssociado ? 'Como posso adquirir com o preço associado?' : 'Poderia me passar mais informações?');
+  linhas.push('', associado && temPrecoAssociado ? 'Como posso comprar com o preço Clube?' : 'Poderia me passar mais informações?');
 
   return linhas.join('\n');
 }

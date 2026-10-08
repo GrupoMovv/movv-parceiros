@@ -19,14 +19,14 @@ export default function BannerAtivarSeci({ associado, ehAssociadoSeci, carregand
 
   const situacao = associado?.beneficio?.situacao;
   const conteudo = !associado
-    ? { texto: '💡 É do comércio? Crie sua conta grátis e ative seu desconto SECI!', cta: 'Criar conta', to: '/criar-conta' }
+    ? { texto: '💎 Clube MAIS+: preço menor nas lojas de Itumbiara. Saiba como entrar', cta: 'Conhecer', to: '/clube' }
     : situacao === 'expirado'
-      ? { texto: '⌛ Sua carteirinha SECI venceu. Renove e volte a ter preço de associado!', cta: 'Renovar', to: '/meu' }
+      ? { texto: '⌛ Seu Clube MAIS+ venceu. Renove e volte a ter o preço Clube!', cta: 'Renovar', to: '/meu' }
       : situacao === 'pausado'
-        ? { texto: '⏸️ Seus descontos SECI estão pausados. Veja como resolver.', cta: 'Ver', to: '/meu' }
+        ? { texto: '⏸️ Seu Clube MAIS+ está pausado. Veja como resolver.', cta: 'Ver', to: '/meu' }
         : situacao === 'inativo'
           ? null
-          : { texto: '💡 É do comércio? Ative seu desconto SECI!', cta: 'Ativar', to: '/meu' };
+          : { texto: '💎 Clube MAIS+: preço menor nas lojas de Itumbiara. Saiba como entrar', cta: 'Conhecer', to: '/clube' };
   if (!conteudo) return null;
 
   function fechar() {

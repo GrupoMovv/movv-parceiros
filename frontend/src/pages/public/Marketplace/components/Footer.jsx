@@ -15,7 +15,7 @@ export default function Footer() {
             <span className="font-bold text-sm">IUB MAIS</span>
           </div>
           <p className="text-white/50 text-xs leading-relaxed max-w-xs">
-            Mais qualidade. Mais confiança. Mais vantagens. Benefícios exclusivos pra associados SECI.
+            Mais qualidade. Mais confiança. Mais vantagens. Preço menor pra quem é do Clube MAIS+.
           </p>
         </div>
 
@@ -37,7 +37,7 @@ export default function Footer() {
         <div>
           <p className="font-semibold text-xs uppercase tracking-wide mb-3 text-white/40">Ajuda</p>
           <div className="flex flex-col gap-1.5">
-            <Link to="/cadastrar-associado" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Sou associado SECI</Link>
+            <Link to="/clube" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Clube MAIS+</Link>
             <Link to="/entrar" className="text-white/60 hover:text-white text-sm transition-colors w-fit">Já sou parceiro — Entrar</Link>
             <Link to="/vender" className="text-white/40 hover:text-white/70 text-xs transition-colors w-fit mt-1">Cadastrar minha empresa</Link>
             <a

@@ -70,6 +70,7 @@ const BeerBuscaResultado = lazy(() => import('./pages/beer/BuscaResultado'));
 const BeerTodasCategorias = lazy(() => import('./pages/beer/TodasCategoriasPage'));
 const Favoritos = lazy(() => import('./pages/public/Marketplace/Favoritos'));
 const Entregadores = lazy(() => import('./pages/public/Marketplace/Entregadores'));
+const Clube = lazy(() => import('./pages/public/Marketplace/Clube'));
 const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
@@ -273,6 +274,7 @@ export default function App() {
         </Route>
         <Route path="/favoritos"                  element={<MarketplaceFallback><Favoritos /></MarketplaceFallback>} />
         <Route path="/entregadores"               element={<MarketplaceFallback><Entregadores /></MarketplaceFallback>} />
+        <Route path="/clube"                    element={<MarketplaceFallback><Clube /></MarketplaceFallback>} />
         <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />

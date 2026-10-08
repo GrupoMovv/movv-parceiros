@@ -242,7 +242,7 @@ function FiltrosSidebar({ filtros, atualizarFiltro, subcategorias, bairros, clas
         <div className="space-y-2.5 pt-1 border-t border-slate-100">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={filtros.somente_associado} onChange={e => atualizarFiltro('somente_associado', e.target.checked)} className="w-4 h-4" style={{ accentColor: ROXO }} />
-            <span className="text-sm text-slate-700 flex items-center gap-1"><Diamond size={12} weight="duotone" color={ROXO} /> Só com preço associado</span>
+            <span className="text-sm text-slate-700 flex items-center gap-1"><Diamond size={12} weight="duotone" color={ROXO} /> Só com preço Clube</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={filtros.somente_desconto} onChange={e => atualizarFiltro('somente_desconto', e.target.checked)} className="w-4 h-4" style={{ accentColor: ROXO }} />

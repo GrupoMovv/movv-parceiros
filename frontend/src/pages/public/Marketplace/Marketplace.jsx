@@ -154,7 +154,7 @@ export default function Marketplace() {
           produtos={novidades} carregando={carregandoNovidades} badge="novo"
         />
         <SecaoProdutos
-          id="exclusivos" Icone={Diamond} titulo="Exclusivos para Associados" subtitulo="Ofertas só pra quem tem carteirinha SECI"
+          id="exclusivos" Icone={Diamond} titulo="Exclusivos do Clube MAIS+" subtitulo="Ofertas só pra quem é do Clube"
           produtos={exclusivos} carregando={carregandoExclusivos} badge="exclusivo"
         />
 
@@ -162,8 +162,8 @@ export default function Marketplace() {
 
         {!nomeAssociado && !carregandoExclusivos && exclusivos.length > 0 && (
           <p className="text-center text-sm text-slate-500 -mt-6">
-            Ainda não é associado?{' '}
-            <a href="/cadastrar-associado" className="font-semibold underline" style={{ color: PRETO }}>Vire associado grátis pra aproveitar</a>
+            Ainda não é do Clube?{' '}
+            <a href="/clube" className="font-semibold underline" style={{ color: PRETO }}>Saiba como entrar</a>
           </p>
         )}
 

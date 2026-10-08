@@ -32,7 +32,7 @@ function montarMensagemGrupo(produtos, associado) {
   linhas.push('', `Total estimado: ${formatarPrecoBRL(total)}`);
 
   if (ehAssociadoSeci) {
-    linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou associado SECI ativo', `🔗 Minha carteirinha: ${BACKEND_URL}/carteirinha/${associado.carteirinha_hash}`);
+    linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou do Clube MAIS+', `🔗 Meu cartão do Clube: ${BACKEND_URL}/clube/${associado.carteirinha_hash}`);
   }
 
   linhas.push('', 'Poderia me passar mais informações sobre disponibilidade?');

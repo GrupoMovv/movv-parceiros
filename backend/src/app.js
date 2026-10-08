@@ -112,6 +112,7 @@ app.use('/api/public/pedidos',         require('./routes/pedidos'));
 app.use('/api/public/pedido-loja',     require('./routes/pedidoLoja'));
 app.use('/api/public',                 require('./routes/public'));
 app.use('/',                           require('./routes/carteirinhaPublica'));
+app.use('/',                           require('./routes/clubeCartao'));
 app.use('/',                           require('./routes/produtoPublico'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));

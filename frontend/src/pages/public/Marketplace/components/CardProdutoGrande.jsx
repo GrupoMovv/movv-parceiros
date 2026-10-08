@@ -69,7 +69,7 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
         )}
 
         {!(descontoPct > 0) && pctSeci > 0 && (
-          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}>-{pctSeci}% SECI</span>
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}>-{pctSeci}% Clube</span>
 
         )}
         {mostrarNovo && (
@@ -99,7 +99,7 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
           )}
           {/* quem não é associado vê o preço de associado como chamada, não como preço */}
           {pp.chamadaAssociado && (
-            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} para associado SECI</span>
+            <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} no Clube MAIS+</span>
           )}
         </div>
 

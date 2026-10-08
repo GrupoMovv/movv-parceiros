@@ -111,7 +111,7 @@ export default function CarrinhoPage() {
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <span className="font-bold text-sm text-slate-800">{formatarPreco(p.preco)}</span>
                               <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold" style={{ color: '#92700C' }}>
-                                <Diamond size={9} weight="fill" color="#FFB800" /> associados {formatarPreco(p.preco_associado)}
+                                <Diamond size={9} weight="fill" color="#FFB800" /> Clube {formatarPreco(p.preco_associado)}
                               </span>
                             </div>
                           ) : (

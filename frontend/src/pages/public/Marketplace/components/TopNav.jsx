@@ -98,7 +98,7 @@ export default function TopNav({
   const itensMenuMobile = [
     { label: '🎡 Jogar', rota: '/jogar' },
     ...MENU_SECUNDARIO,
-    { label: '💎 SECI', rota: '/cadastrar-associado' },
+    { label: '💎 Clube', rota: '/clube' },
   ];
 
   return (
@@ -250,7 +250,7 @@ export default function TopNav({
               <div className="absolute right-0 top-[calc(100%+6px)] w-60 bg-white rounded-xl shadow-2xl border border-slate-100 py-1.5 overflow-hidden">
                 <div className="px-3.5 py-2 border-b border-slate-100">
                   <p className="text-sm font-bold text-slate-800 truncate">{nomeCompleto || nomeAssociado}</p>
-                  <p className="text-[11px] text-slate-400">{carteirinhaHash ? 'Associado SECI' : 'Minha conta IUB MAIS+'}</p>
+                  <p className="text-[11px] text-slate-400">{carteirinhaHash ? 'Membro do Clube MAIS+' : 'Minha conta IUB MAIS+'}</p>
                 </div>
                 {carteirinhaHash && (
                   <Link
@@ -319,8 +319,8 @@ export default function TopNav({
               {item.label}
             </a>
           ))}
-          <Link to="/cadastrar-associado" className="flex-shrink-0 whitespace-nowrap text-xs font-bold px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors" style={{ color: ROXO_ESCURO }}>
-            Sou SECI 💎
+          <Link to="/clube" className="flex-shrink-0 whitespace-nowrap text-xs font-bold px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors" style={{ color: ROXO_ESCURO }}>
+            Clube MAIS+ 💎
           </Link>
           <Link to="/vender" className="flex-shrink-0 whitespace-nowrap text-xs font-semibold px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-slate-600 hover:text-slate-900 ml-auto">
             Vender no IUB MAIS

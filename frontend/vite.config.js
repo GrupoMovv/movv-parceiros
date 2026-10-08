@@ -30,7 +30,7 @@ export default defineConfig({
       manifest: {
         name: 'IUB MAIS+ - Marketplace de Itumbiara',
         short_name: 'IUB MAIS+',
-        description: 'Marketplace de Itumbiara - Produtos e serviços locais com preços especiais pra associados SECI',
+        description: 'Marketplace de Itumbiara - Produtos e serviços locais com preço menor pra quem é do Clube MAIS+',
         start_url: '/marketplace',
         scope: '/',
         display: 'standalone',

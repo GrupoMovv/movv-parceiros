@@ -227,7 +227,7 @@ export default function FoodDetalhe() {
                     </div>
                     {/* quem não é associado vê o preço de associado como chamada, não como preço */}
                     {!ehAssociadoSeci && item.preco_associado != null && Number(item.preco_associado) < Number(item.preco) && (
-                      <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarBRL(item.preco_associado)} para associado SECI</p>
+                      <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarBRL(item.preco_associado)} no Clube MAIS+</p>
                     )}
                     <div className="mt-auto pt-2">
                       {vendeSite ? (

@@ -212,7 +212,7 @@ export default function PromocaoDetalhe() {
             </span>
             {promocao.exclusivo_associado && (
               <span className="absolute top-3 right-3 flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm text-white" style={{ backgroundColor: ROXO }}>
-                <Diamond size={13} weight="duotone" /> SECI
+                <Diamond size={13} weight="duotone" /> Só Clube
               </span>
             )}
           </div>
@@ -240,7 +240,7 @@ export default function PromocaoDetalhe() {
             <p className="text-4xl font-extrabold" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
             {pp.tipo === 'associado' && (
               <span className="inline-block mt-2 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
-                Seu preço de associado
+                Seu preço Clube
               </span>
             )}
             <p className="text-sm font-semibold mt-2" style={{ color: '#166534' }}>Você economiza {formatarPreco(economia)}!</p>
@@ -248,7 +248,7 @@ export default function PromocaoDetalhe() {
             {pp.chamadaAssociado && (
               <div className="mt-3 rounded-2xl p-4" style={{ backgroundColor: `${DOURADO}15`, border: `1px solid ${DOURADO}55` }}>
                 <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: '#92700C' }}>
-                  <Diamond size={14} weight="duotone" /> Associados SECI: {formatarPreco(pp.chamadaAssociado)}
+                  <Diamond size={14} weight="duotone" /> No Clube MAIS+: {formatarPreco(pp.chamadaAssociado)}
                 </p>
                 {!ehAssociado && (
                   <div className="flex flex-wrap gap-2 mt-3">
@@ -257,11 +257,11 @@ export default function PromocaoDetalhe() {
                         type="button" onClick={() => navigate(`/entrar?voltar=${encodeURIComponent(location.pathname)}`)}
                         className="text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO_ESCURO }}
                       >
-                        Sou associado — Fazer login
+                        Sou do Clube — Entrar
                       </button>
                     )}
-                    <Link to={associado ? '/meu' : '/criar-conta'} className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
-                      Quero ser associado
+                    <Link to="/clube" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
+                      Quero entrar no Clube
                     </Link>
                   </div>
                 )}
@@ -343,10 +343,10 @@ export default function PromocaoDetalhe() {
       {!ehAssociadoSeci && (
       <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-10">
         <div className="rounded-2xl p-6 text-center text-white" style={{ background: `linear-gradient(135deg, ${ROXO_ESCURO} 0%, ${ROXO} 100%)` }}>
-          <p className="font-bold text-lg">Trabalha no comércio?</p>
-          <p className="text-white/80 text-sm mt-1">Se sua empresa é associada ao SECI, você ganha preço de associado em todos os parceiros.</p>
-          <Link to={associado ? '/meu' : '/criar-conta'} className="inline-block mt-4 text-sm font-bold px-6 py-3 rounded-xl" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
-            {associado ? 'Informar o CNPJ da empresa' : 'Criar minha conta grátis'}
+          <p className="font-bold text-lg">💎 Clube MAIS+</p>
+          <p className="text-white/80 text-sm mt-1">Preço menor nas Lojas do Clube de Itumbiara.</p>
+          <Link to="/clube" className="inline-block mt-4 text-sm font-bold px-6 py-3 rounded-xl" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+            Saiba como entrar
           </Link>
         </div>
       </div>

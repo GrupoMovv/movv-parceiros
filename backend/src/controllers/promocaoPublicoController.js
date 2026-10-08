@@ -104,11 +104,11 @@ function montarMensagemWhatsapp(promocao, associado) {
   ];
 
   if (temPrecoAssociado && associado) {
-    linhas.push(`💎 Preço Associado: ${formatarPrecoBRL(promocao.preco_associado)}`);
+    linhas.push(`💎 Preço Clube MAIS+: ${formatarPrecoBRL(promocao.preco_associado)}`);
   }
 
   if (associado) {
-    linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou associado SECI ativo', `🔗 Minha carteirinha: ${BACKEND_URL}/carteirinha/${associado.carteirinha_hash}`);
+    linhas.push('', `📇 Meu nome: ${associado.nome_completo}`, '🎫 Sou do Clube MAIS+', `🔗 Meu cartão do Clube: ${BACKEND_URL}/clube/${associado.carteirinha_hash}`);
   }
 
   linhas.push('', 'Ainda dá tempo de garantir essa promoção?');
