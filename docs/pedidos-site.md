@@ -88,6 +88,8 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 
 ## Domínio oficial (antes de ligar `PEDIDOS_SITE_LIBERADO`)
 
+**FEITO em 08/10/2026:** FRONTEND_URL=https://iubmais.com.br e BACKEND_URL=https://api.iubmais.com.br (movv-backend), VITE_API_URL=https://api.iubmais.com.br/api (movv-parceiros). Conferido: site chama só api.iubmais.com.br, sem erro de CORS; links e prévias saem com o domínio novo; endereços fixos no código trocados (5c4d19a). Webhook do Mercado Pago segue no endereço antigo (funciona; trocar é opcional).
+
 Decisão do Junior (05/10/2026): ir direto para **iubmais.com.br**, sem passar por portal.grupomovv.com.br. Mensagem pedindo Pix com link `onrender.com` parece golpe.
 
 - **Site:** `iubmais.com.br` e `www.iubmais.com.br` → site estático `movv-parceiros` no Render.
