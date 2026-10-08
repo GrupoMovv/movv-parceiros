@@ -174,7 +174,7 @@ export default function ParceiroPromocoes() {
 
       {limiteAtingido && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
-          Você atingiu o limite de <strong>{limite} promoções ativas</strong> do seu plano. Pause uma promoção existente pra publicar outra, ou fale com o Sindicato sobre upgrade de plano.
+          Você atingiu o limite de <strong>{limite} promoções ativas</strong> do seu plano. Pause uma promoção existente pra publicar outra, ou fale com o IUB MAIS+ sobre upgrade de plano.
         </div>
       )}
       {limiteQuaseAtingido && (

@@ -59,7 +59,7 @@ export default function ParceiroJogos() {
         <h2 className="text-lg font-bold text-slate-800 mt-3">🎰 Roleta da Sorte</h2>
         <p className="text-slate-500 text-sm mt-2 max-w-md mx-auto">
           Seu plano atual ({NOMES_PLANO[dados.plano] || dados.plano}) não participa dos Joguinhos IUB MAIS+.
-          Fale com o Sindicato pra fazer upgrade e distribuir cupons pra milhares de associados todo dia.
+          Fale com o IUB MAIS+ pra fazer upgrade e distribuir cupons pra milhares de clientes todo dia.
         </p>
       </div>
     );
@@ -72,7 +72,7 @@ export default function ParceiroJogos() {
           <div>
             <h2 className="text-lg font-bold text-slate-900">🎰 Roleta da Sorte</h2>
             <p className="text-slate-500 text-sm mt-1">
-              Associados giram 1x por dia e podem ganhar um cupom da sua loja. Você controla quanto dar e quantos por dia.
+              Os clientes giram 1x por dia e podem ganhar um cupom da sua loja. Você controla quanto dar e quantos por dia.
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">

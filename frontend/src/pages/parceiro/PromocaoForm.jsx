@@ -102,8 +102,8 @@ export default function ParceiroPromocaoForm() {
     // Opcional: vazio ou igual ao "Por" = sem desconto extra (o backend guarda NULL).
     if (form.preco_associado) {
       const pa = parseFloat(form.preco_associado);
-      if (!Number.isFinite(pa) || pa < 0) return 'Preço associado inválido';
-      if (pa > por) return 'Preço associado não pode ser maior que o preço promocional ("Por")';
+      if (!Number.isFinite(pa) || pa < 0) return 'Preço Clube inválido';
+      if (pa > por) return 'Preço Clube não pode ser maior que o preço promocional ("Por")';
     }
     if (!form.data_inicio) return 'Informe a data de início';
     if (!form.data_fim) return 'Informe a data de término';
@@ -275,9 +275,9 @@ export default function ParceiroPromocaoForm() {
             <Campo label="Data de término" value={form.data_fim} onChange={v => setCampo('data_fim', v)} type="datetime-local" />
           </div>
 
-          <Campo label="Preço associado (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" className="mt-4"
+          <Campo label="Preço Clube (opcional)" value={form.preco_associado} onChange={v => setCampo('preco_associado', v)} type="money" className="mt-4"
             placeholder="Deixe vazio pra usar o mesmo preço (sem desconto)" />
-          <p className="text-[11px] text-slate-400 mt-1">Associados SECI podem ter preço diferenciado. Deixe vazio se não quiser oferecer desconto agora.</p>
+          <p className="text-[11px] text-slate-400 mt-1">Membros do Clube MAIS+ podem ter um preço menor. Deixe vazio se não quiser oferecer agora.</p>
           <Campo label="Limite de usos (opcional — ex: primeiros 20)" value={form.limite_usos} onChange={v => setCampo('limite_usos', v)} type="number" className="mt-4" />
 
           <div className="flex flex-col gap-2 mt-4">
@@ -287,7 +287,7 @@ export default function ParceiroPromocaoForm() {
             </label>
             <label className="flex items-center gap-2 text-sm font-medium" style={{ color: PRETO }}>
               <input type="checkbox" checked={form.exclusivo_associado} onChange={e => setCampo('exclusivo_associado', e.target.checked)} className="rounded" />
-              Marcar como exclusivo pra associados SECI
+              Marcar como exclusiva para membros do Clube MAIS+
             </label>
           </div>
         </Secao>
@@ -324,7 +324,7 @@ export default function ParceiroPromocaoForm() {
             </div>
             {form.exclusivo_associado && (
               <span className="inline-block mt-1.5 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}>
-                💎 Exclusivo SECI
+                💎 Só Clube
               </span>
             )}
           </div>

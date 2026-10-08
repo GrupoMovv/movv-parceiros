@@ -22,7 +22,7 @@ const DICAS = [
   'Não precisa ser foto profissional!',
 ];
 const LIMITE_FOTOS = 3;
-const TEXTO_AJUDA_ASSOCIADO = 'Associados SECI podem ter preço diferenciado. Deixe vazio se não quiser oferecer desconto agora.';
+const TEXTO_AJUDA_ASSOCIADO = 'Membros do Clube MAIS+ podem ter um preço menor. Deixe vazio se não quiser oferecer agora.';
 const VAZIO = { nome: '', descricao: '', categoria: '', marca: '', preco: '', preco_associado: '', estoque_disponivel: true, destaque: false, tempo_preparo_min: '' };
 
 export default function ParceiroProdutoForm() {
@@ -183,8 +183,8 @@ export default function ParceiroProdutoForm() {
     // Opcional: vazio ou igual = sem desconto (o backend guarda NULL).
     if (f.preco_associado) {
       const pa = parseFloat(f.preco_associado);
-      if (!Number.isFinite(pa) || pa < 0) return 'Preço associado inválido';
-      if (pa > preco) return 'Preço associado não pode ser maior que o normal';
+      if (!Number.isFinite(pa) || pa < 0) return 'Preço Clube inválido';
+      if (pa > preco) return 'Preço Clube não pode ser maior que o normal';
     }
     if (f.tempo_preparo_min !== '') {
       const t = Number(f.tempo_preparo_min);
@@ -379,12 +379,12 @@ export default function ParceiroProdutoForm() {
             <Campo label="Preço normal" value={form.preco} onChange={v => setCampo('preco', v)} type="money" />
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
-                <label className="text-xs font-semibold text-slate-500">Preço associado (opcional)</label>
+                <label className="text-xs font-semibold text-slate-500">Preço Clube (opcional)</label>
                 <button
                   type="button"
                   onClick={() => setAjudaAssociado(a => !a)}
                   aria-expanded={ajudaAssociado}
-                  aria-label="O que é preço associado?"
+                  aria-label="O que é preço Clube?"
                   title={TEXTO_AJUDA_ASSOCIADO}
                   className="w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold leading-none flex items-center justify-center hover:bg-slate-300"
                 >
@@ -478,7 +478,7 @@ export default function ParceiroProdutoForm() {
               </div>
               {temDescontoAssociado && (
                 <span className="inline-block mt-1.5 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: '#92700C' }}>
-                  💎 Exclusivo associado
+                  💎 Preço Clube
                 </span>
               )}
             </div>

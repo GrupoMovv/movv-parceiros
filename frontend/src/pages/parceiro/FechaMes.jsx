@@ -571,7 +571,7 @@ function BannerUpgrade() {
       <Lock className="w-8 h-8 mx-auto text-slate-300" />
       <h1 className="font-bold text-lg mt-4" style={{ color: PRETO }}>Fecha Mês indisponível pro seu plano</h1>
       <p className="text-slate-500 text-sm mt-2 max-w-sm mx-auto">
-        Todo último sexta do mês, seus produtos entram numa vitrine especial com destaque e comunicação pros associados.
+        Todo último sexta do mês, seus produtos entram numa vitrine especial com destaque e comunicação pros clientes do IUB MAIS+.
       </p>
       <Link
         to="/parceiro/painel/planos"

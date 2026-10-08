@@ -54,7 +54,7 @@ const META_PLANOS = {
     beneficios: [
       'Tudo do Oficial',
       '{produtos_rotativa} produtos em destaque',
-      'Push notification pros associados ({push_por_mes}/mês)',
+      'Push notification pros clientes ({push_por_mes}/mês)',
       'Aparece em "Parceiros em Destaque" (topo da home)',
       'Analytics completo',
       'Suporte prioritário por WhatsApp',
@@ -659,7 +659,7 @@ function BannerFechaMes({ proximoFechaMes, planos }) {
           <div className="flex-1">
             <h2 className="text-xl font-black tracking-tight">🔥 Seu produto no Fecha Mês</h2>
             <p className="text-white/80 text-sm mt-2 leading-relaxed">
-              Toda última sexta do mês, o IUB MAIS realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros associados e picos de vendas de <strong className="text-white">até 5x</strong> em 24h.
+              Toda última sexta do mês, o IUB MAIS realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros clientes e picos de vendas de <strong className="text-white">até 5x</strong> em 24h.
             </p>
 
             <div className="grid grid-cols-3 gap-3 mt-5 max-w-md">
