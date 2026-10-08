@@ -24,9 +24,10 @@ const ABAS = [
   { label: '⚙️ Configurar pedidos', to: '/parceiro/painel/pedidos-site', soCnpj: true, soPedidosSite: true },
   { label: '🐾 Agendamentos', to: '/parceiro/painel/agendamentos', soPetAtendimento: true },
   { label: '🎟️ Fidelidade & QR', to: '/parceiro/painel/fidelidade', soPetAtendimento: true },
-  // IUB Disk Bebidas: aberto pra todo parceiro — é a própria aba que oferece
-  // "Quero vender no IUB Beer" pra quem ainda não entrou.
-  { label: '🍻 Meu IUB Beer', to: '/parceiro/painel/beer', soCnpj: true },
+  // IUB Disk Bebidas: só pra quem é do ramo (Bebidas/Alimentação) ou já tem
+  // cadastro no Disk Bebidas (beer_disponivel, ver parceiroAuthController.me).
+  // As outras lojas ativam pelo link em Configurações.
+  { label: '🍻 Meu IUB Beer', to: '/parceiro/painel/beer', soCnpj: true, soBeer: true },
   { label: '📊 Estatísticas', to: '/parceiro/painel/estatisticas' },
   { label: '👤 Meu Perfil', to: '/parceiro/painel/perfil' },
   { label: '⚙️ Configurações', to: '/parceiro/painel/configuracoes' },
@@ -182,6 +183,7 @@ export default function ParceiroPainelLayout() {
               .filter(aba => !aba.soPetAtendimento || parceiro.e_pet_atendimento)
               .filter(aba => !aba.soCnpj || parceiro.tipo_pessoa !== 'pf')
               .filter(aba => !aba.soPedidosSite || parceiro.pedidos_site_liberado)
+              .filter(aba => !aba.soBeer || parceiro.beer_disponivel !== false)
               .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h } : aba))}
           />
         </div>

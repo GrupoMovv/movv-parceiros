@@ -91,12 +91,16 @@ async function me(req, res) {
   const parceiro = parceiroPublico(req.parceiro);
   // Também é "de bebidas" quem entrou no Disk Bebidas pela aba do painel
   // (sem ter escolhido o segmento no /vender) — ProdutoForm mostra o aviso.
-  if (!parceiro.e_bebidas) {
-    try {
-      const r = await db.query('SELECT 1 FROM beer_estabelecimentos WHERE parceiro_id = $1 AND ativo = true', [req.parceiro.id]);
-      parceiro.e_bebidas = r.rows.length > 0;
-    } catch { /* aviso é só UX — a trava de verdade é no salvar */ }
-  }
+  let temCadastroBeer = false;
+  try {
+    const r = await db.query('SELECT ativo FROM beer_estabelecimentos WHERE parceiro_id = $1', [req.parceiro.id]);
+    temCadastroBeer = r.rows.length > 0;
+    if (!parceiro.e_bebidas) parceiro.e_bebidas = r.rows.some(x => x.ativo);
+  } catch { /* aviso é só UX — a trava de verdade é no salvar */ }
+  // Aba "Meu IUB Beer" (Junior, 08/10): só pra quem é do ramo (categoria
+  // Bebidas ou Alimentação) ou já tem cadastro no Disk Bebidas, ativo ou não.
+  // As outras lojas ativam pelo link em Configurações.
+  parceiro.beer_disponivel = Boolean(parceiro.e_bebidas || parceiro.e_restaurante || temCadastroBeer);
   return res.json({ parceiro, usuario: req.parceiroUsuario });
 }
 

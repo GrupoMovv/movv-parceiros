@@ -62,6 +62,13 @@ export default function ParceiroConfiguracoes() {
 
       <SecaoPlano parceiro={parceiro} status={status} interesses={interesses} />
 
+      {parceiro?.beer_disponivel === false && parceiro?.tipo_pessoa !== 'pf' && (
+        <p className="text-sm text-slate-500">
+          🍻 Vende bebidas?{' '}
+          <Link to="/parceiro/painel/beer" className="font-semibold underline" style={{ color: ROXO }}>Ative o Disk Bebidas</Link>
+        </p>
+      )}
+
       <SecaoZonaPerigo status={status} onStatusMudou={setStatus} />
     </div>
   );
