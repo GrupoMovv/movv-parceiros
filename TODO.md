@@ -231,3 +231,35 @@ Clube"), para somar no "Você economizou" do membro e no total da loja.
 Cuidados: o QR mostra só nome e validade (a loja nunca vê a origem
 sindicato/assinatura); evitar registro falso (só usuário logado da loja,
 um registro por leitura).
+
+## "IUB Pay": confirmação automática do Pix do pedido (opção da loja) — avaliar
+
+Pedido do Junior em 08/10/2026. NÃO fazer agora. O padrão gratuito continua
+sendo o Pix direto na chave da loja com conferência manual ("Pago, saiu").
+IUB Pay seria uma opção que a loja liga: o sistema gera o Pix do pedido e
+marca "pago" sozinho pelo aviso (webhook) do banco.
+
+1. **Mercado Pago (já integrado nos planos)** — a loja conecta a conta dela
+   (OAuth "marketplace"); o sistema cria o Pix do pedido com o token da loja;
+   o dinheiro cai na conta Mercado Pago da LOJA; webhook marca pago.
+   - Tarifa (out/2026, conferir antes): 0,99% por Pix online, paga pela loja;
+     o IUB pode cobrar comissão (marketplace_fee), descontada do valor.
+   - A loja precisa: ter conta Mercado Pago e autorizar o app do IUB uma vez.
+   - Esforço: ~3 a 4 dias (OAuth e renovação de token por loja, Pix com o
+     token da loja, webhook por pagamento, estorno no cancelamento depois do
+     pago, tela no painel). Reaproveita o webhook dos planos.
+   - Entregador: split no MP Brasil é loja + marketplace (2 partes); pagar o
+     entregador direto exigiria outro caminho.
+2. **Subcontas (ex.: Asaas)** — o IUB abre uma subconta por loja via API
+   (cadastro e documentos da loja), gera a cobrança, recebe o webhook e pode
+   dividir o valor (split) com o entregador.
+   - Tarifa (out/2026, conferir antes): Pix R$ 0,99 por cobrança nos 3
+     primeiros meses e R$ 1,99 depois (valor fixo, bom para pedido grande,
+     ruim para pedido pequeno); sem mensalidade.
+   - A loja precisa: enviar documentos para a subconta e aceitar os termos da
+     instituição; o dinheiro fica na subconta e ela saca para o banco dela.
+   - Esforço: ~6 a 8 dias + contrato com a instituição e análise jurídica
+     (o IUB passa a orquestrar contas de terceiros; ver a regra "o dinheiro
+     não passa pelo IUB").
+Comparação de custo por pedido: R$ 30 → MP R$ 0,30 / Asaas R$ 1,99;
+R$ 200 → MP R$ 1,98 / Asaas R$ 1,99 (empate perto de R$ 200).
