@@ -10,6 +10,8 @@ const db = require('../config/database');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://iubmais.com.br';
 const BACKEND_URL = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
+// Foto do Cloudinary já vem com endereço completo; só caminho relativo (/uploads/...) ganha o backend na frente.
+const urlAbsoluta = u => (/^https?:\/\//i.test(u) ? u : `${BACKEND_URL}${u}`);
 
 const BOT_UA_REGEX = /whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|discordbot|pinterest|redditbot|skypeuripreview|vkshare|w3c_validator|applebot|embedly|quora link preview|outbrain|nuzzel|ia_archiver/i;
 
@@ -90,7 +92,7 @@ router.get('/carteirinha/:hash', async (req, res) => {
       }));
     }
 
-    const image = dados.foto_url ? `${BACKEND_URL}${dados.foto_url}` : `${FRONTEND_URL}/iub-logo-og.png`;
+    const image = dados.foto_url ? urlAbsoluta(dados.foto_url) : `${FRONTEND_URL}/iub-logo-og.png`;
 
     return res.send(paginaMeta({
       title: `${dados.nome_completo} - Carteirinha SECI`,

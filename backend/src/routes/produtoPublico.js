@@ -8,6 +8,8 @@ const db = require('../config/database');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://iubmais.com.br';
 const BACKEND_URL = process.env.BACKEND_URL || 'https://api.iubmais.com.br';
+// Foto do Cloudinary já vem com endereço completo; só caminho relativo (/uploads/...) ganha o backend na frente.
+const urlAbsoluta = u => (/^https?:\/\//i.test(u) ? u : `${BACKEND_URL}${u}`);
 
 const BOT_UA_REGEX = /whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|discordbot|pinterest|redditbot|skypeuripreview|vkshare|w3c_validator|applebot|embedly|quora link preview|outbrain|nuzzel|ia_archiver/i;
 
@@ -46,7 +48,7 @@ router.get('/produto/:id', async (req, res) => {
     }
 
     const precoFmt = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const image = produto.fotos?.[0]?.url ? `${BACKEND_URL}${produto.fotos[0].url}` : `${FRONTEND_URL}/iub-logo-og.png`;
+    const image = produto.fotos?.[0]?.url ? urlAbsoluta(produto.fotos[0].url) : `${FRONTEND_URL}/iub-logo-og.png`;
     const t = escapeHtml(`${produto.nome} — ${produto.parceiro_nome} | IUB MAIS`);
     const d = escapeHtml(`${precoFmt} — ${(produto.descricao || '').slice(0, 150)}`);
     const i = escapeHtml(image);
