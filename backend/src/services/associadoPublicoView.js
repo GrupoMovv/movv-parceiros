@@ -61,6 +61,9 @@ async function montarViewAssociado(associado) {
     // situação do benefício AGORA (validade + empresa em dia) — ver beneficioAssociado.js
     beneficio,
     eh_associado_ativo: beneficio?.situacao === 'ativo',
+    // acesso de testador ligado pelo admin (migration 086): vê as lojas de teste
+    modo_teste: Boolean(associado.testador_ate && new Date(associado.testador_ate) > new Date()),
+    testador_ate: associado.testador_ate && new Date(associado.testador_ate) > new Date() ? associado.testador_ate : null,
     dependentes: depResult.rows,
   };
 }

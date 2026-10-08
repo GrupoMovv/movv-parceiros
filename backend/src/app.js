@@ -32,7 +32,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   // x-admin-token: modo QA do pedido pelo site (admin testando a empresa de
   // teste com a sessão do cliente no Authorization — routes/pedidos.js)
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token', 'x-cliente-token'],
 };
 
 // Responde preflight OPTIONS em todas as rotas
@@ -108,6 +108,7 @@ app.use('/api/public/verificar-cnpj-seci', require('./routes/baseSeciPublico'));
 app.use('/api/public/conta',           require('./routes/conta'));
 app.use('/api/public/pet',             require('./routes/pet'));
 app.use('/api/public/clube',           require('./routes/clubePublico'));
+app.use('/api/admin/testadores',        require('./routes/adminTestadores'));
 app.use('/api/public/meus-pets',       require('./routes/meusPets'));
 app.use('/api/public/pedidos',         require('./routes/pedidos'));
 app.use('/api/public/pedido-loja',     require('./routes/pedidoLoja'));

@@ -83,17 +83,35 @@ async function marcarModoQa(req, token) {
   }
 }
 
+// Testador (migration 086): conta de CLIENTE que o admin marcou, por até 30
+// dias, para ver e comprar nas lojas de teste sem a senha de admin. O token
+// é a sessão do /meu (painel_publico); a marca vale só até testador_ate.
+async function marcarTestador(req, token) {
+  if (req.modoQa || !token) return;
+  try {
+    const d = jwt.verify(token, process.env.JWT_SECRET);
+    if (d.type !== 'painel_publico' || !d.associado_id) return;
+    const r = await db.query('SELECT 1 FROM sindicato_associados WHERE id = $1 AND ativo AND testador_ate > NOW()', [d.associado_id]);
+    if (r.rows[0]) { req.modoQa = true; req.modoQaMotivo = 'testador'; }
+  } catch { /* token inválido/velho: segue como visitante */ }
+}
+
+const bearer = req => (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+
 const lerAdminOpcional = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  await marcarModoQa(req, authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
+  await marcarModoQa(req, bearer(req));
+  // páginas públicas: o site manda a sessão do cliente em x-cliente-token
+  await marcarTestador(req, String(req.headers['x-cliente-token'] || '') || null);
   next();
 };
 
 // Mesmo "olho de admin", mas com o JWT do admin no header x-admin-token —
 // pra rotas em que o Authorization já é a sessão do CLIENTE (pedido pelo
 // site: o admin testa comprando da empresa de teste logado como cliente).
+// Testador: a própria sessão do cliente (Authorization) liga o modo QA.
 const lerAdminOpcionalCabecalho = async (req, res, next) => {
   await marcarModoQa(req, String(req.headers['x-admin-token'] || '') || null);
+  await marcarTestador(req, bearer(req));
   next();
 };
 

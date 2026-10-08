@@ -5,6 +5,7 @@ import Layout from './components/Layout/Layout';
 import IubSpinner from './pages/public/Marketplace/components/IubSpinner';
 import { CarrinhoProvider } from './pages/public/Marketplace/CarrinhoContext';
 import InstallPWABanner from './components/InstallPWABanner';
+import ModoTesteAviso from './components/ModoTesteAviso';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Statement from './pages/Statement';
@@ -24,6 +25,7 @@ import AdminProducts from './pages/admin/Products';
 import AdminInterest from './pages/admin/Interest';
 import AdminInternalCommissions from './pages/admin/InternalCommissions';
 import AdminIndicadores from './pages/admin/AdminIndicadores';
+import AdminTestadores from './pages/admin/AdminTestadores';
 import DiretaDashboardAdmin from './pages/admin/Direta/DiretaDashboard';
 import DiretaVendasAdmin from './pages/admin/Direta/DiretaVendas';
 import DiretaContabilidadesAdmin from './pages/admin/Direta/DiretaContabilidades';
@@ -221,6 +223,7 @@ function MarketplaceFallback({ children }) {
       <CarrinhoProvider>
         {children}
         <InstallPWABanner />
+        <ModoTesteAviso />
       </CarrinhoProvider>
     </Suspense>
   );
@@ -378,6 +381,7 @@ export default function App() {
           <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
           <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
           <Route path="admin/indicadores"   element={<RequireAdmin><AdminIndicadores /></RequireAdmin>} />
+          <Route path="admin/testadores"    element={<RequireAdmin><AdminTestadores /></RequireAdmin>} />
           <Route path="admin/direta"             element={<RequireAdmin><DiretaDashboardAdmin /></RequireAdmin>} />
           <Route path="admin/direta/vendas"      element={<RequireAdmin><DiretaVendasAdmin /></RequireAdmin>} />
           <Route path="admin/direta/contabilidades" element={<RequireAdmin><DiretaContabilidadesAdmin /></RequireAdmin>} />

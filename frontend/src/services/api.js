@@ -10,6 +10,11 @@ api.interceptors.request.use(config => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Testador (conta de cliente marcada pelo admin): as rotas públicas
+  // precisam da sessão do /meu pra mostrar as lojas de teste.
+  const cliente = localStorage.getItem('seci_painel_token');
+  const url = String(config.url || '');
+  if (cliente && (url.startsWith('/public/') || url.startsWith('public/'))) config.headers['x-cliente-token'] = cliente;
   return config;
 });
 

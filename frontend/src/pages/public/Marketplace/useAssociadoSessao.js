@@ -17,18 +17,30 @@ import { limparSacola } from '../Pedido/sacola';
 // o Authorization com o `movv_token` do portal interno e desloga em 401,
 // o que corromperia essa sessão pública em qualquer navegador onde o mesmo
 // dispositivo também logou como parceiro/admin.
+// Acesso de testador: guarda na sessão se o modo teste está ligado, pro aviso
+// "Modo teste" (ModoTesteAviso) aparecer sem outra consulta ao servidor.
+function marcarModoTeste(ligado) {
+  try {
+    const antes = sessionStorage.getItem('iub_modo_teste') === '1';
+    sessionStorage.setItem('iub_modo_teste', ligado ? '1' : '0');
+    if (antes !== ligado) window.dispatchEvent(new Event('iub:modo-teste'));
+  } catch { /* sem storage: sem aviso */ }
+}
+
 export function useAssociadoSessao() {
   const [associado, setAssociado] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
   const carregarDoToken = useCallback(async () => {
-    if (!getPainelToken()) { setAssociado(null); return; }
+    if (!getPainelToken()) { setAssociado(null); marcarModoTeste(false); return; }
     try {
       const res = await apiPainel.get('/public/painel/me');
       setAssociado(res.data);
+      marcarModoTeste(Boolean(res.data?.modo_teste));
     } catch {
       setPainelToken(null);
       setAssociado(null);
+      marcarModoTeste(false);
     }
   }, []);
 
