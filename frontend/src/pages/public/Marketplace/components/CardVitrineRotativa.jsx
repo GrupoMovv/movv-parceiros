@@ -54,7 +54,7 @@ export default function CardVitrineRotativa({ produto }) {
               <p className="text-gray-400 text-xs line-through">{formatarPreco(pp.riscado)}</p>
               <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5" style={{ color: DOURADO }}>
-                <Diamond size={10} weight="fill" /> {pp.tipo === 'fecha_mes' ? 'Fecha Mês' : 'assoc'}
+                <Diamond size={10} weight="fill" /> {pp.tipo === 'fecha_mes' ? 'Fecha Mês' : 'preço Clube'}
               </span>
             </>
           ) : (

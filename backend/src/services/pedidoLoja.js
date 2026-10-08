@@ -186,7 +186,7 @@ async function resolverItem(entrada, ctx) {
     // Promoção exclusiva: só quem tem o benefício ativo compra (antes o
     // servidor ignorava a marca e qualquer pessoa comprava — correção 07/10).
     if (p.exclusivo_associado && !ctx.associadoAtivo) {
-      throw new ErroPedido(403, 'SO_ASSOCIADO', 'Esta promoção é exclusiva para associados com o benefício ativo.');
+      throw new ErroPedido(403, 'SO_ASSOCIADO', 'Esta promoção é só para quem é do Clube MAIS+.');
     }
     const escolhido = menorPreco([
       { preco: p.preco_por, tipo: 'promocao' },

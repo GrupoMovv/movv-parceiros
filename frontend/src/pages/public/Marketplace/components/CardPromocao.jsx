@@ -81,7 +81,7 @@ export default function CardPromocao({ produto: promocao, className = '', style 
           <p className="font-bold text-lg leading-tight" style={{ color: ROXO }}>{formatarPreco(pp.principal)}</p>
           {pp.tipo === 'associado' && (
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5" style={{ color: DOURADO }}>
-              <Diamond size={10} weight="fill" /> assoc
+              <Diamond size={10} weight="fill" /> preço Clube
             </span>
           )}
           {pp.chamadaAssociado && (

@@ -29,8 +29,8 @@ const MENSAGENS = {
     const hoje = a.venceu_hoje;
     return `Olá, ${primeiroNome(a.nome_completo)}!\n\nSua carteirinha de associado(a) SECI no *IUB MAIS+* ${hoje ? '*vence hoje*' : `venceu em *${fmtData(a.carteirinha_valida_ate)}*`}.\n\nRenove agora pra não perder seus descontos — é só informar o CNPJ da empresa onde você trabalha:\n${URL_PAINEL}`;
   },
-  renovada: a => `✅ Carteirinha renovada, ${primeiroNome(a.nome_completo)}!\n\nSeus descontos de associado(a) SECI no *IUB MAIS+* estão garantidos até *${fmtData(a.carteirinha_valida_ate)}*.\n\n${URL_PAINEL}`,
-  ativada: a => `🎊 Bem-vindo(a) associado(a) SECI, ${primeiroNome(a.nome_completo)}!\n\nSeus descontos exclusivos no *IUB MAIS+* já estão ativos e sua carteirinha digital vale até *${fmtData(a.carteirinha_valida_ate)}*.\n\n${URL_PAINEL}`,
+  renovada: a => `✅ Carteirinha renovada, ${primeiroNome(a.nome_completo)}!\n\nSeus preços Clube no *IUB MAIS+* estão garantidos até *${fmtData(a.carteirinha_valida_ate)}*.\n\n${URL_PAINEL}`,
+  ativada: a => `🎊 Bem-vindo(a) associado(a) SECI, ${primeiroNome(a.nome_completo)}!\n\nSeus preços Clube no *IUB MAIS+* já estão ativos e sua carteirinha digital vale até *${fmtData(a.carteirinha_valida_ate)}*.\n\n${URL_PAINEL}`,
 };
 
 // Registra e envia um aviso. Devolve 'enviado' | 'ja_enviado' | 'falhou'.
