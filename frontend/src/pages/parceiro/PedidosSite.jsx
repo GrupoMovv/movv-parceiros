@@ -182,6 +182,14 @@ export default function PedidosSite() {
         <p className="text-sm" style={{ color: PRETO }}>
           Os avisos chegam em: <strong>{config.whatsapps_aviso.length ? config.whatsapps_aviso.join(' e ') : 'nenhum WhatsApp cadastrado'}</strong>
         </p>
+        <p className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          {(config.catalogos.includes('geral') || !config.catalogos.includes('beer')) && (
+            <Link to="/parceiro/painel/perfil#whatsapp" className="font-semibold underline" style={{ color: ROXO }}>Trocar número</Link>
+          )}
+          {config.catalogos.includes('beer') && (
+            <Link to="/parceiro/painel/beer" className="font-semibold underline" style={{ color: ROXO }}>Trocar o número do Disk Bebidas</Link>
+          )}
+        </p>
         <ol className="mt-4 space-y-3 text-sm text-slate-700 list-decimal pl-5">
           <li>
             <strong>Salve o número do IUB MAIS+ nos seus contatos</strong>

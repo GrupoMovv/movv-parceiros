@@ -55,6 +55,17 @@ export default function ParceiroPerfil() {
   const [arrastando, setArrastando] = useState(false);
   const fotosInputRef = useRef(null);
 
+  // Veio do "Trocar número" (Configurar pedidos): rola até o WhatsApp e foca.
+  useEffect(() => {
+    if (!perfil || window.location.hash !== '#whatsapp') return;
+    const t = setTimeout(() => {
+      const el = document.getElementById('whatsapp');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.querySelector('input')?.focus({ preventScroll: true });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [perfil]);
+
   useEffect(() => {
     apiParceiro.get('/parceiro/perfil').then(res => {
       const p = res.data;
@@ -294,7 +305,10 @@ export default function ParceiroPerfil() {
             <Campo label="Cidade" value={form.cidade} onChange={v => setCampo('cidade', v)} />
             <Campo label="Estado" value={form.estado} onChange={v => setCampo('estado', v.toUpperCase().slice(0, 2))} />
           </div>
-          <Campo label="WhatsApp (obrigatório)" value={form.whatsapp} onChange={v => setCampo('whatsapp', formatarTelefone(v))} placeholder="(64) 99999-9999" />
+          {/* #whatsapp: o link "Trocar número" de Configurar pedidos abre aqui */}
+          <div id="whatsapp" className="scroll-mt-32">
+            <Campo label="WhatsApp (obrigatório)" value={form.whatsapp} onChange={v => setCampo('whatsapp', formatarTelefone(v))} placeholder="(64) 99999-9999" />
+          </div>
           <Campo label="Telefone fixo (opcional)" value={form.telefone_fixo} onChange={v => setCampo('telefone_fixo', formatarTelefone(v))} placeholder="(64) 3333-3333" />
           <Campo label="Instagram (opcional)" value={form.instagram} onChange={v => setCampo('instagram', v.replace(/^@/, ''))} placeholder="seu.perfil" />
           <Campo label="URL do Google Maps (opcional)" value={form.google_maps_url} onChange={v => setCampo('google_maps_url', v)} />
