@@ -11,21 +11,21 @@ const dataHora = d => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/S
 
 function Linha({ c, onMudar, mudando }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-3 border-b border-white/10 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-3 border-b border-slate-100 last:border-0">
       <div className="flex-1 min-w-0">
-        <p className="text-white font-semibold text-sm truncate">{c.nome_completo}</p>
-        <p className="text-white/50 text-xs">
+        <p className="text-slate-800 font-semibold text-sm truncate">{c.nome_completo}</p>
+        <p className="text-slate-500 text-xs">
           {c.tipo_acesso === 'seci' ? 'Associado SECI' : 'Cliente'} · CPF {c.cpf || '—'} · WhatsApp {c.whatsapp || '—'}
         </p>
-        {c.testador_ativo && <p className="text-amber-300 text-xs mt-0.5">🧪 Testador até {data(c.testador_ate)}</p>}
+        {c.testador_ativo && <p className="text-amber-700 text-xs mt-0.5 font-semibold">🧪 Testador até {data(c.testador_ate)}</p>}
         {c.ultimo_registro && (
-          <p className="text-white/40 text-[11px] mt-0.5">
+          <p className="text-slate-400 text-[11px] mt-0.5">
             Último: {c.ultimo_registro.acao} em {dataHora(c.ultimo_registro.em)}{c.ultimo_registro.por ? ` por ${c.ultimo_registro.por}` : ''}
           </p>
         )}
       </div>
       <button type="button" disabled={mudando === c.id} onClick={() => onMudar(c, !c.testador_ativo)}
-        className={`text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50 ${c.testador_ativo ? 'bg-white/10 text-white' : 'bg-amber-400 text-amber-950'}`}>
+        className={`text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50 ${c.testador_ativo ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-amber-400 text-amber-950 hover:bg-amber-300'}`}>
         {c.testador_ativo ? 'Desligar' : 'Ligar por 30 dias'}
       </button>
     </div>
@@ -59,28 +59,28 @@ export default function AdminTestadores() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-white text-2xl font-bold flex items-center gap-2"><FlaskConical className="w-6 h-6" /> Testadores</h1>
-        <p className="text-white/60 text-sm mt-1">
+        <h1 className="text-slate-900 text-2xl font-bold flex items-center gap-2"><FlaskConical className="w-6 h-6" /> Testadores</h1>
+        <p className="text-slate-500 text-sm mt-1">
           Conta de cliente marcada como testador vê e compra nas lojas de teste, sem a senha de admin. A marca vale 30 dias e desliga sozinha.
           No site aparece o aviso "Modo teste".
         </p>
       </div>
 
-      <div className="card p-5">
-        <h2 className="text-white font-semibold text-sm mb-2">Testadores ativos ({dados.ativos.length})</h2>
-        {dados.ativos.length === 0 ? <p className="text-white/50 text-sm">Nenhum.</p>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 className="text-slate-800 font-semibold text-sm mb-2">Testadores ativos ({dados.ativos.length})</h2>
+        {dados.ativos.length === 0 ? <p className="text-slate-500 text-sm">Nenhum.</p>
           : dados.ativos.map(c => <Linha key={c.id} c={c} onMudar={mudar} mudando={mudando} />)}
       </div>
 
-      <div className="card p-5">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
         <form onSubmit={e => { e.preventDefault(); carregar(q); }} className="flex gap-2">
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Nome, CPF ou WhatsApp da conta"
-            className="flex-1 px-3 py-2.5 text-sm rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/40" />
+            className="flex-1 px-3 py-2.5 text-sm rounded-xl bg-white border border-slate-300 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300" />
           <button type="submit" className="btn-primary flex items-center gap-1.5 text-sm"><Search className="w-4 h-4" /> Buscar</button>
         </form>
         {q.trim().length >= 3 && (
           <div className="mt-3">
-            {dados.busca.length === 0 ? <p className="text-white/50 text-sm">Nenhuma conta encontrada.</p>
+            {dados.busca.length === 0 ? <p className="text-slate-500 text-sm">Nenhuma conta encontrada.</p>
               : dados.busca.map(c => <Linha key={c.id} c={c} onMudar={mudar} mudando={mudando} />)}
           </div>
         )}
