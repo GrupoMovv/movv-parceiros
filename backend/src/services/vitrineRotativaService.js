@@ -114,7 +114,13 @@ async function obterVitrineRotativa() {
   if (expirado || cache.produtos.length === 0) {
     cache = { geradoEm: Date.now(), produtos: await gerarRotacao() };
   }
-  return cache;
+  // A fila fica 4h guardada; loja pausada (ou marcada como teste) nesse
+  // meio-tempo sai na hora — não espera a fila ser refeita (achado 08/10).
+  const visiveis = new Set((await db.query(
+    "SELECT id FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste"
+  )).rows.map(r => r.id));
+  const produtos = cache.produtos.filter(p => visiveis.has(p.parceiro_id));
+  return { ...cache, produtos };
 }
 
 module.exports = { obterVitrineRotativa };

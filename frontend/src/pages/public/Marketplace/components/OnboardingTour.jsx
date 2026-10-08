@@ -5,7 +5,7 @@ import { ROXO, DOURADO } from '../theme';
 const SLIDES = [
   {
     icon: Diamond,
-    titulo: 'Bem-vindo ao IUB MAIS!',
+    titulo: 'Bem-vindo ao IUB MAIS+!',
     texto: 'Você é do Clube MAIS+ — seus preços Clube já aparecem em tudo, automaticamente.',
   },
   {

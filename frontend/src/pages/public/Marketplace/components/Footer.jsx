@@ -12,7 +12,7 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-2 mb-2.5">
             <img src="/iub-logo-sm.png" alt="IUB" className="h-6 w-auto rounded-lg" />
-            <span className="font-bold text-sm">IUB MAIS</span>
+            <span className="font-bold text-sm">IUB MAIS+</span>
           </div>
           <p className="text-white/50 text-xs leading-relaxed max-w-xs">
             Mais qualidade. Mais confiança. Mais vantagens. Preço menor pra quem é do Clube MAIS+.

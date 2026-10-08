@@ -79,7 +79,7 @@ export default function PromocaoDetalhe() {
 
   const mensagemFallback = useMemo(() => {
     if (!promocao) return '';
-    return `Olá! Vi a promoção "${promocao.titulo}" no IUB MAIS e tenho interesse. Ainda dá tempo de garantir?`;
+    return `Olá! Vi a promoção "${promocao.titulo}" no IUB MAIS+ e tenho interesse. Ainda dá tempo de garantir?`;
   }, [promocao]);
 
   async function handleWhatsappClick() {
@@ -260,7 +260,7 @@ export default function PromocaoDetalhe() {
                         Sou do Clube — Entrar
                       </button>
                     )}
-                    <Link to="/clube" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
+                    <Link to="/clube?origem=promocao#avisar" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
                       Quero entrar no Clube
                     </Link>
                   </div>

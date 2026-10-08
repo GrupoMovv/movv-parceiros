@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  ChevronRight, Heart, Share2, Star, MapPin, MessageCircle, ImageOff, Loader2, PackageX, CheckCircle2, Bookmark,
+  ChevronRight, Heart, Share2, MapPin, MessageCircle, ImageOff, Loader2, PackageX, CheckCircle2, Bookmark,
 } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
 import api from '../../../services/api';
@@ -62,7 +62,7 @@ export default function ProdutoDetalhe() {
 
   const mensagemWhatsapp = useMemo(() => {
     if (!produto) return '';
-    return `Olá! Vi seu produto ${produto.nome} no IUB MAIS e tenho interesse. Poderia me passar mais informações?`;
+    return `Olá! Vi seu produto ${produto.nome} no IUB MAIS+ e tenho interesse. Poderia me passar mais informações?`;
   }, [produto]);
 
   // Abre a aba em branco de forma síncrona (dentro do gesto de clique) e só
@@ -240,7 +240,7 @@ export default function ProdutoDetalhe() {
                         Sou do Clube — Entrar
                       </button>
                     )}
-                    <Link to="/clube" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
+                    <Link to="/clube?origem=produto#avisar" className="text-xs font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: DOURADO, color: '#92700C' }}>
                       Quero entrar no Clube
                     </Link>
                   </div>
@@ -340,10 +340,6 @@ export default function ProdutoDetalhe() {
             {produto.parceiro_endereco && (
               <p className="text-slate-400 text-xs mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" /> {produto.parceiro_bairro ? `${produto.parceiro_bairro}, ` : ''}{produto.parceiro_cidade}</p>
             )}
-            <div className="flex items-center gap-0.5 mt-1">
-              {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="w-3 h-3" style={{ color: DOURADO }} fill={DOURADO} />)}
-              <span className="text-[10px] text-slate-400 ml-1">4.9</span>
-            </div>
           </div>
           <Link to={`/marketplace/parceiro/${produto.parceiro_slug}`} className="text-xs font-semibold whitespace-nowrap flex-shrink-0" style={{ color: ROXO }}>
             Ver perfil completo →

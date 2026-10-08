@@ -106,7 +106,7 @@ export default function TopNav({
       <div className="h-[68px] flex items-center gap-3 sm:gap-5 max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 w-full">
         <Link to="/marketplace" onClick={irParaInicio} className="flex items-center gap-2 flex-shrink-0">
           <img src="/iub-logo-sm.png" alt="IUB" className="h-10 w-auto rounded-lg" />
-          <span className="hidden lg:inline font-black text-sm tracking-tight text-white">IUB MAIS</span>
+          <span className="hidden lg:inline font-black text-sm tracking-tight text-white">IUB MAIS+</span>
         </Link>
 
         <form
@@ -323,7 +323,7 @@ export default function TopNav({
             Clube MAIS+ 💎
           </Link>
           <Link to="/vender" className="flex-shrink-0 whitespace-nowrap text-xs font-semibold px-2 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-slate-600 hover:text-slate-900 ml-auto">
-            Vender no IUB MAIS
+            Vender no IUB MAIS+
           </Link>
         </nav>
       </div>

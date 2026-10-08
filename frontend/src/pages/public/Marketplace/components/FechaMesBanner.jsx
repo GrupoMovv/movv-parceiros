@@ -40,7 +40,7 @@ export default function FechaMesBanner({ info }) {
         style={{ background: `linear-gradient(90deg, ${VERMELHO} 0%, ${DOURADO_ESCURO} 100%)` }}
       >
         <span className="flex items-center gap-2 font-black text-sm sm:text-base uppercase tracking-wide">
-          <Fire size={20} weight="fill" /> Fecha Mês do IUB MAIS — HOJE!
+          <Fire size={20} weight="fill" /> Fecha Mês do IUB MAIS+ — HOJE!
         </span>
         <span className="text-xs sm:text-sm font-medium text-white/90">Descontos exclusivos até 23:59</span>
         <span

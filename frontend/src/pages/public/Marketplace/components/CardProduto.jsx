@@ -27,7 +27,10 @@ export default function CardProduto({ produto, badge, className = '', style }) {
   const pp = precoDoProduto(produto, ehAssociado);
   const mostrarNovo = badge === 'novo' && ehNovo(produto.created_at);
   // selo: o desconto que a pessoa tem AGORA; quem não é associado vê "-X% SECI"
-  const descontoPct = pp.descontoPct ?? produto.desconto_pct;
+  // Só o desconto que ESTA pessoa tem agora. O desconto_pct do servidor é o
+  // do Clube: mostrado a quem não é do Clube virava '-X% OFF' dourado com a
+  // pessoa pagando o preço cheio (achado no teste de 08/10).
+  const descontoPct = pp.descontoPct ?? null;
   const pctSeci = pp.chamadaAssociado ? Math.round((1 - pp.chamadaAssociado / Number(produto.preco)) * 100) : null;
   const { adicionar, remover, estaNoCarrinho } = useCarrinho();
   const noCarrinho = estaNoCarrinho(produto.id);

@@ -24,7 +24,7 @@ function foiDispensadoRecentemente() {
 
 const TEXTOS = {
   marketplace: {
-    titulo: '📲 Instale o IUB MAIS no seu celular',
+    titulo: '📲 Instale o IUB MAIS+ no seu celular',
     subtitulo: 'Acesso rápido a todos os produtos!',
   },
   parceiro: {

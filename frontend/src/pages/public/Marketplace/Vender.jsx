@@ -73,7 +73,7 @@ const PASSOS = [
 ];
 
 const FAQ = [
-  { p: 'Preciso pagar alguma coisa?', r: 'Não! O IUB MAIS é 100% gratuito. Nossa missão é fortalecer o comércio de Itumbiara, então não cobramos mensalidade nem comissão dos parceiros.' },
+  { p: 'Preciso pagar alguma coisa?', r: 'Não! O IUB MAIS+ é 100% gratuito. Nossa missão é fortalecer o comércio de Itumbiara, então não cobramos mensalidade nem comissão dos parceiros.' },
   { p: 'Quanto tempo demora a aprovação?', r: 'Até 24h úteis depois do envio do cadastro.' },
   { p: 'Como recebo os clientes?', r: 'Direto no seu WhatsApp — sem intermediário.' },
   { p: 'Posso cancelar quando quiser?', r: 'Sim, quando quiser, sem burocracia.' },
@@ -448,7 +448,7 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
           <span className="text-4xl">🌆</span>
           <h2 className="text-2xl sm:text-3xl font-extrabold mt-4" style={{ color: PRETO }}>Fortalecer o comércio local</h2>
           <p className="text-slate-600 text-sm sm:text-base leading-relaxed mt-5 whitespace-pre-line">
-            {'O IUB MAIS nasceu com um propósito: fortalecer o comércio de Itumbiara. Enquanto grandes marketplaces levam vendas pra fora da cidade, criamos um espaço onde o comerciante local tem visibilidade, o consumidor encontra o que precisa perto de casa, e nossa cidade se fortalece.\n\nPor isso, não cobramos nada dos parceiros. Nossa recompensa é ver Itumbiara crescendo.'}
+            {'O IUB MAIS+ nasceu com um propósito: fortalecer o comércio de Itumbiara. Enquanto grandes marketplaces levam vendas pra fora da cidade, criamos um espaço onde o comerciante local tem visibilidade, o consumidor encontra o que precisa perto de casa, e nossa cidade se fortalece.\n\nPor isso, não cobramos nada dos parceiros. Nossa recompensa é ver Itumbiara crescendo.'}
           </p>
           <p className="text-slate-400 text-xs font-semibold mt-6">— Junior, fundador</p>
         </div>
@@ -536,7 +536,7 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
 
       <section className="mt-4" style={{ backgroundColor: ROXO_ESCURO }}>
         <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Pronto pra vender no IUB MAIS?</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Pronto pra vender no IUB MAIS+?</h2>
           <button
             onClick={onComecar}
             className="inline-block mt-8 text-base font-bold px-10 py-4 rounded-xl transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-xl"
@@ -787,7 +787,7 @@ function TelaFormulario({ segmento, etapa, passos, form, setCampo, beer, setCamp
                   checked={form.termos_aceitos} onChange={e => setCampo('termos_aceitos', e.target.checked)}
                 />
                 <span className="text-xs text-slate-500 leading-relaxed">
-                  Declaro que sou o responsável legal por este comércio e concordo com os termos de uso do IUB MAIS.
+                  Declaro que sou o responsável legal por este comércio e concordo com os termos de uso do IUB MAIS+.
                 </span>
               </label>
             </Etapa>
@@ -1011,7 +1011,7 @@ function TelaConfirmacao({ bebidas, onVoltar }) {
           </p>
         )}
         <p className="font-semibold text-sm sm:text-base mt-5" style={{ color: DOURADO }}>
-          Bem-vindo(a) ao movimento IUB MAIS. Juntos vamos fortalecer o comércio da nossa cidade!
+          Bem-vindo(a) ao movimento IUB MAIS+. Juntos vamos fortalecer o comércio da nossa cidade!
         </p>
         <p className="text-white/70 text-xs sm:text-sm mt-5">
           Dúvidas?{' '}

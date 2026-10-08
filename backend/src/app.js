@@ -107,6 +107,7 @@ app.use('/api/public/entregadores',    require('./routes/entregadores'));
 app.use('/api/public/verificar-cnpj-seci', require('./routes/baseSeciPublico'));
 app.use('/api/public/conta',           require('./routes/conta'));
 app.use('/api/public/pet',             require('./routes/pet'));
+app.use('/api/public/clube',           require('./routes/clubePublico'));
 app.use('/api/public/meus-pets',       require('./routes/meusPets'));
 app.use('/api/public/pedidos',         require('./routes/pedidos'));
 app.use('/api/public/pedido-loja',     require('./routes/pedidoLoja'));
