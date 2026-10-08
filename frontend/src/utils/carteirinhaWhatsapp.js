@@ -91,7 +91,8 @@ SECI — Sindicato do Comércio de Itumbiara`;
 // direto — o domínio do frontend não serve esse arquivo, ver migration
 // 016_sindicato_beneficios_link_pdf_backend_direto.sql).
 export function publicBeneficiosPdfUrl() {
-  return `${backendOrigin()}/api/public/beneficios/catalogo.pdf`;
+  // Convênios agora só com login (08/10): o link abre /meu/convenios.
+  return `${window.location.origin}/meu/convenios`;
 }
 
 // Mensagem da tela final do autocadastro público (/cadastrar e reenvio):

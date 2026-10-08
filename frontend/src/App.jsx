@@ -71,7 +71,6 @@ const BeerTodasCategorias = lazy(() => import('./pages/beer/TodasCategoriasPage'
 const Favoritos = lazy(() => import('./pages/public/Marketplace/Favoritos'));
 const Entregadores = lazy(() => import('./pages/public/Marketplace/Entregadores'));
 const Clube = lazy(() => import('./pages/public/Marketplace/Clube'));
-const MarketplaceParceiro = lazy(() => import('./pages/public/Marketplace/ParceiroDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
 const MarketplaceCarrinho = lazy(() => import('./pages/public/Marketplace/CarrinhoPage'));
@@ -98,6 +97,7 @@ import MeuDados from './pages/public/Cadastro/MeuDados';
 import MeuDependentes from './pages/public/Cadastro/MeuDependentes';
 import MeusPets from './pages/public/Cadastro/MeusPets';
 import MeusPedidos from './pages/public/Cadastro/MeusPedidos';
+import MeusConvenios from './pages/public/Cadastro/MeusConvenios';
 import MeuPedidoDetalhe from './pages/public/Cadastro/MeuPedidoDetalhe';
 import MinhasCarteirinhas from './pages/public/Cadastro/MinhasCarteirinhas';
 import ParceiroRedefinirSenha from './pages/parceiro/RedefinirSenha';
@@ -275,7 +275,9 @@ export default function App() {
         <Route path="/favoritos"                  element={<MarketplaceFallback><Favoritos /></MarketplaceFallback>} />
         <Route path="/entregadores"               element={<MarketplaceFallback><Entregadores /></MarketplaceFallback>} />
         <Route path="/clube"                    element={<MarketplaceFallback><Clube /></MarketplaceFallback>} />
-        <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><MarketplaceParceiro /></MarketplaceFallback>} />
+        {/* Página antiga dos convênios (lista fixa): saiu do ar em 08/10 — agora
+            só o associado vê, em /meu/convenios. Link antigo volta pra home. */}
+        <Route path="/marketplace/parceiro/:slug" element={<Navigate to="/marketplace" replace />} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
         <Route path="/marketplace/carrinho"       element={<MarketplaceFallback><MarketplaceCarrinho /></MarketplaceFallback>} />
@@ -311,6 +313,7 @@ export default function App() {
           <Route path="cupons" element={<MeuCupons />} />
           <Route path="pets" element={<MeusPets />} />
           <Route path="pedidos" element={<MeusPedidos />} />
+          <Route path="convenios" element={<MeusConvenios />} />
           <Route path="pedidos/:id" element={<MeuPedidoDetalhe />} />
           {/* Qualquer sub-rota não mapeada aqui (ex.: /meu/login, que
               nunca existiu mas as pessoas tentam por analogia com

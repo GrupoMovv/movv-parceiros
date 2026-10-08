@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X, Gift, PawPrint } from 'lucide-react';
+import { Home, User, Users2, CreditCard, ShoppingBag, LogOut, Menu, X, Gift, PawPrint, Tag } from 'lucide-react';
 import apiPainel, { getPainelToken, setPainelToken } from '../../../services/apiPainel';
 import { limparSacola } from '../Pedido/sacola';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
@@ -21,6 +21,7 @@ const LINKS = [
   { to: '/meu/dados', label: 'Meus Dados', icon: User },
   { to: '/meu/dependentes', label: 'Dependentes', icon: Users2, soAssociado: true },
   { to: '/meu/carteirinhas', label: 'Carteirinhas', icon: CreditCard, soAssociado: true },
+  { to: '/meu/convenios', label: '🤝 Meus convênios', icon: Tag, soAssociado: true },
   { to: '/meu/pedidos', label: '🛍️ Meus Pedidos', icon: ShoppingBag },
   { to: '/meu/cupons', label: '🎁 Meus Cupons', icon: Gift },
   { to: '/meu/pets', label: '🐾 Meus Pets', icon: PawPrint },

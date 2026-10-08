@@ -7,7 +7,7 @@ import {
 import apiPainel from '../../../services/apiPainel';
 import api, { assetUrl } from '../../../services/api';
 import {
-  publicCarteirinhaUrl, publicBeneficiosPdfUrl, montarMensagemCadastroPublico, linkWhatsappComTexto,
+  publicCarteirinhaUrl, montarMensagemCadastroPublico, linkWhatsappComTexto,
 } from '../../../utils/carteirinhaWhatsapp';
 import AvatarPlaceholder from '../../../components/AvatarPlaceholder';
 import MascoteIubMais from '../../../components/MascoteIubMais';
@@ -171,9 +171,9 @@ export default function MeuPainel() {
         </Link>
 
         {associado && (
-          <a href={publicBeneficiosPdfUrl()} target="_blank" rel="noreferrer" className="block">
-            <CardAcao icon={<Gift className="w-4 h-4" />} titulo="Ver benefícios" sub="Catálogo completo em PDF" />
-          </a>
+          <Link to="/meu/convenios" className="block">
+            <CardAcao icon={<Gift className="w-4 h-4" />} titulo="Meus convênios" sub="Convênios do SECI e catálogo em PDF" />
+          </Link>
         )}
       </div>
     </div>

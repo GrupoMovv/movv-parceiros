@@ -4,6 +4,12 @@ const { simpleRateLimit } = require('../middleware/rateLimit');
 const { authenticatePainelPublico } = require('../middleware/painelPublicoAuth');
 const ctrl = require('../controllers/publicPainelController');
 const contaCtrl = require('../controllers/contaController');
+const path = require('path');
+const fs = require('fs');
+const db = require('../config/database');
+const { situacaoDoAssociado } = require('../services/beneficioAssociado');
+
+const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -35,6 +41,29 @@ router.post('/whatsapp/confirmar', ctrl.confirmarWhatsapp);
 // Ativar desconto (cliente) / renovar carteirinha (associado) pelo CNPJ.
 router.post('/empresa', contaCtrl.vincularEmpresa);
 router.post('/reenviar-carteirinha', somenteAssociadoSeci, ctrl.reenviarCarteirinha);
+
+// Convênios exclusivos do SECI (parte "e" do Clube, 08/10): só o associado
+// logado vê — nada disso aparece no marketplace público.
+router.get('/convenios', somenteAssociadoSeci, async (req, res) => {
+  try {
+    const convenios = (await db.query(
+      'SELECT slug, nome, categoria, icone, descricao, beneficio, whatsapp, endereco, instagram FROM seci_convenios WHERE ativo ORDER BY ordem, nome'
+    )).rows;
+    const s = await situacaoDoAssociado(req.painelAssociado.id);
+    return res.json({ convenios, situacao: s?.situacao || null, tem_pdf: fs.existsSync(CATALOGO_PDF_PATH) });
+  } catch (err) {
+    console.error('[convênios]', err.message);
+    return res.status(500).json({ error: 'Não deu para carregar os convênios agora.' });
+  }
+});
+// PDF de convênios, servido só com login de associado (antes: link público).
+router.get('/convenios/pdf', somenteAssociadoSeci, (req, res) => {
+  if (!fs.existsSync(CATALOGO_PDF_PATH)) return res.status(404).json({ error: 'Catálogo de convênios não encontrado' });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="convenios-seci.pdf"');
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.sendFile(CATALOGO_PDF_PATH);
+});
 router.post('/foto', upload.single('foto'), ctrl.uploadFoto);
 router.post('/dependentes',              somenteAssociadoSeci, ctrl.updateDependentes);
 router.post('/dependentes/adicionar',    somenteAssociadoSeci, ctrl.adicionarDependente);

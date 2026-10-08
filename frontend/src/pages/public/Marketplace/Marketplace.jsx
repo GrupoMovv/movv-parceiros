@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { assetUrl } from '../../../services/api';
-import { PARCEIROS_INICIAIS, normalizarCategoria } from './parceirosData';
 import { PRETO, ROXO } from './theme';
 import { Lightning, Trophy, Sparkle, Diamond, Storefront } from '@phosphor-icons/react';
 import TopNav from './components/TopNav';
@@ -9,7 +8,6 @@ import CategoriaFaixa from './components/CategoriaFaixa';
 import HeroBannerCarousel from './components/HeroBannerCarousel';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
 import SecaoProdutos from './components/SecaoProdutos';
-import SecaoParceiros from './components/SecaoParceiros';
 import SecaoResultadosBusca from './components/SecaoResultadosBusca';
 import CardPromocao from './components/CardPromocao';
 import VitrineRotativa from './components/VitrineRotativa';
@@ -20,7 +18,6 @@ import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
 import Reveal from './components/Reveal';
 import OnboardingTour from './components/OnboardingTour';
-import { useFavoritos } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import BannerAtivarSeci from './components/BannerAtivarSeci';
 import { useProdutosSecao, useParceirosCompactos, useBusca } from './useSecaoData';
@@ -31,7 +28,6 @@ export default function Marketplace() {
   const navigate = useNavigate();
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
-  const { alternar: alternarFavorito, ehFavorito } = useFavoritos();
   const { associado, ehAssociadoSeci, carregando: carregandoAssociado, logout, recarregar } = useAssociadoSessao();
 
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
@@ -82,9 +78,6 @@ export default function Marketplace() {
   // nem é usada pra renderizar (ver JSX), só continua existindo pro modo
   // sem busca (grade normal filtrada por categoria).
   const { produtos: produtosBusca, parceiros: parceirosBusca, carregando: carregandoBusca } = useBusca(searchQuery);
-
-  const parceirosFiltrados = PARCEIROS_INICIAIS
-    .filter(p => categoriaAtiva === 'Todas' || p.categorias.some(c => normalizarCategoria(c) === normalizarCategoria(categoriaAtiva)));
 
   function handleSearchSubmit() {
     document.querySelector('#parceiros')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -186,20 +179,15 @@ export default function Marketplace() {
       </div>
 
       <div id="parceiros" className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8 w-full flex-1 space-y-8 scroll-mt-16 mt-8">
-        {buscaAtiva ? (
+        {/* A grade "Compre de empresas de Itumbiara" saiu (08/10): era a lista
+            fixa dos convênios do SECI, que agora só o associado vê em
+            /meu/convenios. As lojas de verdade aparecem em "Lojas em Destaque". */}
+        {buscaAtiva && (
           <SecaoResultadosBusca
             termo={searchQuery.trim()}
             produtos={produtosBusca}
             parceiros={parceirosBusca}
             carregando={carregandoBusca}
-          />
-        ) : (
-          <SecaoParceiros
-            titulo={categoriaAtiva === 'Todas' ? 'Compre de empresas de Itumbiara' : categoriaAtiva}
-            parceiros={parceirosFiltrados}
-            ehFavorito={ehFavorito}
-            onToggleFavorito={alternarFavorito}
-            vazio="Nenhum parceiro encontrado."
           />
         )}
       </div>

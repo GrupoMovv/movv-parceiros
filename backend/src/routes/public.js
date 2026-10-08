@@ -1,6 +1,4 @@
 const router = require('express').Router();
-const fs = require('fs');
-const path = require('path');
 const db = require('../config/database');
 const { situacaoDoAssociado } = require('../services/beneficioAssociado');
 const produtoCtrl = require('../controllers/produtoPublicoController');
@@ -13,7 +11,6 @@ const { lerAdminOpcional } = require('../middleware/auth');
 // empresas de teste (utils/lojaVisivel.js). Nunca bloqueia.
 const qa = lerAdminOpcional;
 
-const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
 
 // Campos públicos da carteirinha digital: nunca inclui CPF, data de
 // nascimento ou celular (dado sensível — a página é acessada sem login,
@@ -97,15 +94,12 @@ async function buscarCarteirinhaPorHash(hash) {
   return null;
 }
 
-// Rota pública (sem autenticação) — link enviado pelo Renan via WhatsApp.
+// O PDF de convênios deixou de ser público (08/10): só o associado logado
+// abre, em /meu/convenios. Links antigos (WhatsApp do Renan, mensagens da
+// carteirinha) caem na página, que pede login.
 router.get('/beneficios/catalogo.pdf', (req, res) => {
-  if (!fs.existsSync(CATALOGO_PDF_PATH)) {
-    return res.status(404).json({ error: 'Catálogo de benefícios não encontrado' });
-  }
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'inline; filename="catalogo-beneficios-seci.pdf"');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.sendFile(CATALOGO_PDF_PATH);
+  const front = (process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/\/$/, '');
+  res.redirect(302, `${front}/meu/convenios`);
 });
 
 // Estatistica discreta pro hero do marketplace ("X associados") — so

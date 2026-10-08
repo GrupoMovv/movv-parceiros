@@ -65,7 +65,9 @@ export default function CategoriaFaixa({ categoriaAtiva, onSelecionar }) {
         return slug ? (
           <Link key={c.label} to={`/marketplace/categoria/${slug}`} className={className}>{conteudo}</Link>
         ) : (
-          <button key={c.label} type="button" onClick={() => onSelecionar(c.label)} className={className}>{conteudo}</button>
+          // Categoria sem página própria: mostra todos os produtos (a grade
+          // fixa que ela filtrava saiu em 08/10).
+          <Link key={c.label} to="/marketplace/categoria/todas" className={className}>{conteudo}</Link>
         );
       })}
     </div>
