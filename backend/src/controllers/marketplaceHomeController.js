@@ -120,11 +120,39 @@ async function getNovidades(req, res) {
   }
 }
 
-// Ranking por cliques no WhatsApp nos últimos 7 dias — se ninguém clicou
-// em nada no período, devolve lista vazia (o front simplesmente não
-// mostra a seção, não tem "mínimo de dados" arbitrário além disso).
+// "Mais Vendidos" (Junior, 08/10): conta os pedidos pelo site concluídos
+// (pago ou entregue) dos últimos 30 dias, só do catálogo geral; pedido de
+// loja de teste não conta. Enquanto houver menos de MIN_PRODUTOS_VENDIDOS
+// produtos vendidos no período, usa o critério antigo (cliques no WhatsApp
+// nos últimos 7 dias) e devolve fonte 'cliques' — o site muda o título.
+// Lista vazia: o front não mostra a seção.
+const MIN_PRODUTOS_VENDIDOS = 4;
 async function getMaisVendidos(req, res) {
   try {
+    const vendidos = (await db.query(
+      `WITH vendas AS (
+         SELECT COALESCE(i.produto_id, pm.produto_id) AS produto_id,
+                COUNT(DISTINCT p.id)::int AS pedidos, SUM(i.quantidade)::int AS unidades
+         FROM loja_pedido_itens i
+         JOIN loja_pedidos p ON p.id = i.pedido_id
+         JOIN sindicato_parceiros lp ON lp.id = p.parceiro_id
+         LEFT JOIN sindicato_parceiro_promocoes pm ON pm.id = i.promocao_id
+         WHERE p.catalogo = 'geral' AND i.origem IN ('produto', 'promocao')
+           AND p.status IN ('pago_saiu', 'entregue')
+           AND COALESCE(p.pago_saiu_em, p.entregue_em) >= NOW() - INTERVAL '30 days'
+           AND NOT lp.empresa_teste
+         GROUP BY 1
+       )
+       SELECT ${SELECT_PRODUTO}, v.pedidos, v.unidades
+       FROM vendas v
+       JOIN sindicato_parceiro_produtos pr ON pr.id = v.produto_id
+       JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
+       WHERE pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND pa.status = 'ativo' AND NOT pa.empresa_teste
+       ORDER BY v.pedidos DESC, v.unidades DESC, pr.created_at DESC
+       LIMIT 24`
+    )).rows;
+    if (vendidos.length >= MIN_PRODUTOS_VENDIDOS) return res.json({ produtos: vendidos, fonte: 'vendas' });
+
     const result = await db.query(
       `SELECT ${SELECT_PRODUTO}, COUNT(c.id)::int AS cliques
        FROM sindicato_parceiro_cliques c
@@ -136,7 +164,7 @@ async function getMaisVendidos(req, res) {
        ORDER BY cliques DESC, pr.created_at DESC
        LIMIT 24`
     );
-    return res.json({ produtos: result.rows });
+    return res.json({ produtos: result.rows, fonte: 'cliques' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar mais vendidos' });

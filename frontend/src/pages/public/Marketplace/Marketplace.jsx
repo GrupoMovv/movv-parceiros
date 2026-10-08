@@ -64,7 +64,9 @@ export default function Marketplace() {
   }, []);
 
   const { produtos: ofertas, carregando: carregandoOfertas } = useProdutosSecao('/public/marketplace/ofertas-semana', 'promocoes');
-  const { produtos: maisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
+  const { produtos: maisVendidos, dados: dadosMaisVendidos, carregando: carregandoMaisVendidos } = useProdutosSecao('/public/marketplace/mais-vendidos');
+  // Pedidos pagos/entregues; com pouca venda ainda, o backend usa os cliques no WhatsApp
+  const maisVendidosPorVenda = dadosMaisVendidos?.fonte !== 'cliques';
   const { produtos: novidades, carregando: carregandoNovidades } = useProdutosSecao('/public/marketplace/novidades');
   const { produtos: exclusivos, carregando: carregandoExclusivos } = useProdutosSecao('/public/marketplace/exclusivos-associados');
   const { parceiros: parceirosCompactos, carregando: carregandoParceiros } = useParceirosCompactos();
@@ -139,7 +141,9 @@ export default function Marketplace() {
           produtos={ofertas} carregando={carregandoOfertas} CardComponent={CardPromocao}
         />
         <SecaoProdutos
-          id="mais-vendidos" Icone={Trophy} titulo="Mais Vendidos"
+          id="mais-vendidos" Icone={Trophy}
+          titulo={maisVendidosPorVenda ? 'Mais Vendidos' : 'Mais procurados'}
+          subtitulo={maisVendidosPorVenda ? 'Os mais pedidos pelo site no último mês' : 'Os mais chamados no WhatsApp nesta semana'}
           produtos={maisVendidos} carregando={carregandoMaisVendidos}
         />
         <SecaoProdutos

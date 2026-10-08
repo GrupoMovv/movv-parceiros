@@ -6,18 +6,19 @@ import api from '../../../services/api';
 // resto da página (Bloco 8: "não bloquear render inicial").
 export function useProdutosSecao(endpoint, chave = 'produtos') {
   const [produtos, setProdutos] = useState([]);
+  const [dados, setDados] = useState(null); // resposta inteira (ex.: fonte do Mais Vendidos)
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     let ativo = true;
     api.get(endpoint)
-      .then(res => { if (ativo) setProdutos(res.data[chave]); })
+      .then(res => { if (ativo) { setProdutos(res.data[chave]); setDados(res.data); } })
       .catch(() => { if (ativo) setProdutos([]); })
       .finally(() => { if (ativo) setCarregando(false); });
     return () => { ativo = false; };
   }, [endpoint, chave]);
 
-  return { produtos, carregando };
+  return { produtos, dados, carregando };
 }
 
 // Não existe endpoint de "buscar produtos por lista de ids" — busca cada um
