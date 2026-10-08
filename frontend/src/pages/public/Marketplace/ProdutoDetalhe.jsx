@@ -341,6 +341,9 @@ export default function ProdutoDetalhe() {
               <p className="text-slate-400 text-xs mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" /> {produto.parceiro_bairro ? `${produto.parceiro_bairro}, ` : ''}{produto.parceiro_cidade}</p>
             )}
           </div>
+          <Link to={`/marketplace/parceiro/${produto.parceiro_slug}`} className="text-xs font-semibold whitespace-nowrap flex-shrink-0" style={{ color: ROXO }}>
+            Ver loja →
+          </Link>
         </div>
       </div>
 

@@ -71,6 +71,7 @@ const BeerTodasCategorias = lazy(() => import('./pages/beer/TodasCategoriasPage'
 const Favoritos = lazy(() => import('./pages/public/Marketplace/Favoritos'));
 const Entregadores = lazy(() => import('./pages/public/Marketplace/Entregadores'));
 const Clube = lazy(() => import('./pages/public/Marketplace/Clube'));
+const LojaDetalhe = lazy(() => import('./pages/public/Marketplace/LojaDetalhe'));
 const MarketplaceProduto = lazy(() => import('./pages/public/Marketplace/ProdutoDetalhe'));
 const MarketplacePromocao = lazy(() => import('./pages/public/Marketplace/PromocaoDetalhe'));
 const MarketplaceCarrinho = lazy(() => import('./pages/public/Marketplace/CarrinhoPage'));
@@ -275,9 +276,9 @@ export default function App() {
         <Route path="/favoritos"                  element={<MarketplaceFallback><Favoritos /></MarketplaceFallback>} />
         <Route path="/entregadores"               element={<MarketplaceFallback><Entregadores /></MarketplaceFallback>} />
         <Route path="/clube"                    element={<MarketplaceFallback><Clube /></MarketplaceFallback>} />
-        {/* Página antiga dos convênios (lista fixa): saiu do ar em 08/10 — agora
-            só o associado vê, em /meu/convenios. Link antigo volta pra home. */}
-        <Route path="/marketplace/parceiro/:slug" element={<Navigate to="/marketplace" replace />} />
+        {/* Página da loja (08/10). Antes mostrava os convênios escritos no
+            código (agora em /meu/convenios); slug que não é loja pública → 404 na tela. */}
+        <Route path="/marketplace/parceiro/:slug" element={<MarketplaceFallback><LojaDetalhe /></MarketplaceFallback>} />
         <Route path="/marketplace/produto/:id"    element={<MarketplaceFallback><MarketplaceProduto /></MarketplaceFallback>} />
         <Route path="/marketplace/promocao/:id"   element={<MarketplaceFallback><MarketplacePromocao /></MarketplaceFallback>} />
         <Route path="/marketplace/carrinho"       element={<MarketplaceFallback><MarketplaceCarrinho /></MarketplaceFallback>} />

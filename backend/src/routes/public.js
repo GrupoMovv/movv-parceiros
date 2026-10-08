@@ -144,6 +144,7 @@ router.get('/servicos/:slug', qa, marketplaceHomeCtrl.getServicoPorSlug);
 router.get('/marketplace/busca', qa, marketplaceHomeCtrl.getBusca);
 router.get('/marketplace/food', marketplaceHomeCtrl.getFood);
 router.get('/food/:slug', qa, marketplaceHomeCtrl.getFoodPorSlug);
+router.get('/lojas/:slug', qa, marketplaceHomeCtrl.getLojaPorSlug);
 router.get('/parceiros/master-por-categoria', marketplaceHomeCtrl.getMasterPorCategoria);
 router.get('/cupons/disponiveis', marketplaceHomeCtrl.getCuponsDisponiveis);
 

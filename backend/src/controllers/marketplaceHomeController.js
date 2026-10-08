@@ -622,7 +622,50 @@ async function getFoodPorSlug(req, res) {
   }
 }
 
+// Página da loja (/marketplace/parceiro/:slug no front, 08/10): dados,
+// horário, atendimento, produtos e promoções. Loja pausada ou de teste não
+// abre pra visitante (só no modo QA — utils/lojaVisivel.js).
+async function getLojaPorSlug(req, res) {
+  try {
+    const r = await db.query(
+      `SELECT id, slug, nome, logo_url, icone, categorias, categoria_principal, plano, plano_expira_em, cortesia_interna, e_pioneiro,
+              tipo_negocio, descricao, descricao_completa, endereco, bairro, cidade, whatsapp, instagram,
+              google_maps_url, fotos_estabelecimento, pet_servicos, horario_atendimento, ${SELECT_ENTREGA}
+       FROM sindicato_parceiros
+       WHERE slug = $1 AND ${lojaVisivel(req.modoQa, '')}`,
+      [req.params.slug]
+    );
+    const loja = r.rows[0];
+    if (!loja) return res.status(404).json({ error: 'Loja não encontrada' });
+    const produtos = (await db.query(
+      `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos, pr.created_at, pr.estoque_disponivel,
+              $2::text AS parceiro_nome, $3::text AS parceiro_slug
+       FROM sindicato_parceiro_produtos pr
+       WHERE pr.parceiro_id = $1 AND pr.ativo AND NOT pr.rascunho AND pr.moderacao_status = 'aprovado'
+       ORDER BY pr.destaque DESC, pr.created_at DESC
+       LIMIT 60`,
+      [loja.id, loja.nome, loja.slug]
+    )).rows;
+    const promocoes = (await db.query(
+      `SELECT pm.id, pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, pm.data_fim, pm.exclusivo_associado,
+              COALESCE(pm.foto_url, pr.fotos->0->>'url') AS foto_url, $2::text AS parceiro_nome, $3::text AS parceiro_slug
+       FROM sindicato_parceiro_promocoes pm
+       LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = pm.produto_id
+       WHERE pm.parceiro_id = $1 AND pm.ativo AND NOT pm.rascunho
+         AND (pm.data_inicio IS NULL OR pm.data_inicio <= NOW()) AND (pm.data_fim IS NULL OR pm.data_fim >= NOW())
+       ORDER BY pm.destaque DESC, pm.data_fim ASC`,
+      [loja.id, loja.nome, loja.slug]
+    )).rows;
+    const { id: _id, plano_expira_em: _e, cortesia_interna: _c, ...publico } = loja; // eslint-disable-line no-unused-vars
+    return res.json({ ...publico, plano: planoEfetivo(loja), e_restaurante: ehRestaurante(loja.categorias), produtos, promocoes });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar loja' });
+  }
+}
+
 module.exports = {
+  getLojaPorSlug,
   // usado também pela busca do /marketplace/pet (petController)
   sqlBoostBusca,
   getOfertasSemana,
