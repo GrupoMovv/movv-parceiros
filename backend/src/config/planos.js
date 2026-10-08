@@ -297,7 +297,15 @@ function precoAssinatura(plano, sindicalizada, metodo) {
   return final / 100;
 }
 
+// Preço menor dos planos (preco_sindicalizada): SUSPENSO desde 08/10/2026
+// (decisão do Junior, opção B). Antes valia para CNPJ em dia na Base SECI;
+// volta na parte (c) do Clube MAIS+ como preço de LOJA DO CLUBE. Os valores
+// continuam guardados em PLANOS. Com false, todo mundo paga o preço normal e
+// nenhuma tela do empresário fala em sindicato.
+const PRECO_LOJA_CLUBE_ATIVO = false;
+
 module.exports = {
+  PRECO_LOJA_CLUBE_ATIVO,
   PLANOS,
   PIONEIRO_VAGAS_TOTAL,
   planoValido,

@@ -1,5 +1,5 @@
 const { Resend } = require('resend');
-const { PLANOS, precoPlano, ehPlanoPf } = require('../config/planos');
+const { PRECO_LOJA_CLUBE_ATIVO, PLANOS, precoPlano, ehPlanoPf } = require('../config/planos');
 const { formatarPrecoBRL } = require('../utils/planos');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -252,10 +252,14 @@ async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindi
   // Sindicalização vem de sindicalizacaoService (consultada na aprovação, ver
   // parceiroSolicitacaoController) — se por algum motivo não foi calculada,
   // some com a caixa de preços em vez de arriscar mostrar dado errado.
+  // Preço menor suspenso (PRECO_LOJA_CLUBE_ATIVO): só a tabela com o preço
+  // normal, sem falar de sindicato.
+  if (!PRECO_LOJA_CLUBE_ATIVO && sindicalizada !== undefined && sindicalizada !== null) sindicalizada = false;
+  const statusSind = PRECO_LOJA_CLUBE_ATIVO;
   const blocoPrecos = sindicalizada === undefined || sindicalizada === null ? '' : `
     <div style="background:${sindicalizada ? '#f0fdf4' : '#fff8e8'};border-left:4px solid ${sindicalizada ? '#16A34A' : '#C9A84C'};padding:14px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
       <p style="margin:0 0 8px;font-size:13px;color:${sindicalizada ? '#166534' : '#7a5e00'};">
-        ${sindicalizada
+        ${!statusSind ? `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Preços dos planos pagos do IUB MAIS+:` : sindicalizada
           ? `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Status: <strong>SINDICALIZADA AO SECI ✅</strong> — você tem desconto exclusivo em todos os planos pagos do IUB MAIS.`
           : `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Status: <strong>NÃO SINDICALIZADA ⚠️</strong> — sindicalize-se ao SECI e ganhe desconto exclusivo nos planos pagos.`}
       </p>
@@ -265,7 +269,7 @@ async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindi
           <td style="padding:4px 0;font-size:13px;font-weight:700;text-align:right;color:#1a1a2e;">${formatarPrecoBRL(precoPlano(p, sindicalizada))}/mês</td>
         </tr>`).join('')}
       </table>
-      ${!sindicalizada ? `<p style="margin:10px 0 0;font-size:12px;color:#7a5e00;">Economize até ${formatarPrecoBRL(Math.max(...['oficial', 'premium', 'master'].map(p => PLANOS[p].preco_nao_sindicalizada - PLANOS[p].preco_sindicalizada)))}/mês sindicalizando. Fale com a gente pelo WhatsApp.</p>` : ''}
+      ${statusSind && !sindicalizada ? `<p style="margin:10px 0 0;font-size:12px;color:#7a5e00;">Economize até ${formatarPrecoBRL(Math.max(...['oficial', 'premium', 'master'].map(p => PLANOS[p].preco_nao_sindicalizada - PLANOS[p].preco_sindicalizada)))}/mês sindicalizando. Fale com a gente pelo WhatsApp.</p>` : ''}
     </div>`;
 
   const html = template(`

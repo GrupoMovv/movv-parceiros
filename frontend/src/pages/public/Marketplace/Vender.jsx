@@ -61,7 +61,7 @@ function vantagens(qtdAssociados) {
   return [
     { emoji: '🆓', titulo: '100% Gratuito', texto: 'Sem mensalidade, sem comissão. Anuncie até 30 produtos. Nossa missão: fortalecer o comércio de Itumbiara.' },
     { emoji: '💬', titulo: 'Cliente direto no seu WhatsApp', texto: 'Sem comissão, sem intermediário. Cliente fala com você.' },
-    { emoji: '💎', titulo: 'Público qualificado', texto: `Alcance ${qtdAssociados ? `+${qtdAssociados} ` : ''}associados SECI ativos + toda Itumbiara.` },
+    { emoji: '💎', titulo: 'Público qualificado', texto: `Alcance ${qtdAssociados ? `+${qtdAssociados} ` : ''}membros do Clube MAIS+ + toda Itumbiara.` },
     { emoji: '📊', titulo: 'Métricas em tempo real', texto: 'Veja quantos leads gerou, produtos mais vistos.' },
   ];
 }
@@ -961,8 +961,12 @@ function StatusConsultaReceita({ status, onConsultarNovamente }) {
 // desconto é uma regra de preço que já existe (config/planos.js), então o
 // texto não depende de o checkout estar ligado ou não. O "até X% OFF" vem do
 // endpoint (hoje 50%, do Oficial) pra não virar número chapado.
+// Preço menor dos planos (antes: empresa sindicalizada) SUSPENSO desde
+// 08/10/2026 — volta na parte (c) do Clube MAIS+ como preço de Loja do Clube.
+// Igual a PRECO_LOJA_CLUBE_ATIVO em backend/src/config/planos.js.
+const PRECO_LOJA_CLUBE_ATIVO = false;
 function AvisoSindicalizacao({ sindicalizacao }) {
-  if (!sindicalizacao) return null;
+  if (!PRECO_LOJA_CLUBE_ATIVO || !sindicalizacao) return null;
   const { eSindicalizada, offPct } = sindicalizacao;
   const cta = (
     <a

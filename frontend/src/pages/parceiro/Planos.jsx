@@ -122,6 +122,11 @@ function comDescontoCartao(precoMensal, descontoPct) {
   return Math.round(Math.round(precoMensal * 100) * (1 - descontoPct / 100)) / 100;
 }
 
+// Preço menor dos planos (antes: empresa sindicalizada) SUSPENSO desde
+// 08/10/2026 — volta na parte (c) do Clube MAIS+ como preço de Loja do Clube.
+// Igual a PRECO_LOJA_CLUBE_ATIVO em backend/src/config/planos.js.
+const PRECO_LOJA_CLUBE_ATIVO = false;
+
 // Modal de sindicalização: 1x por SESSÃO (fecha a aba, vê de novo).
 const CHAVE_MODAL_SINDICALIZACAO = 'iub_mais_planos_sindicalizacao_visto';
 
@@ -271,7 +276,7 @@ function PlanosEmpresa() {
   // honraria — quem decide o valor é o CNPJ, em assinaturaService.
   const [modalSindicalizacao, setModalSindicalizacao] = useState(null); // null | 'principal' | 'como'
   useEffect(() => {
-    if (!precosData || cortesia) return;
+    if (!PRECO_LOJA_CLUBE_ATIVO || !precosData || cortesia) return;
     if (jaViuModal(CHAVE_MODAL_SINDICALIZACAO)) return;
     marcarModalVisto(CHAVE_MODAL_SINDICALIZACAO);
     setModalSindicalizacao('principal');
@@ -357,7 +362,7 @@ function PlanosEmpresa() {
 
       {/* Com assinatura online o preço já vem calculado pro CNPJ da própria
           loja — a caixa de "verificar outro CNPJ" só faz sentido no modo antigo. */}
-      {!modoAssinatura && !cortesia && (
+      {PRECO_LOJA_CLUBE_ATIVO && !modoAssinatura && !cortesia && (
         <VerifiqueSeuPreco
           cnpjInput={cnpjInput}
           setCnpjInput={setCnpjInput}
@@ -366,7 +371,7 @@ function PlanosEmpresa() {
         />
       )}
 
-      {precosData?.cnpj_limpo && (
+      {PRECO_LOJA_CLUBE_ATIVO && precosData?.cnpj_limpo && (
         <BannerSindicalizacao
           eSindicalizada={eSindicalizada}
           razaoSocial={precosData.razao_social}
@@ -396,12 +401,17 @@ function PlanosEmpresa() {
 
       <BannerFechaMes proximoFechaMes={proximoFechaMes} planos={precosData?.planos} />
 
-      {!cortesia && precosData && (
+      {PRECO_LOJA_CLUBE_ATIVO && !cortesia && precosData && (
         <TogglePrecoSindicalizada
           valor={verSindicalizada}
           onChange={setVerSindicalizada}
           eSindicalizada={eSindicalizada}
         />
+      )}
+      {!PRECO_LOJA_CLUBE_ATIVO && !cortesia && (
+        <p className="text-center text-sm font-semibold rounded-2xl px-4 py-3" style={{ backgroundColor: `${DOURADO}1A`, color: '#92700C' }}>
+          💎 Em breve: Lojas do Clube MAIS+ vão pagar menos nos planos pagos.
+        </p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
