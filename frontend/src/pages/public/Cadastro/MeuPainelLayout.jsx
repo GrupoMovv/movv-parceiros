@@ -76,7 +76,7 @@ export default function MeuPainelLayout() {
         <button type="button" onClick={() => setMenuAberto(true)} aria-label="Menu" className="text-white">
           <Menu className="w-5 h-5" />
         </button>
-        <span className="text-white font-black text-sm tracking-wide">Meu Painel SECI</span>
+        <span className="text-white font-black text-sm tracking-wide">Meu Painel</span>
         {dados.foto_url ? (
           <img src={assetUrl(dados.foto_url)} alt="" className="w-7 h-7 rounded-full object-cover border border-white/40" />
         ) : (

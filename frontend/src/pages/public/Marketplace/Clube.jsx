@@ -151,7 +151,7 @@ export default function Clube() {
               <div className="rounded-2xl border-2 p-5 flex flex-col" style={{ borderColor: ROXO }}>
                 <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ROXO }}>Assinatura</p>
                 <p className="text-lg font-black mt-1" style={{ color: ROXO_ESCURO }}>R$ 9,90 por mês</p>
-                <p className="text-sm text-slate-600 mt-2 flex-1">Para qualquer pessoa. Está quase abrindo: deixe seu WhatsApp e avisamos você.</p>
+                <p className="text-sm text-slate-600 mt-2 flex-1">Para qualquer pessoa. Em breve. Deixe seu WhatsApp e avisamos você.</p>
                 <QueroSerAvisado associado={associado} origem={origem} />
               </div>
               <div className="rounded-2xl border-2 p-5 flex flex-col" style={{ borderColor: ROXO }}>
