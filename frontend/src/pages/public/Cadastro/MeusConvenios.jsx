@@ -2,16 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2, FileText } from 'lucide-react';
-import { WhatsappLogo } from '@phosphor-icons/react';
 import apiPainel from '../../../services/apiPainel';
-import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 
 const NAVY = '#0B1F3A';
 const ROXO = '#5B21B6';
 
 // /meu/convenios — convênios exclusivos do SECI (parte "e" do Clube, 08/10).
-// Só o associado logado vê: a lista (tabela seci_convenios) e o PDF, servido
-// com login. Nada disso aparece no marketplace público.
+// Só o associado logado vê. A fonte é o PDF do sindicato, servido com login
+// (decisão do Junior, 09/10): a tela mostra só o botão do catálogo, sem a
+// lista da tabela seci_convenios (a tabela fica, só não é exibida).
 export default function MeusConvenios() {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
@@ -48,7 +47,7 @@ export default function MeusConvenios() {
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-bold" style={{ color: NAVY }}>Meus convênios</h1>
-        <p className="text-slate-500 text-sm mt-1">Convênios exclusivos para associados do SECI. Mostre a sua carteirinha na hora de usar.</p>
+        <p className="text-slate-500 text-sm mt-1">Convênios exclusivos para associados do SECI. Veja as empresas e os descontos no catálogo e mostre a sua carteirinha na hora de usar.</p>
       </div>
 
       {!ativo && (
@@ -61,31 +60,13 @@ export default function MeusConvenios() {
       {dados.tem_pdf && (
         <button type="button" onClick={abrirPdf} disabled={abrindoPdf}
           className="w-full flex items-center justify-center gap-2 text-sm font-bold px-4 py-3 rounded-xl text-white disabled:opacity-60" style={{ backgroundColor: ROXO }}>
-          {abrindoPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Ver o catálogo completo (PDF)
+          {abrindoPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Ver o catálogo de convênios (PDF)
         </button>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-3">
-        {dados.convenios.map(c => (
-          <div key={c.slug} className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-col gap-2">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl leading-none">{c.icone || '🤝'}</span>
-              <div className="min-w-0">
-                <p className="font-bold text-sm" style={{ color: NAVY }}>{c.nome}</p>
-                <p className="text-xs text-slate-400">{[c.categoria, c.endereco].filter(Boolean).join(' · ')}</p>
-              </div>
-            </div>
-            <p className="text-sm font-bold rounded-lg px-3 py-2" style={{ backgroundColor: '#FEF3C7', color: '#92700C' }}>🏷️ {c.beneficio}</p>
-            {c.descricao && <p className="text-xs text-slate-500">{c.descricao}</p>}
-            {c.whatsapp && (
-              <a href={linkWhatsappComTexto(c.whatsapp, `Olá! Sou associado do SECI e gostaria de usar o convênio com ${c.nome}.`)}
-                target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-                <WhatsappLogo size={16} weight="fill" /> Chamar no WhatsApp
-              </a>
-            )}
-          </div>
-        ))}
-      </div>
+      {!dados.tem_pdf && (
+        <p className="text-sm text-slate-500 text-center py-6">O catálogo de convênios ainda não está disponível. Fale com o SECI.</p>
+      )}
     </div>
   );
 }

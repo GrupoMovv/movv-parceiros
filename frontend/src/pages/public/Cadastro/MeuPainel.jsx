@@ -172,7 +172,7 @@ export default function MeuPainel() {
 
         {associado && (
           <Link to="/meu/convenios" className="block">
-            <CardAcao icon={<Gift className="w-4 h-4" />} titulo="Meus convênios" sub="Convênios do SECI e catálogo em PDF" />
+            <CardAcao icon={<Gift className="w-4 h-4" />} titulo="Meus convênios" sub="Catálogo de convênios do SECI em PDF" />
           </Link>
         )}
       </div>

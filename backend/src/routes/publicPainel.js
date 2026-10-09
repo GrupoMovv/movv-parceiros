@@ -6,7 +6,6 @@ const ctrl = require('../controllers/publicPainelController');
 const contaCtrl = require('../controllers/contaController');
 const path = require('path');
 const fs = require('fs');
-const db = require('../config/database');
 const { situacaoDoAssociado } = require('../services/beneficioAssociado');
 
 const CATALOGO_PDF_PATH = path.join(__dirname, '../../uploads/beneficios/catalogo-beneficios-seci.pdf');
@@ -43,14 +42,12 @@ router.post('/empresa', contaCtrl.vincularEmpresa);
 router.post('/reenviar-carteirinha', somenteAssociadoSeci, ctrl.reenviarCarteirinha);
 
 // Convênios exclusivos do SECI (parte "e" do Clube, 08/10): só o associado
-// logado vê — nada disso aparece no marketplace público.
+// logado vê — nada disso aparece no marketplace público. A fonte é o PDF
+// (Junior, 09/10): a tabela seci_convenios fica no banco, mas não é exibida.
 router.get('/convenios', somenteAssociadoSeci, async (req, res) => {
   try {
-    const convenios = (await db.query(
-      'SELECT slug, nome, categoria, icone, descricao, beneficio, whatsapp, endereco, instagram FROM seci_convenios WHERE ativo ORDER BY ordem, nome'
-    )).rows;
     const s = await situacaoDoAssociado(req.painelAssociado.id);
-    return res.json({ convenios, situacao: s?.situacao || null, tem_pdf: fs.existsSync(CATALOGO_PDF_PATH) });
+    return res.json({ situacao: s?.situacao || null, tem_pdf: fs.existsSync(CATALOGO_PDF_PATH) });
   } catch (err) {
     console.error('[convênios]', err.message);
     return res.status(500).json({ error: 'Não deu para carregar os convênios agora.' });

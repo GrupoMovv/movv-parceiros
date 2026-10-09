@@ -7,7 +7,7 @@
 export const PARCEIROS_INICIAIS = [
   {
     slug: 'nossa-drogaria',
-    nome: 'Nossa Drogaria',
+    nome: 'Drogaria Sindical',
     categorias: ['Saude', 'Produtos'],
     icone: '💊',
     corIcone: '#10B981',
