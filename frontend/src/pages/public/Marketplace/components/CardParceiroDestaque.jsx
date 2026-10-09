@@ -22,14 +22,18 @@ export default function CardParceiroDestaque({ parceiro }) {
             size={52} weight="duotone" color="#4C1D95"
           />
         )}
-        <div className="absolute top-2.5 left-2.5">
-          <SeloPlano plano={parceiro.plano} size="lg" />
+        {/* Selos no canto de cima, o Pioneiro embaixo do plano: lado a lado
+            eles se sobrepunham (o card tem ~165 px no celular e ~175 px no
+            computador). No celular os selos são menores — o "lg" saía cortado
+            na borda ("MASTER VI"). */}
+        <div className="absolute top-2 left-2 flex flex-col items-start gap-1 sm:hidden">
+          <SeloPlano plano={parceiro.plano} size="sm" />
+          {parceiro.e_pioneiro && <SeloPioneiro pioneiro size="sm" />}
         </div>
-        {parceiro.e_pioneiro && (
-          <div className="absolute top-2.5 right-2.5">
-            <SeloPioneiro pioneiro size="lg" />
-          </div>
-        )}
+        <div className="absolute top-2.5 left-2.5 hidden sm:flex flex-col items-start gap-1.5">
+          <SeloPlano plano={parceiro.plano} size="lg" />
+          {parceiro.e_pioneiro && <SeloPioneiro pioneiro size="lg" />}
+        </div>
       </div>
 
       <div className="p-3.5">
