@@ -207,4 +207,27 @@ async function getRanking(req, res) {
   }
 }
 
-module.exports = { getMeusNiveis, registrarPartida, getMeuRecorde, getRanking };
+// Lojas das cartas do jogo (Junior, 09/10/2026): loja ativa, de verdade (não
+// de teste), com logo e que participa dos jogos (config de jogo ligada, com
+// peso no sorteio — a mesma regra da Roleta, sem o teto diário de cupons,
+// porque a Memória não dá cupom). O site põe pelo menos uma por partida e
+// no máximo metade dos pares.
+async function getLojas(req, res) {
+  try {
+    const r = await db.query(
+      `SELECT DISTINCT p.id, p.nome, p.logo_url, p.slug
+       FROM sindicato_jogos_parceiros jp
+       JOIN sindicato_parceiros p ON p.id = jp.parceiro_id
+       WHERE jp.ativo = true AND jp.peso_sorteio > 0
+         AND p.status = 'ativo' AND NOT p.empresa_teste
+         AND p.logo_url IS NOT NULL AND p.logo_url <> ''
+       ORDER BY p.id`
+    );
+    return res.json(r.rows);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar as lojas do jogo' });
+  }
+}
+
+module.exports = { getMeusNiveis, registrarPartida, getMeuRecorde, getRanking, getLojas };

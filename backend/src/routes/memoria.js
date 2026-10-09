@@ -9,6 +9,7 @@ router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 80 }));
 // partida/recorde (e entrar no ranking) continua só com conta.
 router.get('/niveis',       lerPainelPublicoOpcional, ctrl.getMeusNiveis);
 router.get('/ranking',      lerPainelPublicoOpcional, ctrl.getRanking);
+router.get('/lojas',        ctrl.getLojas);
 router.post('/partida',     authenticatePainelPublico, ctrl.registrarPartida);
 router.get('/meu-recorde',  authenticatePainelPublico, ctrl.getMeuRecorde);
 

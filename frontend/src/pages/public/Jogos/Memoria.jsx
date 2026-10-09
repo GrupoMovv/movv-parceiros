@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti';
 import apiPainel from '../../../services/apiPainel';
 import MascoteIubMais, { MASCOTE_URL } from '../../../components/MascoteIubMais';
 import MemoriaCarta from './components/MemoriaCarta';
-import { getNivelConfig, POOL_PARES } from './memoriaConfig';
+import { getNivelConfig, POOL_SIMBOLOS, MAX_LOJAS, cartaDeLoja } from './memoriaConfig';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 function embaralhar(itens) {
@@ -17,11 +17,12 @@ function embaralhar(itens) {
   return copia;
 }
 
-// Sorteia `qtd` temas do pool de 18 a cada partida (níveis menores não
-// usam o pool inteiro) — dá variedade entre partidas repetidas do mesmo
-// nível, já que o jogo é "sem limite, joga quanto quiser".
-function criarBaralho(qtd) {
-  const paresEscolhidos = embaralhar(POOL_PARES).slice(0, qtd);
+// Sorteia `qtd` temas a cada partida (variedade entre partidas repetidas
+// do mesmo nível): lojas que participam dos jogos — pelo menos uma, no
+// máximo metade dos pares — e o resto em símbolos.
+function criarBaralho(qtd, lojas = []) {
+  const deLoja = embaralhar(lojas).slice(0, Math.min(lojas.length, MAX_LOJAS(qtd))).map(cartaDeLoja);
+  const paresEscolhidos = [...deLoja, ...embaralhar(POOL_SIMBOLOS).slice(0, qtd - deLoja.length)];
   const cartas = paresEscolhidos.flatMap((par, i) => [{ ...par, uid: `${i}-a` }, { ...par, uid: `${i}-b` }]);
   return embaralhar(cartas);
 }
@@ -88,7 +89,9 @@ export default function Memoria() {
     try { return localStorage.getItem('iub_memoria_som') !== 'off'; } catch { return true; }
   });
 
-  const [baralho, setBaralho] = useState(() => (cfg ? criarBaralho(cfg.pares) : []));
+  // Lojas do jogo (null = ainda buscando; a partida só começa depois)
+  const [lojasJogo, setLojasJogo] = useState(null);
+  const [baralho, setBaralho] = useState([]);
   const [viradas, setViradas] = useState([]);
   const [casadas, setCasadas] = useState(new Set());
   const [travado, setTravado] = useState(false);
@@ -219,7 +222,7 @@ export default function Memoria() {
 
   function reiniciar() {
     if (!cfg) return;
-    setBaralho(criarBaralho(cfg.pares));
+    setBaralho(criarBaralho(cfg.pares, lojasJogo || []));
     setViradas([]);
     setCasadas(new Set());
     setTravado(false);
@@ -233,16 +236,23 @@ export default function Memoria() {
     setAbaRanking('dia');
   }
 
-  // Troca de nível (ex.: botão "Próximo Nível") reusa a mesma instância
-  // do componente — precisa resetar tudo pro novo `nivel`/`cfg`.
   useEffect(() => {
-    if (cfg) reiniciar();
+    apiPainel.get('/public/memoria/lojas')
+      .then(r => setLojasJogo(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setLojasJogo([])); // sem a lista, joga só com símbolos
+  }, []);
+
+  // Troca de nível (ex.: botão "Próximo Nível") reusa a mesma instância
+  // do componente — precisa resetar tudo pro novo `nivel`/`cfg`. Também
+  // monta o primeiro baralho quando a lista de lojas chega.
+  useEffect(() => {
+    if (cfg && lojasJogo) reiniciar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nivel]);
+  }, [nivel, lojasJogo]);
 
   if (!cfg) return null;
 
-  if (carregando || !desbloqueado) {
+  if (carregando || !lojasJogo || !desbloqueado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-iub-roxo to-iub-roxo-escuro">
         <MascoteIubMais tamanho="medium" animacao="pulse" />

@@ -18,16 +18,12 @@ export function getNivelConfig(nivel) {
   return NIVEIS.find(n => n.nivel === Number(nivel));
 }
 
-// Pool de 21 temas de carta — exatamente o que o LENDARIO (21 pares) usa
-// inteiro; níveis menores sorteiam um subconjunto a cada partida (mais
-// variedade nas partidas repetidas, já que "sem limite" é o objetivo).
-// Só loja ATIVA com logo vira carta (09/10/2026: as 9 empresas dos convênios
-// do SECI, pausadas, saíram — no lugar entram símbolos das categorias do
-// IUB MAIS+). Loja que pausar tem que sair daqui também. O pool tem que
-// ser >= o maior `pares` de NIVEIS; a checagem no fim do arquivo garante.
-const PARCEIROS = [
-  { chave: 'imaginari-personalizados', nome: 'Imaginari Personalizados', logo: 'https://res.cloudinary.com/emv2nb1j/image/upload/v1789000890/iubmais/parceiros/14/logo/qqmbgroahvivdxgfe8ym.jpg' },
-].map(p => ({ ...p, tipo: 'parceiro' }));
+// Cartas de cada partida (Junior, 09/10/2026): as LOJAS vêm do banco
+// (GET /public/memoria/lojas: loja ativa, com logo, que participa dos jogos)
+// — pelo menos uma por partida e no máximo metade dos pares; o resto é
+// símbolo. Os símbolos sozinhos têm que dar para o maior nível (sem loja
+// nenhuma, ou se a busca falhar); a checagem no fim do arquivo garante.
+export const MAX_LOJAS = pares => Math.max(1, Math.floor(pares / 2));
 
 // Símbolos das categorias do marketplace (mesmos emojis dos filtros).
 const CATEGORIAS = [
@@ -60,16 +56,21 @@ const SIMBOLOS = [
   { chave: 'carrinho', emoji: '🛒', nome: 'Carrinho' },
   { chave: 'loja', emoji: '🏪', nome: 'Loja' },
   { chave: 'moeda', emoji: '💰', nome: 'Moeda' },
+  // 21º símbolo (09/10): o Lendário (21 pares) fecha só com símbolos
+  { chave: 'balao', emoji: '🎈', nome: 'Balão' },
 ].map(s => ({ ...s, tipo: 'simbolo' }));
 
-export const POOL_PARES = [...PARCEIROS, ...CATEGORIAS, MASCOTE, ...SIMBOLOS];
+export const POOL_SIMBOLOS = [...CATEGORIAS, MASCOTE, ...SIMBOLOS];
+
+// Loja vinda da API -> carta
+export const cartaDeLoja = l => ({ chave: `loja-${l.id}`, nome: l.nome, logo: l.logo_url, tipo: 'parceiro' });
 
 // Rede de segurança: se um nível pedir mais pares do que existe tema, o
 // baralho sai menor e a vitória fica inalcançável — falha silenciosa e
 // chata de achar. Estoura no boot do módulo, não no meio da partida.
 const MAIOR_NIVEL = NIVEIS.reduce((a, n) => Math.max(a, n.pares), 0);
-if (POOL_PARES.length < MAIOR_NIVEL) {
+if (POOL_SIMBOLOS.length < MAIOR_NIVEL) {
   throw new Error(
-    `memoriaConfig: POOL_PARES tem ${POOL_PARES.length} temas, mas o maior nível pede ${MAIOR_NIVEL} pares.`
+    `memoriaConfig: POOL_SIMBOLOS tem ${POOL_SIMBOLOS.length} temas, mas o maior nível pede ${MAIOR_NIVEL} pares.`
   );
 }
