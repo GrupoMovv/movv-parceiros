@@ -40,6 +40,10 @@ function embaralhar(arr) {
 // dele, mesmo que isso signifique não chegar nos 50 produtos do limite.
 function montarRoundRobin(porParceiro) {
   const parceiroIds = [...porParceiro.keys()];
+  // Uma loja só na vitrine inteira: não tem com quem alternar, então entram
+  // os produtos dela (até o limite do plano) em vez de parar no primeiro
+  // (09/10: Imaginari sozinha mostrava 1 produto só).
+  if (parceiroIds.length === 1) return porParceiro.get(parceiroIds[0]).slice(0, LIMITE_TOTAL);
   const resultado = [];
   let ultimoParceiroId = null;
   let rodada = 0;

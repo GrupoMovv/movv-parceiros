@@ -13,8 +13,10 @@ const LINHAS = 2;
 // key própria por cópia) até ter pelo menos 2 páginas cheias, num teto de
 // 3 repetições — só um efeito visual de movimento, nunca finge ter mais
 // produtos distintos do que realmente existem (mesmo produto, mesmo link).
+// Com menos produtos do que cabem numa página, não repete: o mesmo produto
+// apareceria lado a lado na mesma tela (09/10: o kit da Imaginari 3 vezes).
 function comMovimentoGarantido(produtos, itensPorPagina) {
-  if (produtos.length === 0) return produtos;
+  if (produtos.length < itensPorPagina) return produtos;
   const minimo = itensPorPagina * 2;
   if (produtos.length >= minimo) return produtos;
 
