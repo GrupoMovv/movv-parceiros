@@ -7,7 +7,7 @@ async function listPartners(req, res) {
   try {
     const result = await db.query(
       `SELECT p.id, p.code, p.name, p.email, p.type, p.whatsapp, p.pix_key,
-              p.is_admin, p.is_active, p.created_at,
+              p.is_admin, p.perfil_admin, p.is_active, p.created_at,
               pp.name AS parent_name, pp.code AS parent_code,
               COUNT(r.id) AS total_referrals,
               COALESCE(SUM(CASE WHEN c.status != 'paid' THEN c.amount ELSE 0 END), 0) AS pending_balance
@@ -48,7 +48,7 @@ async function createPartner(req, res) {
   let { name, email, type, whatsapp, pix_key, parent_id, password, is_admin } = req.body;
 
   if (!isAdmin) {
-    // Fernando (comercial_full) só pode cadastrar contabilidades parceiras —
+    // Fernando (comercial_full) e o perfil financeiro só cadastram contabilidades parceiras —
     // ignora qualquer type/is_admin/parent_id que venha no corpo da requisição.
     type = 'accounting';
     is_admin = false;

@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireEquipe } = require('../middleware/auth');
+const { veTudo } = require('../config/perfilAdmin');
 const salesCtrl = require('../controllers/diretaSalesController');
 const activitiesCtrl = require('../controllers/diretaActivitiesController');
 
@@ -11,9 +12,9 @@ const requireComercialFull = (req, res, next) => {
   next();
 };
 
-// Leitura compartilhada: admin vê tudo, Fernando vê o que é dele (filtrado no controller).
+// Leitura compartilhada: admin e perfil financeiro veem tudo, Fernando vê o que é dele (filtrado no controller).
 const requireAdminOrComercialFull = (req, res, next) => {
-  if (req.user?.is_admin) return next();
+  if (veTudo(req.user)) return next();
   return requireComercialFull(req, res, next);
 };
 
@@ -29,7 +30,7 @@ router.patch('/sales/:id/cancel', authenticate, requireAdminOrComercialFull, sal
 // ─── Dashboard / metas / folha ───────────────────────────────────────────────
 router.get('/dashboard',    authenticate, requireComercialFull,        salesCtrl.getMyDashboard);
 router.get('/goal',         authenticate, requireAdminOrComercialFull, salesCtrl.getGoalCurrentMonth);
-router.post('/payroll/close', authenticate, requireAdmin,              salesCtrl.closePayroll);
+router.post('/payroll/close', authenticate, requireEquipe,              salesCtrl.closePayroll);
 
 // ─── Atividades (mini-CRM) ───────────────────────────────────────────────────
 router.get('/activities',           authenticate, requireAdminOrComercialFull, activitiesCtrl.listActivities);

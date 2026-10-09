@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { contaDoPortal } = require('../config/perfilAdmin');
 
 async function login(req, res) {
   const { identifier, password } = req.body;
@@ -55,13 +56,13 @@ async function login(req, res) {
       if (!valid) return res.status(401).json({ error: 'Código ou senha inválidos' });
 
       const token = jwt.sign(
-        { id: partner.id, userType: 'partner', code: partner.code, is_admin: partner.is_admin },
+        { id: partner.id, userType: 'partner', code: partner.code, is_admin: contaDoPortal(partner).is_admin },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
       const { password_hash, ...safe } = partner;
-      return res.json({ token, partner: safe });
+      return res.json({ token, partner: contaDoPortal(safe) });
     }
 
     // 3. Tenta indicador (CPF sem máscara, email ou whatsapp)
@@ -111,14 +112,14 @@ async function me(req, res) {
 
     const result = await db.query(
       `SELECT p.id, p.code, p.name, p.email, p.type, p.whatsapp, p.pix_key,
-              p.is_admin, p.is_active, p.created_at, p.must_change_password,
+              p.is_admin, p.is_active, p.created_at, p.must_change_password, p.perfil_admin,
               pp.code AS parent_code, pp.name AS parent_name
        FROM partners p
        LEFT JOIN partners pp ON pp.id = p.parent_id
        WHERE p.id = $1`,
       [req.user.id]
     );
-    return res.json(result.rows[0]);
+    return res.json(contaDoPortal(result.rows[0]));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });

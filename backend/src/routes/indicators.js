@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/indicatorController');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireEquipe } = require('../middleware/auth');
 
 // Público
 router.post('/register', ctrl.register);
@@ -22,17 +22,17 @@ router.put('/referrals/:id/renew',    authenticate, requireIndicator, ctrl.renew
 router.get('/my-payments',            authenticate, requireIndicator, ctrl.getMyPayments);
 
 // Admin
-router.get('/',                            authenticate, requireAdmin, ctrl.listIndicators);
-router.get('/all-referrals',               authenticate, requireAdmin, ctrl.listAllReferrals);
-router.put('/referrals/:id/approve',       authenticate, requireAdmin, ctrl.approveReferralAdmin);
-router.put('/referrals/:id/cancel',        authenticate, requireAdmin, ctrl.cancelReferralAdmin);
-router.get('/payments/pending',            authenticate, requireAdmin, ctrl.getPendingPayments);
-router.get('/payments',                    authenticate, requireAdmin, ctrl.listAdminPayments);
-router.post('/payments',                   authenticate, requireAdmin, ctrl.createPayment);
-router.put('/payments/:id/pay',            authenticate, requireAdmin, ctrl.markPaymentPaid);
-router.get('/:id',                         authenticate, requireAdmin, ctrl.getIndicatorById);
-router.put('/:id/approve',                 authenticate, requireAdmin, ctrl.approveIndicator);
-router.put('/:id/reject',                  authenticate, requireAdmin, ctrl.rejectIndicator);
-router.put('/:id/suspend',                 authenticate, requireAdmin, ctrl.suspendIndicator);
+router.get('/',                            authenticate, requireEquipe, ctrl.listIndicators);
+router.get('/all-referrals',               authenticate, requireEquipe, ctrl.listAllReferrals);
+router.put('/referrals/:id/approve',       authenticate, requireEquipe, ctrl.approveReferralAdmin);
+router.put('/referrals/:id/cancel',        authenticate, requireEquipe, ctrl.cancelReferralAdmin);
+router.get('/payments/pending',            authenticate, requireEquipe, ctrl.getPendingPayments);
+router.get('/payments',                    authenticate, requireEquipe, ctrl.listAdminPayments);
+router.post('/payments',                   authenticate, requireEquipe, ctrl.createPayment);
+router.put('/payments/:id/pay',            authenticate, requireEquipe, ctrl.markPaymentPaid);
+router.get('/:id',                         authenticate, requireEquipe, ctrl.getIndicatorById);
+router.put('/:id/approve',                 authenticate, requireEquipe, ctrl.approveIndicator);
+router.put('/:id/reject',                  authenticate, requireEquipe, ctrl.rejectIndicator);
+router.put('/:id/suspend',                 authenticate, requireEquipe, ctrl.suspendIndicator);
 
 module.exports = router;

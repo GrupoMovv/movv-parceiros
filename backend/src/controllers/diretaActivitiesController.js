@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
 
 function monthFromDate(dateStr) {
   return (dateStr ? new Date(dateStr) : new Date()).toISOString().slice(0, 7);
@@ -7,7 +8,7 @@ function monthFromDate(dateStr) {
 // ─── Listar atividades (admin: todas + filtros; Fernando: apenas as próprias) ─
 async function listActivities(req, res) {
   try {
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
     const { collaborator_id, reference_month, tipo, status_lead } = req.query;
 
     const conditions = [];
@@ -43,7 +44,7 @@ async function listActivities(req, res) {
 async function getActivity(req, res) {
   try {
     const { id } = req.params;
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
 
     const result = await db.query('SELECT * FROM sales_activities WHERE id = $1', [id]);
     const activity = result.rows[0];

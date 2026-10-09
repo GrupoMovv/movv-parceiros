@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
 
 async function getMonthlyStatement(req, res) {
   const { accounting_id, month } = req.query;
@@ -9,7 +10,7 @@ async function getMonthlyStatement(req, res) {
 
   const accId = parseInt(accounting_id);
 
-  if (!req.user.is_admin && req.user.id !== accId) {
+  if (!veTudo(req.user) && req.user.id !== accId) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
@@ -17,7 +18,7 @@ async function getMonthlyStatement(req, res) {
     // 1. Accounting partner info
     // Admins may generate reports for any partner; non-admins are limited to accounting-type partners.
     const accRes = await db.query(
-      req.user.is_admin
+      veTudo(req.user)
         ? `SELECT id, name, code, email, pix_key FROM partners WHERE id = $1`
         : `SELECT id, name, code, email, pix_key FROM partners WHERE id = $1 AND type = 'accounting'`,
       [accId]

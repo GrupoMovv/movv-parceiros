@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
 const { generateProtocol, getExpirationDate } = require('../services/protocolService');
 const { sendWhatsAppMessage, buildProtocolMessage } = require('../services/zapApiService');
 const { calculateCommissions } = require('../services/commissionService');
@@ -18,7 +19,7 @@ async function listReferrals(req, res) {
     `;
     const params = [];
 
-    if (!req.user.is_admin) {
+    if (!veTudo(req.user)) {
       params.push(req.user.id);
       query += ` AND r.partner_id = $${params.length}`;
     }

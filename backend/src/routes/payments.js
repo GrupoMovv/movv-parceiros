@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireEquipe } = require('../middleware/auth');
 const { listPayments, registerPayment, getPendingByPartner } = require('../controllers/paymentController');
 
 const storage = multer.diskStorage({
@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.get('/', authenticate, listPayments);
-router.get('/pending', authenticate, requireAdmin, getPendingByPartner);
-router.post('/', authenticate, requireAdmin, upload.single('receipt'), registerPayment);
+router.get('/pending', authenticate, requireEquipe, getPendingByPartner);
+router.post('/', authenticate, requireEquipe, upload.single('receipt'), registerPayment);
 
 module.exports = router;

@@ -146,6 +146,7 @@ import IndicadorSimulador from './pages/indicador/Simulador';
 import IndicadorMaterialApoio from './pages/indicador/MaterialApoio';
 import IndicadorMeusPagamentos from './pages/indicador/MeusPagamentos';
 import IndicadorPerfil from './pages/indicador/Perfil';
+import { ehEquipe, ehFinanceiro } from './utils/perfilAdmin';
 
 // No domínio da marca (iubmais.com.br), a raiz é o marketplace. A equipe
 // logada no portal continua indo para o painel (o /login manda para "/").
@@ -182,9 +183,16 @@ function RequireAdmin({ children }) {
   return children;
 }
 
+// Telas de dinheiro do /admin: admin completo ou perfil financeiro.
+function RequireEquipe({ children }) {
+  const { user } = useAuth();
+  if (!ehEquipe(user)) return <Navigate to="/" replace />;
+  return children;
+}
+
 function RequireAccounting({ children }) {
   const { user } = useAuth();
-  if (!user?.is_admin && user?.type !== 'accounting') return <Navigate to="/" replace />;
+  if (ehFinanceiro(user) || (!user?.is_admin && user?.type !== 'accounting')) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -240,7 +248,7 @@ function RequireIndicator({ children }) {
 // <Dashboard/> genérico (tela "Indique e Ganhe" de parceiro/indicador).
 function HomeRedirect() {
   const { user } = useAuth();
-  if (user?.is_admin) return <Navigate to="/admin" replace />;
+  if (ehEquipe(user)) return <Navigate to="/admin" replace />;
   if (user?.type === 'indicator') return <Navigate to="/indicador/dashboard" replace />;
   if (user?.type === 'internal') {
     if (user?.role === 'manager_azul')       return <Navigate to="/minhas-comissoes" replace />;
@@ -372,19 +380,19 @@ export default function App() {
           <Route path="movv-office"          element={<MovvOffice />} />
           <Route path="movv-cobrancas"       element={<MovvCobrancas />} />
           <Route path="movv-suprimentos"     element={<MovvSuprimentos />} />
-          <Route path="admin"                element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
-          <Route path="admin/parceiros"      element={<RequireAdmin><AdminPartners /></RequireAdmin>} />
-          <Route path="admin/indicacoes"     element={<RequireAdmin><AdminReferrals /></RequireAdmin>} />
-          <Route path="admin/comissoes"      element={<RequireAdmin><AdminCommissions /></RequireAdmin>} />
+          <Route path="admin"                element={<RequireEquipe><AdminDashboard /></RequireEquipe>} />
+          <Route path="admin/parceiros"      element={<RequireEquipe><AdminPartners /></RequireEquipe>} />
+          <Route path="admin/indicacoes"     element={<RequireEquipe><AdminReferrals /></RequireEquipe>} />
+          <Route path="admin/comissoes"      element={<RequireEquipe><AdminCommissions /></RequireEquipe>} />
           <Route path="admin/interesse"      element={<RequireAdmin><AdminInterest /></RequireAdmin>} />
-          <Route path="admin/pagamentos"     element={<RequireAdmin><AdminPayments /></RequireAdmin>} />
+          <Route path="admin/pagamentos"     element={<RequireEquipe><AdminPayments /></RequireEquipe>} />
           <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
-          <Route path="admin/comissoes-internas" element={<RequireAdmin><AdminInternalCommissions /></RequireAdmin>} />
-          <Route path="admin/indicadores"   element={<RequireAdmin><AdminIndicadores /></RequireAdmin>} />
+          <Route path="admin/comissoes-internas" element={<RequireEquipe><AdminInternalCommissions /></RequireEquipe>} />
+          <Route path="admin/indicadores"   element={<RequireEquipe><AdminIndicadores /></RequireEquipe>} />
           <Route path="admin/testadores"    element={<RequireAdmin><AdminTestadores /></RequireAdmin>} />
-          <Route path="admin/direta"             element={<RequireAdmin><DiretaDashboardAdmin /></RequireAdmin>} />
-          <Route path="admin/direta/vendas"      element={<RequireAdmin><DiretaVendasAdmin /></RequireAdmin>} />
-          <Route path="admin/direta/contabilidades" element={<RequireAdmin><DiretaContabilidadesAdmin /></RequireAdmin>} />
+          <Route path="admin/direta"             element={<RequireEquipe><DiretaDashboardAdmin /></RequireEquipe>} />
+          <Route path="admin/direta/vendas"      element={<RequireEquipe><DiretaVendasAdmin /></RequireEquipe>} />
+          <Route path="admin/direta/contabilidades" element={<RequireEquipe><DiretaContabilidadesAdmin /></RequireEquipe>} />
           <Route path="admin/sindicato"          element={<RequireAdmin><SindicatoFaturamentoAdmin /></RequireAdmin>} />
           <Route path="admin/empresas-contribuintes" element={<Navigate to="/sindicato/base-seci" replace />} />
           <Route path="minhas-comissoes"         element={<RequireInternal><MinhasComissoes /></RequireInternal>} />

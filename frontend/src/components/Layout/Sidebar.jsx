@@ -2,6 +2,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import { ehFinanceiro } from '../../utils/perfilAdmin';
 import {
   LayoutDashboard, FileText, UserPlus, Users, ClipboardList,
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
@@ -13,6 +14,8 @@ import {
 
 function getUserRoles(user) {
   if (!user) return [];
+  // Perfil financeiro: só as telas de dinheiro do Admin (utils/perfilAdmin.js).
+  if (ehFinanceiro(user)) return ['financeiro'];
   const roles = [];
   if (user.is_admin) roles.push('admin');
   if (user.type === 'accounting') roles.push('accounting');
@@ -41,19 +44,19 @@ const MASTER_MENU = [
   {
     section: 'Admin',
     items: [
-      { label: 'Visão Geral',        icon: LayoutDashboard, to: '/admin',                   roles: ['admin'], end: true },
-      { label: 'Parceiros',          icon: Users,           to: '/admin/parceiros',          roles: ['admin'] },
-      { label: 'Indicações',         icon: ClipboardList,   to: '/admin/indicacoes',         roles: ['admin'] },
-      { label: 'Comissões',          icon: Coins,           to: '/admin/comissoes',          roles: ['admin'] },
-      { label: 'Pagamentos',         icon: CreditCard,      to: '/admin/pagamentos',         roles: ['admin'] },
+      { label: 'Visão Geral',        icon: LayoutDashboard, to: '/admin',                   roles: ['admin', 'financeiro'], end: true },
+      { label: 'Parceiros',          icon: Users,           to: '/admin/parceiros',          roles: ['admin', 'financeiro'] },
+      { label: 'Indicações',         icon: ClipboardList,   to: '/admin/indicacoes',         roles: ['admin', 'financeiro'] },
+      { label: 'Comissões',          icon: Coins,           to: '/admin/comissoes',          roles: ['admin', 'financeiro'] },
+      { label: 'Pagamentos',         icon: CreditCard,      to: '/admin/pagamentos',         roles: ['admin', 'financeiro'] },
       { label: 'Produtos',           icon: Package,         to: '/admin/produtos',           roles: ['admin'] },
-      { label: 'Comissões Internas', icon: DollarSign,      to: '/admin/comissoes-internas', roles: ['admin'] },
-      { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin'] },
+      { label: 'Comissões Internas', icon: DollarSign,      to: '/admin/comissoes-internas', roles: ['admin', 'financeiro'] },
+      { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin', 'financeiro'] },
       { label: 'Interesses',         icon: Sparkles,        to: '/admin/interesse',          roles: ['admin'] },
       { label: 'Testadores',         icon: FlaskConical,    to: '/admin/testadores',         roles: ['admin'] },
-      { label: 'Movv Certificado — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin'] },
-      { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin'] },
-      { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin'] },
+      { label: 'Movv Certificado — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin', 'financeiro'] },
+      { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin', 'financeiro'] },
+      { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin', 'financeiro'] },
       { label: 'Sindicato — Renan',  icon: Landmark,     to: '/admin/sindicato',            roles: ['admin'] },
       { label: 'Templates Benefícios', icon: MessagesSquare, to: '/sindicato/beneficios/templates', roles: ['admin'] },
     ],
@@ -255,6 +258,8 @@ export default function Sidebar({ onClose }) {
             <span className={`text-xs font-medium ${tierColor[user?.tier] || 'text-amber-300'}`}>
               {user?.is_admin
                 ? '⚙ Administrador'
+                : ehFinanceiro(user)
+                  ? '⚙ Administrador — Financeiro'
                 : isInternal
                   ? (user?.role === 'manager_azul'
                       ? '★ Gerente Azul'
@@ -271,7 +276,12 @@ export default function Sidebar({ onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-3">
-        {MASTER_MENU.map(({ section, items }) => (
+        {/* Perfil financeiro: o menu mostra só o que ele abre — nem o nome
+            das telas do Sindicato aparece (as outras contas veem com cadeado). */}
+        {(ehFinanceiro(user)
+          ? MASTER_MENU.map(s => ({ ...s, items: s.items.filter(i => canAccess(i, userRoles)) })).filter(s => s.items.length)
+          : MASTER_MENU
+        ).map(({ section, items }) => (
           <div key={section}>
             <p className="text-white/35 text-[10px] font-bold uppercase tracking-widest px-3 mb-1">
               {section}

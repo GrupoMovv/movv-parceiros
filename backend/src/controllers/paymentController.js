@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
 const path = require('path');
 const emailService = require('../services/emailService');
 const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
@@ -8,15 +9,15 @@ async function listPayments(req, res) {
     const { partner_id, month } = req.query;
     let query = `
       SELECT pay.*, p.name AS partner_name, p.code AS partner_code, p.pix_key
-             ${req.user.is_admin ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
+             ${veTudo(req.user) ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
       FROM payments pay
       JOIN partners p ON p.id = pay.partner_id
-      ${req.user.is_admin ? joinUltimaAcao('pay', 'payments') : ''}
+      ${veTudo(req.user) ? joinUltimaAcao('pay', 'payments') : ''}
       WHERE 1=1
     `;
     const params = [];
 
-    if (!req.user.is_admin) {
+    if (!veTudo(req.user)) {
       params.push(req.user.id);
       query += ` AND pay.partner_id = $${params.length}`;
     } else if (partner_id) {

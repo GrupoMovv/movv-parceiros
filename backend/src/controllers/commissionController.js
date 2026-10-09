@@ -1,25 +1,26 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
 const emailService = require('../services/emailService');
 const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
 
 async function listCommissions(req, res) {
   try {
     const { month, status } = req.query;
-    // Quem fez a última ação (aprovou, cancelou, voltou, pagou): só o admin vê.
+    // Quem fez a última ação (aprovou, cancelou, voltou, pagou): só o admin (e o financeiro) vê.
     let query = `
       SELECT c.*, p.name AS partner_name, p.code AS partner_code,
              r.protocol, r.client_name, pr.name AS product_name
-             ${req.user.is_admin ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
+             ${veTudo(req.user) ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
       FROM commissions c
       JOIN partners p ON p.id = c.partner_id
       JOIN referrals r ON r.id = c.referral_id
       JOIN products pr ON pr.id = r.product_id
-      ${req.user.is_admin ? joinUltimaAcao('c', 'commissions') : ''}
+      ${veTudo(req.user) ? joinUltimaAcao('c', 'commissions') : ''}
       WHERE 1=1
     `;
     const params = [];
 
-    if (!req.user.is_admin) {
+    if (!veTudo(req.user)) {
       params.push(req.user.id);
       query += ` AND c.partner_id = $${params.length}`;
     }
@@ -43,7 +44,7 @@ async function listCommissions(req, res) {
 
 async function getStatement(req, res) {
   try {
-    const partnerId = req.user.is_admin ? (req.query.partner_id || req.user.id) : req.user.id;
+    const partnerId = veTudo(req.user) ? (req.query.partner_id || req.user.id) : req.user.id;
     const result = await db.query(
       `SELECT
          c.reference_month,
@@ -71,7 +72,7 @@ async function getStatement(req, res) {
 
 async function getSummaryByMonth(req, res) {
   try {
-    const partnerId = req.user.is_admin ? (req.query.partner_id || req.user.id) : req.user.id;
+    const partnerId = veTudo(req.user) ? (req.query.partner_id || req.user.id) : req.user.id;
     const result = await db.query(
       `SELECT reference_month, SUM(amount) AS total, status, COUNT(*) AS count
        FROM commissions

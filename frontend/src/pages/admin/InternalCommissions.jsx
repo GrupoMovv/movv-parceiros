@@ -3,6 +3,8 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import CurrencyInput from '../../components/ui/CurrencyInput';
 import RegistroAcao from '../../components/admin/RegistroAcao';
+import { useAuth } from '../../contexts/AuthContext';
+import { ehFinanceiro } from '../../utils/perfilAdmin';
 import {
   Users, DollarSign, CheckCircle2, Clock, Plus, X,
   RotateCcw, ChevronDown, ChevronUp, Loader2, Eye,
@@ -21,6 +23,7 @@ const ROLE_LABEL = {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminInternalCommissions() {
+  const { user } = useAuth();
   const [collaborators, setCollaborators] = useState([]);
   const [commissions,   setCommissions]   = useState([]);
   const [loading,       setLoading]       = useState(true);
@@ -136,7 +139,7 @@ export default function AdminInternalCommissions() {
           collab={collab}
           commissions={commByCollab(collab.id)}
           onLaunch={() => setModalCollab(collab)}
-          onReset={() => setModalReset(collab)}
+          onReset={ehFinanceiro(user) ? null : () => setModalReset(collab)}
           onPaid={markPaid}
           onRevert={revert}
           onEdit={commission => setModalEdit({ commission, collab })}
@@ -293,14 +296,14 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          {onReset && <button
             onClick={onReset}
             title="Resetar senha deste colaborador"
             className="flex items-center gap-1.5 border border-slate-200 bg-white text-slate-600 text-sm font-semibold px-3 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
             <KeyRound className="w-4 h-4" />
             Resetar Senha
-          </button>
+          </button>}
           {canLaunchEdit && (
             <button
               onClick={onLaunch}

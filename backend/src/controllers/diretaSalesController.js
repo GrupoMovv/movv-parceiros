@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
 const diretaCalc = require('../services/diretaCalcService');
 
 function currentMonth() {
@@ -48,7 +49,7 @@ async function registrarHistorico(client, { vendaId, acao, motivo, dadosAntes, d
 // ─── Listar vendas (admin: todas + filtros; Fernando: apenas as próprias) ───
 async function listSales(req, res) {
   try {
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
     const { collaborator_id, reference_month, tipo_venda, status } = req.query;
 
     const conditions = [];
@@ -87,7 +88,7 @@ async function listSales(req, res) {
 async function getSale(req, res) {
   try {
     const { id } = req.params;
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
 
     const result = await db.query(
       `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code
@@ -245,7 +246,7 @@ async function createSale(req, res) {
 // mês); se Fernando errou o tipo, o caminho é excluir e recadastrar.
 async function updateSale(req, res) {
   const { id } = req.params;
-  const isAdmin = !!req.user?.is_admin;
+  const isAdmin = veTudo(req.user); // admin ou perfil financeiro
   const {
     cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
     valor_venda_certificado, comissao_contab_certificado,
@@ -349,7 +350,7 @@ async function updateSale(req, res) {
 // ─── Excluir venda (soft delete — "cadastrei errado", some da listagem) ────
 async function deleteSale(req, res) {
   const { id } = req.params;
-  const isAdmin = !!req.user?.is_admin;
+  const isAdmin = veTudo(req.user); // admin ou perfil financeiro
   const { motivo } = req.body;
 
   const client = await db.pool.connect();
@@ -395,7 +396,7 @@ async function cancelSale(req, res) {
   const client = await db.pool.connect();
   try {
     const { id } = req.params;
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
 
     await client.query('BEGIN');
     const check = await client.query('SELECT * FROM direta_sales WHERE id = $1 FOR UPDATE', [id]);
@@ -432,7 +433,7 @@ async function cancelSale(req, res) {
 async function getSaleHistorico(req, res) {
   try {
     const { id } = req.params;
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
 
     const venda = await db.query('SELECT collaborator_id FROM direta_sales WHERE id = $1', [id]);
     if (!venda.rows[0]) return res.status(404).json({ error: 'Venda não encontrada' });
@@ -499,7 +500,7 @@ async function getMyDashboard(req, res) {
 // ─── Meta do mês atual (admin passa collaborator_id; Fernando usa o próprio) ─
 async function getGoalCurrentMonth(req, res) {
   try {
-    const isAdmin = !!req.user?.is_admin;
+    const isAdmin = veTudo(req.user); // admin ou perfil financeiro
     const collaboratorId = isAdmin ? req.query.collaborator_id : req.user.id;
     if (!collaboratorId) {
       return res.status(400).json({ error: 'collaborator_id é obrigatório' });

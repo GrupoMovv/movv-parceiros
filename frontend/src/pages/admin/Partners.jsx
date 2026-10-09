@@ -1,10 +1,11 @@
 ﻿import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Users, Plus, Search, Edit2, Key, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Key, ToggleLeft, ToggleRight, Lock } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { ADMIN_PRINCIPAL } from '../../utils/adminPrincipal';
+import { ehFinanceiro } from '../../utils/perfilAdmin';
 
 const EMPTY_FORM = { name: '', email: '', type: 'employee', whatsapp: '', pix_key: '', parent_id: '', password: '', is_admin: false };
 
@@ -125,7 +126,7 @@ export default function AdminPartners() {
                   <td className="py-3 px-4 font-mono text-xs text-[#C9A84C]">{p.code}</td>
                   <td className="py-3 px-4 text-slate-900 font-medium whitespace-nowrap">
                     {p.name}
-                    {p.is_admin && <span className="ml-2 text-xs bg-blue-50 text-movv-900 border border-blue-200 px-1.5 py-0.5 rounded">Admin</span>}
+                    {p.is_admin && <span className="ml-2 text-xs bg-blue-50 text-movv-900 border border-blue-200 px-1.5 py-0.5 rounded">{p.perfil_admin === 'financeiro' ? 'Admin · Financeiro' : 'Admin'}</span>}
                   </td>
                   <td className="py-3 px-4">
                     <span className={p.type === 'accounting' ? 'badge-approved' : 'badge-pending'}>
@@ -152,7 +153,12 @@ export default function AdminPartners() {
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      {!outroAdmin(p) && (
+                      {outroAdmin(p) && (
+                        <span className="p-1.5 text-slate-300 cursor-help" title="A senha de uma conta de administrador só o próprio dono troca." aria-label="A senha de uma conta de administrador só o próprio dono troca.">
+                          <Lock className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                      {!outroAdmin(p) && !ehFinanceiro(user) && (
                         <button onClick={() => openReset(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-amber-600 transition-colors" title="Redefinir senha">
                           <Key className="w-3.5 h-3.5" />
                         </button>
@@ -162,7 +168,6 @@ export default function AdminPartners() {
                           {p.is_active ? <ToggleRight className="w-3.5 h-3.5 text-[#1B5E20]" /> : <ToggleLeft className="w-3.5 h-3.5 text-red-500" />}
                         </button>
                       )}
-                      {outroAdmin(p) && <span className="text-[11px] text-slate-400 ml-1" title="A senha de uma conta de administrador só o próprio dono troca.">só o dono troca a senha</span>}
                     </div>
                   </td>
                 </tr>

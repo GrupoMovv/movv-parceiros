@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { contaDoPortal, veTudo } = require('../config/perfilAdmin');
 
 // Senha provisória (must_change_password): até trocar, o servidor só deixa
 // ver a própria conta e trocar a senha — não basta a tela mandar para
@@ -45,7 +46,7 @@ const authenticate = async (req, res, next) => {
       req.user = { ...result.rows[0], type: 'indicator', is_admin: false };
     } else {
       const result = await db.query(
-        'SELECT id, code, name, email, type, is_admin, is_active, parent_id, must_change_password FROM partners WHERE id = $1',
+        'SELECT id, code, name, email, type, is_admin, is_active, parent_id, must_change_password, perfil_admin FROM partners WHERE id = $1',
         [decoded.id]
       );
       if (!result.rows[0] || !result.rows[0].is_active) {
@@ -53,7 +54,7 @@ const authenticate = async (req, res, next) => {
       }
       if (bloquearSenhaProvisoria(req, res, result.rows[0])) return;
       const { must_change_password: _m, ...parceiro } = result.rows[0]; // eslint-disable-line no-unused-vars
-      req.user = parceiro;
+      req.user = contaDoPortal(parceiro);
     }
 
     next();
@@ -64,6 +65,16 @@ const authenticate = async (req, res, next) => {
 
 const requireAdmin = (req, res, next) => {
   if (!req.user?.is_admin) {
+    return res.status(403).json({ error: 'Acesso restrito ao administrador' });
+  }
+  next();
+};
+
+// Admin ou perfil financeiro (config/perfilAdmin.js): só nas rotas de
+// parceiros, indicações, comissões, pagamentos, comissões internas,
+// indicadores e Movv Certificado.
+const requireEquipe = (req, res, next) => {
+  if (!veTudo(req.user)) {
     return res.status(403).json({ error: 'Acesso restrito ao administrador' });
   }
   next();
@@ -91,9 +102,9 @@ async function marcarModoQa(req, token) {
       req.modoQaMotivo = 'nao_admin';
       return;
     }
-    const r = await db.query('SELECT is_admin, is_active, must_change_password FROM partners WHERE id = $1', [decoded.id]);
-    // senha provisória ainda não trocada não liga o modo de teste
-    req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active && !r.rows[0]?.must_change_password);
+    const r = await db.query('SELECT is_admin, is_active, must_change_password, perfil_admin FROM partners WHERE id = $1', [decoded.id]);
+    // senha provisória ainda não trocada e perfil financeiro não ligam o modo de teste
+    req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active && !r.rows[0]?.must_change_password && !r.rows[0]?.perfil_admin);
     req.modoQaMotivo = req.modoQa ? 'ok' : 'nao_admin';
   } catch (err) {
     req.modoQaMotivo = err.name === 'TokenExpiredError' ? 'login_expirado' : 'token_invalido';
@@ -132,4 +143,4 @@ const lerAdminOpcionalCabecalho = async (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin, requireInternal, lerAdminOpcional, lerAdminOpcionalCabecalho };
+module.exports = { authenticate, requireAdmin, requireEquipe, requireInternal, lerAdminOpcional, lerAdminOpcionalCabecalho };

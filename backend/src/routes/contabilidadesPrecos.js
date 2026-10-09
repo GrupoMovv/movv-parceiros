@@ -1,11 +1,12 @@
 const router = require('express').Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { veTudo } = require('../config/perfilAdmin');
 const ctrl = require('../controllers/contabilidadesPrecosController');
 
 // Leitura e cadastro: admin ou Fernando (ele que cadastra/edita as
 // contabilidades que usa no dia a dia pra registrar vendas).
 const requireAdminOrComercialFull = (req, res, next) => {
-  if (req.user?.is_admin) return next();
+  if (veTudo(req.user)) return next(); // admin ou perfil financeiro
   if (req.user?.type === 'internal' && req.user?.role === 'comercial_full') return next();
   return res.status(403).json({ error: 'Acesso negado' });
 };
