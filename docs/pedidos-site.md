@@ -1,6 +1,6 @@
 # Pedido pelo site (botão Comprar) — IUB MAIS+
 
-Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
+Resumo do projeto para consulta. Atualizado em 09/10/2026: partes 1 a 9 no ar, domínio iubmais.com.br no ar, falta a parte 10 (teste ponta a ponta e liberação).
 
 ## Escopo (versão 1)
 
@@ -36,13 +36,13 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 
 ## Ajustes decididos depois
 
-- **Teste com a Adega Teste IUB (parceiro 47, `empresa_teste`):** só compra em **modo QA** (admin logado). O servidor recusa pedido para ela fora do modo QA. Como o `Authorization` já leva a sessão do cliente, o login do admin vai no cabeçalho `x-admin-token`.
+- **Teste com as lojas de teste (`empresa_teste`, ver "Lojas de teste" abaixo):** só compra em **modo QA**. O servidor recusa pedido para elas fora do modo QA. Modo QA = admin logado (login no cabeçalho `x-admin-token`, porque o `Authorization` já leva a sessão do cliente) **ou** conta de cliente marcada como **testador** (desde 09/10: o admin liga em /admin/testadores por 30 dias, com registro de quem ligou; o site manda o cabeçalho `x-cliente-token` e mostra o aviso "Modo teste").
 - **A mensagem de aceite** que vai para o WhatsApp do cliente já leva o total e a chave Pix, para o fluxo funcionar ao fim da parte 6, antes do `/meu/pedidos`.
 - **Política de Privacidade e termos** entram na parte 10: o pedido passa nome, telefone e endereço do cliente para a loja; o IUB não é parte da venda; o pagamento é direto para a loja.
 - **Preço:** o pedido cobra o **menor preço a que o cliente tem direito naquele momento** (normal, associado com benefício ativo, Fecha Mês no dia do evento, promoção, oferta do Beer). Descontos não acumulam. O resumo do Finalizar mostra esse preço, calculado pelo servidor, e o pedido cobra exatamente o valor do resumo.
 - **Exibição (parte 6):**
   - o preço principal de qualquer card ou página é o que **aquela pessoa** paga agora (mesma função do servidor);
-  - **não** esconder o preço de associado do visitante: o preço normal é o principal e o de associado aparece como chamada secundária ("R$ X para associado SECI"), com link para fazer a carteirinha;
+  - **não** esconder o preço de membro do visitante: o preço normal é o principal e o de membro aparece como chamada secundária ("R$ X no Clube MAIS+", antes "para associado SECI"), com link para o /clube;
   - Fecha Mês aparece na página do produto no dia do evento;
   - a página da promoção mostra o menor preço para o associado.
 - **Fecha Mês:** o preço do evento vale para todo mundo, visitante e associado. Não existe preço de Fecha Mês só para associado (conferido no código: a tabela só tem `preco_original` e `preco_fecha_mes`). Se o produto também tem preço de associado menor, o associado paga o menor.
@@ -60,8 +60,11 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
   - ativação: passo "salve o número do IUB MAIS+ nos contatos" (número em `ZAPI_NUMERO_EXIBICAO`, no Render) e botão "Enviar aviso de teste".
 - **Link da loja:** depois de "Pago, saiu", botão "Enviar para o entregador" com nome, telefone, endereço completo, itens e total (já pago), **sem** o link do pedido.
 - **Número do pedido começa em 1001** (migration 082).
-- **Links das mensagens** usam a variável `FRONTEND_URL` (hoje https://movv-parceiros.onrender.com). Quando o domínio iubmais.com.br entrar, basta trocar a variável.
+- **Links das mensagens** usam a variável `FRONTEND_URL` (desde 08/10: https://iubmais.com.br).
 - **Não marcar como confirmado** o WhatsApp de quem usou o "esqueci a senha": aquele fluxo não guarda para qual número o código foi.
+- **Promoção "Só Clube"** (antes "exclusiva para associado"): o servidor recusa no pedido (403 `SO_ASSOCIADO`) para quem não tem o benefício ativo, e o botão Comprar some (07/10). A mensagem diz "Esta promoção é só para quem é do Clube MAIS+".
+- **"Mais Vendidos" da home** (08/10): conta os pedidos pagos ou entregues dos últimos 30 dias, sem loja de teste e sem Disk Bebidas. Enquanto houver menos de 4 produtos vendidos, a lista usa os cliques no WhatsApp dos últimos 7 dias e o título vira "Mais procurados" (aprovado pelo Junior em 09/10).
+- **Mensagem do aceito** leva também o Pix copia e cola com o valor (08/10). Os avisos de WhatsApp têm o botão "Trocar número" (08/10).
 
 ## O que cada parte entregou
 
@@ -74,17 +77,28 @@ Resumo do projeto para consulta. Atualizado em 05/10/2026 (parte 5 no ar).
 | Ajustes | Migration 081 (limite só de não pagos) e promoção com 1 unidade por pedido | No ar (`ddded99`) |
 | 5. Avisos e link da loja | Textos em `services/pedidoMensagens.js` (aprovados pelo Junior), envio e registro em `services/pedidoAvisos.js` (cada aviso uma vez só), página `/pedido-loja/:token` (Aceitar/Recusar, Pago saiu, Cancelar, Enviar para o entregador), botão de aviso de teste no painel, migration 082 (#1001) | No ar (`5143a96`, `412171f`) |
 | 6a. Comprar e Finalizar | Botão Comprar (produto, promoção, Fecha Mês, Beer, Food), sacola, Finalizar com WhatsApp confirmado, endereço e +18; "Minha lista" (antigo carrinho) | No ar |
-| 6b. Preço por pessoa | O preço principal de cada card e página é o que aquela pessoa paga (`precoPessoa.js`, mesma regra do servidor); selo "-X% SECI" | No ar |
+| 6b. Preço por pessoa | O preço principal de cada card e página é o que aquela pessoa paga (`precoPessoa.js`, mesma regra do servidor); selo "-X% Clube" (era "-X% SECI") | No ar |
 | 7. Aba Pedidos no painel | Para responder / Em andamento / Encerrados, contador, som e "(n) Novo pedido" no título | No ar (`218ffa6`, `6e709d6`) |
 | 8. `/meu/pedidos` | Lista e acompanhamento, Pix, "Recebi meu pedido", cancelar enquanto a loja não aceitou, "Chamar a loja" | No ar (`9af4f68`) |
-| QR Pix | Copia e cola e QR com o valor (BR Code do Banco Central, `utils/pixBrCode.js`), só enquanto o pedido está aceito | Commit local |
-| 9. Prazos | `services/pedidoPrazos.js`: timer no servidor a cada minuto + `POST /api/interno/pedidos/prazos` (reserva, com `CRON_SECRET`). `PEDIDOS_PRAZOS_TIMER=false` desliga o timer | Commit local |
+| QR Pix | Copia e cola e QR com o valor (BR Code do Banco Central, `utils/pixBrCode.js`), só enquanto o pedido está aceito | No ar |
+| 9. Prazos | `services/pedidoPrazos.js`: timer no servidor a cada minuto + `POST /api/interno/pedidos/prazos` (reserva, com `CRON_SECRET`). `PEDIDOS_PRAZOS_TIMER=false` desliga o timer. Linha "[prazos pedidos] timer ligado" nos logs a cada start | No ar |
+| Lembrete do Pix | Um lembrete para a loja aos 30 min de aceito sem "pago" (texto aprovado) | No ar (`8ca443c`, `dca319a`) |
+| Migrations | `migrations/run.js` registra o que já rodou em `schema_migrations` e roda só as novas (o build do movv-backend roda o run.js) | No ar (`64af049`) |
+| Domínio | iubmais.com.br e api.iubmais.com.br (ver "Domínio oficial") | No ar (08/10) |
+| Testador | Conta de cliente em modo QA por 30 dias (migration 086, /admin/testadores) | No ar (09/10, `fc58f45`) |
 
 ## O que falta
 
 | Parte | O que vai entrar |
 |---|---|
-| 10. Teste ponta a ponta | Com a Adega Teste em modo QA, Política de Privacidade e termos atualizados, limpeza dos pedidos de teste (numeração volta para 1001), **raiz e marca do iubmais.com.br**, troca das variáveis (ver "Domínio oficial") e depois `PEDIDOS_SITE_LIBERADO=true` |
+| 10. Teste ponta a ponta | Teste com as lojas de teste em modo QA (admin ou testador), Política de Privacidade e termos atualizados (razão social do cartão CNPJ + "nome fantasia: Grupo Movv"), limpeza dos pedidos de teste (`node scripts/lojas_teste_limpar.js`, numeração volta para 1001) e depois `PEDIDOS_SITE_LIBERADO=true` no Render. Raiz, marca e troca das variáveis do domínio já foram feitas |
+
+## Lojas de teste e lojas pausadas (09/10/2026)
+
+- **Lojas de teste** (`empresa_teste`, só aparecem e só compram em modo QA): 47 Adega Teste IUB, 49 Pet Teste, 50 Serviço Teste, 51 Mercado Teste (pausadas) e 18 Burguer Teste (ativa, marcada como teste em 08/10). Pedido de loja de teste não conta no "Mais Vendidos".
+- **Pausadas** (não aparecem no site): 1 a 9, as contas automáticas dos convênios do SECI (decisão de 09/10: continuam pausadas; se alguma entrar, entra como loja normal), 15 Azul Empréstimo (Premium de cortesia) e 16 Gêmeos Moda Masculina.
+- **Única loja pública hoje:** 14 Imaginari Personalizados, em **Master de cortesia** desde 09/10 (para a vitrine "Produtos em Destaque" voltar à home).
+- Detalhes do Clube MAIS+ e dos convênios em `docs/clube-mais.md`.
 
 ## Domínio oficial (antes de ligar `PEDIDOS_SITE_LIBERADO`)
 
@@ -124,4 +138,4 @@ Decisão do Junior (05/10/2026): ir direto para **iubmais.com.br**, sem passar p
 ## Como testar
 
 - Sem banco de staging: os testes rodam num **banco descartável** (PGlite com todas as migrations) e no app real do backend, com o Z-API só gravando as mensagens. Nunca no banco de produção.
-- Telas: Vite com `VITE_API_URL=/api` e as respostas da API simuladas no navegador (Edge em 390 px).
+- Telas: build do site com `VITE_API_URL=http://127.0.0.1:3999/api` servido na porta 5173 (a única que o CORS aceita), contra o backend real ligado ao banco descartável; fotos no Edge a 390 px. Antes de todo push de site, a rotina dos menus no celular (360 px).
