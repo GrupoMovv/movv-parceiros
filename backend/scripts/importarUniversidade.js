@@ -9,6 +9,8 @@
 // (modulo.numero, pergunta.numero) e atualiza o texto SEM trocar os ids, para
 // não perder o progresso dos Partners quando o conteúdo for reimportado.
 // Nunca mexe em `publicado` do que já existe; o que é novo entra despublicado.
+// Tópico editado ou criado pelo admin (editado_manual_em, migration 092) é
+// pulado: a correção feita no portal não é sobrescrita pelo arquivo.
 // O Módulo 7 (conteudo_pendente) fica sempre despublicado.
 //
 // Alternativas do quiz: cada uma ganha um id aleatório e fixo, e a resposta
@@ -108,7 +110,7 @@ function tituloDoTermo(md) {
 }
 
 async function importar(client, { conteudo, quiz, termo }) {
-  const r = { modulos: [0, 0], aulas: [0, 0], topicos: [0, 0], perguntas: [0, 0], termo: '' };
+  const r = { modulos: [0, 0], aulas: [0, 0], topicos: [0, 0], perguntas: [0, 0], termo: '', topicos_pulados: [] };
   const conta = (k, novo) => { r[k][novo ? 0 : 1]++; };
   const idModulo = {};
 
@@ -149,8 +151,11 @@ async function importar(client, { conteudo, quiz, termo }) {
              atualizado_em = CASE WHEN universidade_topicos.texto IS DISTINCT FROM EXCLUDED.texto
                                     OR universidade_topicos.titulo IS DISTINCT FROM EXCLUDED.titulo
                                   THEN NOW() ELSE universidade_topicos.atualizado_em END
+           WHERE universidade_topicos.editado_manual_em IS NULL
            RETURNING (xmax = 0) AS novo`, [aulaId, t.numero, t.titulo, t.texto.trim(), i + 1]);
-        conta('topicos', up.rows[0].novo);
+        // sem linha de volta = já existia e foi editado no admin: fica como está
+        if (!up.rows[0]) r.topicos_pulados.push(`M${m.numero} aula ${a.ordem} tópico ${t.numero}`);
+        else conta('topicos', up.rows[0].novo);
       }
     }
   }
@@ -222,7 +227,8 @@ async function main() {
   const db = require('../src/config/database');
   const r = await db.transacao(client => importar(client, arquivos));
   const f = ([n, a]) => `${n} novos, ${a} atualizados`;
-  console.log(`Gravado. módulos: ${f(r.modulos)} · aulas: ${f(r.aulas)} · tópicos: ${f(r.topicos)} · perguntas: ${f(r.perguntas)} · termo: ${r.termo}`);
+  console.log(`Gravado. módulos: ${f(r.modulos)} · aulas: ${f(r.aulas)} · tópicos: ${f(r.topicos)}, ${r.topicos_pulados.length} pulados (editados no admin) · perguntas: ${f(r.perguntas)} · termo: ${r.termo}`);
+  if (r.topicos_pulados.length) console.log('  pulados:', r.topicos_pulados.join(', '));
   await db.pool?.end?.();
 }
 

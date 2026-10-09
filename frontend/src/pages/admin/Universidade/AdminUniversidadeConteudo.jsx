@@ -243,7 +243,7 @@ function Topico({ t, onMudou }) {
   const [apagar, setApagar] = useState(false);
   const mudou = titulo !== t.titulo || texto !== t.texto;
   async function salvar() {
-    try { const r = await api.patch(`/universidade/admin/topicos/${t.id}`, { titulo, texto }); t.titulo = r.data.titulo; t.texto = r.data.texto; toast.success('Tópico salvo'); setTitulo(r.data.titulo); }
+    try { const r = await api.patch(`/universidade/admin/topicos/${t.id}`, { titulo, texto }); Object.assign(t, r.data); toast.success('Tópico salvo'); setTitulo(r.data.titulo); }
     catch (err) { toast.error(err.response?.data?.error || 'Erro'); }
   }
   async function excluir() {
@@ -262,7 +262,9 @@ function Topico({ t, onMudou }) {
         {apagar
           ? <><button onClick={excluir} className="btn-danger !px-3 !py-1 text-xs">Excluir mesmo</button><button onClick={() => setApagar(false)} className="btn-secondary !px-3 !py-1 text-xs">Cancelar</button></>
           : <button onClick={() => setApagar(true)} className="text-xs text-red-500 hover:underline">Excluir</button>}
-        {t.atualizado_em && <span className="text-[11px] text-slate-400 ml-auto">editado em {dataBR(t.atualizado_em)}</span>}
+        {t.editado_manual_em
+          ? <span className="text-[11px] text-amber-700 ml-auto" title="A reimportação do conteúdo não sobrescreve este tópico">editado no admin por {t.editado_manual_por} em {dataBR(t.editado_manual_em)} · a reimportação pula</span>
+          : t.atualizado_em && <span className="text-[11px] text-slate-400 ml-auto">atualizado em {dataBR(t.atualizado_em)}</span>}
       </div>
     </div>
   );

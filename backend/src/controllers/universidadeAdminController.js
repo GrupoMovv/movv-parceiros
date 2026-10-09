@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const emailService = require('../services/emailService');
-const { registrarAcao, registrarLote } = require('../services/registroAdmin');
+const { registrarAcao, registrarLote, nomeDoAdmin } = require('../services/registroAdmin');
 const { situacao, lerConfig } = require('../services/universidade');
 
 const NIVEIS = ['mobile', 'point', 'hub', 'regional'];
@@ -304,8 +304,10 @@ async function criarTopico(req, res) {
       if (!a) return null;
       const n = (await cx.query(`SELECT COALESCE(MAX(numero), 0) + 1 AS n, COALESCE(MAX(ordem), 0) + 1 AS o FROM universidade_topicos WHERE aula_id = $1`, [a.id])).rows[0];
       const t = (await cx.query(
-        `INSERT INTO universidade_topicos (aula_id, numero, titulo, texto, ordem) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [a.id, n.n, titulo, corpo, n.o])).rows[0];
+        // criado no admin: a reimportação não mexe nele (migration 092)
+        `INSERT INTO universidade_topicos (aula_id, numero, titulo, texto, ordem, editado_manual_em, editado_manual_por)
+         VALUES ($1, $2, $3, $4, $5, NOW(), $6) RETURNING *`,
+        [a.id, n.n, titulo, corpo, n.o, nomeDoAdmin(req.user)])).rows[0];
       await registrarAcao(cx, req, 'universidade_topico_criado', 'universidade_topicos', t.id);
       return t;
     });
@@ -324,8 +326,11 @@ async function editarTopico(req, res) {
       const corpo = b.texto === undefined ? t.texto : texto(b.texto);
       if (!corpo) throw Object.assign(new Error('vazio'), { status: 400 });
       const linha = (await cx.query(
-        `UPDATE universidade_topicos SET titulo = $2, texto = $3, atualizado_em = NOW() WHERE id = $1 RETURNING *`,
-        [t.id, titulo, corpo])).rows[0];
+        // editado no admin: a reimportação pula este tópico (migration 092)
+        `UPDATE universidade_topicos SET titulo = $2, texto = $3, atualizado_em = NOW(),
+                editado_manual_em = NOW(), editado_manual_por = $4
+          WHERE id = $1 RETURNING *`,
+        [t.id, titulo, corpo, nomeDoAdmin(req.user)])).rows[0];
       await registrarAcao(cx, req, 'universidade_topico_editado', 'universidade_topicos', t.id);
       return linha;
     });
