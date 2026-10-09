@@ -6,6 +6,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Grupo Movv <noreply@grupomovv.com.br>';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'contato@grupomovv.com.br';
 const PORTAL_URL = process.env.FRONTEND_URL || 'https://iubmais.com.br';
+// Portal Movv (equipe e MOVV Partner): endereço fixo, nunca o domínio do
+// IUB MAIS+ que vem em FRONTEND_URL (Junior, 09/10/2026).
+const PORTAL_MOVV_URL = 'https://portal.grupomovv.com.br';
 
 async function enviar({ to, subject, html }) {
   try {
@@ -109,7 +112,7 @@ async function enviarAcessoUniversidade({ nome, email, codigo, senha, redefinido
     <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
       <p style="margin:0;color:#7a5e00;font-size:13px;"><strong>Atencao:</strong> no primeiro acesso o portal pede para voce criar a sua senha.</p>
     </div>
-    ${botao('Entrar no Portal Movv', `${PORTAL_URL}/login`)}
+    ${botao('Entrar no Portal Movv', `${PORTAL_MOVV_URL}/login`)}
   `);
   return enviar({ to: email, subject: redefinido ? 'Universidade MOVV Partner — acesso redefinido' : 'Universidade MOVV Partner — seu acesso', html });
 }
