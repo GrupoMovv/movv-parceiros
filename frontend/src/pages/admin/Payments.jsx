@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import { CreditCard, CheckCircle2, AlertCircle, Calendar, FileDown, Loader2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 import RegistroAcao from '../../components/admin/RegistroAcao';
+import AvisoPixAlterado from '../../components/admin/AvisoPixAlterado';
 import { generateMonthlyReport } from '../../utils/generateReport';
 
 function buildMonthOptions() {
@@ -125,6 +126,7 @@ export default function AdminPayments() {
                     R$ {parseFloat(p.pending_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-slate-400 text-xs mt-0.5">51% func. · 34% cont. · 15% imp.</p>
+                  <AvisoPixAlterado item={p} className="mt-2 ml-auto w-fit" />
                   <button onClick={() => openPay(p)} className="btn-primary mt-2 text-sm flex items-center gap-1.5">
                     <CreditCard className="w-3.5 h-3.5" /> Registrar PIX
                   </button>
@@ -219,6 +221,7 @@ export default function AdminPayments() {
                 <span className="text-slate-500 text-sm">Chave PIX:</span>
                 <span className="text-slate-900 text-sm font-medium">{selected.pix_key || 'Não cadastrada'}</span>
               </div>
+              <AvisoPixAlterado item={selected} className="mt-2" />
               <div className="flex items-center justify-between mt-1">
                 <span className="text-slate-500 text-sm">Valor a pagar:</span>
                 <span className="text-[#1B5E20] font-bold text-lg">

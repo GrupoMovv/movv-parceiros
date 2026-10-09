@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const emailService = require('../services/emailService');
+const { registrarTrocaPix } = require('../services/historicoPix');
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -77,12 +78,18 @@ async function updateEmployee(req, res) {
     );
     if (!own.rows[0]) return res.status(404).json({ error: 'Funcionário não encontrado' });
 
-    const result = await db.query(
-      `UPDATE partners SET name=$1, email=$2, whatsapp=$3, pix_key=$4
-       WHERE id=$5 RETURNING id, code, name, email, whatsapp, pix_key, is_active`,
-      [name, email, whatsapp || null, pix_key || null, req.params.id]
-    );
-    return res.json(result.rows[0]);
+    // troca de chave PIX fica registrada (quem e quando), na mesma transação
+    const linha = await db.transacao(async cx => {
+      const antes = (await cx.query('SELECT pix_key FROM partners WHERE id = $1 FOR UPDATE', [req.params.id])).rows[0];
+      const result = await cx.query(
+        `UPDATE partners SET name=$1, email=$2, whatsapp=$3, pix_key=$4
+         WHERE id=$5 RETURNING id, code, name, email, whatsapp, pix_key, is_active`,
+        [name, email, whatsapp || null, pix_key || null, req.params.id]
+      );
+      await registrarTrocaPix(cx, Number(req.params.id), antes?.pix_key, pix_key || null, req.user);
+      return result.rows[0];
+    });
+    return res.json(linha);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Email já cadastrado' });
     console.error(err);

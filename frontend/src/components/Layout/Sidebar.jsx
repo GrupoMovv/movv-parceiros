@@ -259,7 +259,7 @@ export default function Sidebar({ onClose }) {
               {user?.is_admin
                 ? '⚙ Administrador'
                 : ehFinanceiro(user)
-                  ? '⚙ Administrador — Financeiro'
+                  ? '⚙ Financeiro'
                 : isInternal
                   ? (user?.role === 'manager_azul'
                       ? '★ Gerente Azul'

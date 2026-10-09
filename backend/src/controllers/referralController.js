@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { veTudo } = require('../config/perfilAdmin');
+const { registrarLote } = require('../services/registroAdmin');
 const { generateProtocol, getExpirationDate } = require('../services/protocolService');
 const { sendWhatsAppMessage, buildProtocolMessage } = require('../services/zapApiService');
 const { calculateCommissions } = require('../services/commissionService');
@@ -144,16 +145,37 @@ async function confirmSale(req, res) {
 
 async function expireOldReferrals(req, res) {
   try {
-    const result = await db.query(
-      `UPDATE referrals SET status='expired'
-       WHERE status='pending' AND expires_at < NOW()
-       RETURNING id, protocol`
-    );
-    return res.json({ expired: result.rows.length, protocols: result.rows.map(r => r.protocol) });
+    // quem clicou, quando e quantas expiraram ficam no registro (admin_acoes),
+    // mesmo quando nenhuma expira
+    const rows = await db.transacao(async cx => {
+      const result = await cx.query(
+        `UPDATE referrals SET status='expired'
+         WHERE status='pending' AND expires_at < NOW()
+         RETURNING id, protocol`
+      );
+      await registrarLote(cx, req, 'indicacoes_expiradas', 'referrals', { quantidade: result.rows.length, protocolos: result.rows.map(r => r.protocol) });
+      return result.rows;
+    });
+    return res.json({ expired: rows.length, protocols: rows.map(r => r.protocol) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
 
-module.exports = { listReferrals, createReferral, confirmSale, expireOldReferrals };
+// Último clique no "Expirar pendentes" (Visão Geral): quem, quando e quantas.
+async function ultimaExpiracao(req, res) {
+  try {
+    const r = await db.query(
+      `SELECT admin_nome, criado_em, (detalhes->>'quantidade')::int AS quantidade
+       FROM admin_acoes WHERE acao = 'indicacoes_expiradas'
+       ORDER BY criado_em DESC, id DESC LIMIT 1`
+    );
+    return res.json(r.rows[0] || null);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+module.exports = { listReferrals, createReferral, confirmSale, expireOldReferrals, ultimaExpiracao };

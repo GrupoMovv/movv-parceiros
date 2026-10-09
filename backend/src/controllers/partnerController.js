@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { ADMIN_PRINCIPAL, ehAdminPrincipal } = require('../config/adminPrincipal');
 const db = require('../config/database');
 const emailService = require('../services/emailService');
+const { registrarTrocaPix } = require('../services/historicoPix');
 
 async function listPartners(req, res) {
   try {
@@ -120,13 +121,20 @@ async function updatePartner(req, res) {
   const { name, email, whatsapp, pix_key, parent_id, is_active } = req.body;
   try {
     if (await protegerOutroAdmin(req, res)) return;
-    const result = await db.query(
-      `UPDATE partners SET name=$1, email=$2, whatsapp=$3, pix_key=$4, parent_id=$5, is_active=$6
-       WHERE id=$7 RETURNING id, code, name, email, type, whatsapp, pix_key, is_active`,
-      [name, email, whatsapp, pix_key, parent_id || null, is_active ?? true, req.params.id]
-    );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Parceiro não encontrado' });
-    return res.json(result.rows[0]);
+    // troca de chave PIX fica registrada (quem e quando), na mesma transação
+    const linha = await db.transacao(async cx => {
+      const antes = (await cx.query('SELECT pix_key FROM partners WHERE id = $1 FOR UPDATE', [req.params.id])).rows[0];
+      if (!antes) return null;
+      const result = await cx.query(
+        `UPDATE partners SET name=$1, email=$2, whatsapp=$3, pix_key=$4, parent_id=$5, is_active=$6
+         WHERE id=$7 RETURNING id, code, name, email, type, whatsapp, pix_key, is_active`,
+        [name, email, whatsapp, pix_key, parent_id || null, is_active ?? true, req.params.id]
+      );
+      await registrarTrocaPix(cx, Number(req.params.id), antes.pix_key, pix_key, req.user);
+      return result.rows[0];
+    });
+    if (!linha) return res.status(404).json({ error: 'Parceiro não encontrado' });
+    return res.json(linha);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });

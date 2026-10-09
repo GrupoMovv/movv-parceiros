@@ -111,42 +111,46 @@ export default function AdminPartners() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                {['Código','Nome','Tipo','Email','WhatsApp','PIX','Vinculado a','Indicações','Saldo','Status','Ações'].map(h => (
-                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
+                {['Código','Nome','Contato','PIX','Vinculado a','Indicações','Saldo','Status','Ações'].map(h => (
+                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="text-center py-10 text-slate-400">Carregando...</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-slate-400">Carregando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} className="text-center py-10 text-slate-400">Nenhum parceiro encontrado</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-slate-400">Nenhum parceiro encontrado</td></tr>
               ) : filtered.map(p => (
                 <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${!p.is_active ? 'opacity-50' : ''}`}>
-                  <td className="py-3 px-4 font-mono text-xs text-[#C9A84C]">{p.code}</td>
-                  <td className="py-3 px-4 text-slate-900 font-medium whitespace-nowrap">
-                    {p.name}
-                    {p.is_admin && <span className="ml-2 text-xs bg-blue-50 text-movv-900 border border-blue-200 px-1.5 py-0.5 rounded">{p.perfil_admin === 'financeiro' ? 'Admin · Financeiro' : 'Admin'}</span>}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={p.type === 'accounting' ? 'badge-approved' : 'badge-pending'}>
+                  {/* tipo embaixo do código: a tabela cabe em 1366 px */}
+                  <td className="py-3 px-3">
+                    <p className="font-mono text-xs text-[#C9A84C] whitespace-nowrap">{p.code}</p>
+                    <span className={`inline-block mt-1 ${p.type === 'accounting' ? 'badge-approved' : 'badge-pending'}`}>
                       {p.type === 'accounting' ? 'Contab.' : 'Func.'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-slate-600 text-xs">{p.email}</td>
-                  <td className="py-3 px-4 text-slate-500 text-xs">{p.whatsapp || '—'}</td>
-                  <td className="py-3 px-4 text-slate-500 text-xs max-w-[120px] truncate">{p.pix_key || '—'}</td>
-                  <td className="py-3 px-4 text-slate-500 text-xs">{p.parent_name || '—'}</td>
-                  <td className="py-3 px-4 text-center text-slate-700">{p.total_referrals || 0}</td>
-                  <td className="py-3 px-4 text-right text-[#1B5E20] font-semibold whitespace-nowrap">
+                  <td className="py-3 px-3 text-slate-900 font-medium min-w-[150px]">
+                    {p.name}
+                    {p.is_admin && <span className="ml-2 text-xs bg-blue-50 text-movv-900 border border-blue-200 px-1.5 py-0.5 rounded">{p.perfil_admin === 'financeiro' ? 'Financeiro' : 'Admin'}</span>}
+                  </td>
+                  {/* e-mail e WhatsApp numa coluna só: a tabela cabe em 1366 px */}
+                  <td className="py-3 px-3 text-xs max-w-[170px]" title={[p.email, p.whatsapp].filter(Boolean).join(' · ')}>
+                    <p className="text-slate-600 truncate">{p.email}</p>
+                    <p className="text-slate-500 truncate">{p.whatsapp || '—'}</p>
+                  </td>
+                  <td className="py-3 px-3 text-slate-500 text-xs max-w-[120px] truncate">{p.pix_key || '—'}</td>
+                  <td className="py-3 px-3 text-slate-500 text-xs">{p.parent_name || '—'}</td>
+                  <td className="py-3 px-3 text-center text-slate-700">{p.total_referrals || 0}</td>
+                  <td className="py-3 px-3 text-right text-[#1B5E20] font-semibold whitespace-nowrap">
                     R$ {parseFloat(p.pending_balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3">
                     <span className={p.is_active ? 'badge-converted' : 'badge-expired'}>
                       {p.is_active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3">
                     <div className="flex items-center gap-1">
                       {(!outroAdmin(p) || souPrincipal) && (
                         <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar">

@@ -21,8 +21,14 @@ export default function AdminDashboard() {
   const [recentReferrals, setRecentReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expiring, setExpiring] = useState(false);
+  // último clique no "Expirar pendentes": quem, quando e quantas expiraram
+  const [ultimaExpiracao, setUltimaExpiracao] = useState(null);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); carregarUltimaExpiracao(); }, []);
+
+  function carregarUltimaExpiracao() {
+    api.get('/referrals/expire/ultimo').then(r => setUltimaExpiracao(r.data)).catch(() => {});
+  }
 
   async function loadData() {
     try {
@@ -67,6 +73,7 @@ export default function AdminDashboard() {
       const r = await api.post('/referrals/expire');
       toast.success(`${r.data.expired} indicações expiradas`);
       loadData();
+      carregarUltimaExpiracao();
     } catch { toast.error('Erro ao expirar indicações'); }
     finally { setExpiring(false); }
   }
@@ -96,10 +103,17 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Painel Admin</h1>
           <p className="text-slate-500 text-sm mt-1">Visão geral do Movv Parceiros</p>
         </div>
-        <button onClick={handleExpire} disabled={expiring} className="btn-secondary flex items-center gap-2 text-sm">
-          <RefreshCw className={`w-4 h-4 ${expiring ? 'animate-spin' : ''}`} />
-          Expirar pendentes
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button onClick={handleExpire} disabled={expiring} className="btn-secondary flex items-center gap-2 text-sm">
+            <RefreshCw className={`w-4 h-4 ${expiring ? 'animate-spin' : ''}`} />
+            Expirar pendentes
+          </button>
+          {ultimaExpiracao && (
+            <p className="text-[11px] text-slate-400 text-right">
+              Último: {ultimaExpiracao.admin_nome.replace(/ (.*)$/, '')} · {new Date(ultimaExpiracao.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} · {ultimaExpiracao.quantidade} {ultimaExpiracao.quantidade === 1 ? 'expirada' : 'expiradas'}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}

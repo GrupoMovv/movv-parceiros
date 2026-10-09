@@ -19,6 +19,15 @@ async function registrarAcao(cx, req, acao, alvoTipo, ids, detalhes = null) {
   );
 }
 
+// Ação em lote sem alvo (ex.: "Expirar pendentes", que pode não expirar
+// nada): uma linha só, com a quantidade e os protocolos nos detalhes.
+async function registrarLote(cx, req, acao, alvoTipo, detalhes = null) {
+  await (cx || db).query(
+    `INSERT INTO admin_acoes (admin_id, admin_nome, acao, alvo_tipo, alvo_id, detalhes) VALUES ($1, $2, $3, $4, NULL, $5)`,
+    [req.user?.id || null, nomeDoAdmin(req.user), acao, alvoTipo, detalhes ? JSON.stringify(detalhes) : null]
+  );
+}
+
 // Trecho de SQL com a última ação de cada linha: colunas ultima_acao,
 // ultima_acao_por e ultima_acao_em. `alias` é o apelido da tabela na query.
 function joinUltimaAcao(alias, alvoTipo, apelido = 'ult') {
@@ -31,4 +40,4 @@ function joinUltimaAcao(alias, alvoTipo, apelido = 'ult') {
 const COLUNAS_ULTIMA_ACAO = (apelido = 'ult') =>
   `${apelido}.acao AS ultima_acao, ${apelido}.admin_nome AS ultima_acao_por, ${apelido}.criado_em AS ultima_acao_em`;
 
-module.exports = { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO, nomeDoAdmin };
+module.exports = { registrarAcao, registrarLote, joinUltimaAcao, COLUNAS_ULTIMA_ACAO, nomeDoAdmin };

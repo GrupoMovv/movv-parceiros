@@ -3,6 +3,7 @@ const { veTudo } = require('../config/perfilAdmin');
 const path = require('path');
 const emailService = require('../services/emailService');
 const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
+const { JOIN_PIX_RECENTE, COLUNAS_PIX_RECENTE } = require('../services/historicoPix');
 
 async function listPayments(req, res) {
   try {
@@ -104,16 +105,21 @@ async function registerPayment(req, res) {
 
 async function getPendingByPartner(req, res) {
   try {
+    // pix_alterada_em/por: chave PIX trocada nos últimos 7 dias (aviso antes do "Registrar PIX")
     const result = await db.query(
-      `SELECT p.id, p.name, p.code, p.pix_key,
-              COALESCE(SUM(c.amount),0) AS pending_total,
-              COUNT(c.id) AS commission_count,
-              ARRAY_AGG(c.id) AS commission_ids
-       FROM partners p
-       LEFT JOIN commissions c ON c.partner_id = p.id AND c.status = 'approved'
-       GROUP BY p.id
-       HAVING COALESCE(SUM(c.amount),0) > 0
-       ORDER BY pending_total DESC`
+      `SELECT x.*, ${COLUNAS_PIX_RECENTE}
+       FROM (
+         SELECT p.id, p.name, p.code, p.pix_key,
+                COALESCE(SUM(c.amount),0) AS pending_total,
+                COUNT(c.id) AS commission_count,
+                ARRAY_AGG(c.id) AS commission_ids
+         FROM partners p
+         LEFT JOIN commissions c ON c.partner_id = p.id AND c.status = 'approved'
+         GROUP BY p.id
+         HAVING COALESCE(SUM(c.amount),0) > 0
+       ) x
+       ${JOIN_PIX_RECENTE('x')}
+       ORDER BY x.pending_total DESC`
     );
     return res.json(result.rows);
   } catch (err) {
