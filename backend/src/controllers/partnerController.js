@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { ADMIN_PRINCIPAL, ehAdminPrincipal } = require('../config/adminPrincipal');
 const db = require('../config/database');
 const emailService = require('../services/emailService');
 
@@ -57,6 +58,9 @@ async function createPartner(req, res) {
   if (!name || !email || !type || !password) {
     return res.status(400).json({ error: 'Campos obrigatórios: nome, email, tipo, senha' });
   }
+  if (is_admin && !ehAdminPrincipal(req.user)) {
+    return res.status(403).json({ error: `Só o ${ADMIN_PRINCIPAL} cria contas de administrador.` });
+  }
 
   try {
     const countResult = await db.query(
@@ -66,7 +70,10 @@ async function createPartner(req, res) {
     const count = parseInt(countResult.rows[0].count) + 1;
     const paddedCount = String(count).padStart(3, '0');
     let code;
-    if (type === 'accounting') {
+    if (is_admin) {
+      const n = (await db.query("SELECT COUNT(*)::int AS n FROM partners WHERE code LIKE 'ADMIN-%'")).rows[0].n + 1;
+      code = `ADMIN-${String(n).padStart(3, '0')}`;
+    } else if (type === 'accounting') {
       code = `CONT-IT-${paddedCount}`;
     } else {
       code = `FUNC-IT-CS-${paddedCount}`;
@@ -74,9 +81,10 @@ async function createPartner(req, res) {
 
     const hash = await bcrypt.hash(password, 10);
     const result = await db.query(
-      `INSERT INTO partners (code, name, email, password_hash, type, whatsapp, pix_key, parent_id, is_admin)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, code, name, email, type, whatsapp, pix_key, is_admin, is_active, created_at`,
-      [code, name, email, hash, type, whatsapp, pix_key, parent_id || null, is_admin || false]
+      `INSERT INTO partners (code, name, email, password_hash, type, whatsapp, pix_key, parent_id, is_admin, must_change_password)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING id, code, name, email, type, whatsapp, pix_key, is_admin, is_active, created_at`,
+      // conta de admin nasce com senha provisória: troca obrigatória no 1º acesso
+      [code, name, email, hash, type, whatsapp, pix_key, parent_id || null, Boolean(is_admin)]
     );
     const partner = result.rows[0];
     emailService.enviarCredenciais({
@@ -93,9 +101,25 @@ async function createPartner(req, res) {
   }
 }
 
+// Conta de outro admin: só o ADMIN-001 edita ou desativa (09/10).
+async function protegerOutroAdmin(req, res, { soDono = false } = {}) {
+  const alvo = (await db.query('SELECT id, is_admin FROM partners WHERE id = $1', [req.params.id])).rows[0];
+  if (!alvo || !alvo.is_admin || alvo.id === req.user.id) return false;
+  if (soDono) {
+    res.status(403).json({ error: 'A senha de uma conta de administrador só o próprio dono troca.' });
+    return true;
+  }
+  if (!ehAdminPrincipal(req.user)) {
+    res.status(403).json({ error: `Só o ${ADMIN_PRINCIPAL} altera a conta de outro administrador.` });
+    return true;
+  }
+  return false;
+}
+
 async function updatePartner(req, res) {
   const { name, email, whatsapp, pix_key, parent_id, is_active } = req.body;
   try {
+    if (await protegerOutroAdmin(req, res)) return;
     const result = await db.query(
       `UPDATE partners SET name=$1, email=$2, whatsapp=$3, pix_key=$4, parent_id=$5, is_active=$6
        WHERE id=$7 RETURNING id, code, name, email, type, whatsapp, pix_key, is_active`,
@@ -115,6 +139,7 @@ async function resetPassword(req, res) {
     return res.status(400).json({ error: 'Senha deve ter ao menos 6 caracteres' });
   }
   try {
+    if (await protegerOutroAdmin(req, res, { soDono: true })) return;
     const hash = await bcrypt.hash(password, 10);
     await db.query('UPDATE partners SET password_hash = $1 WHERE id = $2', [hash, req.params.id]);
     return res.json({ message: 'Senha redefinida com sucesso' });

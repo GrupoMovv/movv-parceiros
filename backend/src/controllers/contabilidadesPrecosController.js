@@ -48,7 +48,7 @@ async function listContabilidades(req, res) {
               cp.created_at, cp.updated_at
        FROM partners p
        LEFT JOIN contabilidades_precos cp ON cp.partner_id = p.id
-       WHERE p.type = 'accounting'
+       WHERE p.type = 'accounting' AND NOT p.is_admin -- conta admin não é contabilidade (09/10)
        ORDER BY p.name`
     );
     return res.json(result.rows);
@@ -67,7 +67,7 @@ async function getContabilidade(req, res) {
               cp.preco_certificado, cp.ativo, cp.observacoes
        FROM partners p
        LEFT JOIN contabilidades_precos cp ON cp.partner_id = p.id
-       WHERE p.id = $1 AND p.type = 'accounting'`,
+       WHERE p.id = $1 AND p.type = 'accounting' AND NOT p.is_admin`,
       [id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Contabilidade não encontrada' });
@@ -153,7 +153,7 @@ async function updateContabilidade(req, res) {
   try {
     await client.query('BEGIN');
 
-    const partnerCheck = await client.query(`SELECT * FROM partners WHERE id = $1 AND type = 'accounting'`, [id]);
+    const partnerCheck = await client.query(`SELECT * FROM partners WHERE id = $1 AND type = 'accounting' AND NOT is_admin`, [id]);
     if (!partnerCheck.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Contabilidade não encontrada' }); }
 
     if (cnpjDigits) {

@@ -3,10 +3,17 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Users, Plus, Search, Edit2, Key, ToggleLeft, ToggleRight } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
+import { useAuth } from '../../contexts/AuthContext';
+import { ADMIN_PRINCIPAL } from '../../utils/adminPrincipal';
 
 const EMPTY_FORM = { name: '', email: '', type: 'employee', whatsapp: '', pix_key: '', parent_id: '', password: '', is_admin: false };
 
 export default function AdminPartners() {
+  const { user } = useAuth();
+  // Conta de outro admin: só o dono troca a senha, e só o ADMIN-001 edita ou
+  // desativa (o servidor confere de novo).
+  const souPrincipal = Boolean(user?.is_admin && user?.code === ADMIN_PRINCIPAL);
+  const outroAdmin = p => p.is_admin && p.id !== user?.id;
   const [partners, setPartners] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,15 +147,22 @@ export default function AdminPartners() {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => openReset(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-amber-600 transition-colors" title="Redefinir senha">
-                        <Key className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors" title={p.is_active ? 'Desativar' : 'Ativar'}>
-                        {p.is_active ? <ToggleRight className="w-3.5 h-3.5 text-[#1B5E20]" /> : <ToggleLeft className="w-3.5 h-3.5 text-red-500" />}
-                      </button>
+                      {(!outroAdmin(p) || souPrincipal) && (
+                        <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" title="Editar">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {!outroAdmin(p) && (
+                        <button onClick={() => openReset(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-amber-600 transition-colors" title="Redefinir senha">
+                          <Key className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {(!outroAdmin(p) || souPrincipal) && (
+                        <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors" title={p.is_active ? 'Desativar' : 'Ativar'}>
+                          {p.is_active ? <ToggleRight className="w-3.5 h-3.5 text-[#1B5E20]" /> : <ToggleLeft className="w-3.5 h-3.5 text-red-500" />}
+                        </button>
+                      )}
+                      {outroAdmin(p) && <span className="text-[11px] text-slate-400 ml-1" title="A senha de uma conta de administrador só o próprio dono troca.">só o dono troca a senha</span>}
                     </div>
                   </td>
                 </tr>
