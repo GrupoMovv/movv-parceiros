@@ -37,7 +37,7 @@ export default function ParceiroDashboard() {
         style={{ background: `linear-gradient(135deg, ${ROXO} 0%, #7C3AED 100%)` }}
       >
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Olá, {parceiro.nome}! 👋</h1>
-        <p className="text-white/80 text-sm mt-1.5">Aqui você acompanha as visitas, gerencia produtos e promoções do seu comércio no IUB MAIS.</p>
+        <p className="text-white/80 text-sm mt-1.5">Aqui você acompanha as visitas, gerencia produtos e promoções do seu comércio no IUB MAIS+.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

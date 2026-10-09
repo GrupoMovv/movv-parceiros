@@ -238,7 +238,7 @@ async function iniciarAssinaturaPix({ parceiroId, email, plano }) {
   const parceiro = pr.rows[0];
   if (!parceiro) throw new ErroAssinatura(404, 'NAO_ENCONTRADO', 'Parceiro não encontrado');
   if (parceiro.cortesia_interna) {
-    throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS — não precisa assinar.');
+    throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS+ — não precisa assinar.');
   }
   exigirPlanoPermitido(parceiro, plano);
 
@@ -678,7 +678,7 @@ async function iniciarAssinaturaCartao({ parceiroId, plano, cardToken, payerEmai
   const parceiro = (await db.query('SELECT id, cnpj, tipo_pessoa, identidade_status, cortesia_interna FROM sindicato_parceiros WHERE id = $1', [parceiroId])).rows[0];
   if (!parceiro) throw new ErroAssinatura(404, 'NAO_ENCONTRADO', 'Parceiro não encontrado');
   if (parceiro.cortesia_interna) {
-    throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS — não precisa assinar.');
+    throw new ErroAssinatura(409, 'CORTESIA', 'Sua loja tem plano de cortesia do IUB MAIS+ — não precisa assinar.');
   }
   exigirPlanoPermitido(parceiro, plano);
 

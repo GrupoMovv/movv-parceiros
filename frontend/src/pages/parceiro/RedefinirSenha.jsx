@@ -34,7 +34,7 @@ export default function ParceiroRedefinirSenha() {
   return (
     <div className="min-h-screen w-full flex flex-col bg-white">
       <header className="h-16 flex items-center px-6" style={{ backgroundColor: PRETO }}>
-        <img src="/iub-logo-sm.png" alt="IUB MAIS" className="h-9 w-auto rounded-lg" />
+        <img src="/iub-logo-sm.png" alt="IUB MAIS+" className="h-9 w-auto rounded-lg" />
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-10">
@@ -111,7 +111,7 @@ export default function ParceiroRedefinirSenha() {
       </div>
 
       <footer className="text-center py-6">
-        <p className="text-slate-400 text-xs">IUB MAIS - Marketplace de Itumbiara</p>
+        <p className="text-slate-400 text-xs">IUB MAIS+ - Marketplace de Itumbiara</p>
       </footer>
     </div>
   );

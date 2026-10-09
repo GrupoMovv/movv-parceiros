@@ -134,7 +134,7 @@ export default function ParceiroFechaMes() {
         <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: PRETO }}>
           <Flame className="w-5 h-5" style={{ color: VERMELHO }} /> Fecha Mês
         </h1>
-        <p className="text-slate-500 text-sm mt-1">A super promoção de 24h do IUB MAIS — benefício do seu plano, com bônus exclusivo.</p>
+        <p className="text-slate-500 text-sm mt-1">A super promoção de 24h do IUB MAIS+ — benefício do seu plano, com bônus exclusivo.</p>
       </div>
 
       <div className="rounded-2xl p-6 text-white" style={{ background: `linear-gradient(135deg, ${ROXO} 0%, #7C3AED 100%)` }}>

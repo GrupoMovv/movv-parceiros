@@ -137,7 +137,7 @@ export default function ParceiroPainelLayout() {
     <div className="min-h-screen w-full bg-slate-50">
       <header className="sticky top-0 z-30 bg-white border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
-          <img src="/iub-logo-sm.png" alt="IUB MAIS" className="h-8 w-auto rounded-lg flex-shrink-0" />
+          <img src="/iub-logo-sm.png" alt="IUB MAIS+" className="h-8 w-auto rounded-lg flex-shrink-0" />
           <p className="flex-1 text-center font-bold text-sm truncate" style={{ color: PRETO }}>{parceiro.nome}</p>
 
           <InstallAppButton variant="compact" />

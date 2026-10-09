@@ -328,7 +328,7 @@ export default function ParceiroProdutoForm() {
         <Secao titulo="Informações">
           <Campo label={`Nome do produto (${form.nome.length}/100)`} value={form.nome} onChange={v => setCampo('nome', v.slice(0, 100))} />
           <div className="mt-4">
-            <Label>Descrição ({form.descricao.length}/500) — bem descritas ganham selo de qualidade IUB MAIS</Label>
+            <Label>Descrição ({form.descricao.length}/500) — bem descritas ganham selo de qualidade IUB MAIS+</Label>
             <textarea value={form.descricao} onChange={e => setCampo('descricao', e.target.value.slice(0, 500))} rows={4} className={campoCls} />
           </div>
           <div className="grid grid-cols-2 gap-4 mt-4">

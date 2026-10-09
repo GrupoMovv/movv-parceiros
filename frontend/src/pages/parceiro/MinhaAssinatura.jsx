@@ -66,7 +66,7 @@ export default function MinhaAssinatura() {
             <div>
               <p className="font-black" style={{ color: PRETO }}>Cortesia interna</p>
               <p className="text-sm text-slate-600 mt-1">
-                Sua loja tem o plano <strong>{dados.plano_atual_nome}</strong> oferecido pelo IUB MAIS, <strong>sem cobrança</strong> e sem data pra acabar.
+                Sua loja tem o plano <strong>{dados.plano_atual_nome}</strong> oferecido pelo IUB MAIS+, <strong>sem cobrança</strong> e sem data pra acabar.
               </p>
             </div>
           </div>

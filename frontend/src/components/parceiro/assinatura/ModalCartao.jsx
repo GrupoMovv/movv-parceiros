@@ -132,7 +132,7 @@ export default function ModalCartao({ plano, planoNome, valor, trial, trialDias,
           <div>
             <h2 className="font-black text-lg pr-10" style={{ color: PRETO }}>Dados do cartão</h2>
             <p className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Processado pelo Mercado Pago. O IUB MAIS não vê nem guarda o número do cartão.
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Processado pelo Mercado Pago. O IUB MAIS+ não vê nem guarda o número do cartão.
             </p>
             {carregandoBrick && (
               <div className="py-10 text-center"><Loader2 className="w-7 h-7 mx-auto animate-spin" style={{ color: ROXO }} /></div>

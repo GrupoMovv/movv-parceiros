@@ -16,7 +16,7 @@ const CARGOS = [
 const NOTIFICACOES_CONFIG = [
   { chave: 'novos_clientes_whatsapp', label: 'Novos clientes interessados nos meus produtos', desc: 'Avisamos no WhatsApp toda vez que alguém clicar pra falar com você.' },
   { chave: 'resumo_semanal_email', label: 'Resumo semanal de métricas', desc: 'Um e-mail toda semana com visualizações, cliques e destaques.' },
-  { chave: 'novidades_iub_email', label: 'Novidades e atualizações do IUB MAIS', desc: 'Fique por dentro de novos recursos do marketplace.' },
+  { chave: 'novidades_iub_email', label: 'Novidades e atualizações do IUB MAIS+', desc: 'Fique por dentro de novos recursos do marketplace.' },
   { chave: 'promocoes_expirando_whatsapp', label: 'Alertas de promoções expirando', desc: 'Um lembrete no WhatsApp antes de uma promoção sua terminar.' },
 ];
 

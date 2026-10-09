@@ -68,7 +68,7 @@ const META_PLANOS = {
       'Tudo do Premium',
       'Produtos ilimitados',
       '{produtos_rotativa} produtos em destaque',
-      'Post no Instagram oficial IUB MAIS (mensal)',
+      'Post no Instagram oficial IUB MAIS+ (mensal)',
       'Live mensal exclusiva com nossa equipe',
       'Biblioteca de materiais exclusivos (vídeos, PDFs, templates)',
       'Selo VIP dourado exclusivo',
@@ -312,7 +312,7 @@ function PlanosEmpresa() {
               🔥 Todos os planos estão em breve — aproveite o Grátis ilimitado!
             </span>
             <p className="text-slate-500 text-sm mt-4">
-              Estamos ativando planos pagos em breve. Enquanto isso, aproveite o Grátis sem limites e garanta seu bônus como Pioneiro do IUB MAIS!
+              Estamos ativando planos pagos em breve. Enquanto isso, aproveite o Grátis sem limites e garanta seu bônus como Pioneiro do IUB MAIS+!
             </p>
           </>
         )}
@@ -323,7 +323,7 @@ function PlanosEmpresa() {
           <span className="text-2xl">🎁</span>
           <div>
             <p className="font-bold text-sm" style={{ color: '#7A5E00' }}>Cortesia interna — plano {minha?.plano_atual_nome || 'Premium'} sem cobrança</p>
-            <p className="text-xs mt-1" style={{ color: '#92700C' }}>Sua loja tem o plano oferecido pelo IUB MAIS. Não precisa assinar nem pagar nada.</p>
+            <p className="text-xs mt-1" style={{ color: '#92700C' }}>Sua loja tem o plano oferecido pelo IUB MAIS+. Não precisa assinar nem pagar nada.</p>
           </div>
         </div>
       )}
@@ -383,9 +383,9 @@ function PlanosEmpresa() {
         <div className="flex items-start gap-4 max-w-2xl mx-auto">
           <Fire size={32} weight="duotone" color={DOURADO} className="flex-shrink-0 mt-1" />
           <div>
-            <h2 className="text-lg font-extrabold">No IUB MAIS, sua empresa não fica apenas cadastrada</h2>
+            <h2 className="text-lg font-extrabold">No IUB MAIS+, sua empresa não fica apenas cadastrada</h2>
             <p className="text-white/70 text-sm mt-2 leading-relaxed">
-              Nos planos pagos, seus produtos entram numa <strong className="text-white">vitrine rotativa</strong> que gira todos os dias na home do marketplace pra milhares de consumidores de Itumbiara. Mais produtos na fila = mais oportunidades de aparecer!
+              Nos planos pagos, seus produtos entram numa <strong className="text-white">vitrine rotativa</strong> que gira todos os dias na home do marketplace, para quem compra em Itumbiara. Mais produtos na fila = mais oportunidades de aparecer!
             </p>
             <div className="grid grid-cols-3 gap-3 mt-5">
               {ORDEM_PLANOS.filter(p => p !== 'gratis').map(p => (
@@ -621,7 +621,7 @@ function BannerSindicalizacao({ eSindicalizada, razaoSocial, economiaMax }) {
         <SealCheck size={26} weight="fill" color="#16A34A" className="flex-shrink-0 mt-0.5" />
         <div>
           <p className="font-bold text-sm text-emerald-800">🎉 Parabéns! {razaoSocial ? `${razaoSocial} é` : 'Sua empresa é'} SINDICALIZADA ao SECI!</p>
-          <p className="text-emerald-700 text-xs mt-1">Você tem desconto EXCLUSIVO em todos os planos pagos do IUB MAIS — os preços abaixo já são os seus.</p>
+          <p className="text-emerald-700 text-xs mt-1">Você tem desconto EXCLUSIVO em todos os planos pagos do IUB MAIS+ — os preços abaixo já são os seus.</p>
         </div>
       </div>
     );
@@ -632,7 +632,7 @@ function BannerSindicalizacao({ eSindicalizada, razaoSocial, economiaMax }) {
       <div>
         <p className="font-bold text-sm text-amber-800">⚠️ {razaoSocial ? `${razaoSocial} não está` : 'Sua empresa não está'} contribuindo com o SECI.</p>
         <p className="text-amber-700 text-xs mt-1">
-          Sindicalize-se e economize até {formatarBRL(economiaMax)}/mês nos planos pagos do IUB MAIS.{' '}
+          Sindicalize-se e economize até {formatarBRL(economiaMax)}/mês nos planos pagos do IUB MAIS+.{' '}
           <a href={linkWhatsappIub('Olá! Quero saber como sindicalizar minha empresa ao SECI e pagar menos no IUB MAIS+')} target="_blank" rel="noreferrer" className="font-bold underline" style={{ color: '#92700C' }}>Fale com o IUB MAIS+ pra saber como.</a>
         </p>
       </div>
@@ -669,7 +669,7 @@ function BannerFechaMes({ proximoFechaMes, planos }) {
           <div className="flex-1">
             <h2 className="text-xl font-black tracking-tight">🔥 Seu produto no Fecha Mês</h2>
             <p className="text-white/80 text-sm mt-2 leading-relaxed">
-              Toda última sexta do mês, o IUB MAIS realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros clientes e picos de vendas de <strong className="text-white">até 5x</strong> em 24h.
+              Toda última sexta do mês, o IUB MAIS+ realiza o <strong className="text-white">Fecha Mês</strong>: vitrine especial com destaque, comunicação direta pros clientes e 24 horas de ofertas em destaque.
             </p>
 
             <div className="grid grid-cols-3 gap-3 mt-5 max-w-md">
@@ -728,23 +728,29 @@ function CardPlano({ planoKey, meta, precoInfo, eSindicalizada, verSindicalizada
         background: meta.maisEscolhido ? `linear-gradient(160deg, white 0%, ${DOURADO}0D 100%)` : 'white',
       }}
     >
-      {ehAtual && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-emerald-500 text-white whitespace-nowrap">
-          Seu plano atual
-        </span>
-      )}
-      {emBreve && (
-        <span className="absolute -top-3 right-4 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-slate-700 text-white whitespace-nowrap">
-          🔜 Em breve
-        </span>
-      )}
-      {meta.maisEscolhido && (
-        <span
-          className="absolute -top-3 left-4 text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap flex items-center gap-1"
-          style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
-        >
-          <Sparkle size={11} weight="fill" /> Mais escolhido
-        </span>
+      {/* Selos numa fileira só: antes cada um era posicionado sozinho e o
+          "Mais escolhido" cobria o "Seu plano atual" no Premium (09/10). */}
+      {(ehAtual || emBreve || meta.maisEscolhido) && (
+        <div className="absolute -top-3 inset-x-3 flex justify-center gap-1.5">
+          {meta.maisEscolhido && (
+            <span
+              className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap flex items-center gap-1"
+              style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+            >
+              <Sparkle size={11} weight="fill" /> Mais escolhido
+            </span>
+          )}
+          {ehAtual && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-emerald-500 text-white whitespace-nowrap">
+              {meta.maisEscolhido ? 'Seu plano' : 'Seu plano atual'}
+            </span>
+          )}
+          {emBreve && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-slate-700 text-white whitespace-nowrap">
+              🔜 Em breve
+            </span>
+          )}
+        </div>
       )}
 
       <p className="font-bold text-base mt-3" style={{ color: PRETO }}>{meta.nome}</p>
@@ -1009,7 +1015,7 @@ function ModalComoSindicalizar({ economiaAnual, onVoltar, onFechar }) {
   const passos = [
     'Sua empresa precisa estar contribuindo com o SECI através da guia mensal do sindicato.',
     'Vale como "em dia" quem pagou pelo menos 1 das 3 guias mais recentes.',
-    'O IUB MAIS confere seu CNPJ na base de contribuintes do SECI e aplica o desconto sozinho — você não precisa avisar nem pedir.',
+    'O IUB MAIS+ confere seu CNPJ na base de contribuintes do SECI e aplica o desconto sozinho — você não precisa avisar nem pedir.',
   ];
   return (
     <CascaModal onFechar={onFechar}>
@@ -1039,7 +1045,7 @@ function ModalComoSindicalizar({ economiaAnual, onVoltar, onFechar }) {
 
       <div className="rounded-2xl p-4 mt-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
         <p className="text-xs" style={{ color: '#92700C' }}>
-          <strong>Já é sindicalizada e aparece que não?</strong> Pode ser que seu CNPJ ainda não esteja na base que o IUB MAIS recebe do SECI
+          <strong>Já é sindicalizada e aparece que não?</strong> Pode ser que seu CNPJ ainda não esteja na base que o IUB MAIS+ recebe do SECI
           {' — '}
           <a
             href={linkWhatsappIub('Olá! Minha empresa é sindicalizada ao SECI, mas o IUB MAIS+ não está reconhecendo meu CNPJ.')}
