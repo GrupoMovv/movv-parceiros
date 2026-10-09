@@ -1,6 +1,18 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
+// Senha provisória (must_change_password): até trocar, o servidor só deixa
+// ver a própria conta e trocar a senha — não basta a tela mandar para
+// /trocar-senha-obrigatorio (Junior, 09/10/2026, antes da conta do ADMIN-002).
+const ROTAS_COM_SENHA_PROVISORIA = ['/api/auth/me', '/api/auth/force-change-password', '/api/auth/change-password'];
+function bloquearSenhaProvisoria(req, res, conta) {
+  if (!conta?.must_change_password) return false;
+  const rota = (req.baseUrl + req.path).replace(/\/+$/, '');
+  if (ROTAS_COM_SENHA_PROVISORIA.includes(rota)) return false;
+  res.status(403).json({ error: 'Troque a senha provisória antes de continuar.', codigo: 'TROCAR_SENHA' });
+  return true;
+}
+
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -13,13 +25,15 @@ const authenticate = async (req, res, next) => {
 
     if (decoded.userType === 'internal') {
       const result = await db.query(
-        'SELECT id, name, email, role, whatsapp, pix_key, base_salary FROM internal_collaborators WHERE id = $1 AND active = true',
+        'SELECT id, name, email, role, whatsapp, pix_key, base_salary, must_change_password FROM internal_collaborators WHERE id = $1 AND active = true',
         [decoded.id]
       );
       if (!result.rows[0]) {
         return res.status(401).json({ error: 'Colaborador não encontrado ou inativo' });
       }
-      req.user = { ...result.rows[0], type: 'internal', is_admin: false };
+      if (bloquearSenhaProvisoria(req, res, result.rows[0])) return;
+      const { must_change_password: _m, ...colab } = result.rows[0]; // eslint-disable-line no-unused-vars
+      req.user = { ...colab, type: 'internal', is_admin: false };
     } else if (decoded.userType === 'indicator') {
       const result = await db.query(
         'SELECT id, name, cpf, email, whatsapp, pix_key, pix_key_type, status, total_indications, total_commissions, total_paid, pending_amount FROM indicators WHERE id = $1 AND status = $2',
@@ -31,13 +45,15 @@ const authenticate = async (req, res, next) => {
       req.user = { ...result.rows[0], type: 'indicator', is_admin: false };
     } else {
       const result = await db.query(
-        'SELECT id, code, name, email, type, is_admin, is_active, parent_id FROM partners WHERE id = $1',
+        'SELECT id, code, name, email, type, is_admin, is_active, parent_id, must_change_password FROM partners WHERE id = $1',
         [decoded.id]
       );
       if (!result.rows[0] || !result.rows[0].is_active) {
         return res.status(401).json({ error: 'Parceiro não encontrado ou inativo' });
       }
-      req.user = result.rows[0];
+      if (bloquearSenhaProvisoria(req, res, result.rows[0])) return;
+      const { must_change_password: _m, ...parceiro } = result.rows[0]; // eslint-disable-line no-unused-vars
+      req.user = parceiro;
     }
 
     next();
@@ -75,8 +91,9 @@ async function marcarModoQa(req, token) {
       req.modoQaMotivo = 'nao_admin';
       return;
     }
-    const r = await db.query('SELECT is_admin, is_active FROM partners WHERE id = $1', [decoded.id]);
-    req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active);
+    const r = await db.query('SELECT is_admin, is_active, must_change_password FROM partners WHERE id = $1', [decoded.id]);
+    // senha provisória ainda não trocada não liga o modo de teste
+    req.modoQa = Boolean(r.rows[0]?.is_admin && r.rows[0]?.is_active && !r.rows[0]?.must_change_password);
     req.modoQaMotivo = req.modoQa ? 'ok' : 'nao_admin';
   } catch (err) {
     req.modoQaMotivo = err.name === 'TokenExpiredError' ? 'login_expirado' : 'token_invalido';
