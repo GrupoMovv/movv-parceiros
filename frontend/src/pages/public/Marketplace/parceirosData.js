@@ -151,7 +151,3 @@ export const CATEGORIAS_HOME_FOOTER = [
 export function normalizarCategoria(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
-
-export function buscarParceiroPorSlug(slug) {
-  return PARCEIROS_INICIAIS.find(p => p.slug === slug) || null;
-}

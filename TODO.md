@@ -96,32 +96,11 @@ sorteio/exibição quando o parceiro tiver texto em vez de percentual
 em `backend/src/services/roletaService.js` e o front que renderiza o
 cupom). Depois disso, ativar Roleta pro azul-emprestimo.
 
-## Unificar ParceiroDetalhe.jsx (estático) com as páginas novas de Produtos/Serviços (banco real)
+## ~~Unificar ParceiroDetalhe.jsx (estático) com as páginas do banco~~ — FEITO
 
-Em 2026-09-14, construí `/marketplace/servicos` + `/servicos/:slug`
-(feature de separar Produto de Serviço, `tipo_negocio` em
-`sindicato_parceiros`, migration `049`) 100% direto do banco real.
-
-Só que `/marketplace/parceiro/:slug` (`ParceiroDetalhe.jsx`) continua
-"Fase 1": lê de um arquivo estático hardcoded
-(`frontend/src/pages/public/Marketplace/parceirosData.js`), não do
-banco. Esse arquivo só tem 9 dos parceiros reais (falta
-`imaginari-personalizados` e `azul-emprestimo`) e nunca teve
-`produtos` preenchido — a aba "Produtos" dessa página nunca aparece
-pra ninguém. Também mostra "5.0 ⭐" fixo sem sistema de avaliação
-nenhum por trás (dado decorativo, não real).
-
-Descobri isso comparando com o banco real: `sindicato_parceiros` já
-tem os mesmos campos (whatsapp/descrição/endereço) preenchidos e mais
-completos que o arquivo estático — dá pra migrar sem perder nada.
-
-Resultado: hoje existem DOIS sistemas de página de parceiro
-coexistindo (estático em `/marketplace/parceiro/:slug`, banco real em
-`/servicos/:slug`) — não decidi migrar o antigo porque mexer numa
-página que já funciona em produção não estava no escopo pedido.
-Precisa: migrar `ParceiroDetalhe.jsx` pro banco de verdade (reusar os
-endpoints de `marketplaceHomeController.js` como referência) e tirar o
-"5.0 fixo", ou decidir formalmente manter os dois por algum motivo.
+Resolvido em 08-09/10/2026: `/marketplace/parceiro/:slug` virou `LojaDetalhe.jsx`
+(banco real, `GET /public/lojas/:slug`, commit d30b573) e o `ParceiroDetalhe.jsx`
+estático, que tinha ficado sem rota, foi apagado.
 
 ## Itens adiados do redesign Produto vs Serviço (2026-09-14)
 

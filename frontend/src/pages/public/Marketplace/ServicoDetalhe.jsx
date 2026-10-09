@@ -13,8 +13,7 @@ import { PERIODOS, nomePeriodo, dataCurta, hojeSP, emojiEspecie } from '../../..
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 
 // Página individual de um serviço — 100% banco real (sindicato_parceiros
-// + sindicato_parceiro_produtos como "serviços oferecidos"), diferente
-// de ParceiroDetalhe.jsx (que ainda é Fase 1 estática, ver TODO.md).
+// + sindicato_parceiro_produtos como "serviços oferecidos").
 // CTA é "Agendar", não "Comprar" — reflete que é hora marcada, não SKU
 // com preço fixo/estoque.
 export default function ServicoDetalhe() {
