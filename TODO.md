@@ -1,5 +1,19 @@
 # TODO
 
+## Trocar o PDF dos convênios do SECI pelo admin (anotado 09/10/2026 — não fazer agora)
+
+Hoje o PDF que "Meus convênios" abre fica no código (`backend/uploads/beneficios/catalogo-beneficios-seci.pdf`):
+trocar exige commit e deploy. Fazer um botão no admin (área do Sindicato) para enviar o PDF novo, guardado
+fora do código (banco ou Cloudinary), com a rota `/api/public/painel/convenios/pdf` lendo de lá e caindo no
+arquivo atual se não houver outro. Esforço: meio dia.
+
+## Push notification para clientes no Premium e no Master (anotado 09/10/2026)
+
+A tela de Planos prometia "Push notification pros clientes (2/mês)" no Premium (Master: 4), mas o site
+não envia push hoje (sem chaves VAPID nem inscrição dos navegadores; ver `backend/src/jobs/notificarRoletaDiaria.js`).
+O item saiu da tela em 09/10. Os números continuam em `config/planos.js` (`push_por_mes`). Só voltar a
+prometer quando o envio existir. A "Integração com Instagram" também saiu: não existe função no sistema.
+
 ## IUB Disk Bebidas (/beer) — pendências da fase 1 (2026-09-23)
 
 - **Parecer jurídico sobre cigarros (Lei 9.294/96)** ANTES de intensificar

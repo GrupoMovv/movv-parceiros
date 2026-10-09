@@ -59,7 +59,7 @@ const BEER_VAZIO = { tipo: '', whatsapp: '', bairros_entrega: [], horario_funcio
 
 function vantagens(qtdAssociados) {
   return [
-    { emoji: '🆓', titulo: '100% Gratuito', texto: 'Sem mensalidade, sem comissão. Anuncie até 30 produtos. Nossa missão: fortalecer o comércio de Itumbiara.' },
+    { emoji: '🆓', titulo: 'Comece grátis', texto: 'O plano Grátis não tem mensalidade. Os planos pagos são opcionais. Anuncie até 30 produtos, sem comissão nas vendas.' },
     { emoji: '💬', titulo: 'Cliente direto no seu WhatsApp', texto: 'Sem comissão, sem intermediário. Cliente fala com você.' },
     { emoji: '💎', titulo: 'Público qualificado', texto: `Alcance ${qtdAssociados ? `+${qtdAssociados} ` : ''}membros do Clube MAIS+ + toda Itumbiara.` },
     { emoji: '📊', titulo: 'Métricas em tempo real', texto: 'Veja quantos leads gerou, produtos mais vistos.' },
@@ -73,7 +73,7 @@ const PASSOS = [
 ];
 
 const FAQ = [
-  { p: 'Preciso pagar alguma coisa?', r: 'Não! O IUB MAIS+ é 100% gratuito. Nossa missão é fortalecer o comércio de Itumbiara, então não cobramos mensalidade nem comissão dos parceiros.' },
+  { p: 'Preciso pagar alguma coisa?', r: 'O plano Grátis não tem mensalidade. Os planos pagos são opcionais. Não cobramos comissão sobre as vendas: o cliente paga direto para a sua loja.' },
   { p: 'Quanto tempo demora a aprovação?', r: 'Até 24h úteis depois do envio do cadastro.' },
   { p: 'Como recebo os clientes?', r: 'Direto no seu WhatsApp — sem intermediário.' },
   { p: 'Posso cancelar quando quiser?', r: 'Sim, quando quiser, sem burocracia.' },
@@ -378,7 +378,7 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
         </div>
         <div className="relative max-w-3xl mx-auto">
           <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight tracking-tight">
-            Anuncie seus produtos e serviços no IUB MAIS
+            Anuncie seus produtos e serviços no IUB MAIS+
           </h1>
           <p className="text-white/80 text-lg sm:text-xl mt-6 max-w-xl mx-auto">
             O marketplace de Itumbiara. Grátis, simples e direto no WhatsApp.
@@ -388,9 +388,9 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
             className="inline-flex items-center gap-2 mt-6 text-sm sm:text-base font-black uppercase tracking-wide px-5 py-2.5 rounded-full"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            🆓 100% Gratuito
+            🆓 Comece grátis
           </span>
-          <p className="text-white/60 text-xs sm:text-sm mt-2.5">Sem mensalidade. Sem comissão. Sem taxas.</p>
+          <p className="text-white/60 text-xs sm:text-sm mt-2.5">O plano Grátis não tem mensalidade. Os planos pagos são opcionais.</p>
 
           <div>
             <button
@@ -495,7 +495,7 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white">🏆 SEJA UM PIONEIRO</h2>
           {vagasPioneiro && (
             <p className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold px-4 py-2 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: DOURADO }}>
-              🔥 Só restam {vagasPioneiro.vagas_restantes} de {vagasPioneiro.total} vagas
+              🔥 {vagasPioneiro.preenchidas > 0 ? `Só restam ${vagasPioneiro.vagas_restantes} de ${vagasPioneiro.total} vagas` : `${vagasPioneiro.total} vagas de Pioneiro`}
             </p>
           )}
           <p className="text-white/80 text-sm mt-4 max-w-lg mx-auto leading-relaxed">
@@ -981,7 +981,7 @@ function AvisoSindicalizacao({ sindicalizacao }) {
   if (eSindicalizada) {
     return (
       <p className="text-[11px] mt-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: '#ECFDF5', color: '#166534' }}>
-        🎉 Sua empresa é <strong>SINDICALIZADA ao SECI</strong> — você já tem {offPct ? `até ${offPct}% OFF` : 'desconto'} em todos os planos pagos do IUB MAIS! {cta}
+        🎉 Sua empresa é <strong>SINDICALIZADA ao SECI</strong> — você já tem {offPct ? `até ${offPct}% OFF` : 'desconto'} em todos os planos pagos do IUB MAIS+! {cta}
       </p>
     );
   }

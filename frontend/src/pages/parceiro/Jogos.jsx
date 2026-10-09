@@ -59,7 +59,7 @@ export default function ParceiroJogos() {
         <h2 className="text-lg font-bold text-slate-800 mt-3">🎰 Roleta da Sorte</h2>
         <p className="text-slate-500 text-sm mt-2 max-w-md mx-auto">
           Seu plano atual ({NOMES_PLANO[dados.plano] || dados.plano}) não participa dos Joguinhos IUB MAIS+.
-          Fale com o IUB MAIS+ pra fazer upgrade e distribuir cupons pra milhares de clientes todo dia.
+          Fale com o IUB MAIS+ pra fazer upgrade e distribuir cupons para os clientes do site.
         </p>
       </div>
     );

@@ -54,12 +54,10 @@ const META_PLANOS = {
     beneficios: [
       'Tudo do Oficial',
       '{produtos_rotativa} produtos em destaque',
-      'Push notification pros clientes ({push_por_mes}/mês)',
       'Aparece em "Parceiros em Destaque" (topo da home)',
       'Analytics completo',
       'Suporte prioritário por WhatsApp',
       'Boost mensal de fim de semana',
-      'Integração com Instagram',
     ],
   },
   master: {
@@ -448,7 +446,7 @@ function PlanosEmpresa() {
           </h2>
           {vagasPioneiro && !jaEhPioneiro && (
             <p className="text-xs font-bold mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ backgroundColor: `${DOURADO}22`, color: DOURADO }}>
-              🔥 Só restam {vagasPioneiro.vagas_restantes} de {vagasPioneiro.total} vagas
+              🔥 {vagasPioneiro.preenchidas > 0 ? `Só restam ${vagasPioneiro.vagas_restantes} de ${vagasPioneiro.total} vagas` : `${vagasPioneiro.total} vagas de Pioneiro`}
             </p>
           )}
           <p className="text-white/80 text-sm mt-3">{jaEhPioneiro ? 'Seus benefícios de parceiro fundador:' : 'Primeiros 20 parceiros ganham:'}</p>
