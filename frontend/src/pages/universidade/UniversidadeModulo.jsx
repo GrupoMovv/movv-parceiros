@@ -3,13 +3,17 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ChevronLeft, CheckCircle2, Circle, ListOrdered, ChevronDown, PlayCircle, FileSignature } from 'lucide-react';
 import api from '../../services/api';
-import { identidade, dataBR, pct } from './identidade';
+import { identidade, dataBR, pct, modoUniversidade } from './identidade';
 import TextoSimples from './TextoSimples';
+import { AvisoPrevia, SeloNaoPublicado } from './UniversidadeHome';
 
 // Página do módulo: índice das aulas (no celular, abre no topo; no computador,
 // coluna fixa), texto dos tópicos, "Marquei como lida" ao fim de cada aula,
 // o termo de adesão no Módulo 0 e o botão do quiz quando tudo estiver lido.
-export default function UniversidadeModulo() {
+// Com `previa` ("Ver como Partner"), "Marquei como lida" e o aceite só mudam a
+// tela: nada vai para o servidor.
+export default function UniversidadeModulo({ previa = false }) {
+  const modo = modoUniversidade(previa);
   const { numero } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -19,11 +23,11 @@ export default function UniversidadeModulo() {
 
   useEffect(() => {
     setM(null);
-    api.get(`/universidade/modulos/${numero}`)
+    api.get(`${modo.api}/modulos/${numero}`)
       .then(r => setM(r.data))
       .catch(err => {
         toast.error(err.response?.data?.error || 'Módulo indisponível.');
-        navigate('/universidade', { replace: true });
+        navigate(modo.base, { replace: true });
       });
   }, [numero]);
 
@@ -36,7 +40,10 @@ export default function UniversidadeModulo() {
   async function marcarLida(aula) {
     setMarcando(aula.id);
     try {
-      const r = await api.post(`/universidade/aulas/${aula.id}/lida`);
+      const lidasDepois = m.aulas.filter(a => a.lida_em || a.id === aula.id).length;
+      const r = previa
+        ? { data: { aulas_lidas: lidasDepois, aulas_total: m.aulas_total, quiz_liberado: true } } // prévia: não grava
+        : await api.post(`/universidade/aulas/${aula.id}/lida`);
       setM(atual => ({
         ...atual,
         aulas_lidas: r.data.aulas_lidas,
@@ -78,7 +85,8 @@ export default function UniversidadeModulo() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <Link to="/universidade" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-movv-900 mb-3">
+      {previa && <div className="mb-3"><AvisoPrevia /></div>}
+      <Link to={modo.base} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-movv-900 mb-3">
         <ChevronLeft className="w-4 h-4" /> Universidade
       </Link>
 
@@ -88,6 +96,7 @@ export default function UniversidadeModulo() {
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-widest text-white/75">Módulo {m.numero}</p>
             <h1 className="text-xl sm:text-2xl font-display font-semibold leading-tight">{m.titulo}</h1>
+            {m.nao_publicado && <SeloNaoPublicado className="mt-1.5" />}
             <p className="text-sm text-white/80 mt-1 tabular-nums">{m.aulas_lidas} de {m.aulas_total} aulas lidas{m.aprovado ? ' · quiz aprovado' : ''}</p>
           </div>
         </div>
@@ -115,6 +124,7 @@ export default function UniversidadeModulo() {
             <section key={a.id} id={`aula-${a.id}`} className="scroll-mt-20 lg:scroll-mt-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: cor }}>Aula {a.ordem}</p>
               <h2 className="text-lg sm:text-xl font-display font-semibold text-slate-900 leading-snug mt-0.5">{a.titulo}</h2>
+              {a.nao_publicado && <SeloNaoPublicado className="mt-1" />}
               {a.video_url && (
                 <a href={a.video_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-movv-900 hover:underline">
                   <PlayCircle className="w-4 h-4" /> Assistir ao vídeo da aula
@@ -143,7 +153,7 @@ export default function UniversidadeModulo() {
           ))}
 
           <section id="fim-do-modulo" className="scroll-mt-20 lg:scroll-mt-4 space-y-4">
-            {m.numero === 0 && <BlocoTermo m={m} onAceito={termo => setM(atual => ({ ...atual, termo }))} />}
+            {m.numero === 0 && <BlocoTermo m={m} modo={modo} onAceito={termo => setM(atual => ({ ...atual, termo }))} />}
             <div className="rounded-2xl border border-gold-500/40 bg-white p-5 sm:p-6">
               <h2 className="font-display font-semibold text-slate-900 text-lg">Quiz do módulo</h2>
               <p className="text-sm text-slate-600 mt-1">
@@ -153,7 +163,7 @@ export default function UniversidadeModulo() {
                 {m.ultima_nota !== null && ` Última nota: ${pct(m.ultima_nota)}.`}
               </p>
               {m.quiz_liberado
-                ? <Link to={`/universidade/modulo/${m.numero}/quiz`} className="btn-primary inline-flex mt-4 w-full sm:w-auto justify-center">{m.aprovado ? 'Refazer o quiz' : 'Fazer o quiz do módulo'}</Link>
+                ? <Link to={`${modo.base}/modulo/${m.numero}/quiz`} className="btn-primary inline-flex mt-4 w-full sm:w-auto justify-center">{m.aprovado ? 'Refazer o quiz' : 'Fazer o quiz do módulo'}</Link>
                 : <button disabled className="btn-primary mt-4 w-full sm:w-auto opacity-40 cursor-not-allowed">Fazer o quiz do módulo</button>}
             </div>
           </section>
@@ -163,21 +173,21 @@ export default function UniversidadeModulo() {
   );
 }
 
-function BlocoTermo({ m, onAceito }) {
+function BlocoTermo({ m, modo, onAceito }) {
   const [termo, setTermo] = useState(null);
   const [concordo, setConcordo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => { api.get('/universidade/termo').then(r => setTermo(r.data)).catch(() => setTermo({ publicado: false })); }, []);
+  useEffect(() => { api.get(`${modo.api}/termo`).then(r => setTermo(r.data)).catch(() => setTermo({ publicado: false })); }, [modo.api]);
 
   async function aceitar() {
     setEnviando(true);
     try {
-      await api.post('/universidade/aceite', { versao: termo.versao, concordo: true });
+      if (!modo.previa) await api.post('/universidade/aceite', { versao: termo.versao, concordo: true }); // prévia: não grava
       const aceito = { ...termo, aceito_em: new Date().toISOString() };
       setTermo(aceito);
       onAceito?.({ versao: aceito.versao, titulo: aceito.titulo, aceito_em: aceito.aceito_em });
-      toast.success('Termo aceito. Os outros módulos foram liberados.');
+      toast.success(modo.previa ? 'Visualização: o aceite não foi gravado.' : 'Termo aceito. Os outros módulos foram liberados.');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Não foi possível registrar o aceite.');
     } finally { setEnviando(false); }
@@ -195,6 +205,7 @@ function BlocoTermo({ m, onAceito }) {
       ) : (
         <>
           <p className="text-xs text-slate-500 mt-1">Versão {termo.versao}</p>
+          {termo.nao_publicado && <SeloNaoPublicado className="mt-1" />}
           <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4">
             <TextoSimples texto={termo.texto} className="space-y-3 text-[15px] leading-relaxed text-slate-700 max-w-[65ch]" />
           </div>

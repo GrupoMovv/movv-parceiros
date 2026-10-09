@@ -1,19 +1,9 @@
 // Universidade MOVV Partner — rotas do Partner (sempre o usuário do token;
 // um Partner nunca vê dados de outro). Regras em services/universidade.js.
-const crypto = require('crypto');
 const db = require('../config/database');
-const { situacao, avaliarCertificacao, termoPublicado, lerConfig } = require('../services/universidade');
+const { situacao, avaliarCertificacao, termoPublicado, lerConfig, montarQuiz, corrigirQuiz } = require('../services/universidade');
 
 const erro = (res, err) => { console.error('[universidade]', err); return res.status(500).json({ error: 'Erro interno do servidor' }); };
-
-function embaralhar(lista) {
-  const a = [...lista];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 // Módulo pelo número, já com a situação do Partner (null = não existe/despublicado)
 async function moduloDoPartner(userId, numero) {
@@ -119,10 +109,7 @@ async function quiz(req, res) {
     return res.json({
       modulo: { numero: m.numero, titulo: m.titulo },
       nota_minima: cfg.nota_minima,
-      perguntas: embaralhar(perguntas).map(p => ({
-        id: p.id, enunciado: p.enunciado,
-        alternativas: embaralhar(p.alternativas).map(a => ({ id: a.id, texto: a.texto })),
-      })),
+      perguntas: montarQuiz(perguntas),
     });
   } catch (err) { return erro(res, err); }
 }
@@ -132,46 +119,19 @@ async function responderQuiz(req, res) {
     const { m } = await moduloDoPartner(req.user.id, req.params.numero);
     if (!m) return res.status(404).json({ error: 'Módulo não encontrado' });
     if (!m.quiz_liberado) return res.status(403).json({ error: 'Quiz bloqueado', codigo: 'QUIZ_BLOQUEADO' });
-    // [{ pergunta_id, alternativa_id }] na ordem em que o Partner viu as perguntas
-    const lista = Array.isArray(req.body?.respostas) ? req.body.respostas : null;
-    if (!lista) return res.status(400).json({ error: 'Envie as respostas' });
-    const respostas = {};
-    const ordem = [];
-    for (const r of lista) {
-      const id = Number(r?.pergunta_id);
-      if (!id || respostas[id]) continue;
-      respostas[id] = String(r.alternativa_id || '');
-      ordem.push(id);
-    }
     const perguntas = (await db.query(
       `SELECT id, enunciado, alternativas, correta, explicacao FROM universidade_quiz_perguntas WHERE modulo_id = $1 AND ativa ORDER BY numero`, [m.id])).rows;
-    if (!perguntas.length) return res.status(409).json({ error: 'Este módulo ainda não tem perguntas.' });
-    const faltando = perguntas.filter(p => !respostas[p.id]);
-    if (faltando.length) return res.status(400).json({ error: `Responda todas as perguntas (faltam ${faltando.length}).` });
-
-    const porId = new Map(perguntas.map(p => [p.id, p]));
-    const correcao = ordem.filter(id => porId.has(id)).map(id => {
-      const p = porId.get(id);
-      const escolhida = p.alternativas.find(a => a.id === respostas[id]) || null;
-      const certa = p.alternativas.find(a => a.id === p.correta);
-      return {
-        pergunta_id: p.id, enunciado: p.enunciado,
-        escolhida: escolhida?.texto || null, correta: certa?.texto || null,
-        acertou: escolhida?.id === p.correta, explicacao: p.explicacao,
-      };
-    });
-    const acertos = correcao.filter(c => c.acertou).length;
-    const total = perguntas.length;
     const cfg = await lerConfig();
-    const nota = acertos / total;
-    const aprovado = nota + 1e-9 >= cfg.nota_minima;
+    const r = corrigirQuiz(perguntas, req.body?.respostas, cfg.nota_minima);
+    if (r.erro) return res.status(r.status || 400).json({ error: r.erro });
+    const { acertos, total, nota, aprovado, correcao } = r;
 
     const certificado = await db.transacao(async cx => {
       await cx.query(
         `INSERT INTO universidade_quiz_tentativas (user_id, modulo_id, versao_conteudo, acertos, total, nota, aprovado, respostas)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [req.user.id, m.id, m.versao_conteudo, acertos, total, nota.toFixed(4), aprovado,
-          JSON.stringify(Object.fromEntries(perguntas.map(p => [p.id, respostas[p.id]])))]);
+          JSON.stringify(r.respostas)]);
       return aprovado ? avaliarCertificacao(cx, req.user.id) : null;
     });
     return res.json({ acertos, total, nota, aprovado, nota_minima: cfg.nota_minima, correcao, certificado });

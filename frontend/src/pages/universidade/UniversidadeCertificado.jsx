@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ChevronLeft, Printer } from 'lucide-react';
 import api from '../../services/api';
-import { NIVEIS, dataBR } from './identidade';
+import { NIVEIS, dataBR, modoUniversidade } from './identidade';
+import { AvisoPrevia } from './UniversidadeHome';
 
 // Certificado da Universidade MOVV Partner, no modelo do Word
 // (Universidade_MOVV_Partner_Template_Certificado). Folha A4 paisagem de
@@ -12,17 +13,25 @@ import { NIVEIS, dataBR } from './identidade';
 const LARGURA = 1123;
 const ALTURA = 794;
 
-export default function UniversidadeCertificado() {
+// Com `previa`, mostra o modelo com dados de exemplo (nada é emitido).
+export default function UniversidadeCertificado({ previa = false }) {
+  const modo = modoUniversidade(previa);
   const [c, setC] = useState(null);
   const [erro, setErro] = useState('');
   const caixa = useRef(null);
   const [escala, setEscala] = useState(1);
 
   useEffect(() => {
+    if (previa) {
+      const hoje = new Date();
+      const ate = new Date(hoje); ate.setFullYear(ate.getFullYear() + 1);
+      setC({ nome: 'Nome do Partner', codigo: `MOVV-XXXXXX-${hoje.getFullYear()}`, nivel: 'mobile', emitido_em: hoje.toISOString(), valido_ate: ate.toISOString(), status: 'valida', valido: true });
+      return;
+    }
     api.get('/universidade/certificado')
       .then(r => setC(r.data))
       .catch(err => setErro(err.response?.data?.error || 'Não foi possível carregar o certificado.'));
-  }, []);
+  }, [previa]);
 
   useLayoutEffect(() => {
     if (!caixa.current) return undefined;
@@ -37,7 +46,7 @@ export default function UniversidadeCertificado() {
     return (
       <div className="max-w-xl mx-auto text-center py-16">
         <p className="text-slate-700">{erro}</p>
-        <Link to="/universidade" className="btn-primary inline-flex mt-4">Voltar à Universidade</Link>
+        <Link to={modo.base} className="btn-primary inline-flex mt-4">Voltar à Universidade</Link>
       </div>
     );
   }
@@ -49,6 +58,7 @@ export default function UniversidadeCertificado() {
 
   return (
     <div className="max-w-6xl mx-auto">
+      {previa && <div className="mb-4"><AvisoPrevia /></div>}
       <style>{`
         @page { size: A4 landscape; margin: 0; }
         @media print {
@@ -59,7 +69,7 @@ export default function UniversidadeCertificado() {
         }
       `}</style>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <Link to="/universidade" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-movv-900">
+        <Link to={modo.base} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-movv-900">
           <ChevronLeft className="w-4 h-4" /> Universidade
         </Link>
         <button onClick={() => { try { window.print(); } catch { toast.error('Use o menu do navegador para imprimir.'); } }}

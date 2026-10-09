@@ -132,6 +132,56 @@ async function situacao(userId, cx = db, { config } = {}) {
   };
 }
 
+function embaralhar(lista) {
+  const a = [...lista];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Quiz para a tela: ordem nova a cada vez, só id e texto (o gabarito fica no servidor).
+const montarQuiz = perguntas => embaralhar(perguntas).map(p => ({
+  id: p.id, enunciado: p.enunciado,
+  alternativas: embaralhar(p.alternativas).map(a => ({ id: a.id, texto: a.texto })),
+}));
+
+// Corrige [{ pergunta_id, alternativa_id }] (na ordem em que a pessoa viu) pelo id
+// da alternativa. Devolve { erro } ou { acertos, total, nota, aprovado, correcao, respostas }.
+function corrigirQuiz(perguntas, lista, notaMinima) {
+  if (!Array.isArray(lista)) return { erro: 'Envie as respostas' };
+  if (!perguntas.length) return { erro: 'Este módulo ainda não tem perguntas.', status: 409 };
+  const respostas = {};
+  const ordem = [];
+  for (const r of lista) {
+    const id = Number(r?.pergunta_id);
+    if (!id || respostas[id]) continue;
+    respostas[id] = String(r.alternativa_id || '');
+    ordem.push(id);
+  }
+  const faltando = perguntas.filter(p => !respostas[p.id]);
+  if (faltando.length) return { erro: `Responda todas as perguntas (faltam ${faltando.length}).` };
+  const porId = new Map(perguntas.map(p => [p.id, p]));
+  const correcao = ordem.filter(id => porId.has(id)).map(id => {
+    const p = porId.get(id);
+    const escolhida = p.alternativas.find(a => a.id === respostas[id]) || null;
+    const certa = p.alternativas.find(a => a.id === p.correta);
+    return {
+      pergunta_id: p.id, enunciado: p.enunciado,
+      escolhida: escolhida?.texto || null, correta: certa?.texto || null,
+      acertou: escolhida?.id === p.correta, explicacao: p.explicacao,
+    };
+  });
+  const acertos = correcao.filter(c => c.acertou).length;
+  const total = perguntas.length;
+  const nota = acertos / total;
+  return {
+    acertos, total, nota, aprovado: nota + 1e-9 >= notaMinima, correcao,
+    respostas: Object.fromEntries(perguntas.map(p => [p.id, respostas[p.id]])),
+  };
+}
+
 function gerarCodigo(ano) {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I
   return `MOVV-${Array.from(crypto.randomBytes(6), b => abc[b % abc.length]).join('')}-${ano}`;
@@ -170,4 +220,7 @@ async function travaDoPortal(req, res, user) {
   return true;
 }
 
-module.exports = { lerConfig, termoPublicado, situacao, avaliarCertificacao, travaDoPortal, gerarCodigo };
+module.exports = {
+  lerConfig, termoPublicado, situacao, avaliarCertificacao, travaDoPortal, gerarCodigo,
+  embaralhar, montarQuiz, corrigirQuiz,
+};

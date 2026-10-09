@@ -4,6 +4,7 @@ const router = require('express').Router();
 const { authenticate, requireMovvPartner, requireAdminUniversidade } = require('../middleware/auth');
 const c = require('../controllers/universidadeController');
 const a = require('../controllers/universidadeAdminController');
+const v = require('../controllers/universidadePreviaController');
 
 router.use(authenticate);
 
@@ -26,6 +27,12 @@ router.patch('/admin/perguntas/:id',           requireAdminUniversidade, a.edita
 router.put('/admin/termo',                     requireAdminUniversidade, a.salvarTermo);
 router.patch('/admin/termo/:id/publicar',      requireAdminUniversidade, a.publicarTermo);
 router.patch('/admin/config',                  requireAdminUniversidade, a.salvarConfig);
+// "Ver como Partner": só leitura, nada é gravado
+router.get('/admin/previa',                    requireAdminUniversidade, v.inicio);
+router.get('/admin/previa/termo',              requireAdminUniversidade, v.termo);
+router.get('/admin/previa/modulos/:numero',    requireAdminUniversidade, v.modulo);
+router.get('/admin/previa/modulos/:numero/quiz',  requireAdminUniversidade, v.quiz);
+router.post('/admin/previa/modulos/:numero/quiz', requireAdminUniversidade, v.responderQuiz);
 
 // Partner
 router.get('/',                         requireMovvPartner, c.inicio);

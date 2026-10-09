@@ -41,3 +41,12 @@ export const NIVEIS = { mobile: 'Mobile', point: 'Point', hub: 'Hub', regional: 
 
 export const dataBR = d => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
 export const pct = n => `${Math.round((Number(n) || 0) * 100)}%`;
+
+// "Ver como Partner": admin e comercial_full veem as mesmas telas em
+// /admin/universidade/ver-como-partner, lendo de /universidade/admin/previa
+// (só leitura; leitura, aceite e quiz não são gravados).
+export function modoUniversidade(previa) {
+  return previa
+    ? { previa: true, base: '/admin/universidade/ver-como-partner', api: '/universidade/admin/previa' }
+    : { previa: false, base: '/universidade', api: '/universidade' };
+}

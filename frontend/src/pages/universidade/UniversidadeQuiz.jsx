@@ -3,12 +3,15 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ChevronLeft, CheckCircle2, XCircle, RotateCcw, Award } from 'lucide-react';
 import api from '../../services/api';
-import { identidade, pct } from './identidade';
+import { identidade, pct, modoUniversidade } from './identidade';
+import { AvisoPrevia } from './UniversidadeHome';
 
 // Quiz do módulo: uma pergunta por tela, barra de avanço e resultado com a
 // resposta certa e a explicação. A ordem vem embaralhada do servidor, que
-// também corrige (aqui não existe gabarito).
-export default function UniversidadeQuiz() {
+// também corrige (aqui não existe gabarito). Com `previa`, a correção é a mesma
+// e nada é gravado.
+export default function UniversidadeQuiz({ previa = false }) {
+  const modo = modoUniversidade(previa);
   const { numero } = useParams();
   const navigate = useNavigate();
   const [quiz, setQuiz] = useState(null);
@@ -19,11 +22,11 @@ export default function UniversidadeQuiz() {
 
   function carregar() {
     setQuiz(null); setResultado(null); setRespostas({}); setAtual(0);
-    api.get(`/universidade/modulos/${numero}/quiz`)
+    api.get(`${modo.api}/modulos/${numero}/quiz`)
       .then(r => setQuiz(r.data))
       .catch(err => {
         toast.error(err.response?.data?.error || 'Quiz indisponível.');
-        navigate(`/universidade/modulo/${numero}`, { replace: true });
+        navigate(`${modo.base}/modulo/${numero}`, { replace: true });
       });
   }
   useEffect(carregar, [numero]);
@@ -31,7 +34,7 @@ export default function UniversidadeQuiz() {
   async function enviar() {
     setEnviando(true);
     try {
-      const r = await api.post(`/universidade/modulos/${numero}/quiz`, {
+      const r = await api.post(`${modo.api}/modulos/${numero}/quiz`, {
         respostas: quiz.perguntas.map(p => ({ pergunta_id: p.id, alternativa_id: respostas[p.id] })),
       });
       setResultado(r.data);
@@ -45,7 +48,7 @@ export default function UniversidadeQuiz() {
   const { cor } = identidade(quiz.modulo.numero);
   const total = quiz.perguntas.length;
 
-  if (resultado) return <Resultado r={resultado} numero={numero} cor={cor} onRefazer={carregar} />;
+  if (resultado) return <Resultado r={resultado} numero={numero} cor={cor} onRefazer={carregar} base={modo.base} previa={previa} />;
 
   const p = quiz.perguntas[atual];
   const respondidas = quiz.perguntas.filter(x => respostas[x.id]).length;
@@ -53,7 +56,8 @@ export default function UniversidadeQuiz() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link to={`/universidade/modulo/${numero}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-movv-900 mb-3">
+      {previa && <div className="mb-3"><AvisoPrevia /></div>}
+      <Link to={`${modo.base}/modulo/${numero}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-movv-900 mb-3">
         <ChevronLeft className="w-4 h-4" /> Módulo {quiz.modulo.numero}
       </Link>
       <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
@@ -96,21 +100,22 @@ export default function UniversidadeQuiz() {
   );
 }
 
-function Resultado({ r, numero, cor, onRefazer }) {
+function Resultado({ r, numero, cor, onRefazer, base, previa }) {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+      {previa && <AvisoPrevia />}
       <div className={`rounded-2xl p-5 sm:p-7 text-center border ${r.aprovado ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
         {r.aprovado ? <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-600" /> : <XCircle className="w-12 h-12 mx-auto text-orange-500" />}
         <h1 className="mt-2 text-xl font-display font-semibold text-slate-900">{r.aprovado ? 'Aprovado!' : 'Ainda não foi desta vez'}</h1>
         <p className="mt-1 text-slate-700 tabular-nums">Você acertou {r.acertos} de {r.total} ({pct(r.nota)}). Para aprovar: {pct(r.nota_minima)}.</p>
         {r.certificado && (
-          <Link to="/universidade/certificado" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gold-gradient px-5 py-2.5 font-semibold text-movv-900 shadow-gold">
+          <Link to={`${base}/certificado`} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gold-gradient px-5 py-2.5 font-semibold text-movv-900 shadow-gold">
             <Award className="w-5 h-5" /> Ver meu certificado
           </Link>
         )}
         <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
           <button onClick={onRefazer} className="btn-secondary inline-flex items-center justify-center gap-2"><RotateCcw className="w-4 h-4" /> {r.aprovado ? 'Refazer' : 'Tentar de novo'}</button>
-          <Link to={r.aprovado ? '/universidade' : `/universidade/modulo/${numero}`} className="btn-primary text-center">{r.aprovado ? 'Voltar à Universidade' : 'Rever o módulo'}</Link>
+          <Link to={r.aprovado ? base : `${base}/modulo/${numero}`} className="btn-primary text-center">{r.aprovado ? 'Voltar à Universidade' : 'Rever o módulo'}</Link>
         </div>
       </div>
 

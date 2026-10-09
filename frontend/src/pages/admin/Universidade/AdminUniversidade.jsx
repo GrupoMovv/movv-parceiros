@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { GraduationCap, Plus, Search, KeyRound, Edit2, Copy, BookOpen, Award } from 'lucide-react';
+import { GraduationCap, Plus, Search, KeyRound, Edit2, Copy, BookOpen, Award, Eye, MessageCircle } from 'lucide-react';
 import api from '../../../services/api';
 import Modal from '../../../components/ui/Modal';
 import { NIVEIS, SITUACAO, dataBR, pct } from '../../universidade/identidade';
@@ -10,6 +10,26 @@ import { NIVEIS, SITUACAO, dataBR, pct } from '../../universidade/identidade';
 // % concluído, última atividade, notas e certificação; criar Partner e mandar
 // o acesso por e-mail; editar e redefinir acesso. Admin e comercial_full.
 const FORM_VAZIO = { name: '', email: '', whatsapp: '', nivel_partner: '', is_active: true };
+const LINK_PORTAL = 'https://portal.grupomovv.com.br/login';
+
+// "Enviar acesso pelo WhatsApp": abre o WhatsApp de quem está no admin com a
+// mensagem pronta para o número da Partner (nada sai sozinho do servidor).
+function linkWhatsApp({ nome, codigo, senha, whatsapp, redefinido }) {
+  let numero = String(whatsapp || '').replace(/\D/g, '');
+  if (!numero) return null;
+  if (numero.length <= 11) numero = `55${numero}`;
+  const primeiroNome = String(nome || '').split(' ')[0];
+  const texto = [
+    `Olá, ${primeiroNome}! ${redefinido ? 'Seu acesso ao Portal Movv foi redefinido.' : 'Seu acesso à Universidade MOVV Partner está pronto.'}`,
+    '',
+    `Entre em ${LINK_PORTAL}`,
+    `Código: ${codigo} (ou o seu e-mail)`,
+    `Senha provisória: ${senha}`,
+    '',
+    'No primeiro acesso o portal pede para você criar a sua senha.',
+  ].join('\n');
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+}
 
 export default function AdminUniversidade() {
   const [dados, setDados] = useState(null);
@@ -41,7 +61,7 @@ export default function AdminUniversidade() {
       const corpo = { ...form, nivel_partner: form.nivel_partner || null };
       if (modal === 'criar') {
         const r = await api.post('/universidade/admin/partners', corpo);
-        setSenha({ ...r.data, nome: r.data.partner.name, codigo: r.data.partner.code });
+        setSenha({ ...r.data, nome: r.data.partner.name, codigo: r.data.partner.code, whatsapp: r.data.partner.whatsapp });
         setModal('senha');
       } else {
         await api.put(`/universidade/admin/partners/${selecionado.id}`, corpo);
@@ -58,7 +78,7 @@ export default function AdminUniversidade() {
     setSalvando(true);
     try {
       const r = await api.post(`/universidade/admin/partners/${p.id}/redefinir-acesso`);
-      setSenha({ ...r.data, nome: p.name, codigo: p.code, redefinido: true });
+      setSenha({ ...r.data, nome: p.name, codigo: p.code, whatsapp: p.whatsapp, redefinido: true });
       setModal('senha');
       carregar();
     } catch (err) {
@@ -84,6 +104,7 @@ export default function AdminUniversidade() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Link to="/admin/universidade/ver-como-partner" className="btn-secondary inline-flex items-center gap-2"><Eye className="w-4 h-4" /> Ver como Partner</Link>
           <Link to="/admin/universidade/conteudo" className="btn-secondary inline-flex items-center gap-2"><BookOpen className="w-4 h-4" /> Conteúdo e regras</Link>
           <button onClick={abrirCriar} className="btn-primary inline-flex items-center gap-2"><Plus className="w-4 h-4" /> Novo Partner</button>
         </div>
@@ -199,7 +220,15 @@ export default function AdminUniversidade() {
             <p className={senha.email === 'enviado' ? 'text-emerald-700' : 'text-orange-700'}>
               {senha.email === 'enviado' ? 'E-mail de acesso enviado.' : 'O e-mail não saiu. Repasse o código e a senha provisória por outro canal.'}
             </p>
-            <p className="text-slate-500">No primeiro acesso o portal pede para trocar a senha.</p>
+            {linkWhatsApp({ ...senha, senha: senha.senha_provisoria })
+              ? (
+                <a href={linkWhatsApp({ ...senha, senha: senha.senha_provisoria })} target="_blank" rel="noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 font-semibold text-white hover:bg-[#1fb957]">
+                  <MessageCircle className="w-4 h-4" /> Enviar acesso pelo WhatsApp
+                </a>
+              )
+              : <p className="text-slate-500">Sem WhatsApp no cadastro: para enviar pelo WhatsApp, edite o Partner e redefina o acesso.</p>}
+            <p className="text-slate-500">O link do portal é {LINK_PORTAL}. No primeiro acesso o portal pede para trocar a senha.</p>
           </div>
         )}
       </Modal>

@@ -455,6 +455,11 @@ export default function App() {
           <Route path="partner/comissoes"               element={<RequireMovvPartner><PartnerComissoes /></RequireMovvPartner>} />
           <Route path="admin/universidade"              element={<RequireAdminUniversidade><AdminUniversidade /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/conteudo"     element={<RequireAdminUniversidade><AdminUniversidadeConteudo /></RequireAdminUniversidade>} />
+          {/* "Ver como Partner": mesmas telas, só leitura */}
+          <Route path="admin/universidade/ver-como-partner"                     element={<RequireAdminUniversidade><UniversidadeHome previa /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/ver-como-partner/modulo/:numero"      element={<RequireAdminUniversidade><UniversidadeModulo previa /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/ver-como-partner/modulo/:numero/quiz" element={<RequireAdminUniversidade><UniversidadeQuiz previa /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/ver-como-partner/certificado"         element={<RequireAdminUniversidade><UniversidadeCertificado previa /></RequireAdminUniversidade>} />
           {/* Rotas do Indicador */}
           <Route path="indicador/dashboard"          element={<RequireIndicator><IndicadorDashboard /></RequireIndicator>} />
           <Route path="indicador/indicar"            element={<RequireIndicator><IndicadorIndicar /></RequireIndicator>} />
