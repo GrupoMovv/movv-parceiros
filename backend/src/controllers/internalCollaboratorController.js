@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { calcPabline } = require('../services/internalCommissionService');
+const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -135,6 +136,7 @@ async function createCommission(req, res) {
       ]
     );
 
+    await registrarAcao(null, req, 'comissao_interna_lancada', 'internal_commissions', result.rows[0].id, { mes: result.rows[0].month, total: result.rows[0].total_amount });
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -154,6 +156,7 @@ async function markAsPaid(req, res) {
       [id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
+    await registrarAcao(null, req, 'comissao_interna_paga', 'internal_commissions', result.rows[0].id, { mes: result.rows[0].month, total: result.rows[0].total_amount });
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -174,6 +177,7 @@ async function revertToPending(req, res) {
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Registro não encontrado' });
     console.log(`[ESTORNO] ${new Date().toISOString()} — comissão ID ${id} (${result.rows[0].month}) estornada para pendente`);
+    await registrarAcao(null, req, 'comissao_interna_estornada', 'internal_commissions', result.rows[0].id, { mes: result.rows[0].month, total: result.rows[0].total_amount });
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -248,6 +252,7 @@ async function updateCommission(req, res) {
         id,
       ]
     );
+    await registrarAcao(null, req, 'comissao_interna_editada', 'internal_commissions', result.rows[0].id, { mes: result.rows[0].month, total: result.rows[0].total_amount });
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -265,6 +270,7 @@ async function deleteCommission(req, res) {
       return res.status(403).json({ error: 'Não é possível excluir uma comissão já paga. Estorne o pagamento primeiro.' });
     }
     await db.query('DELETE FROM internal_commissions WHERE id = $1', [id]);
+    await registrarAcao(null, req, 'comissao_interna_apagada', 'internal_commissions', Number(id), { mes: check.rows[0].month, total: check.rows[0].total_amount, colaborador_id: check.rows[0].collaborator_id });
     console.log(`[DELETE] ${new Date().toISOString()} — comissão ID ${id} (${check.rows[0].month}) excluída`);
     return res.json({ message: 'Comissão excluída com sucesso' });
   } catch (err) {
@@ -287,9 +293,10 @@ async function listAllCommissions(req, res) {
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
     const result = await db.query(
-      `SELECT cm.*, ic.name AS collaborator_name, ic.role AS collaborator_role, ic.pix_key
+      `SELECT cm.*, ic.name AS collaborator_name, ic.role AS collaborator_role, ic.pix_key, ${COLUNAS_ULTIMA_ACAO()}
        FROM internal_commissions cm
        JOIN internal_collaborators ic ON ic.id = cm.collaborator_id
+       ${joinUltimaAcao('cm', 'internal_commissions')}
        ${where}
        ORDER BY cm.month DESC, ic.id`,
       params

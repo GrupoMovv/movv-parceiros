@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const emailService = require('../services/emailService');
+const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
 
 const AZUL_PRODUCTS = [
   { name: 'Cartão Benefício INSS',     category: 'alta',  pct: 0.01  },
@@ -337,9 +338,10 @@ async function getProducts(req, res) {
 async function listAdminPayments(req, res) {
   try {
     const result = await db.query(
-      `SELECT ip.*, i.name AS indicator_name, i.cpf AS indicator_cpf, i.email AS indicator_email
+      `SELECT ip.*, i.name AS indicator_name, i.cpf AS indicator_cpf, i.email AS indicator_email, ${COLUNAS_ULTIMA_ACAO()}
        FROM indicator_payments ip
        JOIN indicators i ON i.id = ip.indicator_id
+       ${joinUltimaAcao('ip', 'indicator_payments')}
        ORDER BY ip.created_at DESC`
     );
     return res.json(result.rows);
@@ -365,6 +367,7 @@ async function createPayment(req, res) {
       'UPDATE indicators SET pending_amount = GREATEST(0, pending_amount - $1), updated_at = NOW() WHERE id = $2',
       [total_amount, indicator_id]
     );
+    await registrarAcao(null, req, 'pagamento_indicador_criado', 'indicator_payments', result.rows[0].id, { valor: total_amount });
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -386,6 +389,7 @@ async function markPaymentPaid(req, res) {
       'UPDATE indicators SET total_paid = total_paid + $1, updated_at = NOW() WHERE id = $2',
       [payment.total_amount, payment.indicator_id]
     );
+    await registrarAcao(null, req, 'pagamento_indicador_pago', 'indicator_payments', payment.id, { valor: payment.total_amount });
     return res.json(payment);
   } catch (err) {
     console.error(err);
@@ -434,9 +438,10 @@ async function listAllReferrals(req, res) {
   const { status } = req.query;
   try {
     let sql = `
-      SELECT ir.*, i.name AS indicator_name, i.cpf AS indicator_cpf, i.whatsapp AS indicator_whatsapp
+      SELECT ir.*, i.name AS indicator_name, i.cpf AS indicator_cpf, i.whatsapp AS indicator_whatsapp, ${COLUNAS_ULTIMA_ACAO()}
       FROM indicator_referrals ir
       JOIN indicators i ON i.id = ir.indicator_id
+      ${joinUltimaAcao('ir', 'indicator_referrals')}
     `;
     const params = [];
     if (status) {
@@ -485,6 +490,7 @@ async function approveReferralAdmin(req, res) {
       );
     }
 
+    await registrarAcao(null, req, 'indicacao_aprovada', 'indicator_referrals', result.rows[0].id, { comissao: commValue });
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -502,6 +508,7 @@ async function cancelReferralAdmin(req, res) {
       [notes || null, req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Indicação não encontrada' });
+    await registrarAcao(null, req, 'indicacao_cancelada', 'indicator_referrals', result.rows[0].id);
     return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);

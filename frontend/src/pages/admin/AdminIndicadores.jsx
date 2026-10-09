@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import RegistroAcao from '../../components/admin/RegistroAcao';
 import {
   Users, CheckCircle, XCircle, AlertCircle, Clock,
   FileText, CreditCard, DollarSign,
@@ -475,7 +476,7 @@ function SectionIndicacoes() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-slate-500 text-sm">{fmtDate(ref.created_at)}</td>
-                    <td className="px-4 py-4"><ReferralBadge status={ref.status} /></td>
+                    <td className="px-4 py-4"><ReferralBadge status={ref.status} /><RegistroAcao item={ref} /></td>
                     <td className="px-6 py-4 text-right">
                       {(ref.status === 'pending' || ref.status === 'in_progress') && (
                         <div className="flex items-center justify-end gap-2">
@@ -657,6 +658,7 @@ function SectionPagamentos() {
                         }`}>
                           {pay.status === 'paid' ? 'Pago' : 'Pendente'}
                         </span>
+                        <RegistroAcao item={pay} />
                       </td>
                       <td className="px-4 py-4 text-slate-500 text-sm">{fmtDate(pay.paid_at || pay.created_at)}</td>
                       <td className="px-6 py-4 text-right">

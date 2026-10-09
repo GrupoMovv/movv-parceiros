@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreditCard, CheckCircle2, AlertCircle, Calendar, FileDown, Loader2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
+import RegistroAcao from '../../components/admin/RegistroAcao';
 import { generateMonthlyReport } from '../../utils/generateReport';
 
 function buildMonthOptions() {
@@ -169,6 +170,7 @@ export default function AdminPayments() {
                     </td>
                     <td className="py-3 pr-4 text-[#1B5E20] font-bold whitespace-nowrap">
                       R$ {parseFloat(pay.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      <RegistroAcao item={pay} className="font-normal" />
                     </td>
                     <td className="py-3">
                       {pay.pix_receipt ? (

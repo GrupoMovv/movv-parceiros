@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import CurrencyInput from '../../components/ui/CurrencyInput';
+import RegistroAcao from '../../components/admin/RegistroAcao';
 import {
   Users, DollarSign, CheckCircle2, Clock, Plus, X,
   RotateCcw, ChevronDown, ChevronUp, Loader2, Eye,
@@ -363,6 +364,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <StatusBadge status={latest.status} />
+            <RegistroAcao item={latest} className="mt-0" />
             <ActionButtons
               commission={latest}
               canEdit={canLaunchEdit}
@@ -395,7 +397,7 @@ function CollabCard({ collab, commissions, onLaunch, onReset, onPaid, onRevert, 
                     <td className="px-4 py-3 text-slate-600">{fmt(c.direta_commission)}</td>
                     <td className="px-4 py-3 text-slate-600">{fmt(c.base_salary)}</td>
                     <td className="px-4 py-3 font-bold text-[#0C2D48]">{fmt(c.total_amount)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={c.status} /><RegistroAcao item={c} /></td>
                     <td className="px-4 py-3">
                       <ActionButtons
                         commission={c}

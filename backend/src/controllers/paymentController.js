@@ -1,14 +1,17 @@
 const db = require('../config/database');
 const path = require('path');
 const emailService = require('../services/emailService');
+const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
 
 async function listPayments(req, res) {
   try {
     const { partner_id, month } = req.query;
     let query = `
       SELECT pay.*, p.name AS partner_name, p.code AS partner_code, p.pix_key
+             ${req.user.is_admin ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
       FROM payments pay
       JOIN partners p ON p.id = pay.partner_id
+      ${req.user.is_admin ? joinUltimaAcao('pay', 'payments') : ''}
       WHERE 1=1
     `;
     const params = [];
@@ -66,11 +69,13 @@ async function registerPayment(req, res) {
         ]
       );
 
+      await registrarAcao(client, req, 'pagamento_registrado', 'payments', payResult.rows[0].id, { valor: amount, mes: reference_month });
       if (ids?.length) {
-        await client.query(
-          `UPDATE commissions SET status='paid' WHERE id = ANY($1) AND partner_id = $2`,
+        const pagas = await client.query(
+          `UPDATE commissions SET status='paid' WHERE id = ANY($1) AND partner_id = $2 RETURNING id`,
           [ids, partner_id]
         );
+        await registrarAcao(client, req, 'comissao_paga', 'commissions', pagas.rows.map(x => x.id), { pagamento_id: payResult.rows[0].id });
       }
       return payResult.rows[0];
     });

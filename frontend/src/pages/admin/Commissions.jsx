@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Coins, Search, Filter, CheckCircle2, XCircle, RotateCcw, Clock, Ban } from 'lucide-react';
+import RegistroAcao from '../../components/admin/RegistroAcao';
 
 const STATUS_MAP = {
   pending:   { label: 'Pendente',   cls: 'bg-amber-100 text-amber-700 border border-amber-200' },
@@ -215,6 +216,7 @@ export default function AdminCommissions() {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_MAP[c.status]?.cls}`}>
                       {STATUS_MAP[c.status]?.label}
                     </span>
+                    <RegistroAcao item={c} />
                   </td>
                   <td className="py-3 px-4">
                     <ActionButtons commission={c} acting={acting} act={act} />

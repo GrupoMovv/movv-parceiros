@@ -1,16 +1,20 @@
 const db = require('../config/database');
 const emailService = require('../services/emailService');
+const { registrarAcao, joinUltimaAcao, COLUNAS_ULTIMA_ACAO } = require('../services/registroAdmin');
 
 async function listCommissions(req, res) {
   try {
     const { month, status } = req.query;
+    // Quem fez a última ação (aprovou, cancelou, voltou, pagou): só o admin vê.
     let query = `
       SELECT c.*, p.name AS partner_name, p.code AS partner_code,
              r.protocol, r.client_name, pr.name AS product_name
+             ${req.user.is_admin ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
       FROM commissions c
       JOIN partners p ON p.id = c.partner_id
       JOIN referrals r ON r.id = c.referral_id
       JOIN products pr ON pr.id = r.product_id
+      ${req.user.is_admin ? joinUltimaAcao('c', 'commissions') : ''}
       WHERE 1=1
     `;
     const params = [];
@@ -87,10 +91,13 @@ async function approveCommissions(req, res) {
   const { commission_ids } = req.body;
   if (!commission_ids?.length) return res.status(400).json({ error: 'IDs obrigatórios' });
   try {
-    await db.query(
-      `UPDATE commissions SET status='approved' WHERE id = ANY($1) AND status='pending'`,
-      [commission_ids]
-    );
+    await db.transacao(async (cx) => {
+      const r = await cx.query(
+        `UPDATE commissions SET status='approved' WHERE id = ANY($1) AND status='pending' RETURNING id`,
+        [commission_ids]
+      );
+      await registrarAcao(cx, req, 'comissao_aprovada', 'commissions', r.rows.map(x => x.id));
+    });
     return res.json({ message: 'Comissões aprovadas' });
   } catch (err) {
     console.error(err);
@@ -100,10 +107,14 @@ async function approveCommissions(req, res) {
 
 async function approveOne(req, res) {
   try {
-    const result = await db.query(
-      `UPDATE commissions SET status='approved' WHERE id=$1 AND status='pending' RETURNING *`,
-      [req.params.id]
-    );
+    const result = await db.transacao(async (cx) => {
+      const r = await cx.query(
+        `UPDATE commissions SET status='approved' WHERE id=$1 AND status='pending' RETURNING *`,
+        [req.params.id]
+      );
+      if (r.rows[0]) await registrarAcao(cx, req, 'comissao_aprovada', 'commissions', r.rows[0].id);
+      return r;
+    });
     if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou já processada' });
     const comm = result.rows[0];
     db.query('SELECT name, email FROM partners WHERE id = $1', [comm.partner_id])
@@ -127,10 +138,14 @@ async function approveOne(req, res) {
 
 async function cancelOne(req, res) {
   try {
-    const result = await db.query(
-      `UPDATE commissions SET status='cancelled' WHERE id=$1 AND status='pending' RETURNING *`,
-      [req.params.id]
-    );
+    const result = await db.transacao(async (cx) => {
+      const r = await cx.query(
+        `UPDATE commissions SET status='cancelled' WHERE id=$1 AND status='pending' RETURNING *`,
+        [req.params.id]
+      );
+      if (r.rows[0]) await registrarAcao(cx, req, 'comissao_cancelada', 'commissions', r.rows[0].id);
+      return r;
+    });
     if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou já processada' });
     return res.json(result.rows[0]);
   } catch (err) {
@@ -141,10 +156,14 @@ async function cancelOne(req, res) {
 
 async function revertOne(req, res) {
   try {
-    const result = await db.query(
-      `UPDATE commissions SET status='pending' WHERE id=$1 AND status='approved' RETURNING *`,
-      [req.params.id]
-    );
+    const result = await db.transacao(async (cx) => {
+      const r = await cx.query(
+        `UPDATE commissions SET status='pending' WHERE id=$1 AND status='approved' RETURNING *`,
+        [req.params.id]
+      );
+      if (r.rows[0]) await registrarAcao(cx, req, 'comissao_voltou', 'commissions', r.rows[0].id);
+      return r;
+    });
     if (!result.rows[0]) return res.status(404).json({ error: 'Comissão não encontrada ou não aprovada' });
     return res.json(result.rows[0]);
   } catch (err) {
