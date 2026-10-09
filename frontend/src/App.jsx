@@ -132,6 +132,15 @@ import ParceiroMinhaAssinatura from './pages/parceiro/MinhaAssinatura';
 import SindicatoTemplates from './pages/admin/Sindicato/SindicatoTemplates';
 import MovvCafe from './pages/MovvCafe';
 import AlterarSenha from './pages/AlterarSenha';
+// Universidade MOVV Partner
+import UniversidadeHome from './pages/universidade/UniversidadeHome';
+import UniversidadeModulo from './pages/universidade/UniversidadeModulo';
+import UniversidadeQuiz from './pages/universidade/UniversidadeQuiz';
+import UniversidadeCertificado from './pages/universidade/UniversidadeCertificado';
+import PartnerPerfil from './pages/universidade/PartnerPerfil';
+import PartnerComissoes from './pages/universidade/PartnerComissoes';
+import AdminUniversidade from './pages/admin/Universidade/AdminUniversidade';
+import AdminUniversidadeConteudo from './pages/admin/Universidade/AdminUniversidadeConteudo';
 import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
 // Páginas públicas
 import SejaIndicador from './pages/SejaIndicador';
@@ -237,6 +246,20 @@ function MarketplaceFallback({ children }) {
   );
 }
 
+// Universidade MOVV Partner: área do Partner e administração (admin completo
+// ou comercial_full; o perfil financeiro fica de fora).
+function RequireMovvPartner({ children }) {
+  const { user } = useAuth();
+  if (user?.type !== 'movv_partner') return <Navigate to="/" replace />;
+  return children;
+}
+
+function RequireAdminUniversidade({ children }) {
+  const { user } = useAuth();
+  if (!user?.is_admin && !(user?.type === 'internal' && user?.role === 'comercial_full')) return <Navigate to="/" replace />;
+  return children;
+}
+
 function RequireIndicator({ children }) {
   const { user } = useAuth();
   if (user?.type !== 'indicator') return <Navigate to="/login" replace />;
@@ -250,6 +273,7 @@ function HomeRedirect() {
   const { user } = useAuth();
   if (ehEquipe(user)) return <Navigate to="/admin" replace />;
   if (user?.type === 'indicator') return <Navigate to="/indicador/dashboard" replace />;
+  if (user?.type === 'movv_partner') return <Navigate to="/universidade" replace />;
   if (user?.type === 'internal') {
     if (user?.role === 'manager_azul')       return <Navigate to="/minhas-comissoes" replace />;
     if (user?.role === 'comercial_full')     return <Navigate to="/direta/dashboard" replace />;
@@ -422,6 +446,15 @@ export default function App() {
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />
           <Route path="movv-cafe"                element={<MovvCafe />} />
           <Route path="alterar-senha"            element={<AlterarSenha />} />
+          {/* Universidade MOVV Partner */}
+          <Route path="universidade"                    element={<RequireMovvPartner><UniversidadeHome /></RequireMovvPartner>} />
+          <Route path="universidade/modulo/:numero"     element={<RequireMovvPartner><UniversidadeModulo /></RequireMovvPartner>} />
+          <Route path="universidade/modulo/:numero/quiz" element={<RequireMovvPartner><UniversidadeQuiz /></RequireMovvPartner>} />
+          <Route path="universidade/certificado"        element={<RequireMovvPartner><UniversidadeCertificado /></RequireMovvPartner>} />
+          <Route path="partner/perfil"                  element={<RequireMovvPartner><PartnerPerfil /></RequireMovvPartner>} />
+          <Route path="partner/comissoes"               element={<RequireMovvPartner><PartnerComissoes /></RequireMovvPartner>} />
+          <Route path="admin/universidade"              element={<RequireAdminUniversidade><AdminUniversidade /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/conteudo"     element={<RequireAdminUniversidade><AdminUniversidadeConteudo /></RequireAdminUniversidade>} />
           {/* Rotas do Indicador */}
           <Route path="indicador/dashboard"          element={<RequireIndicator><IndicadorDashboard /></RequireIndicator>} />
           <Route path="indicador/indicar"            element={<RequireIndicator><IndicadorIndicar /></RequireIndicator>} />

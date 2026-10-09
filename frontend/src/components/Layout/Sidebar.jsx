@@ -8,7 +8,10 @@ import {
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
   Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck, Crown, Wine, Bike, PawPrint, FlaskConical,
+  GraduationCap, Award, UserRound, Percent,
 } from 'lucide-react';
+
+const NIVEL_PARTNER = { mobile: 'Mobile', point: 'Point', hub: 'Hub', regional: 'Regional' };
 
 // ─── Roles ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +19,8 @@ function getUserRoles(user) {
   if (!user) return [];
   // Perfil financeiro: só as telas de dinheiro do Admin (utils/perfilAdmin.js).
   if (ehFinanceiro(user)) return ['financeiro'];
+  // MOVV Partner: só a Universidade e o que é dele (perfil, certificado, comissões)
+  if (user.type === 'movv_partner') return ['movv_partner'];
   const roles = [];
   if (user.is_admin) roles.push('admin');
   if (user.type === 'accounting') roles.push('accounting');
@@ -54,11 +59,21 @@ const MASTER_MENU = [
       { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin', 'financeiro'] },
       { label: 'Interesses',         icon: Sparkles,        to: '/admin/interesse',          roles: ['admin'] },
       { label: 'Testadores',         icon: FlaskConical,    to: '/admin/testadores',         roles: ['admin'] },
+      { label: 'Universidade',       icon: GraduationCap,   to: '/admin/universidade',       roles: ['admin', 'comercial_full'] },
       { label: 'Movv Certificado — Painel',       icon: ShieldCheck, to: '/admin/direta',               roles: ['admin', 'financeiro'] },
       { label: 'Movv Certificado — Vendas',       icon: FileText,    to: '/admin/direta/vendas',        roles: ['admin', 'financeiro'] },
       { label: 'Movv Certificado — Contabilidades', icon: Building2, to: '/admin/direta/contabilidades', roles: ['admin', 'financeiro'] },
       { label: 'Sindicato — Renan',  icon: Landmark,     to: '/admin/sindicato',            roles: ['admin'] },
       { label: 'Templates Benefícios', icon: MessagesSquare, to: '/sindicato/beneficios/templates', roles: ['admin'] },
+    ],
+  },
+  {
+    section: 'MOVV Partner',
+    items: [
+      { label: 'Universidade',              icon: GraduationCap, to: '/universidade',             roles: ['movv_partner'], end: true },
+      { label: 'Meu certificado',           icon: Award,         to: '/universidade/certificado', roles: ['movv_partner'] },
+      { label: 'Meu perfil',                icon: UserRound,     to: '/partner/perfil',           roles: ['movv_partner'] },
+      { label: 'Minhas comissões / Tabela vigente', icon: Percent, to: '/partner/comissoes',      roles: ['movv_partner'] },
     ],
   },
   {
@@ -268,6 +283,8 @@ export default function Sidebar({ onClose }) {
                         : '★ Comercial Azul + Movv Certificado')
                   : isIndicator
                     ? '◆ Indicador Azul'
+                  : user?.type === 'movv_partner'
+                    ? `◆ MOVV Partner${NIVEL_PARTNER[user?.nivel_partner] ? ` · ${NIVEL_PARTNER[user.nivel_partner]}` : ''}`
                     : `◆ Parceiro ${user?.type === 'accounting' ? 'Contabilidade' : 'Funcionário'}`}
             </span>
           </div>
@@ -276,11 +293,11 @@ export default function Sidebar({ onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-3">
-        {/* Perfil financeiro: o menu mostra só o que ele abre — nem o nome
-            das telas do Sindicato aparece (as outras contas veem com cadeado). */}
-        {(ehFinanceiro(user)
+        {/* Perfil financeiro e MOVV Partner: o menu mostra só o que a conta abre —
+            nem o nome das outras telas aparece (as outras contas veem com cadeado). */}
+        {(ehFinanceiro(user) || user?.type === 'movv_partner'
           ? MASTER_MENU.map(s => ({ ...s, items: s.items.filter(i => canAccess(i, userRoles)) })).filter(s => s.items.length)
-          : MASTER_MENU
+          : MASTER_MENU.filter(s => s.section !== 'MOVV Partner') // seção só do Partner, sem cadeados para os outros
         ).map(({ section, items }) => (
           <div key={section}>
             <p className="text-white/35 text-[10px] font-bold uppercase tracking-widest px-3 mb-1">
