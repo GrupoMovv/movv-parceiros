@@ -26,6 +26,9 @@ A loja nunca sabe por qual porta o cliente entrou. Filiação a sindicato é dad
 | 09/10 | O nome certo é **"Drogaria Sindical"**, não "Nossa Drogaria" (migration 087). |
 | 09/10 | Imaginari Personalizados (14) em **Master de cortesia**, para a vitrine "Produtos em Destaque" voltar à home. |
 | 09/10 | A página antiga `ParceiroDetalhe.jsx` (sem rota, com "Exclusivo associado") foi apagada. |
+| 09/10 | Sobras do convênio: Favoritos só com lojas reais do banco; Memória com símbolos de categoria no lugar das 9 empresas (fica a Imaginari); sai o campo "Benefício associado" do painel (o dado fica no banco); "IUB MAIS+" com o "+" em todo o site, e-mails e WhatsApp. Cupons 20 e 21 (conta 144, do Junior) invalidados; 22 e 23, de clientes reais, ficaram. |
+| 09/10 | Só promessa comprovável: "Comece grátis" e "O plano Grátis não tem mensalidade. Os planos pagos são opcionais."; topo do /vender "O marketplace de Itumbiara. Simples e direto no WhatsApp."; sem push e sem Instagram nos planos (não existem; TODO.md); Roleta sem "milhares de clientes"; Pioneiro "20 vagas" enquanto ninguém entrou. Live, Post no Instagram, Boost e eventos: decisão do Junior. |
+| 09/10 | Portal Movv com mais de um admin: registro de quem aprovou, cancelou, voltou e pagou (migration 088); senha de admin só o dono troca; só o ADMIN-001 cria admin; servidor bloqueia tudo até trocar a senha provisória. Perfil **financeiro** (migration 089) para a ADMIN-002 do Edmar: só parceiros, indicações, comissões, pagamentos, comissões internas, indicadores e Movv Certificado; sem Sindicato, sem verificação de pessoa física, sem modo de teste e sem trocar senha de ninguém. |
 | — | IUB Pay (confirmação automática do Pix do pedido): decidir depois do piloto (TODO.md). |
 
 ## O que está no ar
@@ -44,27 +47,29 @@ A loja nunca sabe por qual porta o cliente entrou. Filiação a sindicato é dad
 | Testador | Conta de cliente em modo QA por 30 dias (migration 086, /admin/testadores, aviso "Modo teste") | No ar (`fc58f45`, `58c779b`, push 09/10) |
 | Mais Vendidos | Pedidos pagos ou entregues (30 dias), sem loja de teste; menos de 4 produtos → cliques e "Mais procurados" | No ar (`bced6b7`, push 09/10) |
 | "preço Clube" para membro logado | "◆ assoc" vira "◆ preço Clube" nos cards; mensagens da carteirinha renovada e ativada | No ar (`8983402`, push 09/10) |
+| Vitrine e convênios só em PDF | Vitrine com uma loja só mostra os produtos dela; "Meus convênios" só com o botão do PDF; migration 087 (Drogaria Sindical); `ParceiroDetalhe.jsx` apagada; planos sem selos sobrepostos e sem números sem prova | No ar (`01faaba`, `c761868`, `1a459fb`, `0454399`, push 09/10 11:07; migration 087 às 11:08) |
+| Admin seguro | Registro de quem fez (migration 088), proteção entre admins, bloqueio até trocar a senha provisória; tela de contabilidades não mexe mais em conta admin | No ar (`39811ca`, `80cec31`, `51fa87f`, push 09/10 13:55; migration 088 às 13:55) |
+| Sobras do convênio e promessas | Favoritos do banco, Memória com símbolos, sem "Benefício associado", "IUB MAIS+" em tudo, e-mails "preço Clube no IUB MAIS+"; "Comece grátis", sem push e Instagram nos planos, Pioneiro "20 vagas", Roleta sem "milhares" | No ar (`0afeaa9`, `0ca390f`, push 09/10 13:55) |
 
-### Commits locais esperando aprovação (09/10)
+### Commits locais esperando aprovação (09/10, terceira rodada)
 
-| Commit | O que é |
-|---|---|
-| `01faaba` | Vitrine com uma loja só mostra os produtos dela (antes: 1 produto repetido 3 vezes) |
-| `c761868` | "Meus convênios" só com o botão do PDF; API sem a lista; migration 087 (Drogaria Sindical) |
-| `1a459fb` | Apaga a `ParceiroDetalhe.jsx` |
-| `0454399` | Planos: selos sem sobrepor, "IUB MAIS+" no painel da loja, sem "milhares de consumidores" e "até 5x" |
+| O que é |
+|---|
+| Ajustes de tela: "Aprovada por Fulano" em duas linhas e tabela de Comissões cabendo em 1366 px (data embaixo do protocolo); cadeado no lugar de "só o dono troca a senha"; número do coração conta só o que aparece em Favoritos; topo do /vender sem "Grátis" |
+| Perfil financeiro (migration 089) |
+
+A conta ADMIN-002 do Edmar é criada no perfil financeiro só depois do push do perfil.
 
 ## O que falta em cada parte
 
 | Parte | O que falta | Esforço |
 |---|---|---|
-| a2 (resto) | E-mails da carteirinha ("o marketplace de descontos exclusivos pra associados SECI") e e-mails para a loja com "IUB MAIS" sem o "+" | 1 a 2h, depois da lista aprovada |
 | a3. Política e termos | Política de Privacidade e termos com o Clube, a razão social e "nome fantasia: Grupo Movv" (junto com a parte 10 do pedido pelo site) | 1h + revisão do Junior |
 | b1–b5. Loja do Clube | Benefício da loja (percentual, mínimo por tipo, produtos excluídos ou escolhidos), tela no painel, função `clubeAtivo`, termo de adesão com aceite registrado, preço Clube no pedido e no site, entrega grátis, selo "Clube X%", vitrine "Lojas do Clube", alerta de preço para o admin, contador de economia | Cerca de 3 dias e meio |
 | c. Preço dos planos | Trocar "CNPJ em dia na Base SECI" por "Loja do Clube ativa", reconferir em cada renovação, aviso antes de perder o preço, ligar `PRECO_LOJA_CLUBE_ATIVO` | 1 dia |
 | d2. Assinatura de R$ 9,90 | Cobrança mensal (Mercado Pago), cartão do Clube, cancelamento, aviso de vencimento | 2 dias |
-| e. Convênios | Trocar o PDF pelo admin sem deploy (hoje o arquivo está no código, em `backend/uploads/beneficios/catalogo-beneficios-seci.pdf`) | Meio dia |
-| e. Sobras públicas | Lista de 09/10 esperando decisão do Junior (favoritos com as 9 empresas, jogo da Memória, cupons ativos de lojas pausadas, campo "Benefício associado" no perfil da loja) | — |
+| e. Convênios | Trocar o PDF pelo admin sem deploy (hoje o arquivo está no código, em `backend/uploads/beneficios/catalogo-beneficios-seci.pdf`). Anotado no TODO.md | Meio dia |
+| Admin | Tabela de Parceiros não cabe em 1366 px (Saldo, Status e Ações pedem rolagem para o lado) | A decidir |
 
 ## Lojas (09/10/2026)
 
