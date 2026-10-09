@@ -168,43 +168,44 @@ export default function AdminCommissions() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                {['Data', 'Protocolo', 'Cliente', 'Produto', 'Parceiro', 'Tipo', 'Valor', 'Status', 'Ações'].map(h => (
-                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-4 whitespace-nowrap">{h}</th>
+                {['Protocolo', 'Cliente', 'Produto', 'Parceiro', 'Tipo', 'Valor', 'Status', 'Ações'].map(h => (
+                  <th key={h} className="text-left text-slate-500 font-medium py-3 px-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <div className="w-6 h-6 border-2 border-movv-900 border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-slate-400">Nenhuma comissão encontrada</td>
+                  <td colSpan={8} className="text-center py-12 text-slate-400">Nenhuma comissão encontrada</td>
                 </tr>
               ) : filtered.map(c => (
                 <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 text-slate-400 text-xs whitespace-nowrap">
-                    {format(new Date(c.created_at), 'dd/MM/yy')}
+                  {/* data embaixo do protocolo: uma coluna a menos, a tabela cabe em 1366 px */}
+                  <td className="py-3 px-3 text-xs whitespace-nowrap">
+                    <p className="font-mono text-[#C9A84C]">{c.protocol}</p>
+                    <p className="text-slate-400">{format(new Date(c.created_at), 'dd/MM/yy')}</p>
                   </td>
-                  <td className="py-3 px-4 font-mono text-xs text-[#C9A84C] whitespace-nowrap">{c.protocol}</td>
-                  <td className="py-3 px-4 text-slate-900 whitespace-nowrap">{c.client_name}</td>
-                  <td className="py-3 px-4 text-slate-600 whitespace-nowrap max-w-[160px] truncate">{c.product_name}</td>
-                  <td className="py-3 px-4 text-xs">
+                  <td className="py-3 px-3 text-slate-900 whitespace-nowrap">{c.client_name}</td>
+                  <td className="py-3 px-3 text-slate-600 whitespace-nowrap max-w-[130px] truncate">{c.product_name}</td>
+                  <td className="py-3 px-3 text-xs">
                     <p className="text-slate-900">{c.partner_name}</p>
                     <p className="text-[#C9A84C] font-mono">{c.partner_code}</p>
                   </td>
-                  <td className="py-3 px-4 text-xs">
+                  <td className="py-3 px-3 text-xs max-w-[140px]">
                     <p className="text-slate-600 whitespace-nowrap">{TYPE_MAP[c.type] || c.type}</p>
                     {c.type === 'accounting' && (
-                      <p className="text-slate-400 italic whitespace-nowrap">
+                      <p className="text-slate-400 italic">
                         34% líq. + 15% imp. = 49%
                       </p>
                     )}
                   </td>
-                  <td className="py-3 px-4 whitespace-nowrap">
+                  <td className="py-3 px-3 whitespace-nowrap">
                     <p className="text-[#1B5E20] font-bold">R$ {fmt(c.amount)}</p>
                     {c.type === 'accounting' && (
                       <p className="text-slate-400 text-xs">
@@ -212,13 +213,13 @@ export default function AdminCommissions() {
                       </p>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_MAP[c.status]?.cls}`}>
                       {STATUS_MAP[c.status]?.label}
                     </span>
                     <RegistroAcao item={c} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3">
                     <ActionButtons commission={c} acting={acting} act={act} />
                   </td>
                 </tr>
@@ -248,8 +249,9 @@ function ActionButtons({ commission: c, acting, act }) {
   const loading = key => acting === c.id + key;
 
   if (c.status === 'pending') {
+    // um embaixo do outro: a coluna Ações cabe na tela de notebook (1366 px)
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-col items-start gap-1.5">
         <button
           disabled={!!acting}
           onClick={() => act(c.id, 'approve')}

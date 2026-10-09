@@ -9,7 +9,7 @@ import BadgeMenu from './BadgeMenu';
 import { useCarrinho } from '../CarrinhoContext';
 import AvatarPlaceholder from '../../../../components/AvatarPlaceholder';
 import InstallAppButton from '../../../../components/InstallAppButton';
-import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
+import { useQtdFavoritos } from '../useFavoritos';
 
 // Itens com `rota` navegam de verdade (react-router); com `href` são
 // âncora pra rolar até a seção na própria home (scrollPara). Emoji em vez
@@ -49,9 +49,7 @@ export default function TopNav({
   // parceiros+produtos favoritos "na mão", e a maioria esquecia (só
   // contava parceiros), deixando o badge errado em quase toda página
   // menos a home. Única fonte de verdade agora.
-  const { favoritos: favoritosParceiros } = useFavoritos();
-  const { favoritos: favoritosProdutos } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
-  const qtdFavoritos = favoritosParceiros.length + favoritosProdutos.length;
+  const qtdFavoritos = useQtdFavoritos();
   const naFavoritos = location.pathname === '/favoritos';
   const menuPerfilRef = useRef(null);
 

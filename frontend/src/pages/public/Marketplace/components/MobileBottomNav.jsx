@@ -3,7 +3,7 @@ import { House, Heart, UserCircle, ListChecks, ShoppingBag } from '@phosphor-ico
 import { useQuantidadeSacola } from '../../Pedido/sacola';
 import { ROXO } from '../theme';
 import { useCarrinho } from '../CarrinhoContext';
-import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from '../useFavoritos';
+import { useQtdFavoritos } from '../useFavoritos';
 
 // Menu inferior fixo só no mobile — atalho de uma mão pras 4 ações mais
 // usadas, sem precisar rolar até o topo pra achar a navbar.
@@ -20,9 +20,7 @@ export default function MobileBottomNav({ nomeAssociado, onLoginSuccess }) {
   // Mesma lógica do TopNav — favorito calculado aqui, não via prop (ver
   // comentário lá: contagem espalhada por prop em cada página é fácil de
   // esquecer de atualizar).
-  const { favoritos: favoritosParceiros } = useFavoritos();
-  const { favoritos: favoritosProdutos } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
-  const qtdFavoritos = favoritosParceiros.length + favoritosProdutos.length;
+  const qtdFavoritos = useQtdFavoritos();
 
   // Link puro pra "/marketplace" não faz nada quando já se está lá (mesma
   // rota, React Router não navega de novo) — usuário rolava a página e

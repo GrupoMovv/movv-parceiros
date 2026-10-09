@@ -381,7 +381,7 @@ function TelaLanding({ onComecar, faqAberta, setFaqAberta, qtdAssociados, vagasP
             Anuncie seus produtos e serviços no IUB MAIS+
           </h1>
           <p className="text-white/80 text-lg sm:text-xl mt-6 max-w-xl mx-auto">
-            O marketplace de Itumbiara. Grátis, simples e direto no WhatsApp.
+            O marketplace de Itumbiara. Simples e direto no WhatsApp.
           </p>
 
           <span

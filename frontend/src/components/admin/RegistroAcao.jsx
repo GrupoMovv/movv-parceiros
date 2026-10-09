@@ -4,7 +4,7 @@
 const ROTULO = {
   comissao_aprovada: 'Aprovada',
   comissao_cancelada: 'Cancelada',
-  comissao_voltou: 'Voltou para pendente',
+  comissao_voltou: 'Voltou',
   comissao_paga: 'Paga',
   pagamento_registrado: 'Registrado',
   comissao_interna_lancada: 'Lançada',
@@ -23,9 +23,13 @@ function dataHora(v) {
 
 export default function RegistroAcao({ item, className = '' }) {
   if (!item?.ultima_acao_por) return null;
+  const rotulo = ROTULO[item.ultima_acao] || 'Alterada';
+  // Duas linhas (quem / quando): cabe na coluna sem cortar em tela de notebook
+  // (1366 px): linha 1 "Aprovada por Fulano" sem quebrar, linha 2 a data.
   return (
-    <p className={`text-[11px] text-slate-400 mt-1 whitespace-nowrap ${className}`} title={`${ROTULO[item.ultima_acao] || 'Alterada'} por ${item.ultima_acao_por} em ${dataHora(item.ultima_acao_em)}`}>
-      {ROTULO[item.ultima_acao] || 'Alterada'} por {item.ultima_acao_por.replace(/ \(.*\)$/, '')} · {dataHora(item.ultima_acao_em)}
+    <p className={`text-[11px] leading-tight text-slate-400 mt-1 whitespace-normal ${className}`} title={`${rotulo} por ${item.ultima_acao_por} em ${dataHora(item.ultima_acao_em)}`}>
+      <span className="block whitespace-nowrap">{rotulo} por {item.ultima_acao_por.replace(/ \(.*\)$/, '')}</span>
+      <span className="block whitespace-nowrap">{dataHora(item.ultima_acao_em)}</span>
     </p>
   );
 }
