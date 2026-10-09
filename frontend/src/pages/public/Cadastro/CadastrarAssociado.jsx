@@ -137,7 +137,7 @@ export default function CadastrarAssociado() {
           <PartyPopper className="w-14 h-14 mx-auto" style={{ color: GOLD }} />
           <div>
             <h1 className="text-2xl font-black text-slate-900">Sua carteirinha está ativa!</h1>
-            <p className="text-slate-500 text-sm mt-1">Bem-vindo(a) ao SECI + IUB MAIS, {resultado.nome_completo.trim().split(/\s+/)[0]}!</p>
+            <p className="text-slate-500 text-sm mt-1">Bem-vindo(a) ao SECI + IUB MAIS+, {resultado.nome_completo.trim().split(/\s+/)[0]}!</p>
           </div>
 
           {resultado.foto_url && (
@@ -159,7 +159,7 @@ export default function CadastrarAssociado() {
               className="w-full flex items-center justify-center gap-2 font-bold text-sm py-3.5 rounded-xl transition-transform hover:scale-[1.02]"
               style={{ backgroundColor: LIME, color: NAVY }}
             >
-              Ir pro IUB MAIS
+              Ir pro IUB MAIS+
             </button>
             <Link to="/meu"
               className="w-full flex items-center justify-center gap-2 font-semibold text-sm py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
@@ -186,8 +186,8 @@ export default function CadastrarAssociado() {
       <PageShell>
         <div className="w-full max-w-[560px]">
           <div className="text-center mb-6">
-            <p className="text-white font-black text-2xl tracking-wide">SECI + IUB MAIS</p>
-            <h1 className="text-white text-xl font-bold mt-3">Fazer minha carteirinha SECI + IUB MAIS</h1>
+            <p className="text-white font-black text-2xl tracking-wide">SECI + IUB MAIS+</p>
+            <h1 className="text-white text-xl font-bold mt-3">Fazer minha carteirinha SECI + IUB MAIS+</h1>
             <p className="text-white/60 text-sm mt-1.5">Você é colaborador de uma empresa parceira do SECI?</p>
           </div>
 

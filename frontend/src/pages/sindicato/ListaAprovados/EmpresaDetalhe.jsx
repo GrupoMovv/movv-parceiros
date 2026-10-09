@@ -35,12 +35,12 @@ function montarMensagemPersonalizada(nome) {
   const link = `${window.location.origin}/cadastrar-associado`;
   return `Olá, ${primeiroNome}! 👋
 
-Sua carteirinha SECI + IUB MAIS já está disponível — é só ativar em 2 minutos:
+Sua carteirinha SECI + IUB MAIS+ já está disponível — é só ativar em 2 minutos:
 👉 ${link}
 
 Você vai precisar do seu CPF e do CNPJ da sua empresa (peça ao RH se não souber).
 
-Depois de ativar você ganha carteirinha digital + descontos exclusivos no marketplace IUB MAIS!`;
+Depois de ativar você ganha carteirinha digital + descontos exclusivos no marketplace IUB MAIS+!`;
 }
 
 export default function SindicatoListaAprovadosEmpresaDetalhe() {

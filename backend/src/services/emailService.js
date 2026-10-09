@@ -108,13 +108,13 @@ async function enviarRecuperacaoSenha({ nome, email, token }) {
 async function enviarRecuperacaoSenhaParceiro({ nome, email, token }) {
   const link = `${PORTAL_URL}/parceiro/redefinir-senha?token=${token}`;
   const html = template(`
-    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Redefinição de Senha — IUB MAIS</h2>
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Redefinição de Senha — IUB MAIS+</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Recebemos uma solicitação para redefinir a senha do painel do seu comércio.</p>
     <p style="color:#555;line-height:1.6;">Clique no botão abaixo para criar uma nova senha. O link expira em <strong>1 hora</strong>.</p>
     ${botao('Redefinir Minha Senha', link)}
     <p style="color:#aaa;font-size:12px;margin-top:24px;">Se você não solicitou isso, ignore este email. Sua senha permanece a mesma.</p>
   `);
-  return enviar({ to: email, subject: 'IUB MAIS — Redefinição de senha do parceiro', html });
+  return enviar({ to: email, subject: 'IUB MAIS+ — Redefinição de senha do parceiro', html });
 }
 
 async function enviarComissaoAprovada({ nome, email, valor, mes }) {
@@ -229,7 +229,7 @@ async function enviarAprovacaoIndicador({ nome, email }) {
 
 async function enviarNovaSolicitacaoParceiroAdmin({ nomeFantasia, cnpj, segmento, whatsapp, email }) {
   const html = template(`
-    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Nova Solicitação de Parceiro — IUB MAIS</h2>
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Nova Solicitação de Parceiro — IUB MAIS+</h2>
     <p style="color:#555;line-height:1.6;">Um comerciante se cadastrou pela página <strong>/vender</strong> e aguarda aprovação.</p>
     <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
       ${linha('Nome fantasia', nomeFantasia)}
@@ -243,7 +243,7 @@ async function enviarNovaSolicitacaoParceiroAdmin({ nomeFantasia, cnpj, segmento
     </div>
     ${botao('Acessar o Portal', PORTAL_URL)}
   `);
-  return enviar({ to: ADMIN_EMAIL, subject: `Novo parceiro IUB MAIS — ${nomeFantasia}`, html });
+  return enviar({ to: ADMIN_EMAIL, subject: `Novo parceiro IUB MAIS+ — ${nomeFantasia}`, html });
 }
 
 async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindicalizada }) {
@@ -260,7 +260,7 @@ async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindi
     <div style="background:${sindicalizada ? '#f0fdf4' : '#fff8e8'};border-left:4px solid ${sindicalizada ? '#16A34A' : '#C9A84C'};padding:14px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
       <p style="margin:0 0 8px;font-size:13px;color:${sindicalizada ? '#166534' : '#7a5e00'};">
         ${!statusSind ? `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Preços dos planos pagos do IUB MAIS+:` : sindicalizada
-          ? `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Status: <strong>SINDICALIZADA AO SECI ✅</strong> — você tem desconto exclusivo em todos os planos pagos do IUB MAIS.`
+          ? `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Status: <strong>SINDICALIZADA AO SECI ✅</strong> — você tem desconto exclusivo em todos os planos pagos do IUB MAIS+.`
           : `<strong>Sua empresa: ${nomeFantasia}</strong><br/>Status: <strong>NÃO SINDICALIZADA ⚠️</strong> — sindicalize-se ao SECI e ganhe desconto exclusivo nos planos pagos.`}
       </p>
       <table style="width:100%;border-collapse:collapse;">
@@ -274,7 +274,7 @@ async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindi
 
   const html = template(`
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Sua loja foi aprovada!</h2>
-    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A solicitação de <strong>${nomeFantasia}</strong> pro IUB MAIS foi aprovada.</p>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A solicitação de <strong>${nomeFantasia}</strong> pro IUB MAIS+ foi aprovada.</p>
     <p style="color:#555;line-height:1.6;">Já pode acessar o painel e começar a anunciar seus produtos.</p>
     <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
       ${linha('E-mail de acesso', email)}
@@ -286,14 +286,14 @@ async function enviarAprovacaoParceiro({ nome, nomeFantasia, email, senha, sindi
     </div>
     ${blocoPrecos}
     ${botao('Acessar o Painel do Parceiro', link)}
-    <p style="color:#aaa;font-size:12px;margin-top:24px;">IUB MAIS — Mais qualidade. Mais confiança. Mais vantagens.</p>
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">IUB MAIS+ — Mais qualidade. Mais confiança. Mais vantagens.</p>
   `);
-  return enviar({ to: email, subject: '🎉 IUB MAIS - Sua loja foi aprovada!', html });
+  return enviar({ to: email, subject: '🎉 IUB MAIS+ - Sua loja foi aprovada!', html });
 }
 
 async function enviarRejeicaoParceiro({ nome, nomeFantasia, email, motivo }) {
   const html = template(`
-    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Sobre sua solicitação no IUB MAIS</h2>
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Sobre sua solicitação no IUB MAIS+</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. Analisamos a solicitação de <strong>${nomeFantasia}</strong> e, por enquanto, não conseguimos aprová-la.</p>
     ${motivo ? `<div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
       <p style="margin:0;color:#991b1b;font-size:13px;"><strong>Motivo:</strong> ${motivo}</p>
@@ -301,25 +301,25 @@ async function enviarRejeicaoParceiro({ nome, nomeFantasia, email, motivo }) {
     <p style="color:#555;line-height:1.6;">Se quiser corrigir e enviar um novo cadastro, é só acessar a página novamente.</p>
     <p style="color:#aaa;font-size:12px;margin-top:24px;">Dúvidas? Fale com a gente pelo WhatsApp.</p>
   `);
-  return enviar({ to: email, subject: 'IUB MAIS — Sobre sua solicitação de cadastro', html });
+  return enviar({ to: email, subject: 'IUB MAIS+ — Sobre sua solicitação de cadastro', html });
 }
 
 async function enviarConfirmacaoEmailParceiro({ nome, emailNovo, token }) {
   const link = `${PORTAL_URL}/parceiro/confirmar-email?token=${token}`;
   const html = template(`
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Confirme seu novo e-mail</h2>
-    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Recebemos um pedido pra trocar o e-mail de acesso do painel do seu comércio no IUB MAIS pra este endereço.</p>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Recebemos um pedido pra trocar o e-mail de acesso do painel do seu comércio no IUB MAIS+ pra este endereço.</p>
     <p style="color:#555;line-height:1.6;">Clique no botão abaixo pra confirmar. Se não foi você, ignore este e-mail — seu login continua sendo o de sempre.</p>
     ${botao('Confirmar novo e-mail', link)}
   `);
-  return enviar({ to: emailNovo, subject: 'IUB MAIS — Confirme seu novo e-mail', html });
+  return enviar({ to: emailNovo, subject: 'IUB MAIS+ — Confirme seu novo e-mail', html });
 }
 
 async function enviarConfirmacaoExclusaoParceiro({ nome, nomeFantasia, email, token }) {
   const link = `${PORTAL_URL}/parceiro/confirmar-exclusao?token=${token}`;
   const html = template(`
     <h2 style="color:#991b1b;margin-top:0;font-size:22px;">Confirmação de exclusão de conta</h2>
-    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. Recebemos um pedido pra excluir permanentemente a conta de <strong>${nomeFantasia}</strong> no IUB MAIS.</p>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. Recebemos um pedido pra excluir permanentemente a conta de <strong>${nomeFantasia}</strong> no IUB MAIS+.</p>
     <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
       <p style="margin:0;color:#991b1b;font-size:13px;line-height:1.6;"><strong>Essa ação é irreversível.</strong> Produtos, promoções, fotos e todo o histórico serão apagados permanentemente.</p>
     </div>
@@ -327,7 +327,7 @@ async function enviarConfirmacaoExclusaoParceiro({ nome, nomeFantasia, email, to
     ${botao('Confirmar exclusão definitiva', link)}
     <p style="color:#aaa;font-size:12px;margin-top:24px;">Se não foi você quem pediu, ignore este e-mail — nada será apagado sem essa confirmação.</p>
   `);
-  return enviar({ to: email, subject: 'IUB MAIS — Confirmação de exclusão de conta', html });
+  return enviar({ to: email, subject: 'IUB MAIS+ — Confirmação de exclusão de conta', html });
 }
 
 async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
@@ -339,8 +339,8 @@ async function enviarCarteirinhaAtivada({ nome, email, carteirinhaHash }) {
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Sua carteirinha está ativa!</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${primeiroNome}</strong>! Seu cadastro no SECI foi confirmado e sua carteirinha digital já está pronta pra usar.</p>
     ${botao('Ver Minha Carteirinha', linkCarteirinha)}
-    <p style="color:#555;line-height:1.6;margin-top:28px;">Agora você também tem acesso ao <strong>IUB MAIS</strong>, o marketplace de descontos exclusivos pra associados SECI.</p>
-    ${botao('Ir Pro IUB MAIS', linkMarketplace)}
+    <p style="color:#555;line-height:1.6;margin-top:28px;">Com a carteirinha ativa, você também tem <strong>preço Clube no IUB MAIS+</strong>, o marketplace de Itumbiara.</p>
+    ${botao('Ir Pro IUB MAIS+', linkMarketplace)}
     <p style="color:#aaa;font-size:12px;margin-top:24px;">Guarde o link da sua carteirinha — é seu acesso rápido sempre que precisar usar um benefício.</p>
   `);
   return enviar({ to: email, subject: '🎉 Sua carteirinha SECI está ativa!', html });
@@ -358,8 +358,8 @@ async function enviarNovoDependente({ nomeTitular, email, dependenteNome, depend
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">👨‍👩‍👧 Novo dependente adicionado!</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${primeiroNome}</strong>! A carteirinha digital de <strong>${dependenteNome}</strong> já está pronta.</p>
     ${botao('Ver Carteirinha do Dependente', linkCarteirinhaDependente)}
-    <p style="color:#555;line-height:1.6;margin-top:28px;">As compras com desconto de associado no <strong>IUB MAIS</strong> são feitas por você — o benefício vale pra família toda.</p>
-    ${botao('Ir Pro IUB MAIS', linkMarketplace)}
+    <p style="color:#555;line-height:1.6;margin-top:28px;">As compras com <strong>preço Clube no IUB MAIS+</strong> são feitas por você — o benefício vale pra família toda.</p>
+    ${botao('Ir Pro IUB MAIS+', linkMarketplace)}
   `);
   return enviar({ to: email, subject: '👨‍👩‍👧 Novo dependente adicionado à sua carteirinha SECI', html });
 }
@@ -376,7 +376,7 @@ async function enviarUpgradePlano({ nome, nomeFantasia, email, planoNovo }) {
   const link = `${PORTAL_URL}/parceiro/painel`;
   const html = template(`
     <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">🎉 Parabéns pelo upgrade!</h2>
-    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A <strong>${nomeFantasia}</strong> agora é <strong>${cfg.nome}</strong> no IUB MAIS.</p>
+    <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! A <strong>${nomeFantasia}</strong> agora é <strong>${cfg.nome}</strong> no IUB MAIS+.</p>
     <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
       <p style="margin:0;color:#7a5e00;font-size:13px;line-height:1.6;">
         Seus novos benefícios já estão ativos: selo <strong>${cfg.selo_nome}</strong>${cfg.max_produtos_rotativa ? `, ${cfg.max_produtos_rotativa} produtos na vitrine rotativa da home` : ''}${cfg.analytics_avancado ? ', analytics avançado' : ''}${cfg.aparece_destaques_parceiros ? ' e presença em "Parceiros em Destaque"' : ''}.
@@ -384,19 +384,19 @@ async function enviarUpgradePlano({ nome, nomeFantasia, email, planoNovo }) {
     </div>
     ${botao('Ver Meu Painel', link)}
   `);
-  return enviar({ to: email, subject: `🎉 IUB MAIS — Sua loja agora é ${cfg.nome}!`, html });
+  return enviar({ to: email, subject: `🎉 IUB MAIS+ — Sua loja agora é ${cfg.nome}!`, html });
 }
 
 async function enviarDowngradePlano({ nome, nomeFantasia, email, planoAnterior, planoNovo }) {
   const cfgAnterior = PLANOS[planoAnterior] || PLANOS.gratis;
   const cfgNovo = PLANOS[planoNovo] || PLANOS.gratis;
   const html = template(`
-    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Mudança de plano — IUB MAIS</h2>
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">Mudança de plano — IUB MAIS+</h2>
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>. O plano da <strong>${nomeFantasia}</strong> mudou de <strong>${cfgAnterior.nome}</strong> pra <strong>${cfgNovo.nome}</strong>.</p>
     <p style="color:#555;line-height:1.6;">Alguns benefícios exclusivos do plano anterior deixam de valer a partir de agora. Se foi engano ou você quer voltar, é só chamar a gente.</p>
     ${botao('Ver Planos Disponíveis', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);
-  return enviar({ to: email, subject: 'IUB MAIS — Seu plano foi alterado', html });
+  return enviar({ to: email, subject: 'IUB MAIS+ — Seu plano foi alterado', html });
 }
 
 async function enviarPlanoExpirandoBreve({ nome, nomeFantasia, email, plano, dataExpiracao }) {
@@ -410,7 +410,7 @@ async function enviarPlanoExpirandoBreve({ nome, nomeFantasia, email, plano, dat
     </div>
     ${botao('Renovar Meu Plano', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);
-  return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfg.nome} expira em ${dataFmt}`, html });
+  return enviar({ to: email, subject: `IUB MAIS+ — Seu plano ${cfg.nome} expira em ${dataFmt}`, html });
 }
 
 async function enviarPlanoExpirado({ nome, nomeFantasia, email, planoAnterior }) {
@@ -421,7 +421,7 @@ async function enviarPlanoExpirado({ nome, nomeFantasia, email, planoAnterior })
     <p style="color:#555;line-height:1.6;">${ehPlanoPf(planoAnterior) ? 'Seus produtos continuam salvos no painel e voltam a aparecer assim que você renovar.' : `Seus produtos continuam no ar normalmente — só os benefícios exclusivos do ${cfgAnterior.nome} (vitrine rotativa maior, selo, analytics avançado) que pararam.`}</p>
     ${botao('Renovar Meu Plano', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);
-  return enviar({ to: email, subject: `IUB MAIS — Seu plano ${cfgAnterior.nome} expirou`, html });
+  return enviar({ to: email, subject: `IUB MAIS+ — Seu plano ${cfgAnterior.nome} expirou`, html });
 }
 
 // --- IUB Disk Bebidas: resultado da moderação de produto ---------------
@@ -447,7 +447,7 @@ async function enviarModeracaoBeer({ email, nomeFantasia, produtoNome, aprovado,
   `);
   return enviar({
     to: email,
-    subject: aprovado ? `🍻 IUB MAIS — "${produtoNome}" aprovado no Disk Bebidas` : `IUB MAIS — "${produtoNome}" não foi aprovado no Disk Bebidas`,
+    subject: aprovado ? `🍻 IUB MAIS+ — "${produtoNome}" aprovado no Disk Bebidas` : `IUB MAIS+ — "${produtoNome}" não foi aprovado no Disk Bebidas`,
     html,
   });
 }
@@ -468,7 +468,7 @@ async function enviarLembreteFechaMes({ nome, nomeFantasia, email, dataEvento, l
     </div>
     ${botao('Confirmar Meus Produtos', `${PORTAL_URL}/parceiro/painel/fecha-mes`)}
   `);
-  return enviar({ to: email, subject: '🔥 IUB MAIS — Confirme seus produtos do Fecha Mês (prazo hoje!)', html });
+  return enviar({ to: email, subject: '🔥 IUB MAIS+ — Confirme seus produtos do Fecha Mês (prazo hoje!)', html });
 }
 
 async function enviarFechaMesAtivo({ nome, nomeFantasia, email, produtosConfirmados }) {
@@ -477,7 +477,7 @@ async function enviarFechaMesAtivo({ nome, nomeFantasia, email, produtosConfirma
     <p style="color:#555;line-height:1.6;">Olá, <strong>${nome}</strong>! Os <strong>${produtosConfirmados} produtos</strong> da <strong>${nomeFantasia}</strong> já estão no ar na vitrine especial do Fecha Mês, com destaque na home do marketplace até 23:59 de hoje.</p>
     ${botao('Ver Minha Vitrine no Marketplace', `${PORTAL_URL}/marketplace`)}
   `);
-  return enviar({ to: email, subject: '🔥 IUB MAIS — Fecha Mês está no ar!', html });
+  return enviar({ to: email, subject: '🔥 IUB MAIS+ — Fecha Mês está no ar!', html });
 }
 
 async function enviarRelatorioFechaMes({ nome, nomeFantasia, email, cliques, mediaClicquesDiaNormal }) {
@@ -491,7 +491,7 @@ async function enviarRelatorioFechaMes({ nome, nomeFantasia, email, cliques, med
     ${botao('Ver Meu Painel', `${PORTAL_URL}/parceiro/painel/fecha-mes`)}
     <p style="color:#aaa;font-size:12px;margin-top:24px;">Até o próximo Fecha Mês!</p>
   `);
-  return enviar({ to: email, subject: '📊 IUB MAIS — Resultado do seu Fecha Mês', html });
+  return enviar({ to: email, subject: '📊 IUB MAIS+ — Resultado do seu Fecha Mês', html });
 }
 
 // Assinatura (Mercado Pago): pagamento aprovado — tanto a 1ª ativação
@@ -511,7 +511,7 @@ async function enviarPagamentoAssinaturaConfirmado({ nome, nomeFantasia, email, 
     ${metodo === 'pix' ? `<p style="color:#555;line-height:1.6;font-size:13px;">No PIX a renovação é mensal: alguns dias antes de ${ateFmt} a gente te lembra de gerar o próximo PIX.</p>` : ''}
     ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
   `);
-  return enviar({ to: email, subject: renovacao ? `IUB MAIS — ${cfg.nome} renovado até ${ateFmt}` : `🎉 IUB MAIS — ${cfg.nome} ativo!`, html });
+  return enviar({ to: email, subject: renovacao ? `IUB MAIS+ — ${cfg.nome} renovado até ${ateFmt}` : `🎉 IUB MAIS+ — ${cfg.nome} ativo!`, html });
 }
 
 function dataBR(d) {
@@ -535,7 +535,7 @@ async function enviarTrialAtivado({ nome, nomeFantasia, email, plano, valor, tri
     <p style="color:#555;line-height:1.6;font-size:13px;">Não quer continuar? Cancele antes de ${dataBR(trialAte)} em Minha Assinatura e nada é cobrado.</p>
     ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
   `);
-  return enviar({ to: email, subject: credito ? `IUB MAIS — ${cfg.nome} ativo (troca de plano)` : `🎉 IUB MAIS — ${cfg.nome}: 7 dias grátis ativados`, html });
+  return enviar({ to: email, subject: credito ? `IUB MAIS+ — ${cfg.nome} ativo (troca de plano)` : `🎉 IUB MAIS+ — ${cfg.nome}: 7 dias grátis ativados`, html });
 }
 
 // Cartão recorrente: lembretes do fim do trial (dia 5 e dia 7).
@@ -549,7 +549,7 @@ async function enviarTrialTerminando({ nome, nomeFantasia, email, plano, valor, 
     <p style="color:#555;line-height:1.6;font-size:13px;">Se não quiser continuar, cancele antes em Minha Assinatura.</p>
     ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
   `);
-  return enviar({ to: email, subject: `IUB MAIS — ${titulo}`, html });
+  return enviar({ to: email, subject: `IUB MAIS+ — ${titulo}`, html });
 }
 
 // Cartão recorrente: cobrança recusada (o MP tenta de novo sozinho).
@@ -561,7 +561,7 @@ async function enviarFalhaPagamentoCartao({ nome, nomeFantasia, email, plano, va
     <p style="color:#555;line-height:1.6;">Vamos tentar de novo automaticamente nos próximos dias. Pra não perder os benefícios, confira se o cartão tem limite ou assine de novo com outro cartão (ou PIX).</p>
     ${botao('Ver Minha Assinatura', `${PORTAL_URL}/parceiro/painel/minha-assinatura`)}
   `);
-  return enviar({ to: email, subject: `⚠️ IUB MAIS — Falha no pagamento do ${cfg.nome}`, html });
+  return enviar({ to: email, subject: `⚠️ IUB MAIS+ — Falha no pagamento do ${cfg.nome}`, html });
 }
 
 async function enviarAssinaturaCancelada({ nome, nomeFantasia, email, plano, acessoAte }) {
@@ -573,7 +573,7 @@ async function enviarAssinaturaCancelada({ nome, nomeFantasia, email, plano, ace
     <p style="color:#555;line-height:1.6;font-size:13px;">Mudou de ideia? É só assinar de novo quando quiser.</p>
     ${botao('Ver Planos', `${PORTAL_URL}/parceiro/painel/planos`)}
   `);
-  return enviar({ to: email, subject: `IUB MAIS — Assinatura ${cfg.nome} cancelada`, html });
+  return enviar({ to: email, subject: `IUB MAIS+ — Assinatura ${cfg.nome} cancelada`, html });
 }
 
 module.exports = {

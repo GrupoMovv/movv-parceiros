@@ -6,7 +6,7 @@ import { UserCheck, Loader2, ChevronRight, Upload, MessageCircle } from 'lucide-
 
 function montarMensagemPadrao() {
   const link = `${window.location.origin}/cadastrar-associado`;
-  return `🎉 Sua carteirinha SECI + IUB MAIS já está disponível!
+  return `🎉 Sua carteirinha SECI + IUB MAIS+ já está disponível!
 
 Ative em 2 minutos:
 👉 ${link}
@@ -18,7 +18,7 @@ Você vai precisar:
 Após ativar, você terá acesso:
 🎫 Carteirinha digital no celular
 💊 Descontos exclusivos em farmácias, ótica, restaurantes...
-🛍️ Marketplace IUB MAIS — só pra associados
+🛍️ Marketplace IUB MAIS+ — só pra associados
 
 Dúvidas? Chame no WhatsApp do Sindicato!`;
 }

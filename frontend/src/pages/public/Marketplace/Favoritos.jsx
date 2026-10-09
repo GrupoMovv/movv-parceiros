@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { assetUrl } from '../../../services/api';
+import api, { assetUrl } from '../../../services/api';
 import TopNav from './components/TopNav';
 import MobileBottomNav from './components/MobileBottomNav';
 import Footer from './components/Footer';
@@ -9,7 +9,6 @@ import SecaoParceiros from './components/SecaoParceiros';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useProdutosPorIds } from './useSecaoData';
 import { useAssociadoSessao } from './useAssociadoSessao';
-import { PARCEIROS_INICIAIS } from './parceirosData';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 
 // Página dedicada de favoritos (produtos + lojas) — existia só como um
@@ -29,10 +28,18 @@ export default function Favoritos() {
   const { favoritos: favoritosProdutosIds } = useFavoritos(CHAVE_FAVORITOS_PRODUTOS);
   const { produtos: produtosFavoritos, carregando: carregandoProdutos } = useProdutosPorIds(favoritosProdutosIds);
 
-  const parceirosFavoritos = useMemo(
-    () => PARCEIROS_INICIAIS.filter(p => favoritosParceiros.includes(p.slug)),
-    [favoritosParceiros]
-  );
+  // Lojas favoritas vêm do banco (a lista escrita no código, com os
+  // convênios do SECI, saiu em 09/10). Loja pausada ou que não existe mais
+  // responde 404 e simplesmente não aparece.
+  const [parceirosFavoritos, setParceirosFavoritos] = useState([]);
+  const chaveFavoritos = favoritosParceiros.join('|');
+  useEffect(() => {
+    let vivo = true;
+    const slugs = chaveFavoritos ? chaveFavoritos.split('|') : [];
+    Promise.all(slugs.map(slug => api.get(`/public/lojas/${encodeURIComponent(slug)}`).then(r => r.data).catch(() => null)))
+      .then(lojas => { if (vivo) setParceirosFavoritos(lojas.filter(Boolean)); });
+    return () => { vivo = false; };
+  }, [chaveFavoritos]);
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col pb-14 sm:pb-0">

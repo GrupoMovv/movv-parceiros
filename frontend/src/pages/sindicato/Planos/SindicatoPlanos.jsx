@@ -57,7 +57,7 @@ export default function SindicatoPlanos() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500" /> Planos IUB MAIS</h1>
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500" /> Planos IUB MAIS+</h1>
         <p className="text-slate-500 text-sm mt-1">Gestão de planos pagos dos parceiros do marketplace (Fase 2, ainda desligada — todo mundo é Grátis).</p>
       </div>
 

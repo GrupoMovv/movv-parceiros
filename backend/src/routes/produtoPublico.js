@@ -41,7 +41,7 @@ router.get('/produto/:id', async (req, res) => {
     const produto = result.rows[0];
 
     if (!produto) {
-      const t = escapeHtml('Produto não encontrado — IUB MAIS');
+      const t = escapeHtml('Produto não encontrado — IUB MAIS+');
       return res.status(404).send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${t}</title>
 <meta property="og:title" content="${t}"><meta http-equiv="refresh" content="0; url=${destino}"></head>
 <body><a href="${destino}">Clique aqui</a></body></html>`);
@@ -49,7 +49,7 @@ router.get('/produto/:id', async (req, res) => {
 
     const precoFmt = parseFloat(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const image = produto.fotos?.[0]?.url ? urlAbsoluta(produto.fotos[0].url) : `${FRONTEND_URL}/iub-logo-og.png`;
-    const t = escapeHtml(`${produto.nome} — ${produto.parceiro_nome} | IUB MAIS`);
+    const t = escapeHtml(`${produto.nome} — ${produto.parceiro_nome} | IUB MAIS+`);
     const d = escapeHtml(`${precoFmt} — ${(produto.descricao || '').slice(0, 150)}`);
     const i = escapeHtml(image);
     const cu = escapeHtml(canonicalUrl);

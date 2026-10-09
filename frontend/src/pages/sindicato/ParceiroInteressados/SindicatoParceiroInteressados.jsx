@@ -48,7 +48,7 @@ export default function SindicatoParceiroInteressados() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Bell size={22} weight="duotone" className="text-movv-900" /> Interessados em Planos — IUB MAIS
+          <Bell size={22} weight="duotone" className="text-movv-900" /> Interessados em Planos — IUB MAIS+
         </h1>
         <p className="text-slate-500 text-sm mt-1">
           Parceiros que clicaram em "Notificar-me" na página de Planos (em breve) — {totalGeral} no total.

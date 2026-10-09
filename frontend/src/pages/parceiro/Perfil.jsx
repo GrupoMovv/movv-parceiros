@@ -277,10 +277,9 @@ export default function ParceiroPerfil() {
           <textarea value={form.descricao_completa} onChange={e => setCampo('descricao_completa', e.target.value.slice(0, 2000))}
             rows={5} className={campoCls} />
         </div>
-        <div className="mt-4">
-          <Campo label='Benefício associado (ex: "20% de desconto no primeiro atendimento")' value={form.beneficio}
-            onChange={v => setCampo('beneficio', v)} />
-        </div>
+        {/* "Benefício associado" saiu da tela em 09/10 (era do convênio do
+            SECI e não aparece mais em página pública). O valor continua no
+            banco e vai de volta igual ao salvar (form.beneficio). */}
       </Secao>
 
       {temPet && (

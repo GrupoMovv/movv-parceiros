@@ -133,7 +133,7 @@ export default function MeuPainel() {
             <ShoppingBag className="w-5 h-5" />
           </span>
           <div className="min-w-0">
-            <p className="font-black text-sm">🛍️ Marketplace IUB MAIS</p>
+            <p className="font-black text-sm">🛍️ Marketplace IUB MAIS+</p>
             <p className="text-white/85 text-xs mt-0.5">
               {beneficioAtivo ? 'Compre com desconto exclusivo' : 'Ofertas'}{qtdParceiros ? ` em ${qtdParceiros} ${qtdParceiros === 1 ? 'parceiro' : 'parceiros'}` : ''}!
             </p>

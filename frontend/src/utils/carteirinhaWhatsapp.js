@@ -68,7 +68,7 @@ Aqui está sua carteirinha digital de associado ao SECI — Sindicato dos Empreg
 ${urlTitular}${blocoDependentes}
 
 Novidade! Agora você também tem acesso ao
-🛍️ IUB MAIS — Marketplace de Itumbiara
+🛍️ IUB MAIS+ — Marketplace de Itumbiara
 com preços especiais só pra você!
 
 Acesse marketplace + carteirinha em:

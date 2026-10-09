@@ -72,7 +72,7 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'iubmais',
     data: { url: data.url || '/marketplace' },
   };
-  event.waitUntil(self.registration.showNotification(data.title || 'IUB MAIS', options));
+  event.waitUntil(self.registration.showNotification(data.title || 'IUB MAIS+', options));
 });
 
 self.addEventListener('notificationclick', (event) => {

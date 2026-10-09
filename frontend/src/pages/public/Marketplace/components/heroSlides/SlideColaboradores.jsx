@@ -13,7 +13,7 @@ export default function SlideColaboradores({ empresas }) {
     <div className="relative w-full h-full flex" style={{ background: 'linear-gradient(135deg, #0B1F3A 0%, #3B0A78 100%)' }}>
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-full sm:max-w-[50%]">
         <h2 className="text-white font-black text-xl sm:text-3xl lg:text-4xl tracking-tight leading-tight">🎫 Colaborador de empresa parceira?</h2>
-        <p className="text-white/75 text-xs sm:text-sm mt-2 hidden sm:block">Ative sua carteirinha SECI + IUB MAIS gratuita agora mesmo.</p>
+        <p className="text-white/75 text-xs sm:text-sm mt-2 hidden sm:block">Ative sua carteirinha SECI + IUB MAIS+ gratuita agora mesmo.</p>
         <button
           type="button"
           onClick={() => navigate('/cadastrar-associado')}

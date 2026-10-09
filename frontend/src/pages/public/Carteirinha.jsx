@@ -334,7 +334,7 @@ export default function Carteirinha() {
             className="w-full h-20 flex items-center justify-center gap-3 font-bold uppercase tracking-wide text-white text-lg"
             style={{ backgroundColor: '#16A34A', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)' }}
           >
-            <img src="/iub-logo-sm.png" alt="" className="h-10 w-10 rounded-lg" /> 🛍️ Ir pro IUB MAIS
+            <img src="/iub-logo-sm.png" alt="" className="h-10 w-10 rounded-lg" /> 🛍️ Ir pro IUB MAIS+
           </Link>
         )}
         {ehDependente && (

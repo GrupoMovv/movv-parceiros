@@ -355,14 +355,14 @@ async function aprovarSolicitacao(req, res) {
       nome: sol.responsavel_nome, nomeFantasia: sol.nome_fantasia, email: sol.email, senha, sindicalizada,
     }).catch(err => console.error('[EMAIL]', err.message));
 
-    const mensagemWhatsapp = `🎉 Olá ${sol.responsavel_nome.split(' ')[0]}! Sua loja foi APROVADA no IUB MAIS!\n\n`
+    const mensagemWhatsapp = `🎉 Olá ${sol.responsavel_nome.split(' ')[0]}! Sua loja foi APROVADA no IUB MAIS+!\n\n`
       + (sol.segmento === 'bebidas'
         ? `Seu IUB Disk Bebidas 🍻 já está ativo — cadastre suas bebidas na aba "Meu IUB Beer" do painel.\n\n`
         : `Já pode começar a anunciar seus produtos.\n\n`)
       + `🔗 Link: ${(process.env.FRONTEND_URL || 'https://iubmais.com.br').replace(/^https?:\/\//, '').replace(/\/$/, '')}/entrar\n`
       + `📧 Email: ${sol.email}\n`
       + `🔑 Senha: ${senha}\n\n`
-      + `Dúvidas? Só chamar aqui.\nIUB MAIS`;
+      + `Dúvidas? Só chamar aqui.\nIUB MAIS+`;
 
     return res.json({
       parceiro,
@@ -395,7 +395,7 @@ async function rejeitarSolicitacao(req, res) {
       nome: sol.responsavel_nome, nomeFantasia: sol.nome_fantasia, email: sol.email, motivo,
     }).catch(err => console.error('[EMAIL]', err.message));
 
-    const mensagemWhatsapp = `Olá ${sol.responsavel_nome.split(' ')[0]}, sobre sua solicitação no IUB MAIS: `
+    const mensagemWhatsapp = `Olá ${sol.responsavel_nome.split(' ')[0]}, sobre sua solicitação no IUB MAIS+: `
       + `por enquanto não conseguimos aprovar seu cadastro.${motivo ? ` Motivo: ${motivo}.` : ''} `
       + `Qualquer dúvida, é só chamar aqui.`;
 

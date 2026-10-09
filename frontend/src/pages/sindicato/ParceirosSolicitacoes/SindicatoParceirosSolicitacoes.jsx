@@ -112,7 +112,7 @@ export default function SindicatoParceirosSolicitacoes() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Store className="w-6 h-6 text-movv-900" /> Solicitações de Parceiros — IUB MAIS
+          <Store className="w-6 h-6 text-movv-900" /> Solicitações de Parceiros — IUB MAIS+
         </h1>
         <p className="text-slate-500 text-sm mt-1">
           Comerciantes que se cadastraram pela página pública /vender e aguardam aprovação
