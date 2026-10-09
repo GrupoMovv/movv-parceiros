@@ -93,6 +93,27 @@ async function enviarCredenciais({ nome, email, codigoAcesso, whatsapp }) {
   return enviar({ to: email, subject: 'Movv Parceiros — Suas credenciais de acesso', html });
 }
 
+// Universidade MOVV Partner: acesso do Partner novo (ou acesso redefinido).
+async function enviarAcessoUniversidade({ nome, email, codigo, senha, redefinido = false }) {
+  const html = template(`
+    <h2 style="color:#1a1a2e;margin-top:0;font-size:22px;">${redefinido ? 'Seu acesso foi redefinido' : 'Bem-vindo(a) a Universidade MOVV Partner!'}</h2>
+    <p style="color:#555;line-height:1.6;">Ola, <strong>${nome}</strong>! ${redefinido
+      ? 'Criamos uma senha provisoria nova para voce entrar no Portal Movv.'
+      : 'Seu acesso ao Portal Movv esta pronto. Sua jornada comeca pela Universidade MOVV Partner, no Modulo 0.'}</p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid #ede8f8;">
+      ${linha('Codigo de login', `<span style="letter-spacing:2px;">${codigo}</span>`)}
+      ${linha('Ou entre com o e-mail', email)}
+      ${linha(`<span style="color:#4A0E8F;font-weight:700;">Senha provisoria</span>`,
+        `<span style="font-size:22px;letter-spacing:4px;color:#4A0E8F;font-weight:700;">${senha}</span>`, true)}
+    </table>
+    <div style="background:#fff8e8;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;">
+      <p style="margin:0;color:#7a5e00;font-size:13px;"><strong>Atencao:</strong> no primeiro acesso o portal pede para voce criar a sua senha.</p>
+    </div>
+    ${botao('Entrar no Portal Movv', `${PORTAL_URL}/login`)}
+  `);
+  return enviar({ to: email, subject: redefinido ? 'Universidade MOVV Partner — acesso redefinido' : 'Universidade MOVV Partner — seu acesso', html });
+}
+
 async function enviarRecuperacaoSenha({ nome, email, token }) {
   const link = `${PORTAL_URL}/reset-password?token=${token}`;
   const html = template(`
@@ -577,6 +598,7 @@ async function enviarAssinaturaCancelada({ nome, nomeFantasia, email, plano, ace
 }
 
 module.exports = {
+  enviarAcessoUniversidade,
   enviarModeracaoBeer,
   enviarPagamentoAssinaturaConfirmado,
   enviarTrialAtivado,

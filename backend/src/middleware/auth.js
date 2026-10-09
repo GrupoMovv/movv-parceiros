@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 const { contaDoPortal, veTudo } = require('../config/perfilAdmin');
+const { travaDoPortal } = require('../services/universidade');
 
 // Senha provisória (must_change_password): até trocar, o servidor só deixa
 // ver a própria conta e trocar a senha — não basta a tela mandar para
@@ -55,6 +56,8 @@ const authenticate = async (req, res, next) => {
       if (bloquearSenhaProvisoria(req, res, result.rows[0])) return;
       const { must_change_password: _m, ...parceiro } = result.rows[0]; // eslint-disable-line no-unused-vars
       req.user = contaDoPortal(parceiro);
+      // MOVV Partner sem certificado: com a trava ligada, só Universidade e a própria conta
+      if (await travaDoPortal(req, res, req.user)) return;
     }
 
     next();
@@ -76,6 +79,20 @@ const requireAdmin = (req, res, next) => {
 const requireEquipe = (req, res, next) => {
   if (!veTudo(req.user)) {
     return res.status(403).json({ error: 'Acesso restrito ao administrador' });
+  }
+  next();
+};
+
+// Universidade MOVV Partner: admin completo ou colaborador interno comercial_full
+// (Fernando). O perfil financeiro fica de fora (Junior, 09/10/2026).
+const requireAdminUniversidade = (req, res, next) => {
+  if (req.user?.is_admin || (req.user?.type === 'internal' && req.user?.role === 'comercial_full')) return next();
+  return res.status(403).json({ error: 'Acesso restrito à administração da Universidade' });
+};
+
+const requireMovvPartner = (req, res, next) => {
+  if (req.user?.type !== 'movv_partner') {
+    return res.status(403).json({ error: 'Área exclusiva do MOVV Partner' });
   }
   next();
 };
@@ -143,4 +160,4 @@ const lerAdminOpcionalCabecalho = async (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin, requireEquipe, requireInternal, lerAdminOpcional, lerAdminOpcionalCabecalho };
+module.exports = { authenticate, requireAdmin, requireEquipe, requireInternal, requireAdminUniversidade, requireMovvPartner, lerAdminOpcional, lerAdminOpcionalCabecalho };

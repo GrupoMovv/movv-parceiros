@@ -112,7 +112,7 @@ async function me(req, res) {
 
     const result = await db.query(
       `SELECT p.id, p.code, p.name, p.email, p.type, p.whatsapp, p.pix_key,
-              p.is_admin, p.is_active, p.created_at, p.must_change_password, p.perfil_admin,
+              p.is_admin, p.is_active, p.created_at, p.must_change_password, p.perfil_admin, p.nivel_partner,
               pp.code AS parent_code, pp.name AS parent_name
        FROM partners p
        LEFT JOIN partners pp ON pp.id = p.parent_id

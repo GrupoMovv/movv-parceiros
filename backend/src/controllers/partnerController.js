@@ -16,6 +16,7 @@ async function listPartners(req, res) {
        LEFT JOIN partners pp ON pp.id = p.parent_id
        LEFT JOIN referrals r ON r.partner_id = p.id
        LEFT JOIN commissions c ON c.partner_id = p.id
+       WHERE p.type <> 'movv_partner' -- MOVV Partner fica na Universidade (/admin/universidade)
        GROUP BY p.id, pp.name, pp.code
        ORDER BY p.created_at DESC`,
     );
