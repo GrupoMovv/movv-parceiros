@@ -1,8 +1,10 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { ehEquipe } from '../utils/perfilAdmin';
 import toast from 'react-hot-toast';
-import { UserPlus, Phone, Package, CheckCircle2, Copy, Clock, MessageSquare, TrendingUp, Mail } from 'lucide-react';
+import { UserPlus, Phone, Package, CheckCircle2, Copy, Clock, MessageSquare, TrendingUp, Mail, Contact } from 'lucide-react';
 
 const FAIXAS = {
   alta:     { label: 'ALTA',     titulo: 'Faixa Alta — 1,5%',      badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-300', panelCls: 'bg-emerald-50 border-emerald-200' },
@@ -15,14 +17,22 @@ const FAIXA_ORDER = ['alta', 'media', 'baixa', 'especial'];
 
 export default function NewReferral() {
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ client_name: '', client_whatsapp: '', client_email: '', product_id: '', valor_estimado: '' });
+  const VAZIO = { client_name: '', client_whatsapp: '', client_email: '', client_cpf: '', product_id: '', valor_estimado: '', partner_id: '' };
+  const [form, setForm] = useState(VAZIO);
+  const { user } = useAuth();
+  const equipe = ehEquipe(user);
+  // MOVV Partner (ou a equipe registrando por um): sem percentual de
+  // contabilidade na tela — a comissão dele vem do livro (Minhas comissões)
+  const doPartner = user?.type === 'movv_partner' || (equipe && Boolean(form.partner_id));
+  const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/products').then(r => setProducts(r.data.filter(p => p.is_active)));
-  }, []);
+    if (equipe) api.get('/partner-comissoes/admin/partners').then(r => setPartners(r.data.filter(p => p.is_active))).catch(() => {});
+  }, [equipe]);
 
   const byFaixa = products.reduce((acc, p) => {
     const f = p.faixa || 'media';
@@ -39,6 +49,11 @@ export default function NewReferral() {
         : digits.length <= 7 ? `(${digits.slice(0,2)}) ${digits.slice(2)}`
         : `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
       setForm(f => ({ ...f, client_whatsapp: fmt }));
+    } else if (name === 'client_cpf') {
+      const d = value.replace(/\D/g, '').slice(0, 11);
+      const fmt = d.length <= 3 ? d : d.length <= 6 ? `${d.slice(0,3)}.${d.slice(3)}`
+        : d.length <= 9 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}` : `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+      setForm(f => ({ ...f, client_cpf: fmt }));
     } else if (name === 'valor_estimado') {
       setForm(f => ({ ...f, valor_estimado: value.replace(/[^\d,]/g, '') }));
     } else {
@@ -59,6 +74,8 @@ export default function NewReferral() {
         client_whatsapp: form.client_whatsapp.replace(/\D/g, ''),
         product_id: parseInt(form.product_id),
         ...(form.client_email.trim() && { client_email: form.client_email.trim() }),
+        ...(form.client_cpf && { client_cpf: form.client_cpf.replace(/\D/g, '') }),
+        ...(equipe && form.partner_id && { partner_id: Number(form.partner_id) }),
       });
       setSuccess(res.data);
       toast.success('Indicação registrada! WhatsApp enviado ao cliente.');
@@ -76,7 +93,7 @@ export default function NewReferral() {
 
   function reset() {
     setSuccess(null);
-    setForm({ client_name: '', client_whatsapp: '', client_email: '', product_id: '', valor_estimado: '' });
+    setForm(VAZIO);
   }
 
   if (success) {
@@ -136,6 +153,17 @@ export default function NewReferral() {
       </div>
 
       <form onSubmit={handleSubmit} className="card space-y-5">
+        {equipe && partners.length > 0 && (
+          <div>
+            <label className="label">Registrar para o MOVV Partner <span className="text-slate-400 font-normal">(opcional)</span></label>
+            <select name="partner_id" value={form.partner_id} onChange={handleChange} className="input">
+              <option value="">Ninguém — a indicação é minha</option>
+              {partners.map(p => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
+            </select>
+            <p className="text-slate-400 text-xs mt-1">A indicação fica no nome do Partner escolhido.</p>
+          </div>
+        )}
+
         <div>
           <label className="label">Nome completo do cliente</label>
           <div className="relative">
@@ -166,6 +194,16 @@ export default function NewReferral() {
         </div>
 
         <div>
+          <label className="label">CPF do cliente <span className="text-slate-400 font-normal">(opcional)</span></label>
+          <div className="relative">
+            <Contact className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input name="client_cpf" value={form.client_cpf} onChange={handleChange}
+              placeholder="000.000.000-00" className="input pl-10" inputMode="numeric" />
+          </div>
+          <p className="text-slate-400 text-xs mt-1">Ajuda a ligar a venda à sua indicação quando a Azul pagar.</p>
+        </div>
+
+        <div>
           <label className="label">Produto de interesse</label>
           <div className="relative">
             <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -174,7 +212,7 @@ export default function NewReferral() {
               <option value="">Selecione o produto</option>
               {FAIXA_ORDER.map(faixa =>
                 byFaixa[faixa]?.length > 0 && (
-                  <optgroup key={faixa} label={FAIXAS[faixa].titulo}>
+                  <optgroup key={faixa} label={doPartner ? `Faixa ${FAIXAS[faixa].label.toLowerCase()}` : FAIXAS[faixa].titulo}>
                     {byFaixa[faixa].map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
@@ -185,7 +223,7 @@ export default function NewReferral() {
           </div>
         </div>
 
-        {selectedProduct && (
+        {selectedProduct && !doPartner && (
           <div className={`rounded-2xl p-4 border space-y-3 ${FAIXAS[selectedProduct.faixa || 'media'].panelCls}`}>
             <div className="flex items-center gap-2">
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${FAIXAS[selectedProduct.faixa || 'media'].badgeCls}`}>

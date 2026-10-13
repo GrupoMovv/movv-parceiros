@@ -85,13 +85,10 @@ CREATE TABLE IF NOT EXISTS comissao_importacoes (
   linhas_total         INTEGER       NOT NULL DEFAULT 0,
   linhas_novas         INTEGER       NOT NULL DEFAULT 0,
   linhas_ja_importadas INTEGER       NOT NULL DEFAULT 0,
-  linhas_casadas       INTEGER       NOT NULL DEFAULT 0,
-  linhas_pendentes     INTEGER       NOT NULL DEFAULT 0,
-  linhas_desconto      INTEGER       NOT NULL DEFAULT 0,
-  linhas_estorno       INTEGER       NOT NULL DEFAULT 0,
-  total_incentivo      NUMERIC(12,2) NOT NULL DEFAULT 0,  -- soma das linhas PAGA (nunca o rodapé do relatório)
+  contagens            JSONB         NOT NULL DEFAULT '{}',  -- novas por situação (casada, sugestao, ambigua, sem_partner...)
+  total_incentivo      NUMERIC(12,2) NOT NULL DEFAULT 0,  -- soma das linhas PAGA do arquivo (nunca o rodapé do relatório)
   total_descontos      NUMERIC(12,2) NOT NULL DEFAULT 0,
-  total_partners       NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_partners       NUMERIC(12,2) NOT NULL DEFAULT 0,  -- lançado para Partners nesta importação (casadas por contrato)
   importado_por_id     INTEGER,
   importado_por        VARCHAR(300)  NOT NULL,
   importado_em         TIMESTAMPTZ   NOT NULL DEFAULT NOW()
@@ -120,16 +117,30 @@ CREATE TABLE IF NOT EXISTS comissao_importacao_linhas (
   origem_relatorio     VARCHAR(60),
   observacao           TEXT,
   cod_agente           VARCHAR(30),
+  -- casada:            contrato igual ao de uma indicação de Partner -> lançamento
+  -- sugestao:          só o CPF casou com UMA indicação sem contrato -> admin confirma
+  -- ambigua:           o CPF casou com mais de uma indicação -> admin escolhe
+  -- sem_partner:       venda da própria agência (a maioria); só conta nos totais
+  -- vinculada:         admin confirmou/escolheu/vinculou -> lançamento
+  -- sem_regra:         é de Partner, mas sem regra vigente ou Partner sem nível
+  -- estorno_a_decidir: ESTORNADA de contrato de Partner; política a definir
+  -- estorno_resolvido: o admin decidiu (estornou o lançamento ou manteve)
+  -- desconto:          desconto da agência, sem contrato; nunca gera lançamento
   status               VARCHAR(20)   NOT NULL
-                         CHECK (status IN ('casada','pendente','vinculada','estorno_a_decidir','desconto','ignorada')),
+                         CHECK (status IN ('casada','sugestao','ambigua','sem_partner','vinculada','sem_regra',
+                                           'estorno_a_decidir','estorno_resolvido','desconto')),
   referral_id          INTEGER       REFERENCES referrals(id),
   partner_id           INTEGER       REFERENCES partners(id),
   sugestao_referral_id INTEGER       REFERENCES referrals(id),   -- casou só pelo CPF: pede confirmação
+  lancamento_estorno_id INTEGER,                                -- lançamento que o estorno da Azul atinge
+  motivo               TEXT,
   resolvido_por        VARCHAR(300),
   resolvido_em         TIMESTAMPTZ,
   UNIQUE (importacao_id, linha_numero)
 );
-CREATE INDEX IF NOT EXISTS idx_cil_status   ON comissao_importacao_linhas (status) WHERE status IN ('pendente','estorno_a_decidir');
+CREATE INDEX IF NOT EXISTS idx_cil_status   ON comissao_importacao_linhas (status)
+  WHERE status IN ('sugestao','ambigua','sem_regra','estorno_a_decidir');
+CREATE INDEX IF NOT EXISTS idx_cil_cpf      ON comissao_importacao_linhas (cliente_cpf) WHERE cliente_cpf IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_cil_contrato ON comissao_importacao_linhas (numero_contrato) WHERE numero_contrato IS NOT NULL;
 
 -- 4. O livro

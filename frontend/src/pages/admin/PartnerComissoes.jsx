@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   STATUS_LANC, ORIGEM, BASE, NIVEIS, centavos, reais, pct, competenciaBR, dataBR,
 } from '../universidade/comissoesRotulos';
+import { ImportacaoAzul, PendenciasAzul } from './PartnerComissoesImportacao';
 
 // Livro de comissões do MOVV Partner — administração (migration 093).
 // Admin e financeiro: lançamentos, aprovação, pagamento, estorno e avisos.
@@ -13,6 +14,15 @@ import {
 export default function AdminPartnerComissoes() {
   const [aba, setAba] = useState('lancamentos');
   const [avisosAbertos, setAvisosAbertos] = useState(0);
+  const [pendenciasAzul, setPendenciasAzul] = useState(0);
+  const [versaoPendencias, setVersaoPendencias] = useState(0); // recarrega depois de importar
+  const abas = [
+    ['lancamentos', 'Lançamentos'],
+    ['importacao', 'Importação Azul'],
+    ['pendencias', `Pendências da importação${pendenciasAzul ? ` (${pendenciasAzul})` : ''}`],
+    ['regras', 'Regras (tabela vigente)'],
+    ['avisos', `Avisos${avisosAbertos ? ` (${avisosAbertos})` : ''}`],
+  ];
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
@@ -23,7 +33,7 @@ export default function AdminPartnerComissoes() {
         </div>
       </div>
       <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
-        {[['lancamentos', 'Lançamentos'], ['regras', 'Regras (tabela vigente)'], ['avisos', `Avisos${avisosAbertos ? ` (${avisosAbertos})` : ''}`]].map(([k, r]) => (
+        {abas.map(([k, r]) => (
           <button key={k} onClick={() => setAba(k)}
             className={`px-4 py-2 text-sm font-medium whitespace-nowrap -mb-px border-b-2 ${aba === k ? 'border-movv-900 text-movv-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
             {r}
@@ -31,6 +41,10 @@ export default function AdminPartnerComissoes() {
         ))}
       </div>
       {aba === 'lancamentos' && <Lancamentos />}
+      {aba === 'importacao' && <ImportacaoAzul onImportou={() => setVersaoPendencias(v => v + 1)} />}
+      <div className={aba === 'pendencias' ? '' : 'hidden'}>
+        <PendenciasAzul key={versaoPendencias} onContagem={setPendenciasAzul} />
+      </div>
       {aba === 'regras' && <Regras />}
       <Avisos visivel={aba === 'avisos'} onContagem={setAvisosAbertos} />
     </div>

@@ -1,0 +1,236 @@
+<h1 style="text-align: center;">Relatorio de Incentivo Pagos</h1>
+<table  border="0" cellspacing="2" cellpadding="0">
+    <tr style="font-weight: bold; font-size: 17px; word-spacing: 2px">
+        <td nowrap colspan="12">Pereodo de Pagamento: 01/01/2026 a 13/10/2026Agente: GERAL               Financeira: GERAL</td>
+    </tr>
+    <tr style="font-weight: bold; font-size: 17px" bgcolor="#d4d4d4">
+        <th nowrap >NOME</th>
+        <th nowrap >CPF</th>
+        <th nowrap >DT EMISSAO</th>
+        <th nowrap >DT PGTO</th>
+        <th nowrap >DT LIBERADO</th>
+        <th nowrap >N.CTT</th>
+        <th nowrap >COD. CONV.</th>
+        <th nowrap >CONVENIO</th>
+        <th nowrap >VLR EMPR.</th>
+        <th nowrap >PARC.PG.</th>
+        <th nowrap >%</th>
+        <th nowrap >VLR INCEN.</th>
+    </tr>
+
+                    <tr>
+                    <td colspan="12" align='left' style="color:red">
+                        <h4>AGENTE: 2061-AE-IDEVALDO DOS SANTOS JUNIOR</h4>
+                    </td>
+                </tr>
+                
+            <tr bgcolor="#ededed">
+                <td nowrap align='left'>CLIENTE FICTICIO 01 DA SILVA</td>
+                <td nowrap align='left'>365.397.801-97</td>
+                <td nowrap align='left'> 14/04/2026 </td>
+                <td nowrap align='left'> 22/04/2026 </td>
+                <td nowrap align='left'> 17/04/2026 </td>
+                <td nowrap align='left'>532322183</td>
+                <td nowrap align='left'> 724718 </td>
+                <td nowrap align='left'> FACTA FINANCEIRA INSS NOVO SMART P - 64238 96X </td>
+                <td nowrap align='left'> 1.567,99 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 8,51 </td>
+                <td nowrap align='left'> 133,44 </td>
+            </tr>
+
+            
+            <tr bgcolor="#fff">
+                <td nowrap align='left'>CLIENTE FICTICIO 02 DA SILVA</td>
+                <td nowrap align='left'>130.541.229-97</td>
+                <td nowrap align='left'> 24/04/2026 </td>
+                <td nowrap align='left'> 28/04/2026 </td>
+                <td nowrap align='left'> 24/04/2026 </td>
+                <td nowrap align='left'>504214762</td>
+                <td nowrap align='left'> 722168 </td>
+                <td nowrap align='left'> C6 BANK NOVO INSS ML NORMAL ATE 3K WEB 72X </td>
+                <td nowrap align='left'> 1.362,76 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 2,78 </td>
+                <td nowrap align='left'> 37,88 </td>
+            </tr>
+
+            
+            <tr bgcolor="#ededed">
+                <td nowrap align='left'>CLIENTE FICTICIO 03 DA SILVA</td>
+                <td nowrap align='left'>464.970.339-72</td>
+                <td nowrap align='left'> 27/04/2026 </td>
+                <td nowrap align='left'> 29/04/2026 </td>
+                <td nowrap align='left'> 27/04/2026 </td>
+                <td nowrap align='left'>59656515</td>
+                <td nowrap align='left'> 595991 </td>
+                <td nowrap align='left'> BMG CARTAO INSS SAQUE COMPLEMENTAR DIGITAL TOKEN </td>
+                <td nowrap align='left'> 434,30 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 5,13 </td>
+                <td nowrap align='left'> 22,28 </td>
+            </tr>
+
+            
+            <tr bgcolor="#fff">
+                <td nowrap align='left'>CLIENTE FICTICIO 03 DA SILVA</td>
+                <td nowrap align='left'>464.970.339-72</td>
+                <td nowrap align='left'> 27/04/2026 </td>
+                <td nowrap align='left'> 30/04/2026 </td>
+                <td nowrap align='left'> 27/04/2026 </td>
+                <td nowrap align='left'>58927782</td>
+                <td nowrap align='left'> 595892 </td>
+                <td nowrap align='left'> BMG CARTAO BENEFICIO CARTAO SAQUE COMPLEMENTAR PARCELADO - INSS </td>
+                <td nowrap align='left'> 231,49 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 5,13 </td>
+                <td nowrap align='left'> 11,88 </td>
+            </tr>
+
+            
+            <tr bgcolor="#ededed">
+                <td nowrap align='left'>CLIENTE FICTICIO 04 DA SILVA</td>
+                <td nowrap align='left'>307.283.635-55</td>
+                <td nowrap align='left'> 27/04/2026 </td>
+                <td nowrap align='left'> 05/05/2026 </td>
+                <td nowrap align='left'> 27/04/2026 </td>
+                <td nowrap align='left'>857494629</td>
+                <td nowrap align='left'> 689235 </td>
+                <td nowrap align='left'> FACTA FINANCEIRA FGTS GOLD POWER NOVO 62162 60X </td>
+                <td nowrap align='left'> 1.109,33 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 11,12 </td>
+                <td nowrap align='left'> 123,36 </td>
+            </tr>
+
+            
+            <tr bgcolor="#fff">
+                <td nowrap align='left'>CLIENTE FICTICIO 05 DA SILVA</td>
+                <td nowrap align='left'>663.341.678-40</td>
+                <td nowrap align='left'> 05/05/2026 </td>
+                <td nowrap align='left'> 14/05/2026 </td>
+                <td nowrap align='left'> 06/05/2026 </td>
+                <td nowrap align='left'>852167606032</td>
+                <td nowrap align='left'> 639983 </td>
+                <td nowrap align='left'> CREFISA CREDITO PESSOAL BAIXA RENDA NOVO 1 A 15X </td>
+                <td nowrap align='left'> 666,54 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 9,41 </td>
+                <td nowrap align='left'> 62,72 </td>
+            </tr>
+
+            
+            <tr bgcolor="#ededed">
+                <td nowrap align='left'>CLIENTE FICTICIO 06 DA SILVA</td>
+                <td nowrap align='left'>925.814.958-66</td>
+                <td nowrap align='left'> 29/05/2026 </td>
+                <td nowrap align='left'> 05/06/2026 </td>
+                <td nowrap align='left'> 29/05/2026 </td>
+                <td nowrap align='left'>426453582</td>
+                <td nowrap align='left'> 742188 </td>
+                <td nowrap align='left'> FACTA FINANCEIRA CONSIGNADO DO TRABALHADOR NOVO GOLD TAB 65943 24X </td>
+                <td nowrap align='left'> 2.000,00 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 3,85 </td>
+                <td nowrap align='left'> 77,00 </td>
+            </tr>
+
+            
+            <tr bgcolor="#fff">
+                <td nowrap align='left'>CLIENTE FICTICIO 07 DA SILVA</td>
+                <td nowrap align='left'>840.608.316-89</td>
+                <td nowrap align='left'> 09/06/2026 </td>
+                <td nowrap align='left'> 16/06/2026 </td>
+                <td nowrap align='left'> 10/06/2026 </td>
+                <td nowrap align='left'>39905995</td>
+                <td nowrap align='left'> 714308 </td>
+                <td nowrap align='left'> SAFRA GOV GO NOVO 1,69 DIGITAL </td>
+                <td nowrap align='left'> 3.331,06 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 1,71 </td>
+                <td nowrap align='left'> 56,96 </td>
+            </tr>
+
+            
+            <tr bgcolor="#ededed">
+                <td nowrap align='left'>CLIENTE FICTICIO 08 DA SILVA</td>
+                <td nowrap align='left'>402.297.268-97</td>
+                <td nowrap align='left'> 16/07/2026 </td>
+                <td nowrap align='left'> 21/07/2026 </td>
+                <td nowrap align='left'> 16/07/2026 </td>
+                <td nowrap align='left'>113216988</td>
+                <td nowrap align='left'> 809949 </td>
+                <td nowrap align='left'> FACTA FINANCEIRA CONSIGNADO DO TRABALHADOR NOVO SMART TAB 68764 24X </td>
+                <td nowrap align='left'> 4.500,00 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 4,28 </td>
+                <td nowrap align='left'> 192,60 </td>
+            </tr>
+
+            
+            <tr bgcolor="#fff">
+                <td nowrap align='left'>CLIENTE FICTICIO 09 DA SILVA</td>
+                <td nowrap align='left'>550.945.451-92</td>
+                <td nowrap align='left'> 24/07/2026 </td>
+                <td nowrap align='left'> 29/07/2026 </td>
+                <td nowrap align='left'> 24/07/2026 </td>
+                <td nowrap align='left'>280241644</td>
+                <td nowrap align='left'> 724683 </td>
+                <td nowrap align='left'> PAN CONSIGNADO DO TRABALHADOR NOVO FORMALIZACAO DIGITAL 1 A 36X </td>
+                <td nowrap align='left'> 3.928,65 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 4,28 </td>
+                <td nowrap align='left'> 168,15 </td>
+            </tr>
+
+            
+            <tr bgcolor="#ededed">
+                <td nowrap align='left'>CLIENTE FICTICIO 10 DA SILVA</td>
+                <td nowrap align='left'>581.634.475-14</td>
+                <td nowrap align='left'> 02/09/2026 </td>
+                <td nowrap align='left'> 08/09/2026 </td>
+                <td nowrap align='left'> 03/09/2026 </td>
+                <td nowrap align='left'>455278887</td>
+                <td nowrap align='left'> 747268 </td>
+                <td nowrap align='left'> DAYCOVAL INSS NOVO TAB 1 ESP 32/92 DIG 108X </td>
+                <td nowrap align='left'> 7.623,55 </td>
+                <td nowrap align='left'> 0 </td>
+                <td nowrap align='left'> 2,70 </td>
+                <td nowrap align='left'> 205,84 </td>
+            </tr>
+
+            
+            <tr>
+                <td align='left' colspan="2"> 21/07/2026</td>
+                <td align='left' colspan="7"> Referente a Esteira de Digitação - ECORBAN. - desconto percentual de 100.00 </td>
+                <td align='left' colspan="3"> Vlr: 20,00 -</td>
+            </tr>
+
+            
+        <tr>
+            <td align='left' colspan='12'>+-------------------------------------------------</td>
+        </tr>
+        <tr>
+            <td align='left' colspan='12'>| Saldo de Comissao......: 1.092,11</td>
+        </tr>
+        <tr>
+            <td align='left' colspan='12'>| Total de Descontos [-].: 20,00</td>
+        </tr>
+        <tr>
+            <td align='left' colspan='12'>| Total de Acrescimos [+]: 0,00</td>
+        </tr>
+
+        
+        <tr>
+            <td align='left' colspan='12'>| SALDO FINAL A PAGAR....: 1.072,11</td>
+        </tr>
+        <tr>
+            <td align='left' colspan='12'>+-------------------------------------------------</td>
+        </tr>
+
+            <tr><td align='left'>QTDADE DE CONTRATOS.: 11</td></tr>
+        <tr><td align='left'>PRODUCAO TOTAL......: 26.755,67 </td></tr>
+        <tr><td align='left'>TOTAL DE COM. AGENTE: 0,00 </td></tr>
+        <tr><td align='left'>TOTAL FINAL: 0,00 </td></tr>
+    
+</table>

@@ -40,4 +40,11 @@ function isValidCNPJ(cnpj) {
 // Empresa de teste nunca tem CNPJ (migration 074 trava no banco também).
 const EMPRESA_TESTE_SEM_CNPJ = 'Empresa de teste não pode ter CNPJ — um CNPJ digitado aqui é de uma empresa real. Use só o CNAE.';
 
-module.exports = { onlyDigits, isValidCPF, isValidCNPJ, EMPRESA_TESTE_SEM_CNPJ };
+// CPF para tela, log e relatório: 431.***.***-93 (nunca o CPF completo)
+function mascararCpf(cpf) {
+  const d = onlyDigits(cpf);
+  if (d.length !== 11) return d ? '***' : null;
+  return `${d.slice(0, 3)}.***.***-${d.slice(9)}`;
+}
+
+module.exports = { onlyDigits, isValidCPF, isValidCNPJ, mascararCpf, EMPRESA_TESTE_SEM_CNPJ };

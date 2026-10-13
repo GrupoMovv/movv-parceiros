@@ -5,6 +5,17 @@ const { generateProtocol, getExpirationDate } = require('../services/protocolSer
 const { sendWhatsAppMessage, buildProtocolMessage } = require('../services/zapApiService');
 const { calculateCommissions } = require('../services/commissionService');
 const emailService = require('../services/emailService');
+const { onlyDigits, isValidCPF, mascararCpf } = require('../utils/validators');
+const { registrarAcao } = require('../services/registroAdmin');
+
+// CPF do cliente na indicação (livro de comissões do Partner, Etapa 2):
+// opcional, só dígitos, validado. Devolve { cpf } ou { erro }.
+function cpfDaIndicacao(valor) {
+  if (valor === undefined || valor === null || String(valor).trim() === '') return { cpf: null };
+  const cpf = onlyDigits(valor);
+  if (!isValidCPF(cpf)) return { erro: 'CPF do cliente inválido.' };
+  return { cpf };
+}
 
 async function listReferrals(req, res) {
   try {
@@ -35,6 +46,8 @@ async function listReferrals(req, res) {
     query += ' ORDER BY r.created_at DESC';
 
     const result = await db.query(query, params);
+    // Parceiro vê o CPF do próprio cliente mascarado; a equipe vê inteiro
+    if (!veTudo(req.user)) return res.json(result.rows.map(r => ({ ...r, client_cpf: mascararCpf(r.client_cpf) })));
     return res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -43,28 +56,44 @@ async function listReferrals(req, res) {
 }
 
 async function createReferral(req, res) {
-  const { client_name, client_whatsapp, product_id, client_email } = req.body;
+  const { client_name, client_whatsapp, product_id, client_email, client_cpf, partner_id } = req.body;
   if (!client_name || !client_whatsapp || !product_id) {
     return res.status(400).json({ error: 'Nome, WhatsApp e produto são obrigatórios' });
   }
+  const { cpf, erro: erroCpf } = cpfDaIndicacao(client_cpf);
+  if (erroCpf) return res.status(400).json({ error: erroCpf });
 
   try {
+    // Dono da indicação: quem está logado, ou, se for a equipe registrando
+    // para alguém, o MOVV Partner escolhido.
+    let dono = req.user;
+    if (partner_id && veTudo(req.user)) {
+      const p = await db.query(
+        `SELECT id, name, type FROM partners WHERE id = $1 AND is_active = true AND type = 'movv_partner'`, [partner_id]
+      );
+      if (!p.rows[0]) return res.status(400).json({ error: 'MOVV Partner não encontrado ou inativo' });
+      dono = p.rows[0];
+    }
+
     const productResult = await db.query('SELECT * FROM products WHERE id = $1 AND is_active = true', [product_id]);
     if (!productResult.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
     const product = productResult.rows[0];
+    if (dono.type === 'movv_partner' && ['bpo', 'digital_certificate', 'account'].includes(product.type)) {
+      return res.status(400).json({ error: 'Este produto não faz parte das indicações do MOVV Partner' });
+    }
 
     const protocol = await generateProtocol();
     const expiresAt = getExpirationDate();
 
     const result = await db.query(
-      `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, client_email, product_id, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [protocol, req.user.id, client_name, client_whatsapp, client_email || null, product_id, expiresAt]
+      `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, client_email, product_id, expires_at, client_cpf)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [protocol, dono.id, client_name, client_whatsapp, client_email || null, product_id, expiresAt, cpf]
     );
     const referral = result.rows[0];
 
     const message = buildProtocolMessage(
-      client_name, protocol, product.name, req.user.name, expiresAt
+      client_name, protocol, product.name, dono.name, expiresAt
     );
     sendWhatsAppMessage(client_whatsapp, message).catch(() => {});
 
@@ -78,7 +107,10 @@ async function createReferral(req, res) {
       }).catch(err => console.error('[EMAIL]', err.message));
     }
 
-    return res.status(201).json({ ...referral, product_name: product.name });
+    return res.status(201).json({
+      ...referral, product_name: product.name,
+      client_cpf: veTudo(req.user) ? referral.client_cpf : mascararCpf(referral.client_cpf),
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
@@ -117,7 +149,11 @@ async function confirmSale(req, res) {
 
     const partner = { id: referral.partner_id, type: referral.partner_type, parent_id: referral.parent_id };
     const product = { type: referral.product_type, percentual_repasse: referral.percentual_repasse, commission_rate: referral.commission_rate };
-    const commissions = calculateCommissions(product, operated_value, partner, parentPartner, bpo_month_count || 1);
+    // MOVV Partner não entra no modelo antigo (contabilidade/funcionário): a
+    // comissão dele vem do livro (importação da Azul), não daqui.
+    const commissions = referral.partner_type === 'movv_partner'
+      ? []
+      : calculateCommissions(product, operated_value, partner, parentPartner, bpo_month_count || 1);
 
     const currentMonth = new Date().toISOString().slice(0, 7);
 
@@ -178,4 +214,57 @@ async function ultimaExpiracao(req, res) {
   }
 }
 
-module.exports = { listReferrals, createReferral, confirmSale, expireOldReferrals, ultimaExpiracao };
+// CPF e número do contrato da indicação, depois de criada.
+// Equipe: CPF e contrato a qualquer momento. Dono da indicação: só o CPF, e
+// só enquanto estiver vazio (ele vê o CPF mascarado, não corrige por cima).
+// O contrato só existe depois que a Azul digita a proposta; também é gravado
+// sozinho quando o admin confirma um vínculo na importação da Azul.
+async function atualizarDados(req, res) {
+  const equipe = veTudo(req.user);
+  const { client_cpf, numero_contrato } = req.body || {};
+  try {
+    const r = (await db.query('SELECT id, partner_id, client_cpf, numero_contrato FROM referrals WHERE id = $1', [req.params.id])).rows[0];
+    if (!r) return res.status(404).json({ error: 'Indicação não encontrada' });
+    if (!equipe && r.partner_id !== req.user.id) return res.status(403).json({ error: 'Acesso negado' });
+
+    const mudancas = {};
+    if (client_cpf !== undefined) {
+      const { cpf, erro } = cpfDaIndicacao(client_cpf);
+      if (erro) return res.status(400).json({ error: erro });
+      if (!equipe && r.client_cpf) return res.status(403).json({ error: 'O CPF já foi informado; para corrigir, fale com a Central Movv.' });
+      mudancas.client_cpf = cpf;
+    }
+    if (numero_contrato !== undefined) {
+      if (!equipe) return res.status(403).json({ error: 'O número do contrato é preenchido pela Central Movv.' });
+      const contrato = String(numero_contrato || '').trim().replace(/\s/g, '') || null;
+      if (contrato && !/^\d{4,20}$/.test(contrato)) return res.status(400).json({ error: 'Número do contrato inválido (só dígitos).' });
+      if (contrato) {
+        const outra = (await db.query('SELECT id FROM referrals WHERE numero_contrato = $1 AND id <> $2', [contrato, r.id])).rows[0];
+        if (outra) return res.status(409).json({ error: `O contrato ${contrato} já está na indicação #${outra.id}.` });
+      }
+      mudancas.numero_contrato = contrato;
+    }
+    if (!Object.keys(mudancas).length) return res.status(400).json({ error: 'Nada para alterar' });
+
+    const campos = Object.keys(mudancas);
+    const atualizada = await db.transacao(async cx => {
+      const u = (await cx.query(
+        `UPDATE referrals SET ${campos.map((c, i) => `${c} = $${i + 2}`).join(', ')} WHERE id = $1 RETURNING *`,
+        [r.id, ...campos.map(c => mudancas[c])]
+      )).rows[0];
+      if (equipe) {
+        await registrarAcao(cx, req, 'indicacao_dados', 'referrals', r.id, {
+          cpf: mudancas.client_cpf !== undefined ? mascararCpf(mudancas.client_cpf) : undefined,
+          contrato: mudancas.numero_contrato,
+        });
+      }
+      return u;
+    });
+    return res.json({ ...atualizada, client_cpf: equipe ? atualizada.client_cpf : mascararCpf(atualizada.client_cpf) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+module.exports = { listReferrals, createReferral, confirmSale, expireOldReferrals, ultimaExpiracao, atualizarDados };

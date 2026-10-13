@@ -5,20 +5,25 @@ const { veTudo } = require('../config/perfilAdmin');
 // admin e financeiro, tudo (tela de Produtos); contabilidade e funcionário,
 // o que a tela "Indicar" usa, inclusive o próprio percentual de repasse;
 // o resto (MOVV Partner, colaborador interno, indicador), só id, nome e tipo.
+// MOVV Partner: só os produtos da indicação Azul (sem BPO, certificado e
+// conta), com a faixa para a tela "Indicar" agrupar; nunca percentual.
 function colunasDeProduto(user) {
-  if (veTudo(user)) return { colunas: '*', soAtivos: false };
+  if (veTudo(user)) return { colunas: '*', filtro: '' };
   if (user?.type === 'accounting' || user?.type === 'employee') {
-    return { colunas: 'id, name, type, faixa, percentual_repasse, is_active', soAtivos: true };
+    return { colunas: 'id, name, type, faixa, percentual_repasse, is_active', filtro: 'WHERE is_active = true' };
   }
-  return { colunas: 'id, name, type', soAtivos: true };
+  if (user?.type === 'movv_partner') {
+    return { colunas: 'id, name, type, faixa, is_active', filtro: "WHERE is_active = true AND type NOT IN ('bpo','digital_certificate','account')" };
+  }
+  return { colunas: 'id, name, type', filtro: 'WHERE is_active = true' };
 }
 
 async function listProducts(req, res) {
   try {
-    const { colunas, soAtivos } = colunasDeProduto(req.user);
+    const { colunas, filtro } = colunasDeProduto(req.user);
     const result = await db.query(
       `SELECT ${colunas} FROM products
-       ${soAtivos ? 'WHERE is_active = true' : ''}
+       ${filtro}
        ORDER BY
          CASE faixa WHEN 'alta' THEN 1 WHEN 'media' THEN 2 WHEN 'baixa' THEN 3 WHEN 'especial' THEN 4 ELSE 5 END,
          name ASC`

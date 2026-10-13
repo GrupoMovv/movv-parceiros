@@ -74,6 +74,8 @@ const MASTER_MENU = [
       { label: 'Universidade',              icon: GraduationCap, to: '/universidade',             roles: ['movv_partner'], end: true },
       { label: 'Meu certificado',           icon: Award,         to: '/universidade/certificado', roles: ['movv_partner'] },
       { label: 'Meu perfil',                icon: UserRound,     to: '/partner/perfil',           roles: ['movv_partner'] },
+      { label: 'Indicar cliente',           icon: UserPlus,      to: '/indicar',                  roles: ['movv_partner'] },
+      { label: 'Minhas indicações',         icon: ClipboardList, to: '/partner/indicacoes',       roles: ['movv_partner'] },
       { label: 'Minhas comissões / Tabela vigente', icon: Percent, to: '/partner/comissoes',      roles: ['movv_partner'] },
     ],
   },

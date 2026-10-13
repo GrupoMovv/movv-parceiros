@@ -159,9 +159,66 @@ test('venda do Movv Certificado com Partner: 20% do lucro; sem regra vira aviso;
 
 test('GET /api/products: cada tipo de usuário vê só o que se aplica a ele', async () => {
   const doPartner = await chamar('GET', '/api/products', t.a);
-  assert.deepEqual(Object.keys(doPartner.body[0]).sort(), ['id', 'name', 'type']);
+  assert.deepEqual(Object.keys(doPartner.body[0]).sort(), ['faixa', 'id', 'is_active', 'name', 'type']);
   const daContab = await chamar('GET', '/api/products', t.contab);
   assert.deepEqual(Object.keys(daContab.body[0]).sort(), ['faixa', 'id', 'is_active', 'name', 'percentual_repasse', 'type']);
   const doAdmin = await chamar('GET', '/api/products', t.admin);
   assert.ok('commission_rate' in doAdmin.body[0]);
+});
+
+// ─── Etapa 2: CPF e contrato na indicação; upload da importação ─────────────
+
+test('indicação: Partner informa CPF e vê mascarado; contrato só a equipe; equipe registra pelo Partner', async () => {
+  const produto = (await db.query(`SELECT id FROM products WHERE type = 'credit' LIMIT 1`)).rows[0].id;
+  const base = { client_name: 'Cliente CPF', client_whatsapp: '64999990000', product_id: produto };
+
+  let r = await chamar('POST', '/api/referrals', t.a, { ...base, client_cpf: '111.111.111-11' });
+  assert.equal(r.status, 400, 'CPF inválido é recusado');
+  r = await chamar('POST', '/api/referrals', t.a, { ...base, client_cpf: '529.982.247-25' });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal(r.body.client_cpf, '529.***.***-25');
+  const id = r.body.id;
+  assert.equal((await db.query('SELECT client_cpf FROM referrals WHERE id = $1', [id])).rows[0].client_cpf, '52998224725');
+
+  const lista = await chamar('GET', '/api/referrals', t.a);
+  assert.equal(lista.body.find(x => x.id === id).client_cpf, '529.***.***-25');
+  const doAdmin = await chamar('GET', '/api/referrals', t.admin);
+  assert.equal(doAdmin.body.find(x => x.id === id).client_cpf, '52998224725');
+
+  assert.equal((await chamar('PATCH', `/api/referrals/${id}/dados`, t.a, { numero_contrato: '123456789' })).status, 403);
+  assert.equal((await chamar('PATCH', `/api/referrals/${id}/dados`, t.a, { client_cpf: '52998224725' })).status, 403, 'CPF já informado');
+  assert.equal((await chamar('PATCH', `/api/referrals/${id}/dados`, t.b, { client_cpf: '52998224725' })).status, 403, 'indicação de outro');
+  r = await chamar('PATCH', `/api/referrals/${id}/dados`, t.admin, { numero_contrato: '123456789' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.numero_contrato, '123456789');
+
+  // equipe registra em nome do Partner B; o contrato repetido é recusado
+  r = await chamar('POST', '/api/referrals', t.admin, { ...base, client_name: 'Pela equipe', partner_id: ids.b });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal(r.body.partner_id, ids.b);
+  assert.equal((await chamar('PATCH', `/api/referrals/${r.body.id}/dados`, t.admin, { numero_contrato: '123456789' })).status, 409);
+  // Partner sem CPF pode completar depois
+  assert.equal((await chamar('PATCH', `/api/referrals/${r.body.id}/dados`, t.b, { client_cpf: '52998224725' })).status, 200);
+});
+
+test('importação da Azul pela API: prévia por upload; Partner não abre', async () => {
+  const fs = require('fs');
+  const arquivo = fs.readFileSync(require('path').join(__dirname, 'fixtures/azul/exemplo_comissoes_pagas_domus_ficticio.csv'));
+  const enviar = async (token, rota) => {
+    const form = new FormData();
+    form.append('arquivo', new Blob([arquivo]), 'exemplo.csv');
+    const resp = await fetch(base + rota, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+    return { status: resp.status, body: await resp.json() };
+  };
+  assert.equal((await enviar(t.a, '/api/partner-comissoes/admin/importacao/previa')).status, 403);
+  const p = await enviar(t.admin, '/api/partner-comissoes/admin/importacao/previa');
+  assert.equal(p.status, 200, JSON.stringify(p.body));
+  assert.equal(p.body.linhas_pagas, 11);
+  assert.equal(p.body.total_incentivo_bruto, '1092.11');
+  assert.equal(p.body.total_incentivo_liquido, '1072.11');
+  const c = await enviar(t.admin, '/api/partner-comissoes/admin/importacao/confirmar');
+  assert.equal(c.status, 201, JSON.stringify(c.body));
+  assert.equal(c.body.importacao.linhas_novas, 12);
+  const de_novo = await enviar(t.admin, '/api/partner-comissoes/admin/importacao/previa');
+  assert.equal(de_novo.body.novas, 0);
 });

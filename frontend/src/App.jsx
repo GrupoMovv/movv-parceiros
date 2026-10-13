@@ -140,6 +140,7 @@ import UniversidadeQuiz from './pages/universidade/UniversidadeQuiz';
 import UniversidadeCertificado from './pages/universidade/UniversidadeCertificado';
 import PartnerPerfil from './pages/universidade/PartnerPerfil';
 import PartnerComissoes from './pages/universidade/PartnerComissoes';
+import PartnerIndicacoes from './pages/universidade/PartnerIndicacoes';
 import AdminUniversidade from './pages/admin/Universidade/AdminUniversidade';
 import AdminUniversidadeConteudo from './pages/admin/Universidade/AdminUniversidadeConteudo';
 import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
@@ -455,6 +456,7 @@ export default function App() {
           <Route path="universidade/certificado"        element={<RequireMovvPartner><UniversidadeCertificado /></RequireMovvPartner>} />
           <Route path="partner/perfil"                  element={<RequireMovvPartner><PartnerPerfil /></RequireMovvPartner>} />
           <Route path="partner/comissoes"               element={<RequireMovvPartner><PartnerComissoes /></RequireMovvPartner>} />
+          <Route path="partner/indicacoes"              element={<RequireMovvPartner><PartnerIndicacoes /></RequireMovvPartner>} />
           <Route path="admin/universidade"              element={<RequireAdminUniversidade><AdminUniversidade /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/conteudo"     element={<RequireAdminUniversidade><AdminUniversidadeConteudo /></RequireAdminUniversidade>} />
           {/* "Ver como Partner": mesmas telas, só leitura */}

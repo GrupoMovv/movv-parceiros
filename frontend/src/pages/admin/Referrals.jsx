@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ClipboardList, Search, CheckCircle2, Filter } from 'lucide-react';
+import { ClipboardList, Search, CheckCircle2, Filter, Pencil } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 
 const STATUS_MAP = {
@@ -23,6 +23,7 @@ export default function AdminReferrals() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ operated_value: '', bpo_month_count: 1 });
   const [saving, setSaving] = useState(false);
+  const [dados, setDados] = useState(null); // indicação com CPF/contrato em edição
 
   useEffect(() => { load(); }, []);
 
@@ -34,7 +35,9 @@ export default function AdminReferrals() {
       data = data.filter(r =>
         r.client_name.toLowerCase().includes(q) ||
         r.protocol.toLowerCase().includes(q) ||
-        r.partner_code?.toLowerCase().includes(q)
+        r.partner_code?.toLowerCase().includes(q) ||
+        (r.numero_contrato || '').includes(q) ||
+        (r.client_cpf || '').includes(q.replace(/\D/g, '') || '§')
       );
     }
     setFiltered(data);
@@ -141,7 +144,16 @@ export default function AdminReferrals() {
               ) : filtered.map(r => (
                 <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="py-3 px-4 font-mono text-xs text-[#C9A84C] whitespace-nowrap">{r.protocol}</td>
-                  <td className="py-3 px-4 text-slate-900 whitespace-nowrap">{r.client_name}</td>
+                  <td className="py-3 px-4 text-slate-900 whitespace-nowrap">
+                    {r.client_name}
+                    {(r.client_cpf || r.numero_contrato) && (
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        {r.client_cpf ? `CPF ${r.client_cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')}` : ''}
+                        {r.client_cpf && r.numero_contrato ? ' · ' : ''}
+                        {r.numero_contrato ? `contrato ${r.numero_contrato}` : ''}
+                      </p>
+                    )}
+                  </td>
                   <td className="py-3 px-4 text-slate-500 text-xs">{r.client_whatsapp}</td>
                   <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{r.product_name}</td>
                   <td className="py-3 px-4 text-slate-500 text-xs">{r.partner_code}</td>
@@ -154,7 +166,11 @@ export default function AdminReferrals() {
                   <td className="py-3 px-4">
                     <span className={STATUS_MAP[r.status]?.cls}>{STATUS_MAP[r.status]?.label}</span>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 space-y-1">
+                    <button onClick={() => setDados({ id: r.id, client_name: r.client_name, client_cpf: r.client_cpf || '', numero_contrato: r.numero_contrato || '' })}
+                      className="flex items-center gap-1 text-xs text-slate-600 border border-slate-200 hover:bg-slate-100 px-2.5 py-1 rounded-lg">
+                      <Pencil className="w-3 h-3" /> CPF / contrato
+                    </button>
                     {r.status === 'pending' && (
                       <button onClick={() => openConfirm(r)} className="flex items-center gap-1 text-xs text-[#1B5E20] hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 px-2.5 py-1 rounded-lg transition-colors">
                         <CheckCircle2 className="w-3 h-3" /> Confirmar
@@ -167,6 +183,40 @@ export default function AdminReferrals() {
           </table>
         </div>
       </div>
+
+      {/* CPF e contrato da indicação (o contrato só existe depois que a Azul
+          digita a proposta; também entra sozinho pela importação da Azul) */}
+      <Modal open={Boolean(dados)} onClose={() => setDados(null)} title="CPF e contrato da indicação">
+        {dados && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">{dados.client_name}</p>
+            <div>
+              <label className="label">CPF do cliente</label>
+              <input className="input" inputMode="numeric" value={dados.client_cpf}
+                onChange={e => setDados(d => ({ ...d, client_cpf: e.target.value.replace(/[^\d.-]/g, '').slice(0, 14) }))} placeholder="000.000.000-00" />
+            </div>
+            <div>
+              <label className="label">Número do contrato na Azul</label>
+              <input className="input font-mono" inputMode="numeric" value={dados.numero_contrato}
+                onChange={e => setDados(d => ({ ...d, numero_contrato: e.target.value.replace(/\D/g, '') }))} placeholder="Só depois que a Azul digitar a proposta" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setDados(null)} className="btn-secondary flex-1">Cancelar</button>
+              <button disabled={saving} className="btn-primary flex-1" onClick={async () => {
+                setSaving(true);
+                try {
+                  await api.patch(`/referrals/${dados.id}/dados`, { client_cpf: dados.client_cpf.replace(/\D/g, ''), numero_contrato: dados.numero_contrato });
+                  toast.success('Indicação atualizada');
+                  setDados(null);
+                  load();
+                } catch (err) {
+                  toast.error(err.response?.data?.error || 'Erro ao salvar');
+                } finally { setSaving(false); }
+              }}>Salvar</button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Confirm Sale Modal */}
       <Modal open={modal} onClose={() => setModal(false)} title="Confirmar Venda">

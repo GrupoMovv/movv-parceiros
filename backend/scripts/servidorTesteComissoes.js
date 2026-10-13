@@ -11,6 +11,9 @@
 //   PARTNER-T01         MOVV Partner nível Mobile, com lançamentos
 //   PARTNER-T02         MOVV Partner nível Hub, com lançamentos
 //   fernando@teste.local  vendedor do Movv Certificado (Nova Venda com Partner)
+//
+// Importação da Azul: suba tests/fixtures/azul/exemplo_comissoes_pagas_domus_ficticio.csv
+// em Admin > Comissões do Partner > Importação Azul (1 casada, 1 sugestão, 1 ambígua).
 process.env.JWT_SECRET = process.env.JWT_SECRET_TESTE || 'segredo-local-de-teste';
 process.env.RESEND_API_KEY = 're_teste_sem_envio';
 process.env.PEDIDOS_PRAZOS_TIMER = 'false';
@@ -48,6 +51,23 @@ async function semear(db) {
   await lanc(b, 'Consignado INSS', 'Lucas Teste', '2026-10', '500.00', 'confirmado');
   await pc.mudarStatus(db, [l1, l2], 'aprovar', 'semente de teste');
   await pc.mudarStatus(db, [l1], 'pagar', 'semente de teste', { data_pagamento: '2026-10-10', observacao: 'PIX' });
+
+  // Indicações que casam com o CSV fictício de tests/fixtures/azul:
+  //   cliente 01: contrato 118159083 já na indicação  -> casada por contrato
+  //   cliente 02: só o CPF                            -> sugestão por CPF
+  //   cliente 05: o mesmo CPF em duas indicações      -> CPF ambíguo
+  const produto = (await db.query(
+    `INSERT INTO products (name, type, faixa) VALUES ('Consignado INSS', 'credit', 'alta') RETURNING id`
+  )).rows[0].id;
+  const indicacao = (partnerId, nome, cpf, contrato) => db.query(
+    `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at, client_cpf, numero_contrato)
+     VALUES ($1, $2, $3, '64999990000', $4, NOW() + INTERVAL '30 days', $5, $6)`,
+    [`TESTE-${Math.random().toString(36).slice(2, 8).toUpperCase()}`, partnerId, nome, produto, cpf, contrato]
+  );
+  await indicacao(a, 'Cliente Fictício 01', null, '118159083');
+  await indicacao(a, 'Cliente Fictício 02', '13818854463', null);
+  await indicacao(a, 'Cliente Fictício 05 (Ana)', '72317422075', null);
+  await indicacao(b, 'Cliente Fictício 05 (Bruno)', '72317422075', null);
 }
 
 (async () => {
