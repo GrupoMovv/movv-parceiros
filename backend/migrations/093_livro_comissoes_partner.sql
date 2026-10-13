@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS partner_comissao_regras (
   -- sobre o que o percentual incide:
   --   comissao_recebida: o que o Grupo recebeu (Azul: VALOR COMISSAO)
   --   valor_venda:       Movv Certificado, total da venda (certificado + token)
-  --   lucro_grupo:       Movv Certificado, lucro da Movv na venda
+  --   lucro_grupo:       Movv Certificado, preço de venda − custos (certificado
+  --                      + compra do token); não desconta comissões
   base           VARCHAR(20)  NOT NULL CHECK (base IN ('comissao_recebida','valor_venda','lucro_grupo')),
   percentual     NUMERIC(7,4) NOT NULL CHECK (percentual >= 0 AND percentual <= 100),
   vigente_desde  DATE         NOT NULL,
@@ -64,8 +65,13 @@ INSERT INTO partner_comissao_regras (origem, produto, nivel_partner, base, perce
 SELECT 'azul', NULL, n, 'comissao_recebida', 30.0000, DATE '2026-01-01', 'migration 093', 'Regra inicial: 30% da comissão recebida, todos os produtos'
 FROM unnest(ARRAY['mobile','point','hub','regional']) AS n
 ON CONFLICT DO NOTHING;
--- Movv Certificado: sem regra de propósito — o admin preenche; sem regra,
--- a venda não gera lançamento e aparece nos avisos do admin.
+-- Movv Certificado: 20% do lucro do Grupo na venda (preço − custos: R$ 19,90
+-- do certificado + compra do token), todos os níveis, desde 13/10/2026.
+-- Venda anterior a isso não tem regra: não gera lançamento e vira aviso.
+INSERT INTO partner_comissao_regras (origem, produto, nivel_partner, base, percentual, vigente_desde, criado_por, observacao)
+SELECT 'certificado', NULL, n, 'lucro_grupo', 20.0000, DATE '2026-10-13', 'migration 093', 'Regra inicial: 20% do lucro do Grupo (preço − custos)'
+FROM unnest(ARRAY['mobile','point','hub','regional']) AS n
+ON CONFLICT DO NOTHING;
 
 -- 3. Importação mensal (Etapa 2)
 CREATE TABLE IF NOT EXISTS comissao_importacoes (

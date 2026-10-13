@@ -22,13 +22,19 @@ async function criarPartner(codigo, nivel) {
   return r.rows[0];
 }
 
-async function criarVenda({ partnerId, total = '150.00', lucro = '80.10', token = false, data = '2026-10-05' }) {
+// Venda do Movv Certificado. data padrão ANTES da regra inicial do
+// Certificado (13/10/2026), para os testes de "sem regra".
+async function criarVenda({
+  partnerId, total = '150.00', lucro = '80.10', data = '2026-10-05',
+  preco = total, custo = '19.90', token = false, tokenVenda = null, tokenCompra = null,
+}) {
   const r = await db.query(
     `INSERT INTO direta_sales
        (collaborator_id, data_venda, tipo_venda, cliente_nome, preco_venda, custo, lucro, comissao_pct, comissao_valor,
-        reference_month, total_venda, total_comissao_vendedor, total_lucro_movv, incluiu_token, partner_id)
-     VALUES ($1, $2, 'direta', 'Cliente Teste', $3, 19.90, $4, 20, 30, $5, $3, 30, $4, $6, $7) RETURNING *`,
-    [colaborador.id, data, total, lucro, data.slice(0, 7), token, partnerId]
+        reference_month, total_venda, total_comissao_vendedor, total_lucro_movv, incluiu_token, partner_id,
+        valor_venda_token, valor_compra_token)
+     VALUES ($1, $2, 'direta', 'Cliente Teste', $3, $4, $5, 20, 30, $6, $7, 30, $5, $8, $9, $10, $11) RETURNING *`,
+    [colaborador.id, data, preco, custo, lucro, data.slice(0, 7), total, token, partnerId, tokenVenda, tokenCompra]
   );
   return r.rows[0];
 }
@@ -69,8 +75,14 @@ test('migration 093: regra da Azul de 30% para os quatro níveis', async () => {
     assert.equal(x.base, 'comissao_recebida');
     assert.equal(x.produto, null);
   }
-  const cert = await db.query(`SELECT count(*)::int AS n FROM partner_comissao_regras WHERE origem = 'certificado'`);
-  assert.equal(cert.rows[0].n, 0, 'Certificado nasce sem regra: o admin preenche');
+  const cert = await db.query(`SELECT nivel_partner, percentual, base, produto, vigente_desde FROM partner_comissao_regras WHERE origem = 'certificado' ORDER BY nivel_partner`);
+  assert.deepEqual(cert.rows.map(x => x.nivel_partner), ['hub', 'mobile', 'point', 'regional']);
+  for (const x of cert.rows) {
+    assert.equal(x.percentual, '20.0000');
+    assert.equal(x.base, 'lucro_grupo');
+    assert.equal(x.produto, null);
+    assert.equal(x.vigente_desde, '2026-10-13');
+  }
 });
 
 test('o banco recusa valor_partner que não bate com base × percentual', async () => {
@@ -242,7 +254,8 @@ test('Certificado sem regra não gera lançamento e avisa o admin; com regra ger
   await pc.lancarCertificado(db, venda, 'Vendedor Teste');
   assert.equal((await pc.listarAvisos(db)).filter(x => x.direta_sale_id === venda.id).length, 1);
 
-  await pc.salvarRegra(db, { origem: 'certificado', nivel_partner: 'mobile', base: 'valor_venda', percentual: '10', vigente_desde: '2026-01-01' }, 'Admin');
+  // regra antiga (antes da inicial de 13/10): termina na véspera, sem sobrepor
+  await pc.salvarRegra(db, { origem: 'certificado', nivel_partner: 'mobile', base: 'valor_venda', percentual: '10', vigente_desde: '2026-01-01', vigente_ate: '2026-10-12' }, 'Admin');
   const r2 = await pc.tentarAvisoDeNovo(db, aviso.id, 'Admin');
   assert.equal(r2.lancamento.status, 'previsto');
   assert.equal(r2.lancamento.base_valor, '150.00');
@@ -286,4 +299,45 @@ test('Certificado: venda editada com lançamento aprovado vira aviso, sem mexer 
   const depois = (await db.query('SELECT base_valor, valor_partner FROM partner_comissoes WHERE id = $1', [lancamento.id])).rows[0];
   assert.equal(depois.base_valor, '100.00');
   assert.equal(depois.valor_partner, '10.00');
+});
+
+// ─── Certificado: 20% do lucro do Grupo (preço − custos) ────────────────────
+
+test('Certificado com token: base = preço − custos e valor = 20% arredondado por linha', async () => {
+  // certificado 87,37 − 19,90 = 67,47; token 60,00 − 35,50 = 24,50; base 91,97
+  // 20% = 18,394 -> 18,39. total_lucro_movv (que desconta comissões) é outro número.
+  const venda = await criarVenda({
+    partnerId: partnerB.id, data: '2026-10-20', preco: '87.37', total: '147.37', lucro: '50.00',
+    token: true, tokenVenda: '60.00', tokenCompra: '35.50',
+  });
+  const r = await pc.lancarCertificado(db, venda, 'Vendedor Teste');
+  assert.equal(r.lancamento.base_valor, '91.97');
+  assert.equal(r.lancamento.percentual, '20.0000');
+  assert.equal(r.lancamento.valor_partner, '18.39');
+  assert.equal(r.lancamento.produto, 'Certificado digital + Token');
+  assert.notEqual(r.lancamento.base_valor, venda.total_lucro_movv);
+
+  // 91,99 -> 18,398 -> 18,40 (sobe)
+  const v2 = await criarVenda({ partnerId: partnerB.id, data: '2026-10-21', preco: '111.89', total: '111.89' });
+  assert.equal((await pc.lancarCertificado(db, v2, 'x')).lancamento.valor_partner, '18.40');
+  // sem token: só o certificado (49,90 − 19,90 = 30,00 -> 6,00)
+  const v3 = await criarVenda({ partnerId: partnerB.id, data: '2026-10-21', preco: '49.90', total: '49.90' });
+  const r3 = await pc.lancarCertificado(db, v3, 'x');
+  assert.equal(r3.lancamento.base_valor, '30.00');
+  assert.equal(r3.lancamento.valor_partner, '6.00');
+});
+
+test('Certificado: lucro zero ou negativo não gera lançamento e vira aviso', async () => {
+  const zero = await criarVenda({ partnerId: partnerB.id, data: '2026-10-22', preco: '19.90', total: '19.90' });
+  const r = await pc.lancarCertificado(db, zero, 'x');
+  assert.match(r.aviso, /zero ou negativa/);
+  // token vendido abaixo do custo deixa a soma negativa
+  const neg = await criarVenda({
+    partnerId: partnerB.id, data: '2026-10-22', preco: '20.00', total: '30.00',
+    token: true, tokenVenda: '10.00', tokenCompra: '15.00',
+  });
+  assert.match((await pc.lancarCertificado(db, neg, 'x')).aviso, /zero ou negativa/);
+  for (const v of [zero, neg]) {
+    assert.equal((await db.query('SELECT count(*)::int AS n FROM partner_comissoes WHERE direta_sale_id = $1', [v.id])).rows[0].n, 0);
+  }
 });

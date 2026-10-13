@@ -113,7 +113,7 @@ test('admin: pagar sem aprovar é recusado; o fluxo completo grava quem fez', as
   assert.deepEqual(acoes.rows.map(x => x.acao), ['comissao_partner_manual', 'comissao_partner_aprovar', 'comissao_partner_pagar']);
 });
 
-test('venda do Movv Certificado com Partner: sem regra vira aviso; cancelar estorna', async () => {
+test('venda do Movv Certificado com Partner: 20% do lucro; sem regra vira aviso; cancelar estorna', async () => {
   const lista = await chamar('GET', '/api/partner-comissoes/admin/partners', t.fernando);
   assert.equal(lista.status, 200, JSON.stringify(lista.body));
   assert.ok(lista.body.some(p => p.id === ids.a));
@@ -121,7 +121,8 @@ test('venda do Movv Certificado com Partner: sem regra vira aviso; cancelar esto
   const venda = {
     tipo_venda: 'direta', cliente_nome: 'Cliente Cert', valor_venda_certificado: '150.00', partner_id: ids.a,
   };
-  let r = await chamar('POST', '/api/direta/sales', t.fernando, venda);
+  // antes da regra inicial do Certificado (13/10/2026): sem regra, vira aviso
+  let r = await chamar('POST', '/api/direta/sales', t.fernando, { ...venda, data_venda: '2026-10-01' });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   assert.match(r.body.aviso_comissao_partner, /Sem regra/);
   const avisos = await chamar('GET', '/api/partner-comissoes/admin/avisos', t.admin);
@@ -129,19 +130,21 @@ test('venda do Movv Certificado com Partner: sem regra vira aviso; cancelar esto
   assert.ok(aviso);
 
   r = await chamar('POST', '/api/partner-comissoes/admin/regras', t.admin, {
-    origem: 'certificado', nivel_partner: 'point', base: 'valor_venda', percentual: '10', vigente_desde: '2026-01-01',
+    origem: 'certificado', nivel_partner: 'point', base: 'valor_venda', percentual: '10',
+    vigente_desde: '2026-01-01', vigente_ate: '2026-10-12',
   });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   r = await chamar('POST', `/api/partner-comissoes/admin/avisos/${aviso.id}/tentar`, t.admin);
   assert.equal(r.body.lancamento.valor_partner, '15.00');
   assert.equal(r.body.lancamento.status, 'previsto');
 
-  // venda nova já com regra: lançamento direto, sem aviso
-  r = await chamar('POST', '/api/direta/sales', t.fernando, { ...venda, cliente_nome: 'Cliente Cert 2' });
+  // depois de 13/10: regra inicial, 20% de (150,00 − 19,90) = 26,02
+  r = await chamar('POST', '/api/direta/sales', t.fernando, { ...venda, cliente_nome: 'Cliente Cert 2', data_venda: '2026-10-20' });
   assert.equal(r.body.aviso_comissao_partner, undefined);
   const vendaId = r.body.id;
   const lanc = (await db.query('SELECT * FROM partner_comissoes WHERE direta_sale_id = $1', [vendaId])).rows[0];
-  assert.equal(lanc.valor_partner, '15.00');
+  assert.equal(lanc.base_valor, '130.10');
+  assert.equal(lanc.valor_partner, '26.02');
 
   r = await chamar('PATCH', `/api/direta/sales/${vendaId}/cancel`, t.fernando);
   assert.equal(r.status, 200);

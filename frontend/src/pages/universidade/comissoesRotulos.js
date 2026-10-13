@@ -20,7 +20,7 @@ export const ORIGEM = {
 export const BASE = {
   comissao_recebida: 'da comissão que o Grupo recebe',
   valor_venda: 'do valor da venda',
-  lucro_grupo: 'do lucro do Grupo na venda',
+  lucro_grupo: 'do lucro do Grupo na venda (preço − custos)',
 };
 
 export const NIVEIS = { mobile: 'Mobile', point: 'Point', hub: 'Hub', regional: 'Regional' };

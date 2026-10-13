@@ -322,7 +322,7 @@ function ModalManual({ partners, onFechar, onSalvo }) {
 
 // ─── Regras ─────────────────────────────────────────────────────────────────
 
-const BASES_POR_ORIGEM = { azul: ['comissao_recebida'], certificado: ['valor_venda', 'lucro_grupo'] };
+const BASES_POR_ORIGEM = { azul: ['comissao_recebida'], certificado: ['lucro_grupo', 'valor_venda'] };
 
 function Regras() {
   const { user } = useAuth();
@@ -377,7 +377,7 @@ function ModalRegra({ regra, onFechar, onSalvo }) {
   const nova = !regra.id;
   const [f, setF] = useState({
     origem: regra.origem || 'certificado', produto: regra.produto || '', nivel_partner: regra.nivel_partner || 'mobile',
-    base: regra.base || 'valor_venda', percentual: regra.percentual ? String(Number(regra.percentual)) : '',
+    base: regra.base || 'lucro_grupo', percentual: regra.percentual ? String(Number(regra.percentual)) : '',
     vigente_desde: regra.vigente_desde || hoje(), vigente_ate: regra.vigente_ate || '', observacao: regra.observacao || '',
   });
   const [salvando, setSalvando] = useState(false);

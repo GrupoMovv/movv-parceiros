@@ -275,9 +275,20 @@ async function mudarStatus(cx, ids, acao, quem, extras = {}) {
 const produtoDaVendaCertificado = venda => (venda.incluiu_token ? 'Certificado digital + Token' : 'Certificado digital');
 const chaveCertificado = vendaId => `certificado:venda:${vendaId}`;
 
+// Base da comissão do Partner numa venda do Movv Certificado, em texto "0.00".
+//   valor_venda: total da venda (certificado + token)
+//   lucro_grupo: preço de venda − custos (Junior, 13/10/2026) =
+//     (preço do certificado − custo do certificado gravado na venda, R$ 19,90)
+//     + (preço do token − valor de compra do token), quando a venda tem token.
+//     NÃO desconta a comissão do vendedor nem a da contabilidade: por isso
+//     não é o total_lucro_movv da venda (que desconta as duas).
 function baseDaVendaCertificado(venda, tipoBase) {
-  if (tipoBase === 'valor_venda') return venda.total_venda;
-  if (tipoBase === 'lucro_grupo') return venda.total_lucro_movv;
+  if (tipoBase === 'valor_venda') return formatarCentavos(paraCentavos(venda.total_venda));
+  if (tipoBase === 'lucro_grupo') {
+    let c = paraCentavos(venda.preco_venda) - paraCentavos(venda.custo);
+    if (venda.incluiu_token) c += paraCentavos(venda.valor_venda_token ?? '0') - paraCentavos(venda.valor_compra_token ?? '0');
+    return formatarCentavos(c);
+  }
   return null;
 }
 
@@ -317,8 +328,8 @@ async function lancarCertificado(cx, venda, quem) {
   if (!regra) return avisar(`Sem regra de comissão do Movv Certificado para o nível ${partner.nivel_partner} em ${venda.data_venda}. Cadastre a regra e clique em "Tentar de novo".`);
 
   const base = baseDaVendaCertificado(venda, regra.base);
-  if (base === null || base === undefined || paraCentavos(base) < 0n) {
-    return avisar(`A base da regra (${regra.base}) ficou negativa ou vazia nesta venda; confira a venda.`);
+  if (base === null || paraCentavos(base) <= 0n) {
+    return avisar(`A base da comissão (${regra.base === 'lucro_grupo' ? 'preço − custos' : 'valor da venda'}) deu ${base ?? 'vazia'} nesta venda: zero ou negativa não gera lançamento. Confira a venda.`);
   }
 
   const { lancamento } = await criarLancamento(cx, {
@@ -348,7 +359,7 @@ async function aoEditarVendaCertificado(cx, venda, quem) {
     await cx.query(`UPDATE partner_comissoes SET cliente_nome = $2, atualizado_em = NOW() WHERE id = $1`, [atual.id, venda.cliente_nome]);
     return { lancamento: atual };
   }
-  if (['previsto', 'confirmado'].includes(atual.status) && paraCentavos(novaBase) >= 0n) {
+  if (['previsto', 'confirmado'].includes(atual.status) && paraCentavos(novaBase) > 0n) {
     const valor = valorPartnerCentavos(paraCentavos(novaBase), paraPct4(atual.percentual));
     const r = await cx.query(
       `UPDATE partner_comissoes SET base_valor = $2, valor_partner = $3, cliente_nome = $4, produto = $5, atualizado_em = NOW()
