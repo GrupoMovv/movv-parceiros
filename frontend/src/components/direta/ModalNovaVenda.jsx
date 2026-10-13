@@ -35,11 +35,13 @@ const EMPTY = {
   valor_venda_token: 0,
   comissao_contab_token: 0,
   observacoes: '',
+  partner_id: '',
 };
 
 export default function ModalNovaVenda({ open, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY);
   const [contabilidades, setContabilidades] = useState([]);
+  const [partners, setPartners] = useState([]);
   const [comissaoPct, setComissaoPct] = useState(20);
   const [confirmado, setConfirmado] = useState(false);
   const [motivoReduzido, setMotivoReduzido] = useState('');
@@ -54,6 +56,11 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
     api.get('/contabilidades-precos')
       .then(res => setContabilidades(res.data.filter(c => c.partner_id && c.ativo)))
       .catch(() => toast.error('Erro ao carregar contabilidades'));
+    // MOVV Partner responsável (opcional): a venda gera o lançamento dele no
+    // livro de comissões do Partner (migration 093)
+    api.get('/partner-comissoes/admin/partners')
+      .then(res => setPartners(res.data.filter(p => p.is_active)))
+      .catch(() => setPartners([]));
     api.get('/direta/goal')
       .then(res => setComissaoPct(parseFloat(res.data.goal.comissao_pct)))
       .catch(() => setComissaoPct(20));
@@ -96,7 +103,7 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
   async function handleSave() {
     setSaving(true);
     try {
-      await api.post('/direta/sales', {
+      const { data } = await api.post('/direta/sales', {
         data_venda:        form.data_venda,
         tipo_venda:        form.tipo_venda,
         contabilidade_id:  viaContab ? form.contabilidade_id : null,
@@ -111,8 +118,10 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
         comissao_contab_token: (form.incluiu_token && viaContab) ? form.comissao_contab_token : undefined,
         observacoes:       form.observacoes || null,
         motivo_preco_reduzido: aviso ? motivoReduzido.trim() : undefined,
+        partner_id:        form.partner_id || null,
       });
       toast.success('Venda registrada com sucesso!');
+      if (data?.aviso_comissao_partner) toast(`Comissão do Partner não gerada: ${data.aviso_comissao_partner}`, { icon: '⚠️', duration: 8000 });
       onSaved();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao registrar venda');
@@ -162,6 +171,19 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
             {contabilidades.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">Nenhuma contabilidade ativa cadastrada.</p>
             )}
+          </div>
+        )}
+
+        {partners.length > 0 && (
+          <div>
+            <label className="label">MOVV Partner responsável (opcional)</label>
+            <select className="input" value={form.partner_id} onChange={e => set('partner_id', e.target.value)}>
+              <option value="">Nenhum</option>
+              {partners.map(p => (
+                <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">Se a venda veio de um Partner, ela gera a comissão dele automaticamente.</p>
           </div>
         )}
 

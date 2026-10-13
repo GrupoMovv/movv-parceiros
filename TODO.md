@@ -256,3 +256,46 @@ marca "pago" sozinho pelo aviso (webhook) do banco.
      não passa pelo IUB").
 Comparação de custo por pedido: R$ 30 → MP R$ 0,30 / Asaas R$ 1,99;
 R$ 200 → MP R$ 1,98 / Asaas R$ 1,99 (empate perto de R$ 200).
+
+## Livro único de comissões do MOVV Partner (decidido 13/10/2026 — não construir ainda)
+
+Decisões do Junior sobre a proposta de 13/10/2026 (livro `partner_comissoes`,
+regras `partner_comissao_regras`, importação `comissao_importacoes` /
+`comissao_importacao_linhas`, reaproveitando `products`, `referrals`,
+`direta_sales`, `payments` e `admin_acoes`):
+
+1. **Base do percentual = comissão que o Grupo recebeu (`valor_grupo`)**, regra
+   do negócio. **Exibição: decidido em 13/10/2026: A, transparência.** A tela e
+   a view do Partner mostram, por venda, `base_valor`, `percentual` e
+   `valor_partner`, além de produto, cliente, competência, status e se é
+   estorno. Ficam fora da view a coluna `valor_grupo`, a `regra_id` e tudo que
+   for interno. A aba "Tabela vigente" mostra o percentual do nível do Partner.
+   **Por escolha do Junior, o Partner consegue calcular a comissão do Grupo por
+   venda** (a `base_valor` é a própria comissão do Grupo, e a diferença para o
+   `valor_partner` é o que fica com o Grupo). View:
+   ```sql
+   CREATE OR REPLACE VIEW v_partner_comissoes_partner AS
+   SELECT pc.id, pc.partner_id, pr.name AS produto, pc.cliente_nome,
+          pc.competencia, pc.base_valor, pc.percentual, pc.valor_partner,
+          pc.status,
+          (pc.estorno_de_id IS NOT NULL) AS eh_estorno,
+          pc.pago_em, pc.criado_em
+   FROM partner_comissoes pc
+   JOIN products pr ON pr.id = pc.product_id;
+   ```
+2. **Federal Invest fica fora da 1ª versão.** A estrutura já aceita a fonte
+   (`fonte = 'federal_invest'`) para entrar depois.
+3. **Etapas.**
+   - Etapa 1: tabela de lançamentos, regras (tabela vigente), tela do Partner
+     (`PartnerComissoes.jsx`), aprovação e pagamento no admin (pagamento pela
+     tela `/admin/pagamentos`, tabela `payments`) e lançamento automático do
+     Certificado (`direta_sales.partner_id`; cancelar/excluir a venda estorna).
+   - Etapa 2: importação mensal da planilha da Azul (casar por contrato, depois
+     CPF + produto; o que não casar vai para a lista de pendentes). Só começa
+     depois que o Junior mandar o arquivo de exemplo.
+4. **O lançamento `previsto` nasce na confirmação da venda.**
+5. **Urgente e separado:** `GET /api/products` devolve `SELECT *` (inclusive
+   `commission_rate` e `percentual_repasse`) para qualquer usuário logado.
+   Corrigir para não-admin receber só `id`, `name` e `type`. Atenção:
+   `frontend/src/pages/NewReferral.jsx` (tela `/indicar` de contabilidades e
+   funcionários) usa `is_active`, `faixa` e `percentual_repasse` dessa rota.

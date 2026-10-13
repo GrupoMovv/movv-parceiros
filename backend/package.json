@@ -11,7 +11,9 @@
     "seed:internal": "node seeds/seed_internal_collaborators.js",
     "setup": "node scripts/setup.js",
     "backup": "node scripts/backup-database.js",
-    "clean:test": "node scripts/clean-test-data.js"
+    "clean:test": "node scripts/clean-test-data.js",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "teste:comissoes": "node scripts/servidorTesteComissoes.js"
   },
   "dependencies": {
     "axios": "^1.6.7",
@@ -32,6 +34,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "nodemon": "^3.0.3"
   }
 }

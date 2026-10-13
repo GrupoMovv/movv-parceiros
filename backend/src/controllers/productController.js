@@ -1,9 +1,24 @@
 const db = require('../config/database');
+const { veTudo } = require('../config/perfilAdmin');
+
+// Cada tipo de usuário vê só o que se aplica a ele (Junior, 13/10/2026):
+// admin e financeiro, tudo (tela de Produtos); contabilidade e funcionário,
+// o que a tela "Indicar" usa, inclusive o próprio percentual de repasse;
+// o resto (MOVV Partner, colaborador interno, indicador), só id, nome e tipo.
+function colunasDeProduto(user) {
+  if (veTudo(user)) return { colunas: '*', soAtivos: false };
+  if (user?.type === 'accounting' || user?.type === 'employee') {
+    return { colunas: 'id, name, type, faixa, percentual_repasse, is_active', soAtivos: true };
+  }
+  return { colunas: 'id, name, type', soAtivos: true };
+}
 
 async function listProducts(req, res) {
   try {
+    const { colunas, soAtivos } = colunasDeProduto(req.user);
     const result = await db.query(
-      `SELECT * FROM products
+      `SELECT ${colunas} FROM products
+       ${soAtivos ? 'WHERE is_active = true' : ''}
        ORDER BY
          CASE faixa WHEN 'alta' THEN 1 WHEN 'media' THEN 2 WHEN 'baixa' THEN 3 WHEN 'especial' THEN 4 ELSE 5 END,
          name ASC`

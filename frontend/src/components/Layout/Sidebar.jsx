@@ -56,6 +56,7 @@ const MASTER_MENU = [
       { label: 'Pagamentos',         icon: CreditCard,      to: '/admin/pagamentos',         roles: ['admin', 'financeiro'] },
       { label: 'Produtos',           icon: Package,         to: '/admin/produtos',           roles: ['admin'] },
       { label: 'Comissões Internas', icon: DollarSign,      to: '/admin/comissoes-internas', roles: ['admin', 'financeiro'] },
+      { label: 'Comissões do Partner', icon: Percent,       to: '/admin/comissoes-partner',  roles: ['admin', 'financeiro'] },
       { label: 'Indicadores',        icon: UsersRound,      to: '/admin/indicadores',        roles: ['admin', 'financeiro'] },
       { label: 'Interesses',         icon: Sparkles,        to: '/admin/interesse',          roles: ['admin'] },
       { label: 'Testadores',         icon: FlaskConical,    to: '/admin/testadores',         roles: ['admin'] },

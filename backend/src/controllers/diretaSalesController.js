@@ -1,6 +1,8 @@
 const db = require('../config/database');
 const { veTudo } = require('../config/perfilAdmin');
 const diretaCalc = require('../services/diretaCalcService');
+const partnerComissoes = require('../services/partnerComissoes');
+const { nomeDoAdmin } = require('../services/registroAdmin');
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
@@ -29,6 +31,7 @@ const SALE_COLUMNS = `
   ds.comissao_contab_token, ds.comissao_vendedor_token, ds.lucro_movv_token,
   ds.total_venda, ds.total_comissao_vendedor, ds.total_lucro_movv,
   ds.comissao_pct, ds.status, ds.observacoes, ds.reference_month,
+  ds.partner_id,
   ds.created_at, ds.updated_at
 `;
 
@@ -43,6 +46,25 @@ async function registrarHistorico(client, { vendaId, acao, motivo, dadosAntes, d
     );
   } catch (err) {
     console.error('[FERNANDO] Falha ao registrar histórico da venda', vendaId, err.message);
+  }
+}
+
+// Lançamento do MOVV Partner da venda (livro de comissões, migration 093).
+// Roda dentro da transação da venda, num SAVEPOINT: um erro no livro não
+// derruba a venda — vira aviso para o admin (Comissões do Partner > Avisos).
+async function comissaoDoPartner(client, venda, fn) {
+  await client.query('SAVEPOINT comissao_partner');
+  try {
+    const r = await fn();
+    await client.query('RELEASE SAVEPOINT comissao_partner');
+    return r?.aviso || null;
+  } catch (err) {
+    await client.query('ROLLBACK TO SAVEPOINT comissao_partner');
+    console.error('[COMISSAO PARTNER] venda', venda.id, err.message);
+    const motivo = 'Erro ao gerar o lançamento do Partner desta venda; clique em "Tentar de novo".';
+    await partnerComissoes.registrarAviso(client, { origem: 'certificado', direta_sale_id: venda.id, partner_id: venda.partner_id, motivo })
+      .catch(e => console.error('[COMISSAO PARTNER] aviso', venda.id, e.message));
+    return motivo;
   }
 }
 
@@ -71,9 +93,11 @@ async function listSales(req, res) {
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
     const result = await db.query(
-      `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code
+      `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code,
+              mp.name AS partner_name, mp.code AS partner_code
        FROM direta_sales ds
        LEFT JOIN partners p ON p.id = ds.contabilidade_id
+       LEFT JOIN partners mp ON mp.id = ds.partner_id
        ${where}
        ORDER BY ds.data_venda DESC, ds.id DESC`,
       params
@@ -91,9 +115,11 @@ async function getSale(req, res) {
     const isAdmin = veTudo(req.user); // admin ou perfil financeiro
 
     const result = await db.query(
-      `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code
+      `SELECT ${SALE_COLUMNS}, p.name AS contabilidade_name, p.code AS contabilidade_code,
+              mp.name AS partner_name, mp.code AS partner_code
        FROM direta_sales ds
        LEFT JOIN partners p ON p.id = ds.contabilidade_id
+       LEFT JOIN partners mp ON mp.id = ds.partner_id
        WHERE ds.id = $1`,
       [id]
     );
@@ -122,7 +148,7 @@ async function createSale(req, res) {
     cliente_nome, cliente_cpf_cnpj, cliente_whatsapp,
     valor_venda_certificado, comissao_contab_certificado,
     incluiu_token, valor_compra_token, valor_venda_token, comissao_contab_token,
-    observacoes, motivo_preco_reduzido,
+    observacoes, motivo_preco_reduzido, partner_id,
   } = req.body;
 
   if (!tipo_venda || !['contabilidade', 'direta'].includes(tipo_venda)) {
@@ -162,6 +188,18 @@ async function createSale(req, res) {
       if (!contabRow.rows[0]) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Contabilidade não encontrada ou inativa' });
+      }
+    }
+
+    // Partner responsável (opcional): MOVV Partner ativo
+    const partnerId = partner_id ? Number(partner_id) : null;
+    if (partnerId) {
+      const p = await client.query(
+        `SELECT 1 FROM partners WHERE id = $1 AND type = 'movv_partner' AND is_active = true`, [partnerId]
+      );
+      if (!p.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Partner responsável não encontrado ou inativo' });
       }
     }
 
@@ -207,8 +245,8 @@ async function createSale(req, res) {
           incluiu_token, valor_compra_token, valor_venda_token, comissao_contab_token,
           comissao_vendedor_token, lucro_movv_token,
           total_venda, total_comissao_vendedor, total_lucro_movv,
-          status, observacoes, reference_month)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'confirmada',$23,$24)
+          status, observacoes, reference_month, partner_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'confirmada',$23,$24,$25)
        RETURNING *`,
       [
         collaboratorId, dataVenda, tipo_venda, contabilidade_id || null,
@@ -220,7 +258,7 @@ async function createSale(req, res) {
         incluiToken && tipo_venda === 'contabilidade' ? calc.token.comissaoContab : null,
         calc.token.comissaoVendedor, calc.token.lucro,
         calc.totalVenda, calc.totalComissao, calc.totalLucro,
-        observacoesFinal, referenceMonth,
+        observacoesFinal, referenceMonth, partnerId,
       ]
     );
     const venda = inserted.rows[0];
@@ -229,8 +267,12 @@ async function createSale(req, res) {
       vendaId: venda.id, acao: 'criada', dadosDepois: venda, alteradoPor: quemAlterou(req),
     });
 
+    const avisoPartner = venda.partner_id
+      ? await comissaoDoPartner(client, venda, () => partnerComissoes.lancarCertificado(client, venda, nomeDoAdmin(req.user)))
+      : null;
+
     await client.query('COMMIT');
-    return res.status(201).json({ ...venda, aviso: aviso || undefined });
+    return res.status(201).json({ ...venda, aviso: aviso || undefined, aviso_comissao_partner: avisoPartner || undefined });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
@@ -336,8 +378,13 @@ async function updateSale(req, res) {
       dadosAntes: venda, dadosDepois: updated.rows[0], alteradoPor: quemAlterou(req),
     });
 
+    const vendaNova = updated.rows[0];
+    const avisoPartner = vendaNova.partner_id
+      ? await comissaoDoPartner(client, vendaNova, () => partnerComissoes.aoEditarVendaCertificado(client, vendaNova, nomeDoAdmin(req.user)))
+      : null;
+
     await client.query('COMMIT');
-    return res.json(updated.rows[0]);
+    return res.json({ ...vendaNova, aviso_comissao_partner: avisoPartner || undefined });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
@@ -379,6 +426,11 @@ async function deleteSale(req, res) {
       dadosAntes: venda, alteradoPor: quemAlterou(req),
     });
 
+    if (venda.partner_id) {
+      await comissaoDoPartner(client, venda, () => partnerComissoes.aoCancelarVendaCertificado(
+        client, venda.id, `Venda do Movv Certificado excluída${motivo?.trim() ? `: ${motivo.trim()}` : ''}`, nomeDoAdmin(req.user)));
+    }
+
     await client.query('COMMIT');
     console.log(`[FERNANDO] Venda excluída — ID ${id}, cliente: ${venda.cliente_nome}`);
     return res.json(updated.rows[0]);
@@ -417,6 +469,10 @@ async function cancelSale(req, res) {
     await registrarHistorico(client, {
       vendaId: id, acao: 'cancelada', dadosAntes: check.rows[0], dadosDepois: result.rows[0], alteradoPor: quemAlterou(req),
     });
+    if (check.rows[0].partner_id) {
+      await comissaoDoPartner(client, check.rows[0], () => partnerComissoes.aoCancelarVendaCertificado(
+        client, check.rows[0].id, 'Venda do Movv Certificado cancelada', nomeDoAdmin(req.user)));
+    }
     await client.query('COMMIT');
     console.log(`[FERNANDO] Venda cancelada — ID ${id}, cliente: ${check.rows[0].cliente_nome}`);
     return res.json(result.rows[0]);

@@ -24,6 +24,7 @@ import AdminPayments from './pages/admin/Payments';
 import AdminProducts from './pages/admin/Products';
 import AdminInterest from './pages/admin/Interest';
 import AdminInternalCommissions from './pages/admin/InternalCommissions';
+import AdminPartnerComissoes from './pages/admin/PartnerComissoes';
 import AdminIndicadores from './pages/admin/AdminIndicadores';
 import AdminTestadores from './pages/admin/AdminTestadores';
 import DiretaDashboardAdmin from './pages/admin/Direta/DiretaDashboard';
@@ -412,6 +413,7 @@ export default function App() {
           <Route path="admin/pagamentos"     element={<RequireEquipe><AdminPayments /></RequireEquipe>} />
           <Route path="admin/produtos"          element={<RequireAdmin><AdminProducts /></RequireAdmin>} />
           <Route path="admin/comissoes-internas" element={<RequireEquipe><AdminInternalCommissions /></RequireEquipe>} />
+          <Route path="admin/comissoes-partner" element={<RequireEquipe><AdminPartnerComissoes /></RequireEquipe>} />
           <Route path="admin/indicadores"   element={<RequireEquipe><AdminIndicadores /></RequireEquipe>} />
           <Route path="admin/testadores"    element={<RequireAdmin><AdminTestadores /></RequireAdmin>} />
           <Route path="admin/direta"             element={<RequireEquipe><DiretaDashboardAdmin /></RequireEquipe>} />
