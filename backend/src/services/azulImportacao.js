@@ -24,12 +24,15 @@ const { mascararCpf } = require('../utils/validators');
 
 const { ErroComissao } = pc;
 
-// Indicação "da Azul": de MOVV Partner e de produto de crédito/seguro/outros
-// (fora BPO, certificado e conta).
+// Indicação "da Azul": de MOVV Partner e de produto da Azul. Lista FECHADA
+// de tipos (Junior, 13/10/2026): crédito ('credit') e os "outros" da Azul
+// (consórcio, energia solar). Seguro ('insurance', ex.: Movv Seguros) NUNCA
+// entra — vem de outra fonte e não pode casar com o relatório da Azul.
+const TIPOS_PRODUTO_AZUL = ['credit', 'other'];
 const SQL_INDICACAO_AZUL = `
   r.status <> 'cancelled'
   AND p.type = 'movv_partner'
-  AND pr.type NOT IN ('bpo','digital_certificate','account')`;
+  AND pr.type IN (${TIPOS_PRODUTO_AZUL.map(t => `'${t}'`).join(',')})`;
 
 async function indicacoesPorContrato(cx, contrato) {
   return (await cx.query(
@@ -440,7 +443,7 @@ async function historico(cx) {
 }
 
 module.exports = {
-  analisar, previa, confirmar, classificar,
+  TIPOS_PRODUTO_AZUL, analisar, previa, confirmar, classificar,
   confirmarSugestao, vincular, descartar, tentarSemRegra, decidirEstorno,
   pendencias, buscarLinhas, buscarIndicacoes, historico,
 };

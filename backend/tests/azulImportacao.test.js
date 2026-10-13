@@ -279,3 +279,39 @@ test('histórico guarda arquivo, quem importou e as contagens', async () => {
   assert.equal(primeira.importado_por, quem);
   assert.equal(primeira.contagens.sem_partner, 8);
 });
+
+// ─── Seguro (Movv Seguros) nunca entra no casamento da Azul ─────────────────
+
+test('indicação de seguro não casa com a Azul: nem contrato, nem CPF, nem ambiguidade, nem busca', async () => {
+  assert.deepEqual(imp.TIPOS_PRODUTO_AZUL, ['credit', 'other']);
+  const seguro = (await db.query(`INSERT INTO products (name, type) VALUES ('Movv Seguros', 'insurance') RETURNING id`)).rows[0].id;
+  const indicacaoDe = async (prod, { cpf = null, contrato = null, nome }) => (await db.query(
+    `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at, client_cpf, numero_contrato)
+     VALUES ($1, $2, $3, '64999999999', $4, NOW() + INTERVAL '30 days', $5, $6) RETURNING id`,
+    [`S-${Math.random().toString(36).slice(2, 10)}`, P.a, nome, prod, cpf, contrato]
+  )).rows[0].id;
+  const linha = extra => ({ tipo: 'comissao', produto: 'INSS', dt_pagamento: '2026-09-20', valor_comissao: '10.00', ...extra });
+
+  // só o seguro com o CPF -> não vira sugestão
+  await indicacaoDe(seguro, { cpf: '86011112222', nome: 'Só seguro' });
+  assert.equal((await imp.classificar(db, linha({ cliente_cpf: '86011112222' }))).status, 'sem_partner');
+
+  // só o seguro com o contrato -> não casa
+  await indicacaoDe(seguro, { contrato: '900000500', nome: 'Seguro com contrato' });
+  assert.equal((await imp.classificar(db, linha({ numero_contrato: '900000500' }))).status, 'sem_partner');
+  assert.equal((await imp.classificar(db, { ...linha({ numero_contrato: '900000500' }), tipo: 'estorno' })).status, 'sem_partner');
+
+  // seguro + crédito com o mesmo CPF -> sugestão do crédito, não ambígua
+  const credito = await indicacaoDe(produtoId, { cpf: '86033334444', nome: 'Crédito' });
+  await indicacaoDe(seguro, { cpf: '86033334444', nome: 'Seguro do mesmo cliente' });
+  const c = await imp.classificar(db, linha({ cliente_cpf: '86033334444' }));
+  assert.equal(c.status, 'sugestao');
+  assert.equal(c.sugestao_referral_id, credito);
+
+  // a busca para vincular não traz seguro, e vincular a seguro é recusado
+  const achadas = await imp.buscarIndicacoes(db, 'Seguro');
+  assert.equal(achadas.length, 0);
+  const segId = await indicacaoDe(seguro, { nome: 'Seguro para vincular' });
+  const [semPartner] = await imp.buscarLinhas(db, 'CLIENTE FICTICIO 10');
+  await assert.rejects(db.transacao(cx => imp.vincular(cx, semPartner.id, segId, quem)), /não é uma indicação Azul/);
+});
