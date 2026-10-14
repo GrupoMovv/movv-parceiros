@@ -64,6 +64,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pcr_unica
 INSERT INTO partner_comissao_regras (origem, produto, nivel_partner, base, percentual, vigente_desde, criado_por, observacao)
 SELECT 'azul', NULL, n, 'comissao_recebida', 30.0000, DATE '2026-01-01', 'migration 093', 'Regra inicial: 30% da comissão recebida, todos os produtos'
 FROM unnest(ARRAY['mobile','point','hub','regional']) AS n
+-- só se ainda não houver regra da Azul para o nível (rodar de novo não
+-- recoloca 30% por cima do que o admin encerrou ou trocou)
+WHERE NOT EXISTS (SELECT 1 FROM partner_comissao_regras r WHERE r.origem = 'azul' AND r.nivel_partner = n)
 ON CONFLICT DO NOTHING;
 -- Movv Certificado: 20% do lucro do Grupo na venda (preço − custos: R$ 19,90
 -- do certificado + compra do token), todos os níveis, desde 13/10/2026.
@@ -71,6 +74,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO partner_comissao_regras (origem, produto, nivel_partner, base, percentual, vigente_desde, criado_por, observacao)
 SELECT 'certificado', NULL, n, 'lucro_grupo', 20.0000, DATE '2026-10-13', 'migration 093', 'Regra inicial: 20% do lucro do Grupo (preço − custos)'
 FROM unnest(ARRAY['mobile','point','hub','regional']) AS n
+WHERE NOT EXISTS (SELECT 1 FROM partner_comissao_regras r WHERE r.origem = 'certificado' AND r.nivel_partner = n)
 ON CONFLICT DO NOTHING;
 
 -- 3. Importação mensal (Etapa 2)

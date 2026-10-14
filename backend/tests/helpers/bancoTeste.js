@@ -22,6 +22,7 @@ async function novoBanco() {
   // mesma interface do pg (query(text, params) -> { rows }) e transacao(fn)
   const db = {
     query: (text, params) => pg.query(text, params),
+    exec: sql => pg.exec(sql),
     transacao: fn => pg.transaction(tx => fn({ query: (t, p) => tx.query(t, p) })),
     fechar: () => pg.close(),
   };
@@ -42,4 +43,4 @@ function usarNoApp(banco) {
   };
 }
 
-module.exports = { novoBanco, usarNoApp };
+module.exports = { novoBanco, usarNoApp, DIR_MIGRATIONS: DIR };
