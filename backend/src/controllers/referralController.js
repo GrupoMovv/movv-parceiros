@@ -78,7 +78,10 @@ async function createReferral(req, res) {
     const productResult = await db.query('SELECT * FROM products WHERE id = $1 AND is_active = true', [product_id]);
     if (!productResult.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
     const product = productResult.rows[0];
-    if (dono.type === 'movv_partner' && ['bpo', 'digital_certificate', 'account'].includes(product.type)) {
+    // MOVV Partner indica Azul, seguro e Movv Certificado (liberado em
+    // 14/10/2026); BPO e conta, não. A comissão do Certificado continua
+    // nascendo só da venda em que o Fernando marca o Partner.
+    if (dono.type === 'movv_partner' && ['bpo', 'account'].includes(product.type)) {
       return res.status(400).json({ error: 'Este produto não faz parte das indicações do MOVV Partner' });
     }
 

@@ -80,6 +80,18 @@ export default function UniversidadeHome({ previa = false }) {
         </Link>
       )}
 
+      {/* "Meu certificado" saiu do menu: sem certificado ainda, fica aqui */}
+      {!cert && !previa && (
+        <Link to={`${modo.base}/certificado`} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 min-h-[56px]">
+          <Award className="w-7 h-7 flex-shrink-0 text-slate-400" />
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="block font-semibold text-slate-900">Meu certificado</span>
+            <span className="block text-slate-500">Sai quando você concluir os módulos.</span>
+          </span>
+          <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+        </Link>
+      )}
+
       {/* aviso do Módulo 0 / termo */}
       {!dados.liberado && publicados.length > 0 && (
         <div className="rounded-xl border border-gold-500/40 bg-gold-100 px-4 py-3 text-sm text-gold-900">
@@ -100,6 +112,18 @@ export default function UniversidadeHome({ previa = false }) {
           <span className="min-w-0 flex-1 font-semibold text-slate-900">Ver o modelo do certificado</span>
           <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
         </Link>
+      )}
+      {previa && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link to={`${modo.base}/inicio`} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <span className="min-w-0 flex-1 font-semibold text-slate-900">Ver o Início do Partner</span>
+            <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+          </Link>
+          <Link to={`${modo.base}/vendas`} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <span className="min-w-0 flex-1 font-semibold text-slate-900">Ver Minhas vendas</span>
+            <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+          </Link>
+        </div>
       )}
     </div>
   );

@@ -42,6 +42,22 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY);
   const [contabilidades, setContabilidades] = useState([]);
   const [partners, setPartners] = useState([]);
+  const [sugestoes, setSugestoes] = useState([]);
+
+  // Sugere o Partner de uma indicação de Certificado em aberto com o mesmo
+  // nome ou CPF do cliente (espera o Fernando parar de digitar)
+  useEffect(() => {
+    if (!open) return undefined;
+    const nome = form.cliente_nome.trim();
+    const cpf = form.cliente_cpf_cnpj.replace(/\D/g, '');
+    if (nome.length < 5 && cpf.length !== 11) { setSugestoes([]); return undefined; }
+    const t = setTimeout(() => {
+      api.get('/partner-comissoes/admin/sugestao-certificado', { params: { nome, cpf: cpf.length === 11 ? cpf : undefined } })
+        .then(r => setSugestoes(r.data))
+        .catch(() => setSugestoes([]));
+    }, 500);
+    return () => clearTimeout(t);
+  }, [open, form.cliente_nome, form.cliente_cpf_cnpj]);
   const [comissaoPct, setComissaoPct] = useState(20);
   const [confirmado, setConfirmado] = useState(false);
   const [motivoReduzido, setMotivoReduzido] = useState('');
@@ -310,6 +326,22 @@ export default function ModalNovaVenda({ open, onClose, onSaved }) {
             <input className="input" value={form.cliente_whatsapp} onChange={e => set('cliente_whatsapp', e.target.value)} />
           </div>
         </div>
+
+        {/* Indicação de Certificado de um MOVV Partner com o mesmo nome ou
+            CPF: só sugestão — nada é preenchido sozinho */}
+        {!form.partner_id && sugestoes.length > 0 && (
+          <div className="rounded-xl border border-gold-500/50 bg-gold-100 p-3 space-y-2">
+            <p className="text-sm font-semibold text-slate-900">Este cliente foi indicado por um MOVV Partner</p>
+            {sugestoes.map(s => (
+              <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-slate-700">
+                  {s.partner_nome} ({s.partner_codigo}) · {s.client_name}{s.client_cpf ? ` · ${s.client_cpf}` : ''} · {new Date(s.created_at).toLocaleDateString('pt-BR')}
+                </span>
+                <button type="button" className="btn-secondary text-xs" onClick={() => set('partner_id', String(s.partner_id))}>Usar este Partner</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div>
           <label className="label">Observações (opcional)</label>

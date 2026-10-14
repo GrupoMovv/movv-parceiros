@@ -143,3 +143,57 @@ module.exports = {
   confirmar: acao('confirmar'), aprovar: acao('aprovar'), pagar: acao('pagar'), estornar: acao('estornar'),
   listarRegras, salvarRegra, listarAvisos, tentarAviso, partners,
 };
+
+// ─── Portal do Partner: Início e Minhas vendas (só leitura) ─────────────────
+const portal = require('../services/partnerPortal');
+
+async function inicio(req, res) {
+  try {
+    return res.json({ nome: req.user.name, ...(await portal.inicioDoPartner(db, req.user.id)) });
+  } catch (err) {
+    return responderErro(res, err, 'Erro ao carregar o início');
+  }
+}
+
+async function vendas(req, res) {
+  try {
+    return res.json(await portal.minhasVendas(db, req.user.id));
+  } catch (err) {
+    return responderErro(res, err, 'Erro ao carregar suas vendas');
+  }
+}
+
+// "Ver como Partner" do admin: a mesma tela, sem dado de ninguém e sem
+// gravar nada — só a comissão vigente do nível escolhido (padrão Mobile).
+async function previa(req, res) {
+  try {
+    const nivel = pc.NIVEIS.includes(req.query.nivel) ? req.query.nivel : 'mobile';
+    const regras = (await db.query(
+      `SELECT origem, produto, percentual FROM partner_comissao_regras
+       WHERE nivel_partner = $1 AND vigente_desde <= CURRENT_DATE AND (vigente_ate IS NULL OR vigente_ate >= CURRENT_DATE)`,
+      [nivel]
+    )).rows;
+    return res.json({
+      previa: true, nivel, nome: req.user.name,
+      comissao: portal.comissaoVigente(regras),
+      resumo: { a_receber: '0.00', pago_mes: '0.00', mes: portal.mesAtual() },
+      ultimas: [], vendas: [], total_vendas: 0,
+    });
+  } catch (err) {
+    return responderErro(res, err, 'Erro ao montar a prévia');
+  }
+}
+
+// Nova Venda do Certificado: sugere o Partner de uma indicação em aberto
+async function sugestaoCertificado(req, res) {
+  try {
+    return res.json(await portal.sugestoesCertificado(db, { nome: req.query.nome, cpf: req.query.cpf }));
+  } catch (err) {
+    return responderErro(res, err, 'Erro ao buscar indicação');
+  }
+}
+
+module.exports.inicio = inicio;
+module.exports.vendas = vendas;
+module.exports.previa = previa;
+module.exports.sugestaoCertificado = sugestaoCertificado;

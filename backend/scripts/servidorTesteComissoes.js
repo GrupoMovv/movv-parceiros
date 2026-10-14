@@ -59,6 +59,8 @@ async function semear(db) {
   const produto = (await db.query(
     `INSERT INTO products (name, type, faixa) VALUES ('Consignado INSS', 'credit', 'alta') RETURNING id`
   )).rows[0].id;
+  // Partner também indica Movv Certificado (14/10/2026)
+  await db.query(`INSERT INTO products (name, type, faixa) VALUES ('Movv Certificado', 'digital_certificate', 'media')`);
   const indicacao = (partnerId, nome, cpf, contrato) => db.query(
     `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at, client_cpf, numero_contrato)
      VALUES ($1, $2, $3, '64999990000', $4, NOW() + INTERVAL '30 days', $5, $6)`,

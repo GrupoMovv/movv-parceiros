@@ -222,3 +222,59 @@ test('importação da Azul pela API: prévia por upload; Partner não abre', asy
   const de_novo = await enviar(t.admin, '/api/partner-comissoes/admin/importacao/previa');
   assert.equal(de_novo.body.novas, 0);
 });
+
+// ─── Portal do Partner (Prompt 3): Certificado na indicação, Início e vendas ─
+
+test('Partner indica Movv Certificado; BPO e conta continuam recusados; aparece em Admin > Indicações', async () => {
+  const novo = async (name, type) => (await db.query(`INSERT INTO products (name, type) VALUES ($1, $2) RETURNING id`, [name, type])).rows[0].id;
+  const cert = await novo('Movv Certificado', 'digital_certificate');
+  const bpo = await novo('BPO Financeiro', 'bpo');
+  const conta = await novo('Conta PJ', 'account');
+
+  const lista = await chamar('GET', '/api/products', t.a);
+  const tipos = new Set(lista.body.map(p => p.type));
+  assert.ok(tipos.has('digital_certificate'));
+  assert.ok(!tipos.has('bpo') && !tipos.has('account'));
+
+  const base = { client_name: 'Cliente Cert Indicado', client_whatsapp: '64999990001' };
+  const r = await chamar('POST', '/api/referrals', t.a, { ...base, product_id: cert });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal((await chamar('POST', '/api/referrals', t.a, { ...base, product_id: bpo })).status, 400);
+  assert.equal((await chamar('POST', '/api/referrals', t.a, { ...base, product_id: conta })).status, 400);
+
+  const doAdmin = await chamar('GET', '/api/referrals', t.admin);
+  const vista = doAdmin.body.find(x => x.id === r.body.id);
+  assert.ok(vista);
+  assert.equal(vista.product_name, 'Movv Certificado');
+  assert.equal(vista.partner_code, 'PARTNER-911');
+
+  // nenhuma comissão nasce da indicação
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM partner_comissoes WHERE referral_id = $1', [r.body.id])).rows[0].n, 0);
+
+  // sugestão para o Fernando na Nova Venda
+  const s = await chamar('GET', `/api/partner-comissoes/admin/sugestao-certificado?nome=${encodeURIComponent('cliente cert indicado')}`, t.fernando);
+  assert.equal(s.status, 200);
+  assert.equal(s.body[0].partner_id, ids.a);
+  assert.equal((await chamar('GET', '/api/partner-comissoes/admin/sugestao-certificado?nome=abcde', t.a)).status, 403);
+});
+
+test('Início e Minhas vendas: só do Partner logado; prévia do admin sem dado de ninguém', async () => {
+  const ini = await chamar('GET', '/api/partner-comissoes/inicio', t.a);
+  assert.equal(ini.status, 200, JSON.stringify(ini.body));
+  assert.ok(Array.isArray(ini.body.comissao) && ini.body.comissao.length >= 1);
+  assert.ok('a_receber' in ini.body.resumo && 'pago_mes' in ini.body.resumo);
+  assert.ok(ini.body.ultimas.length <= 3);
+
+  const va = await chamar('GET', '/api/partner-comissoes/vendas', t.a);
+  const vb = await chamar('GET', '/api/partner-comissoes/vendas', t.b);
+  const chavesA = new Set(va.body.vendas.map(x => x.chave));
+  assert.ok(vb.body.vendas.every(x => !chavesA.has(x.chave)));
+  assert.ok(va.body.vendas.some(x => x.cliente_nome === 'Cliente Cert Indicado' && x.situacao === 'Indicado'));
+
+  assert.equal((await chamar('GET', '/api/partner-comissoes/vendas', t.admin)).status, 403);
+  const p = await chamar('GET', '/api/partner-comissoes/previa', t.admin);
+  assert.equal(p.status, 200);
+  assert.equal(p.body.previa, true);
+  assert.deepEqual(p.body.vendas, []);
+  assert.equal((await chamar('GET', '/api/partner-comissoes/previa', t.a)).status, 403);
+});

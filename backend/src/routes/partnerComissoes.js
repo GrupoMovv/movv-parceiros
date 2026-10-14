@@ -5,7 +5,7 @@
 // Lista de Partners: equipe e também o Fernando (comercial_full), que
 // escolhe o "Partner responsável" na venda do Movv Certificado.
 const router = require('express').Router();
-const { authenticate, requireAdmin, requireEquipe, requireMovvPartner } = require('../middleware/auth');
+const { authenticate, requireAdmin, requireEquipe, requireMovvPartner, requireAdminUniversidade } = require('../middleware/auth');
 const { veTudo } = require('../config/perfilAdmin');
 const multer = require('multer');
 const c = require('../controllers/partnerComissoesController');
@@ -21,9 +21,15 @@ router.use(authenticate);
 // Partner
 router.get('/minhas', requireMovvPartner, c.minhas);
 router.get('/tabela', requireMovvPartner, c.tabela);
+router.get('/inicio', requireMovvPartner, c.inicio);
+router.get('/vendas', requireMovvPartner, c.vendas);
+
+// "Ver como Partner" (admin completo e comercial_full, como a Universidade)
+router.get('/previa', requireAdminUniversidade, c.previa);
 
 // Admin
 router.get('/admin/partners',                    requireEquipeOuComercialFull, c.partners);
+router.get('/admin/sugestao-certificado',        requireEquipeOuComercialFull, c.sugestaoCertificado);
 router.get('/admin/lancamentos',                 requireEquipe, c.listar);
 router.post('/admin/lancamentos',                requireEquipe, c.criarManual);
 router.post('/admin/lancamentos/confirmar',      requireEquipe, c.confirmar);

@@ -8,7 +8,7 @@ import {
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
   Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck, Crown, Wine, Bike, PawPrint, FlaskConical,
-  GraduationCap, Award, UserRound, Percent,
+  GraduationCap, UserRound, Percent,
 } from 'lucide-react';
 
 const NIVEL_PARTNER = { mobile: 'Mobile', point: 'Point', hub: 'Hub', regional: 'Regional' };
@@ -71,12 +71,13 @@ const MASTER_MENU = [
   {
     section: 'MOVV Partner',
     items: [
-      { label: 'Universidade',              icon: GraduationCap, to: '/universidade',             roles: ['movv_partner'], end: true },
-      { label: 'Meu certificado',           icon: Award,         to: '/universidade/certificado', roles: ['movv_partner'] },
-      { label: 'Meu perfil',                icon: UserRound,     to: '/partner/perfil',           roles: ['movv_partner'] },
-      { label: 'Indicar cliente',           icon: UserPlus,      to: '/indicar',                  roles: ['movv_partner'] },
-      { label: 'Minhas indicações',         icon: ClipboardList, to: '/partner/indicacoes',       roles: ['movv_partner'] },
-      { label: 'Minhas comissões / Tabela vigente', icon: Percent, to: '/partner/comissoes',      roles: ['movv_partner'] },
+      // Menu enxuto do Partner (14/10/2026). "Meu certificado" fica dentro da
+      // Universidade; "Minhas vendas" une indicações e comissões.
+      { label: 'Início',          icon: LayoutDashboard, to: '/partner/inicio', roles: ['movv_partner'], end: true },
+      { label: 'Indicar cliente', icon: UserPlus,        to: '/indicar',        roles: ['movv_partner'] },
+      { label: 'Minhas vendas',   icon: Percent,         to: '/partner/vendas', roles: ['movv_partner'] },
+      { label: 'Universidade',    icon: GraduationCap,   to: '/universidade',   roles: ['movv_partner'] },
+      { label: 'Meu perfil',      icon: UserRound,       to: '/partner/perfil', roles: ['movv_partner'] },
     ],
   },
   {

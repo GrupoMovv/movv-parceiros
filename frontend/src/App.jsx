@@ -139,8 +139,9 @@ import UniversidadeModulo from './pages/universidade/UniversidadeModulo';
 import UniversidadeQuiz from './pages/universidade/UniversidadeQuiz';
 import UniversidadeCertificado from './pages/universidade/UniversidadeCertificado';
 import PartnerPerfil from './pages/universidade/PartnerPerfil';
-import PartnerComissoes from './pages/universidade/PartnerComissoes';
-import PartnerIndicacoes from './pages/universidade/PartnerIndicacoes';
+import PartnerInicio from './pages/universidade/PartnerInicio';
+import PartnerVendas from './pages/universidade/PartnerVendas';
+import PartnerIndicar from './pages/universidade/PartnerIndicar';
 import AdminUniversidade from './pages/admin/Universidade/AdminUniversidade';
 import AdminUniversidadeConteudo from './pages/admin/Universidade/AdminUniversidadeConteudo';
 import TrocarSenhaObrigatorio from './pages/TrocarSenhaObrigatorio';
@@ -256,6 +257,13 @@ function RequireMovvPartner({ children }) {
   return children;
 }
 
+// "Indicar cliente": o MOVV Partner tem a tela simples dele; as outras
+// contas continuam com a tela de sempre.
+function IndicarPorTipo() {
+  const { user } = useAuth();
+  return user?.type === 'movv_partner' ? <PartnerIndicar /> : <NewReferral />;
+}
+
 function RequireAdminUniversidade({ children }) {
   const { user } = useAuth();
   if (!user?.is_admin && !(user?.type === 'internal' && user?.role === 'comercial_full')) return <Navigate to="/" replace />;
@@ -275,7 +283,9 @@ function HomeRedirect() {
   const { user } = useAuth();
   if (ehEquipe(user)) return <Navigate to="/admin" replace />;
   if (user?.type === 'indicator') return <Navigate to="/indicador/dashboard" replace />;
-  if (user?.type === 'movv_partner') return <Navigate to="/universidade" replace />;
+  // Início do Partner; com a trava ligada e sem certificado, o Início manda
+  // para a Universidade (como antes)
+  if (user?.type === 'movv_partner') return <Navigate to="/partner/inicio" replace />;
   if (user?.type === 'internal') {
     if (user?.role === 'manager_azul')       return <Navigate to="/minhas-comissoes" replace />;
     if (user?.role === 'comercial_full')     return <Navigate to="/direta/dashboard" replace />;
@@ -400,7 +410,7 @@ export default function App() {
           <Route index element={<HomeRedirect />} />
           <Route path="extrato"              element={<Statement />} />
           <Route path="meus-funcionarios"   element={<RequireAccounting><MyEmployees /></RequireAccounting>} />
-          <Route path="indicar"              element={<NewReferral />} />
+          <Route path="indicar"              element={<IndicarPorTipo />} />
           <Route path="material-apoio"       element={<MaterialApoio />} />
           <Route path="direta-certificacao"  element={<RequireAccounting><DiretaCertificacao /></RequireAccounting>} />
           <Route path="movv-office"          element={<MovvOffice />} />
@@ -455,8 +465,11 @@ export default function App() {
           <Route path="universidade/modulo/:numero/quiz" element={<RequireMovvPartner><UniversidadeQuiz /></RequireMovvPartner>} />
           <Route path="universidade/certificado"        element={<RequireMovvPartner><UniversidadeCertificado /></RequireMovvPartner>} />
           <Route path="partner/perfil"                  element={<RequireMovvPartner><PartnerPerfil /></RequireMovvPartner>} />
-          <Route path="partner/comissoes"               element={<RequireMovvPartner><PartnerComissoes /></RequireMovvPartner>} />
-          <Route path="partner/indicacoes"              element={<RequireMovvPartner><PartnerIndicacoes /></RequireMovvPartner>} />
+          <Route path="partner/inicio"                  element={<RequireMovvPartner><PartnerInicio /></RequireMovvPartner>} />
+          <Route path="partner/vendas"                  element={<RequireMovvPartner><PartnerVendas /></RequireMovvPartner>} />
+          {/* links antigos (já enviados) continuam funcionando */}
+          <Route path="partner/comissoes"               element={<Navigate to="/partner/vendas" replace />} />
+          <Route path="partner/indicacoes"              element={<Navigate to="/partner/vendas" replace />} />
           <Route path="admin/universidade"              element={<RequireAdminUniversidade><AdminUniversidade /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/conteudo"     element={<RequireAdminUniversidade><AdminUniversidadeConteudo /></RequireAdminUniversidade>} />
           {/* "Ver como Partner": mesmas telas, só leitura */}
@@ -464,6 +477,8 @@ export default function App() {
           <Route path="admin/universidade/ver-como-partner/modulo/:numero"      element={<RequireAdminUniversidade><UniversidadeModulo previa /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/ver-como-partner/modulo/:numero/quiz" element={<RequireAdminUniversidade><UniversidadeQuiz previa /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/ver-como-partner/certificado"         element={<RequireAdminUniversidade><UniversidadeCertificado previa /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/ver-como-partner/inicio"              element={<RequireAdminUniversidade><PartnerInicio previa /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/ver-como-partner/vendas"              element={<RequireAdminUniversidade><PartnerVendas previa /></RequireAdminUniversidade>} />
           {/* Rotas do Indicador */}
           <Route path="indicador/dashboard"          element={<RequireIndicator><IndicadorDashboard /></RequireIndicator>} />
           <Route path="indicador/indicar"            element={<RequireIndicator><IndicadorIndicar /></RequireIndicator>} />
