@@ -43,6 +43,7 @@ export default function PartnerInicio({ previa = false }) {
         <div className="card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">A receber</p>
           <p className="mt-1 text-xl sm:text-3xl font-bold text-movv-900 tabular-nums break-words">{reais(dados.resumo.a_receber)}</p>
+          {dados.proximo_pagamento && <p className="mt-1 text-xs text-slate-500">Próximo pagamento: até {ddmm(dados.proximo_pagamento)}</p>}
         </div>
         <div className="card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pago no mês</p>
@@ -74,6 +75,9 @@ export default function PartnerInicio({ previa = false }) {
     </div>
   );
 }
+
+// "2026-11-09" -> "09/11"
+const ddmm = d => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 // "Continue de onde parou" ou, com tudo concluído, o selo da certificação
 function CartaoUniversidade({ u, base }) {

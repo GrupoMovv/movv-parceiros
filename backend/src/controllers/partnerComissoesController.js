@@ -146,6 +146,7 @@ module.exports = {
 
 // ─── Portal do Partner: Início e Minhas vendas (só leitura) ─────────────────
 const portal = require('../services/partnerPortal');
+const { dataLimitePagamento } = require('../services/calendarioPagamento');
 
 async function inicio(req, res) {
   try {
@@ -177,6 +178,7 @@ async function previa(req, res) {
       previa: true, nivel, nome: req.user.name,
       comissao: portal.comissaoVigente(regras),
       resumo: { a_receber: '0.00', pago_mes: '0.00', mes: portal.mesAtual() },
+      proximo_pagamento: dataLimitePagamento(portal.mesAtual()),
       ultimas: [], vendas: [], total_vendas: 0,
     });
   } catch (err) {

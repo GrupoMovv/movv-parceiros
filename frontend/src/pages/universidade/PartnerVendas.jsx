@@ -144,6 +144,7 @@ export default function PartnerVendas({ previa = false }) {
       <div>
         <h1 className="text-xl font-display font-semibold text-slate-900">Minhas vendas</h1>
         <LinhaComissao comissao={dados.comissao} className="mt-1" />
+        <p className="text-xs text-slate-500 mt-0.5">O mês fecha no último dia; você recebe até o 5º dia útil do mês seguinte.</p>
       </div>
 
       {dados.vendas.length === 0 ? (

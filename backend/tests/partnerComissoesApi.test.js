@@ -263,6 +263,7 @@ test('Início e Minhas vendas: só do Partner logado; prévia do admin sem dado 
   assert.equal(ini.status, 200, JSON.stringify(ini.body));
   assert.ok(Array.isArray(ini.body.comissao) && ini.body.comissao.length >= 1);
   assert.ok('a_receber' in ini.body.resumo && 'pago_mes' in ini.body.resumo);
+  assert.match(ini.body.proximo_pagamento, /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/);
   assert.ok(ini.body.ultimas.length <= 3);
 
   const va = await chamar('GET', '/api/partner-comissoes/vendas', t.a);

@@ -6,6 +6,7 @@
 const { paraCentavos, formatarCentavos } = require('./dinheiro');
 const pc = require('./partnerComissoes');
 const { mascararCpf } = require('../utils/validators');
+const { dataLimitePagamento } = require('./calendarioPagamento');
 
 const ORIGEM_ROTULO = { azul: 'Azul', certificado: 'Certificado', seguro: 'Seguros', federal_invest: 'Federal Invest', seguro_auto: 'Seguro de carro' };
 
@@ -132,6 +133,8 @@ async function inicioDoPartner(db, partnerId, mes = mesAtual()) {
   return {
     comissao: comissaoVigente(regras),
     resumo: resumoDosLancamentos(lancs, mes),
+    // só informativo: 5º dia útil do mês seguinte ao mês corrente
+    proximo_pagamento: dataLimitePagamento(mes),
     ultimas: vendas.slice(0, 3),
     total_vendas: vendas.length,
   };

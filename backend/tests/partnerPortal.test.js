@@ -100,6 +100,7 @@ test('vendas: indicação some quando já há comissão do mesmo contrato; Certi
 
   const ini = await portal.inicioDoPartner(db, partner, '2026-10');
   assert.equal(ini.resumo.a_receber, '30.00');
+  assert.equal(ini.proximo_pagamento, '2026-11-09', 'outubro/2026 -> até 09/11 (só informativo)');
   assert.equal(ini.ultimas.length, 3);
   assert.deepEqual(ini.comissao.map(c => `${c.rotulo} ${c.texto}`), ['Azul 30%', 'Certificado 20%', 'Seguros 20%']);
 });
