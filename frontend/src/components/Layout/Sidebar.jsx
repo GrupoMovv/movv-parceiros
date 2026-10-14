@@ -300,7 +300,10 @@ export default function Sidebar({ onClose }) {
         {/* Perfil financeiro e MOVV Partner: o menu mostra só o que a conta abre —
             nem o nome das outras telas aparece (as outras contas veem com cadeado). */}
         {(ehFinanceiro(user) || user?.type === 'movv_partner'
-          ? MASTER_MENU.map(s => ({ ...s, items: s.items.filter(i => canAccess(i, userRoles)) })).filter(s => s.items.length)
+          ? MASTER_MENU
+              // MOVV Partner: sem a seção "Recursos" no menu (as telas continuam existindo)
+              .filter(s => !(user?.type === 'movv_partner' && s.section === 'Recursos'))
+              .map(s => ({ ...s, items: s.items.filter(i => canAccess(i, userRoles)) })).filter(s => s.items.length)
           : MASTER_MENU.filter(s => s.section !== 'MOVV Partner') // seção só do Partner, sem cadeados para os outros
         ).map(({ section, items }) => (
           <div key={section}>

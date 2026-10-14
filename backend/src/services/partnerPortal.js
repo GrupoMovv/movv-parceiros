@@ -20,7 +20,7 @@ const ddmm = data => {
 function situacaoDaVenda(v) {
   if (v.tipo === 'lancamento') {
     switch (v.status) {
-      case 'previsto':
+      case 'previsto':   return { situacao: 'Comissão prevista', grupo: 'a_receber' };
       case 'confirmado': return { situacao: 'Comissão confirmada', grupo: 'a_receber' };
       case 'aprovado':   return { situacao: 'Aprovada, a pagar', grupo: 'a_receber' };
       case 'pago':       return { situacao: v.pago_em ? `Paga em ${ddmm(v.pago_em)}` : 'Paga', grupo: 'paga' };

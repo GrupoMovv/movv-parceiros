@@ -13,6 +13,7 @@ import { AvisoPrevia } from './UniversidadeHome';
 const COR = {
   'Indicado': 'bg-slate-100 text-slate-600',
   'Em análise': 'bg-amber-100 text-amber-800',
+  'Comissão prevista': 'bg-sky-50 text-sky-800',
   'Comissão confirmada': 'bg-blue-100 text-movv-900',
   'Aprovada, a pagar': 'bg-indigo-100 text-indigo-800',
   'Cancelada': 'bg-red-50 text-red-600',

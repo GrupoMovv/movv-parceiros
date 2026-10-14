@@ -13,7 +13,7 @@ test('situação em palavras simples, sem jargão', () => {
   assert.deepEqual(s({ tipo: 'indicacao', status: 'expired', numero_contrato: null }), { situacao: 'Indicado', grupo: 'outras' });
   assert.deepEqual(s({ tipo: 'indicacao', status: 'pending', numero_contrato: '123456' }), { situacao: 'Em análise', grupo: 'outras' });
   assert.deepEqual(s({ tipo: 'indicacao', status: 'cancelled', numero_contrato: null }), { situacao: 'Cancelada', grupo: 'outras' });
-  assert.deepEqual(s({ tipo: 'lancamento', status: 'previsto' }), { situacao: 'Comissão confirmada', grupo: 'a_receber' });
+  assert.deepEqual(s({ tipo: 'lancamento', status: 'previsto' }), { situacao: 'Comissão prevista', grupo: 'a_receber' });
   assert.deepEqual(s({ tipo: 'lancamento', status: 'confirmado' }), { situacao: 'Comissão confirmada', grupo: 'a_receber' });
   assert.deepEqual(s({ tipo: 'lancamento', status: 'aprovado' }), { situacao: 'Aprovada, a pagar', grupo: 'a_receber' });
   assert.deepEqual(s({ tipo: 'lancamento', status: 'pago', pago_em: '2026-10-07' }), { situacao: 'Paga em 07/10', grupo: 'paga' });
