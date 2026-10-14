@@ -13,6 +13,7 @@ export const STATUS_LANC = {
 export const ORIGEM = {
   azul: 'Azul',
   certificado: 'Movv Certificado',
+  seguro: 'Seguros',
   federal_invest: 'Federal Invest',
   seguro_auto: 'Seguro de carro',
 };

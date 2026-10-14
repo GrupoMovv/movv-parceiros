@@ -101,7 +101,7 @@ test('vendas: indicação some quando já há comissão do mesmo contrato; Certi
   const ini = await portal.inicioDoPartner(db, partner, '2026-10');
   assert.equal(ini.resumo.a_receber, '30.00');
   assert.equal(ini.ultimas.length, 3);
-  assert.deepEqual(ini.comissao.map(c => c.texto), ['30%', '20%']);
+  assert.deepEqual(ini.comissao.map(c => `${c.rotulo} ${c.texto}`), ['Azul 30%', 'Certificado 20%', 'Seguros 20%']);
 });
 
 test('sugestão de Partner na venda do Certificado: por CPF ou nome, só indicação de Certificado em aberto', async () => {

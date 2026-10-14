@@ -278,7 +278,7 @@ function ModalEstornar({ agindo, onFechar, onConfirmar }) {
 }
 
 function ModalManual({ partners, onFechar, onSalvo }) {
-  const [f, setF] = useState({ partner_id: '', origem: 'azul', produto: '', competencia: hoje().slice(0, 7), base_valor: '', numero_contrato: '', cliente_nome: '', status_inicial: 'confirmado', observacao: '' });
+  const [f, setF] = useState({ partner_id: '', origem: 'azul', produto: '', competencia: hoje().slice(0, 7), base_valor: '', numero_contrato: '', cliente_nome: '', status_inicial: 'confirmado', observacao: '', data_referencia: '' });
   const [salvando, setSalvando] = useState(false);
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   async function salvar() {
@@ -297,7 +297,7 @@ function ModalManual({ partners, onFechar, onSalvo }) {
   const ativos = partners.filter(p => p.is_active);
   return (
     <Modal titulo="Lançamento manual" onFechar={onFechar}>
-      <p className="text-sm text-slate-600">Para casos fora da importação da Azul. O percentual vem da regra vigente do nível do Partner no 1º dia da competência.</p>
+      <p className="text-sm text-slate-600">Para casos fora da importação da Azul. O percentual vem da regra vigente do nível do Partner na data de referência (sem ela, o último dia da competência, sem passar de hoje) e fica gravado no lançamento.</p>
       <div><label className="label">Partner</label>
         <select className="input" value={f.partner_id} onChange={e => set('partner_id', e.target.value)}>
           <option value="">Escolha…</option>
@@ -307,10 +307,15 @@ function ModalManual({ partners, onFechar, onSalvo }) {
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">Origem</label>
           <select className="input" value={f.origem} onChange={e => set('origem', e.target.value)}>
-            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option>
+            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option><option value="seguro">Seguros</option>
           </select>
         </div>
         <div><label className="label">Competência</label><input type="month" className="input" value={f.competencia} onChange={e => set('competencia', e.target.value)} /></div>
+      </div>
+      <div><label className="label">Data de referência (opcional)</label>
+        <input type="date" className="input" value={f.data_referencia} onChange={e => set('data_referencia', e.target.value)}
+          min={`${f.competencia}-01`} max={`${f.competencia}-31`} />
+        <p className="text-xs text-slate-500 mt-1">Dia da venda ou do recebimento; decide qual regra vale.</p>
       </div>
       <div><label className="label">Produto</label><input className="input" value={f.produto} onChange={e => set('produto', e.target.value)} /></div>
       <div className="grid grid-cols-2 gap-3">
@@ -336,7 +341,7 @@ function ModalManual({ partners, onFechar, onSalvo }) {
 
 // ─── Regras ─────────────────────────────────────────────────────────────────
 
-const BASES_POR_ORIGEM = { azul: ['comissao_recebida'], certificado: ['lucro_grupo', 'valor_venda'] };
+const BASES_POR_ORIGEM = { azul: ['comissao_recebida'], certificado: ['lucro_grupo', 'valor_venda'], seguro: ['comissao_recebida'] };
 
 function Regras() {
   const { user } = useAuth();
@@ -417,7 +422,7 @@ function ModalRegra({ regra, onFechar, onSalvo }) {
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">Origem</label>
           <select className="input" value={f.origem} onChange={e => set('origem', e.target.value)}>
-            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option>
+            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option><option value="seguro">Seguros</option>
           </select>
         </div>
         <div><label className="label">Nível</label>

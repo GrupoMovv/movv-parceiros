@@ -16,13 +16,15 @@ const {
   paraCentavos, paraPct4, valorPartnerCentavos, formatarCentavos, formatarPct4,
 } = require('./dinheiro');
 
-const ORIGENS = ['azul', 'certificado', 'federal_invest', 'seguro_auto'];
-// Origens com código nesta entrega (Federal Invest e seguro de carro: só o modelo)
-const ORIGENS_ATIVAS = ['azul', 'certificado'];
+const ORIGENS = ['azul', 'certificado', 'seguro', 'federal_invest', 'seguro_auto'];
+// Origens em uso (seguro desde 14/10/2026, migration 095; Federal Invest e
+// seguro_auto: só o modelo)
+const ORIGENS_ATIVAS = ['azul', 'certificado', 'seguro'];
 const NIVEIS = ['mobile', 'point', 'hub', 'regional'];
 const BASES_POR_ORIGEM = {
   azul: ['comissao_recebida'],
   certificado: ['valor_venda', 'lucro_grupo'],
+  seguro: ['comissao_recebida'],
   federal_invest: ['comissao_recebida'],
   seguro_auto: ['comissao_recebida'],
 };
@@ -184,8 +186,25 @@ async function partnerDoLivro(cx, partnerId) {
   return { partner: p };
 }
 
-// Lançamento manual do admin (casos fora da Azul automática). Mesma regra
-// de percentual: a regra vigente no primeiro dia da competência.
+// Data em que se procura a regra vigente de um lançamento manual: a que o
+// admin informar (dentro da competência) ou, sem ela, o último dia da
+// competência, sem passar de hoje (fuso de Brasília). Antes era o 1º dia
+// do mês, o que deixava sem regra o mês em que uma regra começa (ex.:
+// seguro, desde 14/10/2026).
+function dataDeReferenciaManual(competencia, informada, hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })) {
+  if (informada) {
+    if (!dataValida(informada) || informada.slice(0, 7) !== competencia) {
+      throw new ErroComissao('A data de referência precisa ser um dia da competência.');
+    }
+    return informada;
+  }
+  const [a, m] = competencia.split('-').map(Number);
+  const ultimo = new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
+  return ultimo < hoje ? ultimo : (hoje.slice(0, 7) === competencia ? hoje : ultimo);
+}
+
+// Lançamento manual do admin (casos fora da Azul automática, como o
+// seguro). Mesma regra de percentual, copiado para o lançamento.
 async function criarManual(cx, dados, quem) {
   if (!ORIGENS_ATIVAS.includes(dados.origem)) throw new ErroComissao('Origem não disponível para lançamento manual.');
   const { partner, erro } = await partnerDoLivro(cx, dados.partner_id);
@@ -195,8 +214,9 @@ async function criarManual(cx, dados, quem) {
   if (!produto) throw new ErroComissao('Produto é obrigatório.');
   if (!textoOuNull(dados.observacao)) throw new ErroComissao('Explique na observação por que o lançamento é manual.');
 
-  const regra = await regraVigente(cx, { origem: dados.origem, produto, nivel: partner.nivel_partner, data: `${dados.competencia}-01` });
-  if (!regra) throw new ErroComissao(`Sem regra vigente para ${dados.origem} / nível ${partner.nivel_partner} em ${dados.competencia}. Cadastre a regra antes.`);
+  const data = dataDeReferenciaManual(dados.competencia, textoOuNull(dados.data_referencia));
+  const regra = await regraVigente(cx, { origem: dados.origem, produto, nivel: partner.nivel_partner, data });
+  if (!regra) throw new ErroComissao(`Sem regra vigente para ${dados.origem} / nível ${partner.nivel_partner} em ${data}. Cadastre a regra antes.`);
 
   const { lancamento } = await criarLancamento(cx, {
     partner_id: partner.id, origem: dados.origem, produto,
@@ -495,7 +515,7 @@ async function listarPartners(cx) {
 module.exports = {
   ORIGENS, ORIGENS_ATIVAS, NIVEIS, BASES_POR_ORIGEM, STATUS, ACOES, ErroComissao,
   regraVigente, salvarRegra, listarRegras,
-  criarLancamento, criarManual, mudarStatus,
+  criarLancamento, criarManual, mudarStatus, dataDeReferenciaManual,
   lancarCertificado, aoEditarVendaCertificado, aoCancelarVendaCertificado, tentarAvisoDeNovo, registrarAviso,
   produtoDaVendaCertificado, chaveCertificado,
   listarDoPartner, tabelaDoPartner, listarAdmin, listarAvisos, listarPartners,

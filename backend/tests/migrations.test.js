@@ -30,7 +30,7 @@ after(async () => { await db.fechar(); });
 test('todas as migrations (001 em diante) rodam uma 2ª e uma 3ª vez sem erro e sem duplicar', async () => {
   assert.ok(TODAS.includes('093_livro_comissoes_partner.sql'));
   const antes = await regras();
-  assert.equal(antes.length, 8, '4 níveis × (Azul 30% + Certificado 20%)');
+  assert.equal(antes.length, 12, '4 níveis × (Azul 30% + Certificado 20% + Seguros 20%)');
   const contAntes = await contagens();
 
   await rodarDeNovo();
@@ -65,4 +65,32 @@ test('094: um único "Movv Certificado" (digital_certificate, sem repasse); roda
   await db.query(`INSERT INTO products (name, type) VALUES ('Certificado do admin', 'digital_certificate')`);
   await db.exec(fs.readFileSync(path.join(DIR_MIGRATIONS, '094_produto_movv_certificado.sql'), 'utf8'));
   assert.deepEqual((await cert()).map(x => x.name), ['Certificado do admin']);
+});
+
+test('095: origem "seguro" aceita, regra de 20% nos 4 níveis, sem restrição duplicada; importação da Azul intacta', async () => {
+  const seguro = async () => (await db.query(
+    `SELECT nivel_partner, base, percentual, vigente_desde, produto FROM partner_comissao_regras WHERE origem = 'seguro' ORDER BY nivel_partner`)).rows;
+  const esperado = ['hub', 'mobile', 'point', 'regional'].map(n => ({
+    nivel_partner: n, base: 'comissao_recebida', percentual: '20.0000', vigente_desde: '2026-10-14', produto: null,
+  }));
+  assert.deepEqual(await seguro(), esperado);
+  await rodarDeNovo();
+  assert.deepEqual(await seguro(), esperado, 'rodar de novo não duplica');
+
+  const checks = async tabela => (await db.query(
+    `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+     WHERE contype = 'c' AND conrelid = $1::regclass AND pg_get_constraintdef(oid) LIKE '%(origem)::text = ANY%'`, [tabela])).rows;
+  for (const t of ['partner_comissao_regras', 'partner_comissoes']) {
+    const c = await checks(t);
+    assert.equal(c.length, 1, `${t}: uma restrição de origem só`);
+    assert.match(c[0].def, /'seguro'/);
+  }
+  const imp = await checks('comissao_importacoes');
+  assert.equal(imp.length, 1);
+  assert.doesNotMatch(imp[0].def, /'seguro'::/, 'a importação continua sem seguro (só Azul e as futuras)');
+
+  // seguro sempre sobre a comissão recebida
+  await assert.rejects(db.query(
+    `INSERT INTO partner_comissao_regras (origem, nivel_partner, base, percentual, vigente_desde, criado_por)
+     VALUES ('seguro', 'hub', 'valor_venda', 20, '2027-01-01', 't')`), /pcr_seguro_base/);
 });

@@ -7,7 +7,7 @@ const { paraCentavos, formatarCentavos } = require('./dinheiro');
 const pc = require('./partnerComissoes');
 const { mascararCpf } = require('../utils/validators');
 
-const ORIGEM_ROTULO = { azul: 'Azul', certificado: 'Certificado', federal_invest: 'Federal Invest', seguro_auto: 'Seguro de carro' };
+const ORIGEM_ROTULO = { azul: 'Azul', certificado: 'Certificado', seguro: 'Seguros', federal_invest: 'Federal Invest', seguro_auto: 'Seguro de carro' };
 
 const ddmm = data => {
   const s = String(data || '').slice(0, 10);

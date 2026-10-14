@@ -341,3 +341,55 @@ test('Certificado: lucro zero ou negativo não gera lançamento e vira aviso', a
     assert.equal((await db.query('SELECT count(*)::int AS n FROM partner_comissoes WHERE direta_sale_id = $1', [v.id])).rows[0].n, 0);
   }
 });
+
+// ─── Seguros: 20% da comissão recebida (migration 095) ──────────────────────
+
+test('data de referência do lançamento manual: informada, ou último dia da competência sem passar de hoje', () => {
+  const f = pc.dataDeReferenciaManual;
+  assert.equal(f('2026-10', null, '2026-10-14'), '2026-10-14');
+  assert.equal(f('2026-09', null, '2026-10-14'), '2026-09-30');
+  assert.equal(f('2026-02', null, '2026-10-14'), '2026-02-28');
+  assert.equal(f('2026-12', null, '2026-10-14'), '2026-12-31');
+  assert.equal(f('2026-10', '2026-10-20', '2026-10-14'), '2026-10-20');
+  assert.throws(() => f('2026-10', '2026-11-02'), /dia da competência/);
+});
+
+test('lançamento manual de seguro: 20% da regra, arredondado por linha, percentual gravado', async () => {
+  const l1 = await pc.criarManual(db, {
+    partner_id: partnerB.id, origem: 'seguro', produto: 'Seguro auto', competencia: '2026-10', data_referencia: '2026-10-20',
+    base_valor: '123.47', cliente_nome: 'Cliente Seguro', observacao: 'comissão de seguro recebida da seguradora',
+  }, 'Admin Teste');
+  assert.equal(l1.origem, 'seguro');
+  assert.equal(l1.base_valor, '123.47');
+  assert.equal(l1.percentual, '20.0000');
+  assert.equal(l1.valor_partner, '24.69');                 // 24,694
+  const regra = (await db.query('SELECT origem, base FROM partner_comissao_regras WHERE id = $1', [l1.regra_id])).rows[0];
+  assert.deepEqual(regra, { origem: 'seguro', base: 'comissao_recebida' });
+
+  const l2 = await pc.criarManual(db, {
+    partner_id: partnerB.id, origem: 'seguro', produto: 'Seguro residencial', competencia: '2026-10', data_referencia: '2026-10-21',
+    base_valor: '123.48', observacao: 'seguro residencial',
+  }, 'Admin Teste');
+  assert.equal(l2.valor_partner, '24.70');                 // 24,696 -> sobe
+
+  // mudar a regra depois não mexe no que já foi lançado
+  await db.query(`UPDATE partner_comissao_regras SET percentual = 25 WHERE origem = 'seguro' AND nivel_partner = 'hub'`);
+  const depois = (await db.query('SELECT percentual, valor_partner FROM partner_comissoes WHERE id = ANY($1::int[]) ORDER BY id', [[l1.id, l2.id]])).rows;
+  assert.deepEqual(depois, [{ percentual: '20.0000', valor_partner: '24.69' }, { percentual: '20.0000', valor_partner: '24.70' }]);
+  await db.query(`UPDATE partner_comissao_regras SET percentual = 20 WHERE origem = 'seguro' AND nivel_partner = 'hub'`);
+
+  // antes de 14/10/2026 não há regra de seguro
+  await assert.rejects(pc.criarManual(db, {
+    partner_id: partnerB.id, origem: 'seguro', produto: 'Seguro vida', competencia: '2026-10', data_referencia: '2026-10-10',
+    base_valor: '50.00', observacao: 'x',
+  }, 'Admin'), /Sem regra vigente/);
+  // seguro só aceita base "comissão recebida"
+  await assert.rejects(pc.salvarRegra(db, { origem: 'seguro', nivel_partner: 'hub', base: 'valor_venda', percentual: '20', vigente_desde: '2027-01-01' }, 'Admin'), /Base não vale/);
+});
+
+test('tabela vigente do Partner traz Seguros 20% (da regra)', async () => {
+  const t = await pc.tabelaDoPartner(db, partnerB.id);
+  const seguro = t.regras.find(r => r.origem === 'seguro');
+  assert.equal(seguro.percentual, '20.0000');
+  assert.equal(seguro.base, 'comissao_recebida');
+});
