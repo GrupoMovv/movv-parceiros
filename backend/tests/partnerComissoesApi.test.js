@@ -278,3 +278,14 @@ test('Início e Minhas vendas: só do Partner logado; prévia do admin sem dado 
   assert.deepEqual(p.body.vendas, []);
   assert.equal((await chamar('GET', '/api/partner-comissoes/previa', t.a)).status, 403);
 });
+
+test('contabilidade não vê nem indica Certificado; o Partner vê o "Movv Certificado" da migration 094', async () => {
+  const daContab = await chamar('GET', '/api/products', t.contab);
+  assert.ok(daContab.body.every(p => p.type !== 'digital_certificate'));
+  const doPartner = await chamar('GET', '/api/products', t.a);
+  assert.ok(doPartner.body.some(p => p.name === 'Movv Certificado' && p.type === 'digital_certificate'));
+  const cert = (await db.query(`SELECT id FROM products WHERE type = 'digital_certificate' ORDER BY id LIMIT 1`)).rows[0].id;
+  const r = await chamar('POST', '/api/referrals', t.contab, { client_name: 'X', client_whatsapp: '64999990002', product_id: cert });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /Direta Certificação/);
+});

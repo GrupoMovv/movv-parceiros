@@ -84,6 +84,11 @@ async function createReferral(req, res) {
     if (dono.type === 'movv_partner' && ['bpo', 'account'].includes(product.type)) {
       return res.status(400).json({ error: 'Este produto não faz parte das indicações do MOVV Partner' });
     }
+    // Certificado como indicação é só do MOVV Partner; contabilidade e
+    // funcionário vendem pelo módulo Direta Certificação.
+    if (dono.type !== 'movv_partner' && product.type === 'digital_certificate') {
+      return res.status(400).json({ error: 'O Certificado é vendido pelo módulo Direta Certificação, não por indicação' });
+    }
 
     const protocol = await generateProtocol();
     const expiresAt = getExpirationDate();

@@ -8,6 +8,7 @@ const TYPES = [
   { value: 'credit',    label: 'Crédito' },
   { value: 'bpo',       label: 'BPO Financeiro' },
   { value: 'insurance', label: 'Seguro' },
+  { value: 'digital_certificate', label: 'Certificado digital' },
   { value: 'other',     label: 'Outro' },
 ];
 

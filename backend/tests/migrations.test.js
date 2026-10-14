@@ -53,3 +53,16 @@ test('segunda rodada não recria a regra inicial que o admin encerrou ou trocou'
 
   assert.deepEqual(await regras(), antes, 'a migration não pode recolocar 30%/20% por cima do que o admin decidiu');
 });
+
+test('094: um único "Movv Certificado" (digital_certificate, sem repasse); rodar de novo não duplica', async () => {
+  const cert = async () => (await db.query(
+    `SELECT name, type, commission_rate, percentual_repasse, is_active FROM products WHERE type = 'digital_certificate'`)).rows;
+  assert.deepEqual(await cert(), [{ name: 'Movv Certificado', type: 'digital_certificate', commission_rate: '0.0000', percentual_repasse: '0.0000', is_active: true }]);
+  await rodarDeNovo();
+  assert.equal((await cert()).length, 1);
+  // se o admin já tiver cadastrado outro produto de Certificado, a 094 não cria mais um
+  await db.query(`DELETE FROM products WHERE type = 'digital_certificate'`);
+  await db.query(`INSERT INTO products (name, type) VALUES ('Certificado do admin', 'digital_certificate')`);
+  await db.exec(fs.readFileSync(path.join(DIR_MIGRATIONS, '094_produto_movv_certificado.sql'), 'utf8'));
+  assert.deepEqual((await cert()).map(x => x.name), ['Certificado do admin']);
+});

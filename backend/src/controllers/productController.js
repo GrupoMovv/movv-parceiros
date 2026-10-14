@@ -9,8 +9,10 @@ const { veTudo } = require('../config/perfilAdmin');
 // 14/10/2026, Movv Certificado); sem BPO e conta; nunca percentual.
 function colunasDeProduto(user) {
   if (veTudo(user)) return { colunas: '*', filtro: '' };
+  // Contabilidade e funcionário: sem Certificado (elas vendem pelo módulo
+  // Direta Certificação; aqui ele viraria comissão do modelo antigo)
   if (user?.type === 'accounting' || user?.type === 'employee') {
-    return { colunas: 'id, name, type, faixa, percentual_repasse, is_active', filtro: 'WHERE is_active = true' };
+    return { colunas: 'id, name, type, faixa, percentual_repasse, is_active', filtro: "WHERE is_active = true AND type <> 'digital_certificate'" };
   }
   if (user?.type === 'movv_partner') {
     return { colunas: 'id, name, type, faixa, is_active', filtro: "WHERE is_active = true AND type NOT IN ('bpo','account')" };

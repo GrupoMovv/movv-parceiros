@@ -315,3 +315,13 @@ test('indicação de seguro não casa com a Azul: nem contrato, nem CPF, nem amb
   const [semPartner] = await imp.buscarLinhas(db, 'CLIENTE FICTICIO 10');
   await assert.rejects(db.transacao(cx => imp.vincular(cx, semPartner.id, segId, quem)), /não é uma indicação Azul/);
 });
+
+test('indicação de Movv Certificado não casa com a Azul (nem contrato, nem CPF)', async () => {
+  const cert = (await db.query(`SELECT id FROM products WHERE type = 'digital_certificate' LIMIT 1`)).rows[0].id;
+  await db.query(
+    `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at, client_cpf, numero_contrato)
+     VALUES ('CERT-AZ-1', $1, 'Cliente Cert', '64999999999', $2, NOW() + INTERVAL '30 days', '86055556666', '900000600')`, [P.a, cert]);
+  const linha = extra => ({ tipo: 'comissao', produto: 'INSS', dt_pagamento: '2026-09-20', valor_comissao: '10.00', ...extra });
+  assert.equal((await imp.classificar(db, linha({ cliente_cpf: '86055556666' }))).status, 'sem_partner');
+  assert.equal((await imp.classificar(db, linha({ numero_contrato: '900000600' }))).status, 'sem_partner');
+});
