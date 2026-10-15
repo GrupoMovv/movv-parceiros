@@ -22,7 +22,10 @@
 // UPDATE confere que a linha ainda é a que foi lida (senão desfaz tudo).
 const fs = require('fs');
 const path = require('path');
-const { LOTE, ITENS, TROCAS_GERAIS } = require('./textos-universidade/lote-2026-10');
+const crypto = require('crypto');
+const { LOTE, ITENS: ITENS_TEXTOS, TROCAS_GERAIS } = require('./textos-universidade/lote-2026-10');
+const { ITENS: ITENS_QUIZ } = require('./textos-universidade/lote-2026-10-quiz');
+const ITENS = [...ITENS_TEXTOS, ...ITENS_QUIZ];
 
 // ─── Ler (só SELECT) ────────────────────────────────────────────────────────
 
@@ -55,16 +58,23 @@ function trocar(texto, regra) {
   return s;
 }
 
-function aplicarGerais(mod, tabela, texto, usadas) {
+function aplicarGerais(mod, tabela, texto, usadas, alvo) {
   let s = texto;
   for (const g of TROCAS_GERAIS) {
     if (!g.tabelas.includes(tabela) || g.excetoModulos.includes(mod)) continue;
+    if (alvo && (g.excetoTopicos || []).some(e => e.mod === mod && e.aula === alvo.aula && e.top === alvo.top)) continue;
     const novo = trocar(s, g);
     if (novo !== s && usadas) usadas.add(g.id);
     s = novo;
   }
   return s;
 }
+
+// id de alternativa nova: 6 caracteres, fixo por lote + item + posição
+const idOpcao = (item, i) => BigInt(`0x${crypto.createHash('sha256').update(`${LOTE}:${item}:${i}`).digest('hex').slice(0, 12)}`)
+  .toString(36).padStart(6, '0').slice(-6);
+const textosDe = p => (p.alternativas || []).map(a => a.texto);
+const certaDe = p => (p.alternativas || []).find(a => a.id === p.correta)?.texto ?? null;
 
 function planejar(conteudo, itens = ITENS) {
   const clonar = x => JSON.parse(JSON.stringify(x));
@@ -126,10 +136,56 @@ function planejar(conteudo, itens = ITENS) {
       continue;
     }
 
+    if (it.tipo === 'quiz_reescrita' || it.tipo === 'quiz_opcao') {
+      const ondeQ = `M${it.mod} · Pergunta ${it.numero}`;
+      const doModulo = perguntas.filter(x => x.mod === it.mod);
+      const atualG = aplicarGerais(it.mod, 'quiz', it.enunciadoAtual);
+      const porAtual = doModulo.find(x => norm(x.enunciado) === norm(it.enunciadoAtual) || norm(x.enunciado) === norm(atualG));
+      const aviso = x => (x && x.numero !== it.numero ? ` (está como pergunta ${x.numero} no banco)` : '');
+
+      if (it.tipo === 'quiz_opcao') {
+        const x = porAtual;
+        if (!x) { rel(it, 'pulado', 'enunciado atual não encontrado no módulo', ondeQ); continue; }
+        let mudou = false;
+        let faltou = null;
+        const alternativas = x.alternativas.map(a => ({ ...a }));
+        for (const [de, para] of it.trocas) {
+          const final = aplicarGerais(it.mod, 'quiz', para);
+          const alvo = alternativas.find(a => norm(a.texto) === norm(de) || norm(a.texto) === norm(aplicarGerais(it.mod, 'quiz', de)));
+          if (alvo) { if (alvo.texto !== final) { alvo.texto = final; mudou = true; } } else if (!alternativas.some(a => a.texto === final)) faltou = de;
+        }
+        if (faltou) { rel(it, 'pulado', `opção não encontrada: "${faltou}"`, ondeQ); continue; }
+        if (!mudou) { rel(it, 'ja_aplicado', '', ondeQ); continue; }
+        x.alternativas = alternativas;
+        tocar('universidade_quiz_perguntas', x.id, it.id);
+        rel(it, 'aplicar', aviso(x).trim(), ondeQ);
+        continue;
+      }
+
+      const enunciado = aplicarGerais(it.mod, 'quiz', it.novoEnunciado);
+      const opcoes = it.opcoes.map(o => ({ ...o, texto: aplicarGerais(it.mod, 'quiz', o.texto) }));
+      const certa = opcoes.find(o => o.correta).texto;
+      const porNovo = doModulo.find(x => norm(x.enunciado) === norm(enunciado));
+      const x = porAtual || porNovo;
+      if (!x) { rel(it, 'pulado', 'enunciado atual não encontrado no módulo', ondeQ); continue; }
+      const igual = x.enunciado === enunciado && JSON.stringify(textosDe(x)) === JSON.stringify(opcoes.map(o => o.texto))
+        && certaDe(x) === certa && x.explicacao == null;
+      if (igual) { rel(it, 'ja_aplicado', '', ondeQ); continue; }
+      if (!porAtual) { rel(it, 'pulado', 'o enunciado já é o novo, mas as opções são outras (editado depois?)', ondeQ); continue; }
+      x.enunciado = enunciado;
+      x.alternativas = opcoes.map((o, i) => ({ id: idOpcao(it.id, i), texto: o.texto }));
+      x.correta = x.alternativas[opcoes.findIndex(o => o.correta)].id;
+      x.explicacao = null;
+      tocar('universidade_quiz_perguntas', x.id, it.id);
+      rel(it, 'aplicar', aviso(x).trim(), ondeQ);
+      continue;
+    }
+
     // topico e topico_trecho
     const t = topicoDe(it.mod, it.aula, it.top);
     if (!t) { rel(it, 'pulado', 'tópico não encontrado', onde); continue; }
-    const tituloConfere = norm(t.titulo) === norm(it.tituloAtual) || norm(t.titulo) === norm(aplicarGerais(it.mod, 'topicos', it.tituloAtual));
+    const alvoT = { aula: it.aula, top: it.top };
+    const tituloConfere = norm(t.titulo) === norm(it.tituloAtual) || norm(t.titulo) === norm(aplicarGerais(it.mod, 'topicos', it.tituloAtual, null, alvoT));
     let novoTexto;
     let novoTitulo;
     if (it.tipo === 'topico_trecho') {
@@ -167,8 +223,9 @@ function planejar(conteudo, itens = ITENS) {
   for (const t of topicos) {
     const mod = modDaAula.get(t.aula_id);
     const usadas = new Set();
-    const titulo = aplicarGerais(mod, 'topicos', t.titulo, usadas);
-    const texto = aplicarGerais(mod, 'topicos', t.texto, usadas);
+    const alvo = { aula: aulas.find(a => a.id === t.aula_id)?.ordem, top: t.numero };
+    const titulo = aplicarGerais(mod, 'topicos', t.titulo, usadas, alvo);
+    const texto = aplicarGerais(mod, 'topicos', t.texto, usadas, alvo);
     if (titulo !== t.titulo || texto !== t.texto) {
       t.titulo = titulo; t.texto = texto;
       if (t.id) for (const g of usadas) tocar('universidade_topicos', t.id, g);
@@ -206,7 +263,7 @@ function planejar(conteudo, itens = ITENS) {
   const atual = { universidade_topicos: topicos, universidade_aulas: aulas, universidade_modulos: modulos, universidade_quiz_perguntas: perguntas };
   const CAMPOS = {
     universidade_topicos: ['titulo', 'texto'], universidade_aulas: ['titulo'],
-    universidade_modulos: ['titulo', 'descricao'], universidade_quiz_perguntas: ['enunciado', 'alternativas', 'explicacao'],
+    universidade_modulos: ['titulo', 'descricao'], universidade_quiz_perguntas: ['enunciado', 'alternativas', 'correta', 'explicacao'],
   };
   const mudancas = [];
   for (const [k, itensDoRegistro] of tocados) {
@@ -215,7 +272,7 @@ function planejar(conteudo, itens = ITENS) {
     const depois = atual[tabela].find(r => String(r.id) === id);
     const campos = Object.fromEntries(CAMPOS[tabela].map(c => [c, depois[c]]));
     const mudou = CAMPOS[tabela].some(c => JSON.stringify(antes[c]) !== JSON.stringify(depois[c]));
-    if (mudou) mudancas.push({ tabela, id: Number(id), antes, depois: campos, itens: [...itensDoRegistro].sort() });
+    if (mudou) mudancas.push({ tabela, id: Number(id), mod: depois.mod ?? depois.numero ?? null, antes, depois: campos, itens: [...itensDoRegistro].sort() });
   }
   mudancas.sort((a, b) => a.tabela.localeCompare(b.tabela) || a.id - b.id);
   return { mudancas, novos, relatorio, gerais };
@@ -255,9 +312,9 @@ async function executar(cx, plano, { lote = LOTE, quem = 'script aplicarTextosUn
          WHERE id = $1 AND titulo = $4 AND descricao IS NOT DISTINCT FROM $5 RETURNING id`, [m.id, d.titulo, d.descricao, a.titulo, a.descricao]);
     } else {
       r = await cx.query(
-        `UPDATE universidade_quiz_perguntas SET enunciado = $2, alternativas = $3::jsonb, explicacao = $4
-         WHERE id = $1 AND enunciado = $5 AND alternativas = $6::jsonb AND explicacao IS NOT DISTINCT FROM $7 RETURNING id`,
-        [m.id, d.enunciado, JSON.stringify(d.alternativas), d.explicacao, a.enunciado, JSON.stringify(a.alternativas), a.explicacao]);
+        `UPDATE universidade_quiz_perguntas SET enunciado = $2, alternativas = $3::jsonb, explicacao = $4, correta = $8
+         WHERE id = $1 AND enunciado = $5 AND alternativas = $6::jsonb AND explicacao IS NOT DISTINCT FROM $7 AND correta = $9 RETURNING id`,
+        [m.id, d.enunciado, JSON.stringify(d.alternativas), d.explicacao, a.enunciado, JSON.stringify(a.alternativas), a.explicacao, d.correta, a.correta]);
     }
     conferir(r, m);
     await registrar(m.tabela, m.id, { itens: m.itens });
@@ -294,8 +351,8 @@ async function desfazer(cx, { lote = LOTE, quem = 'script aplicarTextosUniversid
       await cx.query(`UPDATE universidade_modulos SET titulo = $2, descricao = $3, atualizado_em = NOW() WHERE id = $1`, [x.registro_id, d.titulo, d.descricao]);
       restaurados++;
     } else {
-      await cx.query(`UPDATE universidade_quiz_perguntas SET enunciado = $2, alternativas = $3::jsonb, explicacao = $4 WHERE id = $1`,
-        [x.registro_id, d.enunciado, JSON.stringify(d.alternativas), d.explicacao]);
+      await cx.query(`UPDATE universidade_quiz_perguntas SET enunciado = $2, alternativas = $3::jsonb, explicacao = $4, correta = $5 WHERE id = $1`,
+        [x.registro_id, d.enunciado, JSON.stringify(d.alternativas), d.explicacao, d.correta]);
       restaurados++;
     }
     await cx.query(
@@ -323,8 +380,16 @@ function textoDoRelatorio(plano, titulo) {
   return `${linhas.join('\n')}\n`;
 }
 
+function quizLegivel(x) {
+  const ops = (x.alternativas || []).map(a => `  ${a.id === x.correta ? '(CERTA) ' : '        '}${a.texto}`).join('\n');
+  return `Enunciado: ${x.enunciado}\n${ops}\nExplicação: ${x.explicacao ?? '—'}`;
+}
+
 function textoAntesDepois(plano) {
   const blocos = plano.mudancas.map(m => {
+    if (m.tabela === 'universidade_quiz_perguntas') {
+      return `=== quiz M${m.mod ?? ''} pergunta ${m.antes.numero} (#${m.id}) — ${m.itens.join(', ')}\nANTES:\n${quizLegivel(m.antes)}\nDEPOIS:\n${quizLegivel(m.depois)}\n`;
+    }
     const campos = Object.keys(m.depois);
     const partes = campos.map(c => {
       const antes = typeof m.antes[c] === 'object' ? JSON.stringify(m.antes[c], null, 1) : m.antes[c];
@@ -466,4 +531,4 @@ if (require.main === module) {
   main().catch(err => { console.error('Erro:', err.message); process.exitCode = 1; });
 }
 
-module.exports = { carregarConteudo, planejar, executar, desfazer, trocar, textoDoRelatorio, copiarParaMemoria };
+module.exports = { carregarConteudo, planejar, executar, desfazer, trocar, textoDoRelatorio, textoAntesDepoisPublico: textoAntesDepois, copiarParaMemoria };

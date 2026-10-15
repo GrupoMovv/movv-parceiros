@@ -108,9 +108,8 @@ const ITENS = [
   { id: 'T19', tipo: 'topico_novo', mod: 5, aula: 3,
     novoTitulo: 'Comissão.',
     novoTexto: 'Neste momento, MOVV Benefícios ainda não tem comissão habilitada para o Partner. A indicação é feita junto à Central, e a regra de comissão será divulgada no portal quando estiver disponível.' },
-  { id: 'T20', tipo: 'topico_trecho', mod: 5, aula: 4, top: 7,
-    tituloAtual: 'O que deve ser tratado pelo especialista.',
-    trocas: [['valores de prêmio e franquia', 'valores de prêmio, franquia do seguro e condições']] },
+  // T20 retirado (15/10/2026): o texto real já diz "condições contratuais,
+  // valores de prêmio e franquia" — a troca duplicaria "condições".
   { id: 'T21', tipo: 'topico_novo', mod: 5, aula: 4,
     novoTitulo: 'Comissão.',
     novoTexto: 'A comissão de Seguros é uma fatia da comissão que o Grupo Movv efetivamente recebe pelo seguro, conforme a sua comissão vigente no portal. A equipe registra o valor no portal depois que o Grupo recebe, e ele aparece em Minhas vendas.' },
@@ -185,10 +184,28 @@ const ITENS = [
   ...emBreve('Partner Regional', ['Construção de carteira regional.', 'Parcerias estratégicas.', 'Possibilidades conforme regras do programa.'])
     .map((x, i) => ({ id: `T41.${i + 1}`, tipo: 'topico', mod: 10, aula: 4, top: i + 1, ...x })),
 
+  { id: 'T47', tipo: 'topico', mod: 10, aula: 5, top: 3,
+    tituloAtual: 'Retenção.',
+    novoTexto: 'A taxa de retenção de clientes indica a qualidade do relacionamento construído pelo Partner ao longo da jornada e a chance de novas indicações e renovações.' },
+
   // ── Módulo 11 ─────────────────────────────────────────────────────────────
   { id: 'T42', tipo: 'topico', mod: 11, aula: 1, top: 10,
     tituloAtual: 'Crescimento.',
     novoTexto: 'A conclusão do Módulo 10 confirma que o Partner compreende como funcionam os níveis do programa e que, por enquanto, o nível ativo é o Mobile.' },
+
+  // ── Complemento (15/10/2026) ──────────────────────────────────────────────
+  { id: 'T48', tipo: 'topico', mod: 6, aula: 4, top: 6,
+    tituloAtual: 'Clientes ativos.',
+    novoTexto: 'O número de clientes ativos é um indicador direto da saúde da carteira construída pelo Partner ao longo do tempo, pois clientes satisfeitos geram novas indicações e renovações.' },
+  { id: 'T49', tipo: 'topico', mod: 0, aula: 4, top: 4,
+    tituloAtual: 'Senha segura e proteção de acesso.',
+    novoTexto: 'A senha de acesso ao portal protege dados sensíveis de clientes, como CPF, CNPJ e informações financeiras. Recomenda-se uma senha própria, não compartilhada com outros aplicativos, e a troca periódica quando houver qualquer suspeita de acesso indevido.' },
+
+  // Segurados (NÃO aplicar agora): ficam listados como "adiado"
+  { id: 'T50', tipo: 'adiado', mod: 11, aula: 1, top: 7, motivo: 'só junto com a publicação do novo Módulo 7 (o R1 também não mexe neste tópico)' },
+  { id: 'T51.2', tipo: 'adiado', mod: 11, aula: 2, top: 2, motivo: '"Prova final." — texto novo a ser escrito pelo Junior' },
+  { id: 'T51.3', tipo: 'adiado', mod: 11, aula: 2, top: 3, motivo: '"Casos práticos." — texto novo a ser escrito pelo Junior' },
+  { id: 'T52', tipo: 'adiado', mod: 0, aula: 1, top: 4, motivo: 'junto com o T45, depois da decisão sobre nota/RPA e coleta de PIX/CPF/CNPJ' },
 ];
 
 // Trocas gerais, aplicadas DEPOIS dos itens (inclusive sobre os textos novos)
@@ -198,6 +215,8 @@ const TROCAS_GERAIS = [
     trocas: [['MOVV Certificados', 'Movv Certificado'], ['Movv Certificados', 'Movv Certificado'], ['MOVV Certificado', 'Movv Certificado']] },
   // R1: "CRM" vira "portal" em tópicos, aulas e quiz, menos nos módulos 7, 12 e 14
   { id: 'R1', tabelas: ['topicos', 'aulas', 'quiz'], excetoModulos: [7, 12, 14],
+    // M11 · Aula 1 · Tópico 7 ("CRM.") fica com o T50, que está segurado
+    excetoTopicos: [{ mod: 11, aula: 1, top: 7 }],
     trocas: [['CRM', 'portal']], palavraInteira: true, maiusculaNoInicio: true },
 ];
 
