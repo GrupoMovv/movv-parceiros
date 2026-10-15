@@ -49,7 +49,8 @@ async function trocarPixDoPartner(cx, user, { pix_key_type: tipo, pix_key: chave
   )).rows[0];
   if (!p || p.type !== 'movv_partner') throw new ErroComissao('Área exclusiva do MOVV Partner.', 403);
   if (!senha || !(await bcrypt.compare(String(senha), p.password_hash))) {
-    throw new ErroComissao('Senha atual incorreta.', 401);
+    // 400, não 401: no portal, 401 quer dizer "sessão expirada" e desloga
+    throw new ErroComissao('Senha atual incorreta.', 400);
   }
   const v = validarPix(tipo, chave);
   if (v.erro) throw new ErroComissao(v.erro);

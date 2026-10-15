@@ -5,6 +5,7 @@ import { UserRound, KeyRound, Award, Wallet, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { NIVEIS, dataBR } from './identidade';
+import { PasswordField } from '../AlterarSenha';
 
 // Meu perfil do MOVV Partner: dados do cadastro (quem altera é a Central),
 // chave PIX para receber a comissão (o Partner troca, com a senha atual),
@@ -68,22 +69,29 @@ function Pagamento() {
   const [editando, setEditando] = useState(false);
   const [f, setF] = useState({ pix_key_type: 'cpf', pix_key: '', senha_atual: '' });
   const [salvando, setSalvando] = useState(false);
+  const [verSenha, setVerSenha] = useState(false);
+  const [erro, setErro] = useState('');
   const carregar = () => api.get('/partner/perfil').then(r => setPerfil(r.data)).catch(() => {});
   useEffect(() => { carregar(); }, []);
   function abrir() {
     setF({ pix_key_type: perfil?.pix_key_type || 'cpf', pix_key: perfil?.pix_key || '', senha_atual: '' });
+    setErro('');
+    setVerSenha(false);
     setEditando(true);
   }
   async function salvar(e) {
     e.preventDefault();
     setSalvando(true);
+    setErro('');
     try {
       await api.put('/partner/perfil/pix', f);
       toast.success('Chave PIX salva');
       setEditando(false);
       carregar();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao salvar a chave PIX');
+      // a mensagem fica no formulário (senha errada, chave inválida) e o que
+      // foi digitado continua lá para corrigir
+      setErro(err.response?.data?.error || 'Erro ao salvar a chave PIX');
     } finally { setSalvando(false); }
   }
   if (!perfil) return null;
@@ -115,12 +123,12 @@ function Pagamento() {
             <div><label className="label">Chave</label>
               <input className="input" value={f.pix_key} placeholder={DICA_PIX[f.pix_key_type]} autoComplete="off"
                 inputMode={['cpf', 'cnpj', 'telefone'].includes(f.pix_key_type) ? 'numeric' : f.pix_key_type === 'email' ? 'email' : 'text'}
-                onChange={e => setF(x => ({ ...x, pix_key: e.target.value }))} />
+                onChange={e => { setErro(''); setF(x => ({ ...x, pix_key: e.target.value })); }} />
             </div>
-            <div><label className="label">Sua senha atual</label>
-              <input type="password" className="input" value={f.senha_atual} autoComplete="current-password" onChange={e => setF(x => ({ ...x, senha_atual: e.target.value }))} />
-              <p className="text-xs text-slate-500 mt-1">Por segurança, a troca da chave pede a sua senha. A troca fica registrada e a Central é avisada no sistema.</p>
-            </div>
+            <PasswordField label="Sua senha atual" value={f.senha_atual} show={verSenha} onToggle={() => setVerSenha(v => !v)}
+              onChange={v => { setErro(''); setF(x => ({ ...x, senha_atual: v })); }}
+              hint="Por segurança, a troca da chave pede a sua senha. A troca fica registrada e a Central é avisada no sistema." />
+            {erro && <p role="alert" className="text-sm text-red-600 font-medium">{erro}</p>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
               <button type="button" className="btn-secondary" onClick={() => setEditando(false)}>Cancelar</button>
               <button type="submit" className="btn-primary" disabled={salvando || !f.pix_key.trim() || !f.senha_atual}>Salvar chave PIX</button>

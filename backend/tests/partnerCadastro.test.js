@@ -92,13 +92,33 @@ after(async () => {
   await db.fechar();
 });
 
+// O interceptor do portal (frontend/src/services/api.js) trata QUALQUER 401
+// como sessão expirada e manda para /login. Senha errada na troca do PIX não
+// pode responder 401, e a sessão tem de continuar valendo.
+test('Meu perfil: senha errada na troca do PIX não derruba a sessão (400, não 401)', async () => {
+  const antes = (await db.query('SELECT pix_key FROM partners WHERE id = $1', [ids.a])).rows[0].pix_key;
+  const hist = async () => Number((await db.query('SELECT COUNT(*) AS n FROM partner_pix_historico WHERE partner_id = $1', [ids.a])).rows[0].n);
+  const histAntes = await hist();
+  for (const senha of ['errada', '']) {
+    const r = await chamar('PUT', '/api/partner/perfil/pix', t.a, { pix_key_type: 'email', pix_key: 'outra@exemplo.com', senha_atual: senha });
+    assert.notEqual(r.status, 401, '401 desloga o Partner no portal');
+    assert.equal(r.status, 400);
+    assert.equal(r.body.error, 'Senha atual incorreta.');
+  }
+  // o mesmo token continua valendo, e nada mudou
+  const r = await chamar('GET', '/api/partner/perfil', t.a);
+  assert.equal(r.status, 200);
+  assert.equal((await db.query('SELECT pix_key FROM partners WHERE id = $1', [ids.a])).rows[0].pix_key, antes);
+  assert.equal(await hist(), histAntes);
+});
+
 test('Meu perfil: Partner troca o próprio PIX só com a senha atual; o histórico fica mascarado', async () => {
   let r = await chamar('GET', '/api/partner/perfil', t.a);
   assert.equal(r.status, 200);
   assert.deepEqual(r.body.faltas, ['chave PIX', 'CPF/CNPJ']);
 
   r = await chamar('PUT', '/api/partner/perfil/pix', t.a, { pix_key_type: 'email', pix_key: 'ana@exemplo.com', senha_atual: 'errada' });
-  assert.equal(r.status, 401);
+  assert.equal(r.status, 400);
   assert.match(r.body.error, /Senha atual incorreta/);
   r = await chamar('PUT', '/api/partner/perfil/pix', t.a, { pix_key_type: 'telefone', pix_key: '123', senha_atual: 'senha-certa' });
   assert.equal(r.status, 400);

@@ -96,7 +96,9 @@ export default function AlterarSenha() {
   );
 }
 
-function PasswordField({ label, value, show, onToggle, onChange, hint }) {
+// Campo de senha com o "olhinho" (mostrar/ocultar). Também usado na troca
+// da chave PIX em "Meu perfil" do MOVV Partner.
+export function PasswordField({ label, value, show, onToggle, onChange, hint }) {
   return (
     <div>
       <label className="label">{label}</label>
