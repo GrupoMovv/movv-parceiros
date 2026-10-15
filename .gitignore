@@ -68,3 +68,6 @@ backend/scripts/data/
 
 # Testes locais do pedido pelo site (tokens de teste) — nunca commitar
 e2e.json
+
+# Saída do script somente leitura da Universidade (scripts/consultasUniversidadeLeitura.js)
+relatorios-leitura/
