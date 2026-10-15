@@ -140,7 +140,7 @@ const ITENS = [
   { id: 'T28', tipo: 'topico', mod: 6, aula: 2, top: 2,
     tituloAtual: 'Conceito de recorrência quando previsto.',
     novoTitulo: 'Recorrência.',
-    novoTexto: 'Se o Grupo Movv receber mais de um pagamento de comissão pela mesma operação, você recebe a sua fatia sobre cada valor efetivamente recebido. Se algum produto passar a ter comissão recorrente, isso será descrito na sua comissão vigente, no portal.' },
+    novoTexto: 'Se o Grupo Movv receber a comissão em mais de um pagamento pela mesma operação (por exemplo, um seguro pago em parcelas), você recebe a sua fatia sobre cada valor efetivamente recebido. Se algum produto passar a ter comissão recorrente, isso será descrito na sua comissão vigente, no portal.' },
   { id: 'T29', tipo: 'topico', mod: 6, aula: 2, top: 3,
     tituloAtual: 'Importância da permanência do cliente.',
     novoTitulo: 'Importância do relacionamento.',
