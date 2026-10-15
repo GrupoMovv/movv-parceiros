@@ -177,3 +177,13 @@ test('--simular: a cópia em memória fica igual ao conteúdo lido e aceita tóp
   assert.equal(r.criados, 1, 'a sequência de ids foi acertada: o tópico novo entra sem colidir');
   await copia.fechar();
 });
+
+test('sem a migration 097 no banco, o script reconhece e para com mensagem clara', async () => {
+  const { temTabelaBackup, MSG_SEM_097 } = require('../scripts/aplicarTextosUniversidade');
+  const outro = await novoBanco();
+  assert.equal(await temTabelaBackup(outro), true);
+  await outro.query('DROP TABLE universidade_textos_backup');
+  assert.equal(await temTabelaBackup(outro), false);
+  assert.equal(MSG_SEM_097, 'A migration 097 ainda não está no banco. Faça o deploy da branch antes de aplicar.');
+  await outro.fechar();
+});

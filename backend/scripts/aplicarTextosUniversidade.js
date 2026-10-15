@@ -278,6 +278,13 @@ function planejar(conteudo, itens = ITENS) {
   return { mudancas, novos, relatorio, gerais };
 }
 
+// A tabela de backup (migration 097) já existe neste banco?
+const MSG_SEM_097 = 'A migration 097 ainda não está no banco. Faça o deploy da branch antes de aplicar.';
+async function temTabelaBackup(cx) {
+  const r = await cx.query(`SELECT to_regclass('public.universidade_textos_backup') IS NOT NULL AS existe`);
+  return Boolean(r.rows[0]?.existe);
+}
+
 // ─── Executar (grava) ───────────────────────────────────────────────────────
 
 async function executar(cx, plano, { lote = LOTE, quem = 'script aplicarTextosUniversidade' } = {}) {
@@ -466,6 +473,9 @@ async function main() {
 
   try {
     await cliente.connect();
+    const backupOk = await temTabelaBackup(cliente);
+    if ((modo === 'aplicar' || modo === 'desfazer') && !backupOk) throw new Error(MSG_SEM_097);
+    if (!backupOk) console.log(`Aviso: ${MSG_SEM_097}`);
     if (modo === 'previa' || modo === 'simular') {
       await cliente.query('BEGIN READ ONLY');
       const conteudo = await carregarConteudo(cliente);
@@ -507,8 +517,9 @@ async function main() {
       if (modo === 'aplicar') {
         const plano = planejar(await carregarConteudo(cliente));
         const r = await executar(cliente, plano, { quem: 'Junior (script aplicarTextosUniversidade)' });
-        fs.writeFileSync(path.join(pasta, 'relatorio.txt'), textoDoRelatorio(plano, `Aplicado — ${dia}`), 'utf8');
         await cliente.query('COMMIT');
+        // só depois do COMMIT: se ele falhar, o arquivo não diz "Aplicado"
+        fs.writeFileSync(path.join(pasta, 'relatorio.txt'), textoDoRelatorio(plano, `Aplicado — ${dia}`), 'utf8');
         console.log(`Aplicado: ${r.alterados} registro(s) alterado(s), ${r.criados} tópico(s) criado(s). Relatório em ${rel(pasta)}.`);
       } else {
         const r = await desfazer(cliente, { quem: 'Junior (script aplicarTextosUniversidade)' });
@@ -531,4 +542,4 @@ if (require.main === module) {
   main().catch(err => { console.error('Erro:', err.message); process.exitCode = 1; });
 }
 
-module.exports = { carregarConteudo, planejar, executar, desfazer, trocar, textoDoRelatorio, textoAntesDepoisPublico: textoAntesDepois, copiarParaMemoria };
+module.exports = { temTabelaBackup, MSG_SEM_097, carregarConteudo, planejar, executar, desfazer, trocar, textoDoRelatorio, textoAntesDepoisPublico: textoAntesDepois, copiarParaMemoria };
