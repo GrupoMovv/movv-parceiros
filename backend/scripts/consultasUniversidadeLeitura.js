@@ -288,4 +288,4 @@ if (require.main === module) {
   main().catch(err => { console.error('Erro:', err.message); process.exitCode = 1; });
 }
 
-module.exports = { CONSULTAS, somenteLeitura, rodarConsultas };
+module.exports = { CONSULTAS, somenteLeitura, rodarConsultas, perguntarSemEco };
