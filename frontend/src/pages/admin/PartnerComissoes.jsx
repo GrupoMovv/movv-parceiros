@@ -7,6 +7,7 @@ import {
   STATUS_LANC, ORIGEM, BASE, NIVEIS, centavos, reais, pct, competenciaBR, dataBR,
 } from '../universidade/comissoesRotulos';
 import { ImportacaoAzul, PendenciasAzul } from './PartnerComissoesImportacao';
+import { CadastroPagamento, ParaQuemPagar } from './PartnerCadastroPagamento';
 
 // Livro de comissões do MOVV Partner — administração (migration 093).
 // Admin e financeiro: lançamentos, aprovação, pagamento, estorno e avisos.
@@ -20,6 +21,7 @@ export default function AdminPartnerComissoes() {
     ['lancamentos', 'Lançamentos'],
     ['importacao', 'Importação Azul'],
     ['pendencias', `Pendências da importação${pendenciasAzul ? ` (${pendenciasAzul})` : ''}`],
+    ['cadastro', 'Cadastro para pagamento'],
     ['regras', 'Regras (tabela vigente)'],
     ['avisos', `Avisos${avisosAbertos ? ` (${avisosAbertos})` : ''}`],
   ];
@@ -45,6 +47,7 @@ export default function AdminPartnerComissoes() {
       <div className={aba === 'pendencias' ? '' : 'hidden'}>
         <PendenciasAzul key={versaoPendencias} onContagem={setPendenciasAzul} />
       </div>
+      {aba === 'cadastro' && <CadastroPagamento />}
       {aba === 'regras' && <Regras />}
       <Avisos visivel={aba === 'avisos'} onContagem={setAvisosAbertos} />
     </div>
@@ -93,8 +96,9 @@ function Lancamentos() {
         ? `/partner-comissoes/admin/lancamentos/${ids[0]}/${acao}`
         : `/partner-comissoes/admin/lancamentos/${acao}`;
       const r = await api.post(url, { ids, ...corpo });
-      const { alterados = [], recusados = [] } = r.data;
+      const { alterados = [], recusados = [], avisos = [] } = r.data;
       if (alterados.length) toast.success(`${alterados.length} lançamento(s) atualizado(s)`);
+      if (avisos.length) toast(`${avisos.length} aprovado(s) com cadastro incompleto. ${avisos[0].motivo}`, { icon: '⚠️', duration: 8000 });
       if (recusados.length) toast.error(`${recusados.length} recusado(s): ${recusados[0].motivo}`, { duration: 6000 });
       setModal(null);
       carregar();
@@ -204,7 +208,7 @@ function Lancamentos() {
         </div>
       </div>
 
-      {modal?.tipo === 'pagar' && <ModalPagar ids={modal.ids} agindo={agindo} onFechar={() => setModal(null)} onConfirmar={c => agir('pagar', modal.ids, c)} />}
+      {modal?.tipo === 'pagar' && <ModalPagar ids={modal.ids} partnerIds={lista.filter(l => modal.ids.includes(l.id)).map(l => l.partner_id)} agindo={agindo} onFechar={() => setModal(null)} onConfirmar={c => agir('pagar', modal.ids, c)} />}
       {modal?.tipo === 'estornar' && <ModalEstornar agindo={agindo} onFechar={() => setModal(null)} onConfirmar={c => agir('estornar', modal.ids, c)} />}
       {modal?.tipo === 'manual' && <ModalManual partners={partners} onFechar={() => setModal(null)} onSalvo={() => { setModal(null); carregar(); }} />}
     </div>
@@ -247,12 +251,13 @@ function Modal({ titulo, onFechar, children }) {
 
 const hoje = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 
-function ModalPagar({ ids, agindo, onFechar, onConfirmar }) {
+function ModalPagar({ ids, partnerIds, agindo, onFechar, onConfirmar }) {
   const [data, setData] = useState(hoje());
   const [obs, setObs] = useState('');
   return (
     <Modal titulo={`Marcar ${ids.length} lançamento(s) como pago`} onFechar={onFechar}>
-      <p className="text-sm text-slate-600">Só lançamentos aprovados viram pagos; os outros voltam como recusados.</p>
+      <p className="text-sm text-slate-600">Só lançamentos aprovados viram pagos; os outros voltam como recusados. Sem chave PIX ou sem CPF/CNPJ, o pagamento é bloqueado.</p>
+      <ParaQuemPagar partnerIds={partnerIds} />
       <div><label className="label">Data do pagamento</label><input type="date" className="input" value={data} onChange={e => setData(e.target.value)} /></div>
       <div><label className="label">Observação (opcional)</label><input className="input" value={obs} onChange={e => setObs(e.target.value)} placeholder="Ex.: PIX, lote de outubro" /></div>
       <div className="flex justify-end gap-2">

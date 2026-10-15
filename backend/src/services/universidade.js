@@ -207,7 +207,8 @@ async function avaliarCertificacao(cx, userId) {
 }
 
 // Trava do portal: Partner sem certificado válido só usa a Universidade e a própria conta.
-const ROTAS_LIVRES = ['/api/universidade', '/api/auth'];
+// "a própria conta" inclui o cadastro de pagamento (PIX) do Partner
+const ROTAS_LIVRES = ['/api/universidade', '/api/auth', '/api/partner/perfil'];
 async function travaDoPortal(req, res, user) {
   if (user?.type !== 'movv_partner') return false;
   const rota = req.baseUrl + req.path;

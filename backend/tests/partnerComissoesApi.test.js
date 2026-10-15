@@ -48,6 +48,8 @@ before(async () => {
   ids.contab = await partner('CONT-901', 'accounting');
   ids.a = await partner('PARTNER-911', 'movv_partner', { nivel: 'point' });
   ids.b = await partner('PARTNER-912', 'movv_partner', { nivel: 'regional' });
+  // B tem cadastro de pagamento completo (migration 098: pagar exige PIX e documento)
+  await db.query(`UPDATE partners SET pix_key = 'b@teste.local', pix_key_type = 'email', documento = '52998224725', tipo_parceiro = 'autonomo' WHERE id = $1`, [ids.b]);
   ids.fernando = (await db.query(
     `INSERT INTO internal_collaborators (name, email, password_hash, role, must_change_password)
      VALUES ('Fernando Teste', 'fernando@teste.local', 'x', 'comercial_full', false) RETURNING id`

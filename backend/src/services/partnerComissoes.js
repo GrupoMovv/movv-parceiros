@@ -249,45 +249,71 @@ async function mudarStatus(cx, ids, acao, quem, extras = {}) {
   const lista = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number).filter(n => Number.isInteger(n) && n > 0))];
   if (!lista.length) throw new ErroComissao('Nenhum lançamento informado.');
 
+  // Cadastro de pagamento do Partner (migration 098): PAGAR é bloqueado sem
+  // chave PIX ou sem CPF/CNPJ; APROVAR passa, mas avisa.
+  const faltas = await faltasPorLancamento(cx, lista);
+  const bloqueados = acao === 'pagar' ? lista.filter(id => faltas.get(id)?.length) : [];
+  const alvo = lista.filter(id => !bloqueados.includes(id));
+
   let sql;
   let params;
   if (acao === 'confirmar') {
     sql = `UPDATE partner_comissoes SET status = 'confirmado', confirmado_em = NOW(), confirmado_por = $3, atualizado_em = NOW()
            WHERE id = ANY($1::int[]) AND status = ANY($2::text[]) RETURNING *`;
-    params = [lista, regra.de, quem];
+    params = [alvo, regra.de, quem];
   } else if (acao === 'aprovar') {
     sql = `UPDATE partner_comissoes SET status = 'aprovado', aprovado_em = NOW(), aprovado_por = $3, atualizado_em = NOW()
            WHERE id = ANY($1::int[]) AND status = ANY($2::text[]) RETURNING *`;
-    params = [lista, regra.de, quem];
+    params = [alvo, regra.de, quem];
   } else if (acao === 'pagar') {
     if (!dataValida(extras.data_pagamento)) throw new ErroComissao('Informe a data do pagamento.');
     sql = `UPDATE partner_comissoes SET status = 'pago', pago_em = $4::date, pago_registrado_em = NOW(), pago_por = $3,
              observacao_pagamento = $5, atualizado_em = NOW()
            WHERE id = ANY($1::int[]) AND status = ANY($2::text[]) RETURNING *`;
-    params = [lista, regra.de, quem, extras.data_pagamento, textoOuNull(extras.observacao)];
+    params = [alvo, regra.de, quem, extras.data_pagamento, textoOuNull(extras.observacao)];
   } else {
     const motivo = textoOuNull(extras.motivo);
     if (!motivo) throw new ErroComissao('Informe o motivo do estorno.');
     sql = `UPDATE partner_comissoes SET status_antes_estorno = status, status = 'estornado', estornado_em = NOW(),
              estornado_por = $3, motivo_estorno = $4, atualizado_em = NOW()
            WHERE id = ANY($1::int[]) AND status = ANY($2::text[]) RETURNING *`;
-    params = [lista, regra.de, quem, motivo];
+    params = [alvo, regra.de, quem, motivo];
   }
 
-  const alterados = (await cx.query(sql, params)).rows;
+  const alterados = alvo.length ? (await cx.query(sql, params)).rows : [];
   const feitos = new Set(alterados.map(r => r.id));
-  const faltam = lista.filter(id => !feitos.has(id));
-  let recusados = [];
+  const faltam = alvo.filter(id => !feitos.has(id));
+  let recusados = bloqueados.map(id => ({
+    id, motivo: `Cadastro incompleto para pagamento: falta ${faltas.get(id).join(' e ')}. O Partner cadastra o PIX em "Meu perfil"; o CPF/CNPJ é cadastrado pela equipe em "Cadastro para pagamento".`,
+  }));
   if (faltam.length) {
     const atuais = (await cx.query('SELECT id, status FROM partner_comissoes WHERE id = ANY($1::int[])', [faltam])).rows;
     const porId = new Map(atuais.map(r => [r.id, r.status]));
-    recusados = faltam.map(id => {
+    recusados = recusados.concat(faltam.map(id => {
       const st = porId.get(id);
       if (!st) return { id, motivo: 'Lançamento não encontrado.' };
       return { id, status: st, motivo: `Está ${NOME_STATUS[st]}; para ${acao} precisa estar ${regra.de.join(' ou ')}.` };
-    });
+    }));
   }
-  return { alterados, recusados };
+  const avisos = acao === 'aprovar'
+    ? alterados.filter(l => faltas.get(l.id)?.length).map(l => ({ id: l.id, motivo: `Aprovado, mas o Partner ainda não tem ${faltas.get(l.id).join(' nem ')}: o pagamento fica bloqueado até completar o cadastro.` }))
+    : [];
+  return { alterados, recusados, avisos };
+}
+
+// O que falta no cadastro de pagamento do Partner de cada lançamento
+async function faltasPorLancamento(cx, ids) {
+  const r = await cx.query(
+    `SELECT pc.id, p.pix_key, p.pix_key_type, p.documento
+     FROM partner_comissoes pc JOIN partners p ON p.id = pc.partner_id
+     WHERE pc.id = ANY($1::int[])`, [ids]
+  );
+  return new Map(r.rows.map(x => {
+    const f = [];
+    if (!x.pix_key || !x.pix_key_type) f.push('chave PIX');
+    if (!x.documento) f.push('CPF/CNPJ');
+    return [x.id, f];
+  }));
 }
 
 // ─── Movv Certificado ───────────────────────────────────────────────────────

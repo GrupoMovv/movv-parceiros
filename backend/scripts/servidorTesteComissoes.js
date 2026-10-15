@@ -49,6 +49,12 @@ async function semear(db) {
   await lanc(a, 'Antecipação FGTS', 'Carla Teste', '2026-10', '87.35', 'confirmado');
   await lanc(a, 'Consignado CLT', 'Pedro Teste', '2026-10', '55.10', 'previsto');
   await lanc(b, 'Consignado INSS', 'Lucas Teste', '2026-10', '500.00', 'confirmado');
+  // Pagar exige PIX + CPF/CNPJ (migration 098): a Ana tem cadastro completo
+  // (CPF fictício de teste); o Bruno fica incompleto para ver o bloqueio.
+  await db.query(
+    `UPDATE partners SET pix_key = 'ana@teste.local', pix_key_type = 'email', documento = '52998224725', tipo_parceiro = 'autonomo'
+     WHERE id = $1`, [a]
+  );
   await pc.mudarStatus(db, [l1, l2], 'aprovar', 'semente de teste');
   await pc.mudarStatus(db, [l1], 'pagar', 'semente de teste', { data_pagamento: '2026-10-10', observacao: 'PIX' });
 

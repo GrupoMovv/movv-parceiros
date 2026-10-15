@@ -59,6 +59,7 @@ app.use('/api/direta',                 require('./routes/direta'));
 app.use('/api/contabilidades-precos',  require('./routes/contabilidadesPrecos'));
 app.use('/api/universidade',           require('./routes/universidade'));
 app.use('/api/partner-comissoes',      require('./routes/partnerComissoes'));
+app.use('/api/partner/perfil',         require('./routes/partnerPerfil'));
 // Antes de /api/sindicato: prefixo mais específico precisa vir primeiro.
 app.use('/api/sindicato/entregadores', require('./routes/sindicatoEntregadores'));
 app.use('/api/sindicato/base-seci',    require('./routes/baseSeci'));

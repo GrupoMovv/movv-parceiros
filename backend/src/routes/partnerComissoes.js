@@ -10,6 +10,7 @@ const { veTudo } = require('../config/perfilAdmin');
 const multer = require('multer');
 const c = require('../controllers/partnerComissoesController');
 const i = require('../controllers/azulImportacaoController');
+const cad = require('../controllers/partnerCadastroController');
 
 const requireEquipeOuComercialFull = (req, res, next) => {
   if (veTudo(req.user) || (req.user?.type === 'internal' && req.user?.role === 'comercial_full')) return next();
@@ -30,6 +31,10 @@ router.get('/previa', requireAdminUniversidade, c.previa);
 // Admin
 router.get('/admin/partners',                    requireEquipeOuComercialFull, c.partners);
 router.get('/admin/sugestao-certificado',        requireEquipeOuComercialFull, c.sugestaoCertificado);
+// Cadastro para pagamento (migration 098): só admin e financeiro (o Fernando não)
+router.get('/admin/cadastros',                   requireEquipe, cad.listar);
+router.get('/admin/partners/:id/cadastro',       requireEquipe, cad.completo);
+router.put('/admin/partners/:id/documento',      requireEquipe, cad.salvarDocumento);
 router.get('/admin/lancamentos',                 requireEquipe, c.listar);
 router.post('/admin/lancamentos',                requireEquipe, c.criarManual);
 router.post('/admin/lancamentos/confirmar',      requireEquipe, c.confirmar);

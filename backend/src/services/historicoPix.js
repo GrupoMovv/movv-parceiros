@@ -15,6 +15,20 @@ async function registrarTrocaPix(cx, partnerId, antes, depois, user) {
   return true;
 }
 
+// MOVV Partner (15/10/2026): mesma tabela, mas os valores vão MASCARADOS
+// (nunca a chave inteira). O histórico antigo das contabilidades não muda.
+async function registrarTrocaPixPartner(cx, partnerId, antes, depois, user) {
+  const { mascararPix } = require('../utils/validators');
+  if (limpa(antes?.chave) === limpa(depois?.chave) && limpa(antes?.tipo) === limpa(depois?.tipo)) return false;
+  const rotulo = x => (x?.chave ? `${x.tipo}: ${mascararPix(x.tipo, x.chave)}` : null);
+  await cx.query(
+    `INSERT INTO partner_pix_historico (partner_id, campo, valor_antes, valor_depois, alterado_por_id, alterado_por_nome)
+     VALUES ($1, 'pix_key', $2, $3, $4, $5)`,
+    [partnerId, rotulo(antes), rotulo(depois), user?.id || null, nomeDoAdmin(user)]
+  );
+  return true;
+}
+
 // Trecho de SQL com a última troca de chave PIX dos últimos 7 dias do
 // parceiro `alias`.id: colunas pix_alterada_em e pix_alterada_por.
 const JOIN_PIX_RECENTE = alias => `LEFT JOIN LATERAL (
@@ -24,4 +38,4 @@ const JOIN_PIX_RECENTE = alias => `LEFT JOIN LATERAL (
   ) pixh ON true`;
 const COLUNAS_PIX_RECENTE = 'pixh.criado_em AS pix_alterada_em, pixh.alterado_por_nome AS pix_alterada_por';
 
-module.exports = { registrarTrocaPix, JOIN_PIX_RECENTE, COLUNAS_PIX_RECENTE };
+module.exports = { registrarTrocaPix, registrarTrocaPixPartner, JOIN_PIX_RECENTE, COLUNAS_PIX_RECENTE };
