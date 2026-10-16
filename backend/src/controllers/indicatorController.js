@@ -195,7 +195,8 @@ async function changeMyPassword(req, res) {
   try {
     const result = await db.query('SELECT password_hash FROM indicators WHERE id = $1', [req.user.id]);
     const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
-    if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+    // 400, não 401: no portal, todo 401 é "sessão expirada" e manda para /login
+    if (!valid) return res.status(400).json({ error: 'Senha atual incorreta.' });
     const hash = await bcrypt.hash(newPassword, 10);
     await db.query('UPDATE indicators SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hash, req.user.id]);
     return res.json({ message: 'Senha alterada com sucesso' });

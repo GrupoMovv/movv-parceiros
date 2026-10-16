@@ -126,6 +126,8 @@ async function me(req, res) {
   }
 }
 
+// Senha atual errada responde 400, não 401: no portal, todo 401 é "sessão
+// expirada" e manda para /login (frontend/src/services/api.js).
 async function changePassword(req, res) {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword || newPassword.length < 6) {
@@ -136,13 +138,13 @@ async function changePassword(req, res) {
     if (req.user.type === 'internal') {
       const result = await db.query('SELECT password_hash FROM internal_collaborators WHERE id = $1', [req.user.id]);
       const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
-      if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+      if (!valid) return res.status(400).json({ error: 'Senha atual incorreta.' });
       const hash = await bcrypt.hash(newPassword, 10);
       await db.query('UPDATE internal_collaborators SET password_hash = $1, must_change_password = false WHERE id = $2', [hash, req.user.id]);
     } else {
       const result = await db.query('SELECT password_hash FROM partners WHERE id = $1', [req.user.id]);
       const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
-      if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+      if (!valid) return res.status(400).json({ error: 'Senha atual incorreta.' });
       const hash = await bcrypt.hash(newPassword, 10);
       await db.query('UPDATE partners SET password_hash = $1, must_change_password = false WHERE id = $2', [hash, req.user.id]);
     }
