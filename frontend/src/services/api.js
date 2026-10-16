@@ -33,7 +33,10 @@ api.interceptors.response.use(
     // email+senha do Portal) no meio do fluxo público — bug relatado em
     // produção, reproduzido em /cadastrar no celular.
     const rotaPublica = url.startsWith('/public/') || url.startsWith('public/');
-    if (err.response?.status === 401 && !rotaPublica) {
+    // 401 do próprio login é "código ou senha inválidos", não sessão
+    // expirada: sem recarregar, a mensagem fica e os campos não se apagam.
+    const rotaLogin = url === '/auth/login' || url === 'auth/login';
+    if (err.response?.status === 401 && !rotaPublica && !rotaLogin) {
       console.warn(`[api] 401 em "${url}" — sessão do Portal Movv expirada, redirecionando pra /login.`);
       localStorage.removeItem('movv_token');
       delete api.defaults.headers.common['Authorization'];
