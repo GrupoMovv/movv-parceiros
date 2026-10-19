@@ -123,6 +123,25 @@ async function listar(req, res) {
   }
 }
 
+// GET /economia-clube — contador do /meu (b5): quanto o Clube já tirou dos
+// pedidos ENTREGUES (preço sem o Clube − preço pago, mais a entrega grátis).
+// Pedidos de antes da b3 não têm o preço sem o Clube: ficam de fora.
+async function economiaClube(req, res) {
+  try {
+    const r = await db.query(
+      `SELECT COALESCE(SUM(x.economia), 0)::numeric(12,2) AS economia, COUNT(*) FILTER (WHERE x.economia > 0)::int AS pedidos
+       FROM (SELECT p.entrega_dispensada_clube + COALESCE((
+                SELECT SUM((i.preco_sem_clube - i.preco_unitario) * i.quantidade) FROM loja_pedido_itens i
+                 WHERE i.pedido_id = p.id AND i.preco_sem_clube > i.preco_unitario), 0) AS economia
+             FROM loja_pedidos p WHERE p.associado_id = $1 AND p.status = 'entregue') x`,
+      [req.painelAssociado.id]
+    );
+    return res.json({ economia: Number(r.rows[0].economia), pedidos: r.rows[0].pedidos });
+  } catch (err) {
+    return responderErro(res, err, 'Não conseguimos carregar sua economia.');
+  }
+}
+
 async function buscarDoCliente(id, associadoId) {
   if (!/^\d+$/.test(String(id))) return null;
   return (await db.query('SELECT * FROM loja_pedidos WHERE id = $1 AND associado_id = $2', [id, associadoId])).rows[0] || null;
@@ -170,6 +189,6 @@ async function enderecosRecentes(req, res) {
 }
 
 module.exports = {
-  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes,
+  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes, economiaClube,
   cancelar: acao('cancelar'), recebi: acao('recebi'), viewCliente,
 };

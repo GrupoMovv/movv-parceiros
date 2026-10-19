@@ -16,6 +16,7 @@ router.get('/lojas', ctrl.lojas);
 router.use(authenticatePainelPublico);
 router.get('/', ctrl.listar);
 router.get('/enderecos-recentes', ctrl.enderecosRecentes);
+router.get('/economia-clube', ctrl.economiaClube);
 router.post('/cotacao', ctrl.cotacao);
 router.post('/', simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 15 }), ctrl.criar);
 router.get('/:id', ctrl.detalhe);

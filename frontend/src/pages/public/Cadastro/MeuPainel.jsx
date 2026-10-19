@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import {
   Loader2, CreditCard, Users2, User, ExternalLink, MessageCircle, Gift, CheckCircle2, ShoppingBag,
 } from 'lucide-react';
+import { Diamond } from '@phosphor-icons/react';
 import apiPainel from '../../../services/apiPainel';
 import api, { assetUrl } from '../../../services/api';
 import {
@@ -24,10 +25,12 @@ export default function MeuPainel() {
   const [reenviando, setReenviando] = useState(false);
   const [qtdParceiros, setQtdParceiros] = useState(null);
   const [podeJogarRoleta, setPodeJogarRoleta] = useState(false);
+  const [economia, setEconomia] = useState(null); // { economia, pedidos } — contador do Clube (b5)
 
   useEffect(() => {
     api.get('/public/marketplace/stats').then(res => setQtdParceiros(res.data.parceiros)).catch(() => {});
     apiPainel.get('/public/roleta/status').then(res => setPodeJogarRoleta(res.data.pode_jogar)).catch(() => {});
+    apiPainel.get('/public/pedidos/economia-clube').then(res => setEconomia(res.data)).catch(() => {});
   }, []);
 
   async function handleReenviar() {
@@ -74,6 +77,8 @@ export default function MeuPainel() {
           </div>
         </div>
       </div>
+
+      <ContadorEconomia economia={economia} membro={beneficioAtivo} />
 
       <BlocoEmpresaSeci dados={dados} recarregar={recarregar} />
 
@@ -177,6 +182,37 @@ export default function MeuPainel() {
         )}
       </div>
     </div>
+  );
+}
+
+const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// "Você já economizou R$ X no Clube MAIS+" (b5): soma dos pedidos ENTREGUES
+// (preço sem o Clube − preço pago, mais a entrega grátis). Membro sem economia
+// ainda vê o convite para as Lojas do Clube; quem não é do Clube e nunca
+// economizou não vê nada.
+function ContadorEconomia({ economia, membro }) {
+  if (!economia) return null;
+  const tem = economia.economia > 0;
+  if (!tem && !membro) return null;
+  return (
+    <Link to={tem ? '/meu/pedidos' : '/clube#lojas'} className="block rounded-2xl p-4 border" style={{ backgroundColor: '#FDF8ED', borderColor: `${GOLD}66` }}>
+      <div className="flex items-center gap-3">
+        <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-iub-roxo-escuro">
+          <Diamond size={22} weight="fill" color="#FFB800" />
+        </span>
+        <div className="min-w-0">
+          {tem ? (<>
+            <p className="text-sm text-slate-600">Você já economizou</p>
+            <p className="text-2xl font-black text-iub-roxo-escuro leading-tight tabular-nums">{brl(economia.economia)}</p>
+            <p className="text-xs text-slate-500">no Clube MAIS+, em {economia.pedidos} {economia.pedidos === 1 ? 'pedido entregue' : 'pedidos entregues'}</p>
+          </>) : (<>
+            <p className="font-bold text-sm text-iub-roxo-escuro">Seu contador de economia do Clube MAIS+</p>
+            <p className="text-xs text-slate-500 mt-0.5">Começa no primeiro pedido entregue com preço Clube. Veja as Lojas do Clube.</p>
+          </>)}
+        </div>
+      </div>
+    </Link>
   );
 }
 
