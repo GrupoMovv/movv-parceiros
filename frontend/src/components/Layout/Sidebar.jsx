@@ -8,7 +8,7 @@ import {
   Coins, CreditCard, Package, LogOut, ChevronRight, BookOpen, ShieldCheck, UsersRound,
   Building2, TrendingUp, Sparkles, ShoppingCart, DollarSign, Coffee, KeyRound, Lock,
   Landmark, Gift, MessagesSquare, Contact, Inbox, Store, Bell, UserCheck, Crown, Wine, Bike, PawPrint, FlaskConical,
-  GraduationCap, UserRound, Percent,
+  GraduationCap, UserRound, Percent, Gem,
 } from 'lucide-react';
 
 const NIVEL_PARTNER = { mobile: 'Mobile', point: 'Point', hub: 'Hub', regional: 'Regional' };
@@ -123,6 +123,7 @@ const MASTER_MENU = [
       { label: 'Solicitações de Parceiros IUB MAIS+', icon: Store, to: '/sindicato/parceiros-solicitacoes', roles: ['sindicato_aprendiz', 'admin'], badgeKey: 'parceirosSolicitacoes' },
       { label: 'Interessados em Planos', icon: Bell, to: '/sindicato/parceiro-interessados', roles: ['sindicato_aprendiz', 'admin'] },
       { label: 'Planos IUB MAIS+', icon: Crown, to: '/sindicato/planos', roles: ['sindicato_aprendiz', 'admin'] },
+      { label: 'Clube MAIS+', icon: Gem, to: '/sindicato/clube', roles: ['admin'] },
       { label: 'Moderação Disk Bebidas', icon: Wine, to: '/sindicato/beer-moderacao', roles: ['admin'] },
       { label: 'Verificação PF', icon: UserCheck, to: '/sindicato/verificacao-pf', roles: ['admin'], badgeKey: 'verificacaoPf' },
       { label: 'Avaliações Pet Shops', icon: PawPrint, to: '/sindicato/pet-avaliacoes', roles: ['admin'] },

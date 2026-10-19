@@ -121,6 +121,8 @@ import ParceiroFechaMes from './pages/parceiro/FechaMes';
 import ParceiroBeer from './pages/parceiro/Beer';
 import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
+import ParceiroClubeMais from './pages/parceiro/ClubeMais';
+import SindicatoClube from './pages/sindicato/Clube/SindicatoClube';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
 import ParceiroPedidosSite from './pages/parceiro/PedidosSite';
 import ParceiroPedidosRecebidos from './pages/parceiro/PedidosRecebidos';
@@ -393,6 +395,7 @@ export default function App() {
           <Route path="beer" element={<ParceiroBeer />} />
           <Route path="jogos" element={<ParceiroJogos />} />
           <Route path="entrega" element={<ParceiroConfiguracaoEntrega />} />
+          <Route path="clube" element={<ParceiroClubeMais />} />
           <Route path="agendamentos" element={<ParceiroAgendamentosPet />} />
           <Route path="pedidos-site" element={<ParceiroPedidosSite />} />
           <Route path="pedidos" element={<ParceiroPedidosRecebidos />} />
@@ -454,6 +457,7 @@ export default function App() {
           <Route path="sindicato/planos" element={<RequireSindicatoEmpresas><SindicatoPlanos /></RequireSindicatoEmpresas>} />
           <Route path="sindicato/beer-moderacao" element={<RequireAdmin><SindicatoBeerModeracao /></RequireAdmin>} />
           <Route path="sindicato/verificacao-pf" element={<RequireAdmin><SindicatoVerificacaoPf /></RequireAdmin>} />
+          <Route path="sindicato/clube" element={<RequireAdmin><SindicatoClube /></RequireAdmin>} />
         <Route path="sindicato/pet-avaliacoes" element={<RequireAdmin><SindicatoPetAvaliacoes /></RequireAdmin>} />
           <Route path="sindicato/entregadores" element={<RequireAdmin><SindicatoEntregadores /></RequireAdmin>} />
           <Route path="sindicato/beneficios/templates" element={<RequireAdmin><SindicatoTemplates /></RequireAdmin>} />

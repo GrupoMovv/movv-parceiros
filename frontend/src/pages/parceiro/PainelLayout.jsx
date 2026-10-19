@@ -31,6 +31,8 @@ const ABAS = [
   { label: '📊 Estatísticas', to: '/parceiro/painel/estatisticas' },
   { label: '👤 Meu Perfil', to: '/parceiro/painel/perfil' },
   { label: '⚙️ Configurações', to: '/parceiro/painel/configuracoes' },
+  // Clube MAIS+ (migration 100): só empresa (CNPJ)
+  { label: '💎 Clube MAIS+', to: '/parceiro/painel/clube', soCnpj: true },
   { label: '💎 Planos', to: '/parceiro/painel/planos' },
   { label: '💳 Assinatura', to: '/parceiro/painel/minha-assinatura' },
   { label: '🌟 Materiais', to: '/parceiro/painel/materiais' },

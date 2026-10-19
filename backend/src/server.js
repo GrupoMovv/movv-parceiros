@@ -12,6 +12,8 @@ db.pool.connect()
       // Prazos do pedido pelo site (expira, cancela sem Pix, fecha entregue).
       // PEDIDOS_PRAZOS_TIMER=false desliga (aí só pela rota /api/interno).
       if (process.env.PEDIDOS_PRAZOS_TIMER !== 'false') require('./services/pedidoPrazos').iniciarTimer();
+      // Loja do Clube: avisos de versão nova do termo e saída depois de 15 dias sem aceite.
+      if (process.env.LOJA_CLUBE_TIMER !== 'false') require('./services/lojaClube').iniciarTimer();
     });
   })
   .catch((err) => {
