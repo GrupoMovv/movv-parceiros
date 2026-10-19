@@ -87,7 +87,15 @@ async function itensDo(pedidoId) {
 // já recebe o aceito com o Pix.
 async function avisarNovoPedido(pedido) {
   const loja = await dadosLoja(pedido);
-  const lojaAvisada = await registrarEEnviar(pedido.id, 'novo', 'loja', loja.whatsapp, msg.novoPedidoLoja(pedido, await itensDo(pedido.id)));
+  // Equipe de vendas (e3): o vendedor que trouxe o cliente (nome na mensagem da
+  // loja; aviso a ele só se a loja ligou o "avisar no WhatsApp")
+  const vendedor = pedido.vendedor_id
+    ? (await db.query('SELECT nome, whatsapp, avisar_whatsapp FROM loja_vendedores WHERE id = $1', [pedido.vendedor_id])).rows[0] || null
+    : null;
+  const lojaAvisada = await registrarEEnviar(pedido.id, 'novo', 'loja', loja.whatsapp, msg.novoPedidoLoja(pedido, await itensDo(pedido.id), vendedor?.nome));
+  if (vendedor?.avisar_whatsapp) {
+    await registrarEEnviar(pedido.id, 'novo', 'vendedor', vendedor.whatsapp, msg.novoPedidoVendedor(pedido, loja.nome));
+  }
   let clienteAvisado = null;
   if (pedido.status === 'aceito') {
     clienteAvisado = await avisarAceito(pedido, loja);

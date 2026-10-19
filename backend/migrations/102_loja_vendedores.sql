@@ -30,3 +30,9 @@ CREATE INDEX IF NOT EXISTS idx_loja_vendedores_parceiro ON loja_vendedores (parc
 -- Pedido: o vendedor que trouxe o cliente (NULL = "loja", sem link).
 ALTER TABLE loja_pedidos ADD COLUMN IF NOT EXISTS vendedor_id INTEGER REFERENCES loja_vendedores(id);
 CREATE INDEX IF NOT EXISTS idx_loja_pedidos_vendedor ON loja_pedidos (parceiro_id, vendedor_id);
+
+-- Aviso ao vendedor quando entra pedido pelo link dele (e3): mais um destino
+-- nos avisos do pedido (uma vez só por pedido, como os outros).
+ALTER TABLE loja_pedido_avisos ALTER COLUMN destino TYPE VARCHAR(10);
+ALTER TABLE loja_pedido_avisos DROP CONSTRAINT IF EXISTS loja_pedido_avisos_destino_check;
+ALTER TABLE loja_pedido_avisos ADD CONSTRAINT loja_pedido_avisos_destino_check CHECK (destino IN ('cliente', 'loja', 'vendedor'));

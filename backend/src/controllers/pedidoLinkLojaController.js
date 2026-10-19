@@ -43,6 +43,8 @@ async function viewLoja(p) {
     [p.id]
   )).rows;
   const loja = (await db.query('SELECT nome FROM sindicato_parceiros WHERE id = $1', [p.parceiro_id])).rows[0] || {};
+  // Equipe de vendas (e3): quem trouxe o cliente pelo link (null = loja). Só o nome: o WhatsApp do vendedor fica na aba da equipe.
+  const vendedor = p.vendedor_id ? (await db.query('SELECT nome FROM loja_vendedores WHERE id = $1', [p.vendedor_id])).rows[0]?.nome || null : null;
   return {
     id: p.id, status: p.status, status_texto: rotuloStatus(p.status, p.modo_recebimento),
     loja_nome: loja.nome, catalogo: p.catalogo, aviso_idade: p.aviso_idade,
@@ -50,6 +52,7 @@ async function viewLoja(p) {
     responder_ate: p.status === 'enviado' ? new Date(new Date(p.created_at).getTime() + PRAZO_RESPOSTA_MIN * 60000) : null,
     aceite_automatico: p.aceite_automatico,
     cliente: { nome: p.cliente_nome, whatsapp: p.cliente_whatsapp, link_whatsapp: linkWhatsapp(p.cliente_whatsapp) },
+    vendedor,
     modo_recebimento: p.modo_recebimento,
     endereco: p.modo_recebimento === 'entrega' ? {
       cep: p.cep, endereco: p.endereco, numero: p.numero, complemento: p.complemento,

@@ -128,6 +128,8 @@ export default function PedidoLojaDetalhe({ pedido, setPedido, executar, recarre
 
       <Bloco titulo={retirada ? 'Retirada na loja' : 'Entrega'}>
         <p className="text-sm font-semibold" style={{ color: PRETO }}>{pedido.cliente.nome}</p>
+        {/* Equipe de vendas: o vendedor que trouxe o cliente pelo link dele */}
+        {pedido.vendedor && <p className="text-xs font-semibold mt-0.5" style={{ color: '#5B21B6' }}>🧑‍💼 Vendedor: {pedido.vendedor}</p>}
         {e && (
           <p className="text-sm text-slate-700 mt-1">
             {e.endereco}, {e.numero}{e.complemento ? ` — ${e.complemento}` : ''}<br />

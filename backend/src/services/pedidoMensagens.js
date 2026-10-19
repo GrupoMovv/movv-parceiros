@@ -31,7 +31,7 @@ function recebimento(p) {
 
 // ── Loja ──────────────────────────────────────────────────────────────
 
-function novoPedidoLoja(p, itens) {
+function novoPedidoLoja(p, itens, vendedorNome = null) {
   const cab = p.status === 'aceito'
     ? `🛒 *Novo pedido #${p.id}* — IUB MAIS+\n✅ Já aceito automaticamente. O cliente recebeu sua chave Pix.`
     : `🛒 *Novo pedido #${p.id}* — IUB MAIS+`;
@@ -48,6 +48,8 @@ function novoPedidoLoja(p, itens) {
   return [
     cab, '',
     `Cliente: ${p.cliente_nome}`,
+    // Equipe de vendas (e3): o vendedor que trouxe o cliente pelo link
+    vendedorNome ? `Vendedor: ${vendedorNome}` : null,
     valores,
     recebimento(p),
     p.aviso_idade ? `⚠️ Bebida alcoólica: confira a idade (18+) do cliente na ${p.modo_recebimento === 'retirada' ? 'retirada' : 'entrega'}.` : null,
@@ -68,6 +70,16 @@ function lembretePixLoja(p) {
     `Confira se o Pix caiu na sua conta. Se caiu, toque em *${botao}*.`,
     `Se ainda não caiu, não precisa fazer nada: sem confirmação, o pedido é cancelado sozinho às ${cancelaEm}.`,
     linkLoja(p.token_loja),
+  ].join('\n');
+}
+
+// Equipe de vendas (e3): aviso ao vendedor (se a loja ligou) quando entra
+// pedido pelo link dele. Sem nenhum dado do cliente: só número e valor.
+function novoPedidoVendedor(p, nomeLoja) {
+  return [
+    `🛒 *Pedido #${p.id}* entrou pelo seu link — ${nomeLoja}`,
+    `Valor: ${brl(p.total)}`,
+    'A venda conta para você quando o pedido for entregue.',
   ].join('\n');
 }
 
@@ -179,6 +191,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, lembretePixLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, novoPedidoVendedor, lembretePixLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

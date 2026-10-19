@@ -153,6 +153,8 @@ function CardResumo({ p, onAbrir }) {
         <div className="min-w-0">
           <p className="font-bold" style={{ color: PRETO }}>#{p.id} · {p.cliente.nome}</p>
           <p className="text-xs text-slate-500 mt-0.5">{hora(p.created_at)} · {qtd} {qtd === 1 ? 'item' : 'itens'} · {brl(p.total)}</p>
+          {/* Equipe de vendas: quem trouxe o cliente pelo link */}
+          {p.vendedor && <p className="text-xs font-semibold mt-0.5" style={{ color: '#5B21B6' }}>🧑‍💼 Vendedor: {p.vendedor}</p>}
         </div>
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ backgroundColor: fundo, color: texto }}>{p.status_texto}</span>
       </div>
