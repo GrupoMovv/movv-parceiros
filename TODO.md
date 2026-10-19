@@ -1,5 +1,21 @@
 # TODO
 
+## Pedido pelo site — acabamentos (anotado 19/10/2026, para depois)
+
+- **Barra de pedido com um padrão só.** Hoje a página da loja mostra
+  "Ver pedido · N itens" em roxo (`LojaDetalhe.jsx`) e o cardápio do Food
+  mostra "Finalizar pedido (N)" em amarelo (`FoodDetalhe.jsx`); no Disk
+  Bebidas o pedido aparece só no menu de baixo/topo ("Pedido N"). Escolher um
+  texto e uma cor e usar o mesmo componente nas três páginas de loja.
+- **"Comprar" nos cards da home, das categorias e da busca.** Detalhe no item
+  "PRAZO 30/10/2026" abaixo (lá os cards são de várias lojas: consulta em lote
+  `useLojaVendendo`).
+- **Corrigir o teste de tela da parte 6 do pedido** (scratchpad
+  `tela_parte6.mjs`): falha em dois pontos porque os textos mudaram — a 2ª
+  mensagem do aceito agora é o Pix copia e cola (não a chave sozinha) e o
+  botão do WhatsApp na página do produto mudou de nome. Falha igual no site
+  no ar (conferido em 19/10); não é defeito.
+
 ## Chave PIX dos pagamentos antigos — levantar quando o acesso ao banco voltar (anotado 19/10/2026)
 
 Desde a migration 099 (commit 5410294) cada pagamento guarda a chave PIX usada na hora
