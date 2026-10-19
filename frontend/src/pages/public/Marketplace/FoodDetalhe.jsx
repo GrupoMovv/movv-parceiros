@@ -229,6 +229,13 @@ export default function FoodDetalhe() {
                       <p className="text-sm font-black" style={{ color: ROXO_ESCURO }}>{formatarBRL(precoPessoa(item))}</p>
                       {item.tempo_preparo_min && <p className="text-[10px] text-slate-400">⏱️ ~{item.tempo_preparo_min} min</p>}
                     </div>
+                    {/* membro pagando o preço Clube: o normal riscado ao lado */}
+                    {precoPessoa(item) < Number(item.preco) && (
+                      <p className="text-[10px] font-semibold mt-0.5 flex items-center gap-1.5">
+                        <span className="line-through text-slate-400">{formatarBRL(item.preco)}</span>
+                        <span style={{ color: '#92700C' }}>◆ preço Clube</span>
+                      </p>
+                    )}
                     {/* quem não é associado vê o preço de associado como chamada, não como preço */}
                     {!ehAssociadoSeci && (precoClubeDe(item.preco_associado, item.preco, item.clube_pct) ?? Infinity) < Number(item.preco) && (
                       <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarBRL(precoClubeDe(item.preco_associado, item.preco, item.clube_pct))} no Clube MAIS+</p>

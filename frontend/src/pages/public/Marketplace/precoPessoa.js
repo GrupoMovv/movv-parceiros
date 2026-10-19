@@ -92,6 +92,8 @@ export function precoDaPromocao(pm, ehAssociado) {
 
 // Disk Bebidas: preço vigente (oferta ou normal) pra todo mundo; o membro do
 // Clube paga o menor entre ele e o percentual da loja sobre o preço normal.
+// clubePct = o desconto do Clube sobre o normal, pro selo (só quando é o
+// preço Clube que vale: aí o selo de oferta some, porque não é o que ele paga).
 export function precoDoBeer(b, ehAssociado) {
   const vigente = num(b.preco);
   const clube = precoClubeDe(null, b.preco_normal, b.clube_pct);
@@ -100,6 +102,7 @@ export function precoDoBeer(b, ehAssociado) {
     principal: usaClube ? clube : vigente,
     riscado: usaClube ? num(b.preco_normal) : (b.em_oferta ? num(b.preco_original) : null),
     tipo: usaClube ? 'associado' : (b.em_oferta ? 'oferta' : 'normal'),
+    clubePct: usaClube ? Math.round((1 - clube / num(b.preco_normal)) * 100) : null,
     chamadaAssociado: !ehAssociado && clube !== null && clube < vigente ? clube : null,
   };
 }

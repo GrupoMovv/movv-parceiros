@@ -57,10 +57,21 @@ async function dadosLoja(pedido) {
 // Aceito: a mensagem completa e, logo em seguida, o Pix copia e cola sozinho
 // (ou a chave, se não der para gerar o código). Só se a primeira chegou —
 // sem ela o código solto não faz sentido.
-function textoAceito(pedido, loja) {
-  return msg.aceitoCliente(pedido, loja.nome, copiaEColaDoPedido(pedido, loja));
+async function textoAceito(pedido, loja) {
+  return msg.aceitoCliente({ ...pedido, economia_clube: await economiaClube(pedido) }, loja.nome, copiaEColaDoPedido(pedido, loja));
 }
-async function avisarAceito(pedido, loja, texto = textoAceito(pedido, loja)) {
+// Quanto o Clube tirou do pedido (itens + entrega grátis), só pra mensagem
+// do cliente. Pedido de antes da b3 não tem preco_sem_clube: fica de fora.
+async function economiaClube(pedido) {
+  const r = await db.query(
+    `SELECT COALESCE(SUM((preco_sem_clube - preco_unitario) * quantidade) FILTER (WHERE preco_sem_clube > preco_unitario), 0) AS itens
+     FROM loja_pedido_itens WHERE pedido_id = $1`,
+    [pedido.id]
+  );
+  return Math.round((Number(r.rows[0].itens) + Number(pedido.entrega_dispensada_clube || 0)) * 100) / 100;
+}
+async function avisarAceito(pedido, loja, texto) {
+  if (texto == null) texto = await textoAceito(pedido, loja);
   const ok = await registrarEEnviar(pedido.id, 'aceito', 'cliente', pedido.cliente_whatsapp, texto);
   if (ok && pedido.pix_chave) {
     await registrarEEnviar(pedido.id, 'aceito_pix', 'cliente', pedido.cliente_whatsapp, msg.pixParaColar(pedido, copiaEColaDoPedido(pedido, loja)));
@@ -106,6 +117,7 @@ async function avisarMudanca(pedido) {
   // O texto volta só pro botão manual da loja (Z-API falhou), que manda UMA
   // mensagem: no aceito, o formato com a chave + link do pedido (a tela tem o
   // QR e o copia e cola) — "use o código da próxima mensagem" não faria sentido.
+  // Sai do celular da loja: sem a linha da economia do Clube.
   const textoManual = pedido.status === 'aceito' ? msg.aceitoCliente(pedido, loja.nome, null) : texto;
   return { avisado, texto: textoManual };
 }

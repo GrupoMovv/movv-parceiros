@@ -12,7 +12,8 @@ import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, linkDuvida, percentualDesconto
 // arrastar o dedo e ←/→ do teclado; a foto amplia no clique; ESC e o X
 // fecham. `produto` null = ainda carregando (link direto).
 export default function ModalProduto({ produto: p, onFechar }) {
-  const preco = precoDoBeer(p, useEhAssociado()); // Loja do Clube (b3)
+  const ehMembro = useEhAssociado();
+  const preco = p ? precoDoBeer(p, ehMembro) : {}; // Loja do Clube (b3); p null = carregando
   const [zoom, setZoom] = useState(false);
   // pedido pelo site: se a adega vende agora, ele é o botão principal
   const disp = useDisponibilidade(p?.id ? 'beer' : null, p?.id);
@@ -45,7 +46,9 @@ export default function ModalProduto({ produto: p, onFechar }) {
 
   const e = p?.estabelecimento || {};
   const link = p ? linkPedido(p) : null;
-  const pct = p ? percentualDesconto(p) : null;
+  // selo do preço que vale: com o preço Clube, o da oferta não aparece
+  const clube = preco.tipo === 'associado';
+  const pct = p && !clube ? percentualDesconto(p) : null;
   const dias = p ? textoDias(p.dias_disponiveis) : null;
 
   return (
@@ -74,6 +77,7 @@ export default function ModalProduto({ produto: p, onFechar }) {
               </button>
               {atual && <span className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-black/55 flex items-center justify-center text-white pointer-events-none"><MagnifyingGlassPlus size={18} /></span>}
               {pct && <span className="absolute top-3 left-3 text-xs font-black px-2.5 py-1 rounded-full pointer-events-none" style={{ backgroundColor: '#DC2626', color: '#fff' }}>🔥 OFERTA -{pct}%</span>}
+              {preco.clubePct > 0 && <span className="absolute top-3 left-3 text-xs font-black px-2.5 py-1 rounded-full pointer-events-none" style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}>◆ CLUBE -{preco.clubePct}%</span>}
               {fotos.length > 1 && <SetasFotos total={fotos.length} idx={idx} onPassar={passar} onIr={setIdx} />}
             </div>
 
@@ -87,7 +91,7 @@ export default function ModalProduto({ produto: p, onFechar }) {
                   {preco.tipo === 'associado' && <span className="text-xs font-bold" style={{ color: BEER.dourado }}>◆ preço Clube</span>}
                 </div>
                 {preco.chamadaAssociado && <p className="text-sm font-semibold mt-1" style={{ color: BEER.dourado }}>{formatarBRL(preco.chamadaAssociado)} no Clube MAIS+</p>}
-                {p.em_oferta && p.oferta_ate && (
+                {p.em_oferta && p.oferta_ate && !clube && (
                   <p className="text-xs mt-1" style={{ color: '#FCA5A5' }}>Oferta até {new Date(p.oferta_ate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
                 )}
                 <div className="mt-2 flex flex-wrap gap-1.5">

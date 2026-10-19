@@ -208,7 +208,7 @@ export default function PromocaoDetalhe() {
               </div>
             )}
             <span className="absolute top-3 left-3 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
-              {descontoPct}% OFF
+              {descontoPct}% {pp.tipo === 'associado' ? 'Clube' : 'OFF'}
             </span>
             {promocao.exclusivo_associado && (
               <span className="absolute top-3 right-3 flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm text-white" style={{ backgroundColor: ROXO }}>

@@ -385,6 +385,10 @@ async function cotar(associado, entrada, { qa = false } = {}) {
   const taxaNormal = taxaEntrega(loja, subtotal);
   const taxaPessoa = entregaGratisClube ? 0 : taxaNormal;
   const valorEntrega = modo === 'entrega' ? taxaPessoa : 0;
+  const entregaDispensada = modo === 'entrega' && entregaGratisClube ? taxaNormal : 0;
+  // Quanto o Clube tira deste pedido: itens (preço sem o Clube − preço pago)
+  // mais a entrega grátis. Quem não é do Clube dá 0.
+  const economiaItens = itens.reduce((s, i) => s + Math.max(0, (i.preco_sem_clube ?? i.preco_unitario) - i.preco_unitario) * i.quantidade, 0);
   return {
     loja, catalogo,
     resumo: {
@@ -394,7 +398,8 @@ async function cotar(associado, entrada, { qa = false } = {}) {
       // valor de entrega se escolher entrega (pra tela mostrar antes de escolher)
       taxa_se_entrega: modos.includes('entrega') ? taxaPessoa : null,
       entrega_gratis_clube: entregaGratisClube && taxaNormal > 0,
-      entrega_dispensada_clube: modo === 'entrega' && entregaGratisClube ? taxaNormal : 0,
+      entrega_dispensada_clube: entregaDispensada,
+      economia_clube: dinheiro(economiaItens + entregaDispensada),
       aviso_idade: catalogo === 'beer',
       forma_pagamento: 'pix',
     },

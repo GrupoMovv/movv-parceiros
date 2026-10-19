@@ -264,8 +264,11 @@ export default function FinalizarPedido() {
             {cotacao.itens.map((s, k) => (
               <p key={k} className="flex justify-between gap-3"><span className="text-slate-600">{s.quantidade}x {s.nome}</span><span>{brl(s.subtotal)}</span></p>
             ))}
-            {modo === 'entrega' && <p className="flex justify-between"><span className="text-slate-600">Entrega</span><span>{cotacao.valor_entrega > 0 ? brl(cotacao.valor_entrega) : cotacao.entrega_dispensada_clube > 0 ? <>Grátis <span className="text-xs text-violet-700">(Clube MAIS+, economia de {brl(cotacao.entrega_dispensada_clube)})</span></> : 'Grátis'}</span></p>}
+            {modo === 'entrega' && <p className="flex justify-between gap-3"><span className="text-slate-600">Entrega</span><span className="text-right">{cotacao.valor_entrega > 0 ? brl(cotacao.valor_entrega) : cotacao.entrega_dispensada_clube > 0 ? <>Grátis <span className="text-xs text-violet-700">(Clube MAIS+, economia de {brl(cotacao.entrega_dispensada_clube)})</span></> : 'Grátis'}</span></p>}
             <p className="flex justify-between font-extrabold text-lg pt-2 border-t border-slate-100" style={{ color: PRETO }}><span>Total</span><span>{brl(cotacao.total)}</span></p>
+            {cotacao.economia_clube > 0 && (
+              <p className="text-sm font-semibold text-right" style={{ color: '#166534' }}>Você economiza {brl(cotacao.economia_clube)} com o Clube MAIS+</p>
+            )}
           </div>
         </Bloco>
       )}

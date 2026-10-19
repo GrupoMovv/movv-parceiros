@@ -86,19 +86,23 @@ function testeLoja(nomeLoja) {
 // Aceito. Com o código Pix copia e cola (valor já preenchido) a 2ª mensagem
 // leva o código; sem ele (não deu para gerar), volta ao formato com a chave.
 function aceitoCliente(p, nomeLoja, copiaECola = null) {
+  // economia do Clube (itens + entrega grátis): só para o cliente, nunca na mensagem da loja
+  const economia = Number(p.economia_clube) > 0 ? `Você economiza ${brl(p.economia_clube)} com o Clube MAIS+` : null;
   if (copiaECola) {
     return [
       `✅ *Pedido #${p.id} aceito!* — ${nomeLoja}`, '',
       `Total: *${brl(p.total)}*`,
+      economia,
       'Pague com o *Pix copia e cola* da próxima mensagem. O valor já vem preenchido.',
       `Recebedor: ${p.pix_nome_recebedor || nomeLoja}`, '',
       `Confira o nome antes de pagar. A loja só prepara o pedido depois de confirmar o Pix. O pagamento é direto para a loja (o IUB MAIS+ não recebe esse valor). Prazo: ${PRAZO_PAGO_MIN / 60} horas.`, '',
       `Ver o QR e acompanhar o pedido: ${linkMeuPedido(p.id)}`,
-    ].join('\n');
+    ].filter(l => l !== null).join('\n');
   }
   return [
     `✅ *Pedido #${p.id} aceito!* — ${nomeLoja}`, '',
     `Total: *${brl(p.total)}*`,
+    economia,
     'Pague no Pix da loja:',
     `${ROTULO_PIX[p.pix_tipo] || 'Chave'}: ${p.pix_chave}`,
     p.pix_nome_recebedor ? `Nome: ${p.pix_nome_recebedor}` : null, '',

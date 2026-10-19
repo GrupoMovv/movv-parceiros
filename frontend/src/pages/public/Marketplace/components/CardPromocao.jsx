@@ -51,7 +51,12 @@ export default function CardPromocao({ produto: promocao, className = '', style 
           </div>
         )}
 
-        {promocao.desconto_pct && (
+        {/* selo do preço que vale: com o preço Clube, o desconto do Clube (não o da promoção) */}
+        {pp.tipo === 'associado' ? (
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
+            -{Math.round((1 - pp.principal / Number(promocao.preco_de)) * 100)}% Clube
+          </span>
+        ) : promocao.desconto_pct && (
           <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
             -{promocao.desconto_pct}% OFF
           </span>

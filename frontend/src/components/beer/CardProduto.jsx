@@ -17,12 +17,13 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
   const { abrirProduto } = useProdutoModal();
   const link = linkPedido(p, { agora });
   const dias = textoDias(p.dias_disponiveis);
-  const pct = percentualDesconto(p);
   // Loja do Clube (b3): o membro vê e paga o preço Clube; o visitante vê o
   // normal e "R$ X no Clube MAIS+"
   const ehMembro = useEhAssociado();
   const preco = precoDoBeer(p, ehMembro);
   const clube = preco.tipo === 'associado';
+  // selo do preço que vale: com o preço Clube, o da oferta não aparece
+  const pct = clube ? null : percentualDesconto(p);
   const e = p.estabelecimento || {};
   const destaque = variante === 'destaque';
   const oferta = variante === 'oferta';
@@ -56,6 +57,9 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
           )}
           {pct && (
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DC2626', color: '#fff' }}>🔥 OFERTA -{pct}%</span>
+          )}
+          {preco.clubePct > 0 && (
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}>◆ CLUBE -{preco.clubePct}%</span>
           )}
           {p.disponivel_agora && !oferta && (
             <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: BEER.violeta, color: '#fff' }}>
