@@ -22,23 +22,22 @@ export default function CardParceiroDestaque({ parceiro }) {
             size={52} weight="duotone" color="#4C1D95"
           />
         )}
-        {/* Selos no canto de cima, o Pioneiro embaixo do plano: lado a lado
-            eles se sobrepunham (o card tem ~165 px no celular e ~175 px no
-            computador). No celular os selos são menores — o "lg" saía cortado
-            na borda ("MASTER VI"). */}
-        <div className="absolute top-2 left-2 flex flex-col items-start gap-1 sm:hidden">
+        {/* Selo do plano no canto de cima. No celular ele é menor — o "lg"
+            saía cortado na borda ("MASTER VI"). O Pioneiro fica embaixo do
+            nome, fora da imagem: em cima dela cobria as letras do logo
+            (Junior, 19/10/2026). */}
+        <div className="absolute top-2 left-2 sm:hidden">
           <SeloPlano plano={parceiro.plano} size="sm" />
-          {parceiro.e_pioneiro && <SeloPioneiro pioneiro size="sm" />}
         </div>
-        <div className="absolute top-2.5 left-2.5 hidden sm:flex flex-col items-start gap-1.5">
+        <div className="absolute top-2.5 left-2.5 hidden sm:block">
           <SeloPlano plano={parceiro.plano} size="lg" />
-          {parceiro.e_pioneiro && <SeloPioneiro pioneiro size="lg" />}
         </div>
       </div>
 
       <div className="p-3.5">
         <h3 className="font-bold text-sm leading-tight truncate" style={{ color: PRETO }}>{parceiro.nome}</h3>
         <p className="text-slate-500 text-xs mt-1 truncate">{parceiro.categoria_principal || parceiro.categorias?.[0]}</p>
+        {parceiro.e_pioneiro && <SeloPioneiro pioneiro size="sm" className="mt-2" />}
       </div>
     </Link>
   );
