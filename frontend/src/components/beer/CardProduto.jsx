@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { WhatsappLogo, Lightning, Star, ShoppingBag } from '@phosphor-icons/react';
 import { useLojaVendendo } from '../../pages/public/Pedido/lojasSite';
-import { colocarNaSacola } from '../BotaoComprar';
+import { colocarNaSacola, BotaoAdicionarCard } from '../BotaoComprar';
 import BadgeAberto from './BadgeAberto';
 import { formatarBRL } from '../../utils/iubFood';
 import { BEER, linkPedido, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
@@ -13,7 +13,8 @@ import { useEhAssociado, precoDoBeer } from '../../pages/public/Marketplace/prec
 // `variante`: 'padrao' | 'destaque' (selo dourado, foto maior) | 'oferta'
 // (selo vermelho, preço riscado em evidência). Oferta ativa mostra o
 // preço riscado em QUALQUER variante. `agora` = texto "Quero AGORA".
-export default function CardProduto({ produto: p, agora = false, mostrarEstabelecimento = true, variante = 'padrao', className = '' }) {
+// naLoja: na página do estabelecimento, o botão põe no pedido sem sair da página.
+export default function CardProduto({ produto: p, agora = false, mostrarEstabelecimento = true, variante = 'padrao', className = '', naLoja = false }) {
   const { abrirProduto } = useProdutoModal();
   const link = linkPedido(p, { agora });
   const dias = textoDias(p.dias_disponiveis);
@@ -92,7 +93,13 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
         )}
 
         <div className="mt-auto pt-3">
-          {vende?.pode ? (
+          {vende?.pode && naLoja ? (
+            <BotaoAdicionarCard
+              loja={vende.loja} urlLoja={`/beer/estabelecimento/${e.slug}`}
+              item={{ tipo: 'beer', id: p.id, nome: p.nome, foto_url: p.imagem || null }}
+              className="rounded-xl py-2.5 sm:text-sm font-black" style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}
+            />
+          ) : vende?.pode ? (
             // Adega vende pelo site agora: UM botão principal, o pedido pelo site
             <button
               type="button"

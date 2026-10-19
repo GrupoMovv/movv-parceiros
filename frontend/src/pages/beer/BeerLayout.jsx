@@ -151,7 +151,8 @@ export function CabecalhoBeer({ titulo, subtitulo, voltar = '/beer', direita = n
 }
 
 // Grade padrão de produtos + estados de carregando/vazio/erro.
-export function GradeProdutos({ produtos, carregando, erro, vazio, agora = false, mostrarEstabelecimento = true, onTentarDeNovo }) {
+// naLoja: página do estabelecimento — o card põe no pedido sem sair da página.
+export function GradeProdutos({ produtos, carregando, erro, vazio, agora = false, mostrarEstabelecimento = true, naLoja = false, onTentarDeNovo }) {
   if (erro) {
     return (
       <Vazio titulo="Não foi possível carregar agora." acao={onTentarDeNovo && (
@@ -169,7 +170,7 @@ export function GradeProdutos({ produtos, carregando, erro, vazio, agora = false
   if (!produtos.length) return vazio;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      {produtos.map(p => <CardProduto key={p.id} produto={p} agora={agora} mostrarEstabelecimento={mostrarEstabelecimento} />)}
+      {produtos.map(p => <CardProduto key={p.id} produto={p} agora={agora} mostrarEstabelecimento={mostrarEstabelecimento} naLoja={naLoja} />)}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, MapPin, Tag, CalendarCheck, ImageOff, Check, Bookmark, ListChecks } from 'lucide-react';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
@@ -10,7 +10,7 @@ import SeloPlano from './components/SeloPlano';
 import SeloClube from './components/SeloClube';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 import { useAssociadoSessao } from './useAssociadoSessao';
-import { useDisponibilidade, colocarNaSacola } from '../../../components/BotaoComprar';
+import { useDisponibilidade, BotaoAdicionarCard } from '../../../components/BotaoComprar';
 import { precoClubeDe } from './precoPessoa';
 import { quantidadeNaSacola, aoMudarSacola, lerSacola } from '../Pedido/sacola';
 
@@ -41,7 +41,6 @@ export default function FoodDetalhe() {
   const itemReferencia = restaurante?.cardapio?.find(i => i.estoque_disponivel !== false)?.id;
   const dispCompra = useDisponibilidade(itemReferencia ? 'produto' : null, itemReferencia);
   const [naSacola, setNaSacola] = useState(quantidadeNaSacola);
-  const navigate = useNavigate();
   const { ehAssociadoSeci } = useAssociadoSessao();
   useEffect(() => aoMudarSacola(() => setNaSacola(quantidadeNaSacola())), []);
 
@@ -244,22 +243,13 @@ export default function FoodDetalhe() {
                     )}
                     <div className="mt-auto pt-2">
                       {vendeSite ? (
-                        // Restaurante vende pelo site agora: UM botão por item, o pedido pelo site
-                        item.estoque_disponivel === false ? (
-                          <span className="w-full flex justify-center text-[11px] font-bold py-2 rounded-lg border border-slate-200 text-slate-400 bg-slate-100">Esgotado</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const d = { loja: dispCompra.loja, item: { nome: item.nome, foto_url: fotoItem || null } };
-                              if (colocarNaSacola(d, 'produto', item.id, `/food/${slug}`)) navigate('/pedido/finalizar');
-                            }}
-                            className="w-full text-[11px] font-black py-2 px-1 rounded-lg"
-                            style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
-                          >
-                            Pedir agora · {formatarBRL(precoPessoa(item))}
-                          </button>
-                        )
+                        // Restaurante vende pelo site agora: UM botão por item, que põe no
+                        // pedido sem sair do cardápio ("Comprar" / "+ Adicionar")
+                        <BotaoAdicionarCard
+                          loja={dispCompra.loja} urlLoja={`/food/${slug}`} esgotado={item.estoque_disponivel === false}
+                          item={{ tipo: 'produto', id: item.id, nome: item.nome, foto_url: fotoItem || null }}
+                          style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
+                        />
                       ) : (
                       <button
                         type="button"

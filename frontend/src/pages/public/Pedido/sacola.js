@@ -73,3 +73,11 @@ export function useQuantidadeSacola() {
   useEffect(() => aoMudarSacola(() => setN(quantidadeNaSacola())), []);
   return n;
 }
+
+// A sacola inteira (atualiza sozinha) — cards da página da loja: "+ Adicionar"
+// e "2 no pedido".
+export function useSacola() {
+  const [s, setS] = useState(lerSacola);
+  useEffect(() => aoMudarSacola(() => setS(lerSacola())), []);
+  return s;
+}

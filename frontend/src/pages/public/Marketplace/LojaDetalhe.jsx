@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { MapPin, Tag, CalendarCheck, ImageOff, Instagram } from 'lucide-react';
-import { WhatsappLogo } from '@phosphor-icons/react';
+import { WhatsappLogo, ShoppingBag } from '@phosphor-icons/react';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
@@ -9,6 +9,8 @@ import { DIAS, horarioConfigurado, statusFuncionamento, textoTaxaEntrega } from 
 import SeloPlano from './components/SeloPlano';
 import SeloClube from './components/SeloClube';
 import { useEhAssociado } from './precoPessoa';
+import { useDisponibilidade } from '../../../components/BotaoComprar';
+import { useSacola } from '../Pedido/sacola';
 import CardProdutoGrande from './components/CardProdutoGrande';
 import CardPromocao from './components/CardPromocao';
 import { ROXO, ROXO_ESCURO, GRAFITE } from './theme';
@@ -24,6 +26,12 @@ export default function LojaDetalhe() {
   const [loja, setLoja] = useState(null);
   const [estado, setEstado] = useState('carregando'); // carregando | ok | nao_encontrada
   const ehMembro = useEhAssociado();
+  // A loja vende pelo site agora? Uma pergunta só, pelo 1º item disponível —
+  // a resposta traz a loja para o pedido. Os cards viram "Comprar/+ Adicionar".
+  const primeiroProduto = loja?.produtos?.find(p => p.estoque_disponivel !== false);
+  const [tipoTeste, idTeste] = primeiroProduto ? ['produto', primeiroProduto.id] : loja?.promocoes?.[0] ? ['promocao', loja.promocoes[0].id] : [null, null];
+  const disp = useDisponibilidade(tipoTeste, idTeste);
+  const sacola = useSacola();
 
   useEffect(() => {
     setEstado('carregando');
@@ -42,6 +50,9 @@ export default function LojaDetalhe() {
     );
   }
   if (loja.e_restaurante) return <Navigate to={`/food/${slug}`} replace />;
+  const compra = disp?.pode ? { loja: disp.loja, urlLoja: `/marketplace/parceiro/${slug}` } : null;
+  const itensNoPedido = compra && sacola && String(sacola.loja.id) === String(compra.loja.id) && sacola.loja.catalogo === compra.loja.catalogo
+    ? sacola.itens.reduce((n, i) => n + i.quantidade, 0) : 0;
   if (loja.tipo_negocio === 'servico') return <Navigate to={`/servicos/${slug}`} replace />;
 
   const tipo = loja.categoria_principal || loja.categorias?.[0] || null;
@@ -81,7 +92,7 @@ export default function LojaDetalhe() {
           <section>
             <h2 className="font-black text-lg mb-3" style={{ color: GRAFITE }}>🔥 Promoções</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {loja.promocoes.map(pm => <CardPromocao key={pm.id} produto={pm} />)}
+              {loja.promocoes.map(pm => <CardPromocao key={pm.id} produto={pm} compra={compra} />)}
             </div>
           </section>
         )}
@@ -90,7 +101,7 @@ export default function LojaDetalhe() {
           <h2 className="font-black text-lg mb-3" style={{ color: GRAFITE }}>Produtos{loja.produtos.length ? ` (${loja.produtos.length})` : ''}</h2>
           {loja.produtos.length ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {loja.produtos.map(p => <CardProdutoGrande key={p.id} produto={p} />)}
+              {loja.produtos.map(p => <CardProdutoGrande key={p.id} produto={p} compra={compra} />)}
             </div>
           ) : (
             <p className="text-sm text-slate-500">Esta loja ainda não cadastrou produtos.</p>
@@ -141,7 +152,19 @@ export default function LojaDetalhe() {
         )}
       </div>
 
-      {linkWpp && (
+      {itensNoPedido > 0 ? (
+        // Pedido aberto nesta loja: o atalho para o pedido; o WhatsApp vira só dúvida
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-100 px-4 pt-3 pb-1" style={{ paddingBottom: 'calc(0.25rem + env(safe-area-inset-bottom, 0px))' }}>
+          <Link to="/pedido/finalizar" className="max-w-md mx-auto flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-bold text-white" style={{ backgroundColor: '#5B21B6' }}>
+            <ShoppingBag size={20} weight="fill" /> Ver pedido · {itensNoPedido} {itensNoPedido === 1 ? 'item' : 'itens'}
+          </Link>
+          {linkWpp && (
+            <a href={linkWpp} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 underline underline-offset-4 py-2">
+              <WhatsappLogo size={16} /> Tirar dúvida no WhatsApp
+            </a>
+          )}
+        </div>
+      ) : linkWpp && (
         <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-100 px-4 py-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
           <a href={linkWpp} target="_blank" rel="noreferrer" className="max-w-md mx-auto flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-bold text-white" style={{ backgroundColor: '#25D366' }}>
             <WhatsappLogo size={22} weight="fill" /> Falar com a loja

@@ -4,6 +4,7 @@ import { Diamond, Check, BookmarkSimple } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
 import { useEhAssociado, precoDoProduto } from '../precoPessoa';
 import { useCarrinho } from '../CarrinhoContext';
+import { BotaoAdicionarCard } from '../../../../components/BotaoComprar';
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -22,7 +23,9 @@ function ehNovo(criadoEm) {
 // grande" do CardProduto) de propósito: a página de categoria e a busca
 // usam o CardProduto original direto, sem passar pela SecaoProdutos, então
 // mudar o tamanho aqui nunca afeta essas outras telas.
-export default function CardProdutoGrande({ produto, badge, className = '', style }) {
+// compra = { loja, urlLoja }: só na página da loja que vende pelo site
+// (LojaDetalhe) — o botão vira "Comprar"/"+ Adicionar" e o Salvar vira ícone.
+export default function CardProdutoGrande({ produto, badge, className = '', style, compra = null }) {
   const foto = produto.fotos?.[0]?.url;
   // preço que ESTA pessoa paga (mesma regra do servidor — precoPessoa.js)
   const ehAssociado = useEhAssociado();
@@ -67,18 +70,30 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
             className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            -{descontoPct}% OFF
+            {/* do Clube: "◆ Clube -X%"; "OFF" fica para promoção e Fecha Mês */}
+            {pp.tipo === 'associado' ? <span className="inline-flex items-center gap-0.5"><Diamond size={9} weight="fill" /> Clube -{descontoPct}%</span> : <>-{descontoPct}% OFF</>}
           </span>
         )}
 
         {!(descontoPct > 0) && pctSeci > 0 && (
-          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}>-{pctSeci}% Clube</span>
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}><span className="inline-flex items-center gap-0.5"><Diamond size={9} weight="fill" /> Clube -{pctSeci}%</span></span>
 
         )}
         {mostrarNovo && (
           <span className="absolute top-1.5 right-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide text-white" style={{ backgroundColor: '#16A34A' }}>
             Novo
           </span>
+        )}
+        {/* com o botão de pedido, o Salvar na lista vira só um ícone no canto */}
+        {compra && (
+          <button
+            type="button" onClick={handleCarrinho}
+            aria-label={noCarrinho ? 'Tirar da minha lista' : 'Salvar na minha lista'} title={noCarrinho ? 'Na sua lista' : 'Salvar na lista'}
+            className={`absolute bottom-1.5 right-1.5 w-8 h-8 rounded-full flex items-center justify-center shadow border ${noCarrinho ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-white/95 border-slate-200'}`}
+            style={noCarrinho ? undefined : { color: ROXO }}
+          >
+            <BookmarkSimple size={15} weight={noCarrinho ? 'fill' : 'bold'} />
+          </button>
         )}
       </div>
 
@@ -106,6 +121,15 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
           )}
         </div>
 
+        {compra ? (
+          // Página da loja que vende pelo site: o botão principal é o pedido
+          <div className="mt-auto pt-2">
+            <BotaoAdicionarCard
+              loja={compra.loja} urlLoja={compra.urlLoja} esgotado={produto.estoque_disponivel === false}
+              item={{ tipo: 'produto', id: produto.id, nome: produto.nome, foto_url: foto || null }}
+            />
+          </div>
+        ) : (
         <button
           type="button"
           onClick={handleCarrinho}
@@ -116,6 +140,7 @@ export default function CardProdutoGrande({ produto, badge, className = '', styl
         >
           {noCarrinho ? <><Check size={12} weight="bold" /> Na lista</> : <><BookmarkSimple size={12} weight="bold" /> Salvar</>}
         </button>
+        )}
       </div>
     </Link>
   );

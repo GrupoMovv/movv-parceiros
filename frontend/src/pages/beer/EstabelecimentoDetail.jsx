@@ -107,6 +107,7 @@ export default function EstabelecimentoDetail() {
           erro={erro}
           onTentarDeNovo={tentarDeNovo}
           mostrarEstabelecimento={false}
+          naLoja
           vazio={<Vazio emoji="🥃" titulo="Cardápio em montagem" texto="Os produtos deste estabelecimento aparecem aqui depois da aprovação do IUB." />}
         />
       </main>

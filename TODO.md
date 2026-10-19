@@ -185,11 +185,13 @@ Anotado 05/10/2026. Tem que estar no ar ANTES do Fecha Mês de 30/10 (última se
   pelo site já cobra o do evento). Levar `preco_fecha_mes` às consultas de
   listagem (`SELECT_PRODUTO` em `marketplaceHomeController.js`,
   `vitrineRotativaService.js`, busca/categoria) e usar `precoDoProduto` dos cards.
-- **"Comprar · R$ X" nos cards:** nos mesmos cards o único botão hoje é
-  "Salvar". Para loja que vende pelo site agora, o botão do card vira
-  "Comprar · R$ X" (põe no pedido e abre o Finalizar) e o Salvar vira ícone
-  pequeno. Usar a consulta em lote `GET /public/pedidos/lojas?geral=...`
-  (mesma dos cards do Disk Bebidas) pra não fazer uma chamada por card.
+- **"Comprar" nos cards:** FEITO nas páginas de loja (19/10: loja, Food e
+  estabelecimento do Disk Bebidas — `BotaoAdicionarCard`, põe no pedido sem
+  sair da página, "Comprar"/"+ Adicionar", Salvar vira ícone). FALTA nos cards
+  da página inicial, das categorias e da busca (lojas misturadas): lá o botão
+  ainda é só "Salvar". Usar a consulta em lote `GET /public/pedidos/lojas?geral=...`
+  (`useLojaVendendo`, mesma dos cards do Disk Bebidas) pra não fazer uma
+  chamada por card.
 
 ## Blindagem do custeio do sindicato (área da carteirinha SECI) — depende de advogado
 

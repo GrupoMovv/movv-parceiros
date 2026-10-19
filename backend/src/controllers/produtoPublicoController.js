@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { sqlClubePct, precoClubeProduto } = require('../services/clubePreco');
+const { sqlClubePct, sqlClubeLoja, precoClubeProduto } = require('../services/clubePreco');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
 const { edicaoFechaMesDeHoje } = require('../services/pedidoLoja');
@@ -67,7 +67,8 @@ async function getProduto(req, res) {
          pa.id AS parceiro_id, pa.slug AS parceiro_slug, pa.nome AS parceiro_nome,
          pa.icone AS parceiro_icone, pa.cor_icone AS parceiro_cor_icone, pa.logo_url AS parceiro_logo_url,
          pa.categoria_principal AS parceiro_categoria, pa.endereco AS parceiro_endereco,
-         pa.bairro AS parceiro_bairro, pa.cidade AS parceiro_cidade, pa.whatsapp AS parceiro_whatsapp
+         pa.bairro AS parceiro_bairro, pa.cidade AS parceiro_cidade, pa.whatsapp AS parceiro_whatsapp,
+         ${sqlClubeLoja('pa.id')} AS parceiro_clube
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
        WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND ${lojaVisivel(req.modoQa)}`,

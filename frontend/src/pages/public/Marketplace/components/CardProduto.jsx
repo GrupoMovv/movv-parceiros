@@ -65,12 +65,13 @@ export default function CardProduto({ produto, badge, className = '', style }) {
             className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide"
             style={{ backgroundColor: DOURADO, color: '#0F0F14' }}
           >
-            -{descontoPct}% OFF
+            {/* do Clube: "◆ Clube -X%"; "OFF" fica para promoção e Fecha Mês */}
+            {pp.tipo === 'associado' ? <span className="inline-flex items-center gap-0.5"><Diamond size={9} weight="fill" /> Clube -{descontoPct}%</span> : <>-{descontoPct}% OFF</>}
           </span>
         )}
 
         {!(descontoPct > 0) && pctSeci > 0 && (
-          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}>-{pctSeci}% Clube</span>
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: ROXO, color: '#fff' }}><span className="inline-flex items-center gap-0.5"><Diamond size={9} weight="fill" /> Clube -{pctSeci}%</span></span>
 
         )}
         {mostrarNovo && (

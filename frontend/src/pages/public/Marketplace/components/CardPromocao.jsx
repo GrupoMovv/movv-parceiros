@@ -4,6 +4,7 @@ import { ImageOff } from 'lucide-react';
 import { Diamond } from '@phosphor-icons/react';
 import { ROXO, DOURADO, PRETO } from '../theme';
 import { useEhAssociado, precoDaPromocao } from '../precoPessoa';
+import { BotaoAdicionarCard } from '../../../../components/BotaoComprar';
 
 function formatarPreco(v) {
   return parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -30,11 +31,14 @@ function useContagemRegressiva(dataFim) {
   return texto;
 }
 
-export default function CardPromocao({ produto: promocao, className = '', style }) {
+// compra = { loja, urlLoja }: só na página da loja que vende pelo site (LojaDetalhe).
+export default function CardPromocao({ produto: promocao, className = '', style, compra = null }) {
   const contagem = useContagemRegressiva(promocao.data_fim);
   const vagasRestantes = promocao.limite_usos ? promocao.limite_usos - promocao.usos_atuais : null;
   const ehAssociado = useEhAssociado();
   const pp = precoDaPromocao(promocao, ehAssociado);
+  // % da promoção: vem pronto das vitrines; a página da loja não manda, então calcula
+  const pctPromo = promocao.desconto_pct ?? (Number(promocao.preco_de) > 0 ? Math.round((1 - Number(promocao.preco_por) / Number(promocao.preco_de)) * 100) : null);
 
   return (
     <Link
@@ -54,11 +58,11 @@ export default function CardPromocao({ produto: promocao, className = '', style 
         {/* selo do preço que vale: com o preço Clube, o desconto do Clube (não o da promoção) */}
         {pp.tipo === 'associado' ? (
           <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
-            -{Math.round((1 - pp.principal / Number(promocao.preco_de)) * 100)}% Clube
+            <span className="inline-flex items-center gap-0.5"><Diamond size={9} weight="fill" /> Clube -{Math.round((1 - pp.principal / Number(promocao.preco_de)) * 100)}%</span>
           </span>
-        ) : promocao.desconto_pct && (
+        ) : pctPromo > 0 && (
           <span className="absolute top-1.5 left-1.5 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ backgroundColor: DOURADO, color: '#0F0F14' }}>
-            -{promocao.desconto_pct}% OFF
+            -{pctPromo}% OFF
           </span>
         )}
         {promocao.exclusivo_associado && (
@@ -93,6 +97,11 @@ export default function CardPromocao({ produto: promocao, className = '', style 
             <span className="block text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarPreco(pp.chamadaAssociado)} no Clube MAIS+</span>
           )}
         </div>
+        {compra && (
+          <div className="mt-auto pt-2">
+            <BotaoAdicionarCard loja={compra.loja} urlLoja={compra.urlLoja} item={{ tipo: 'promocao', id: promocao.id, nome: promocao.titulo, foto_url: promocao.foto_url || null }} />
+          </div>
+        )}
       </div>
     </Link>
   );

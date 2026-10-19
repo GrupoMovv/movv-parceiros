@@ -10,6 +10,7 @@ import { ROXO, ROXO_ESCURO, DOURADO, PRETO } from './theme';
 import { useFavoritos, CHAVE_FAVORITOS_PRODUTOS } from './useFavoritos';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { precoDoProduto } from './precoPessoa';
+import SeloClube from './components/SeloClube';
 import { useCarrinho } from './CarrinhoContext';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import BotaoComprar, { useDisponibilidade } from '../../../components/BotaoComprar';
@@ -337,6 +338,7 @@ export default function ProdutoDetalhe() {
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm truncate" style={{ color: PRETO }}>{produto.parceiro_nome}</p>
             <p className="text-slate-500 text-xs mt-0.5">{produto.parceiro_categoria}</p>
+            <SeloClube clube={produto.parceiro_clube} className="mt-1.5" />
             {produto.parceiro_endereco && (
               <p className="text-slate-400 text-xs mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" /> {produto.parceiro_bairro ? `${produto.parceiro_bairro}, ` : ''}{produto.parceiro_cidade}</p>
             )}
