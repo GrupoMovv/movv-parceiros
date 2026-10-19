@@ -24,8 +24,18 @@ const acao = fn => async (req, res) => {
   try { return res.json(await fn(req)); } catch (err) { return responderErro(res, err); }
 };
 
+// GET /api/public/vendedor/:codigo — destino do link /v/CÓDIGO (público).
+async function destinoPublico(req, res) {
+  try {
+    const d = await lv.destinoDoCodigo(req.params.codigo, req.modoQa);
+    if (!d) return res.status(404).json({ error: 'Link não encontrado' });
+    return res.json(d);
+  } catch (err) { return responderErro(res, err); }
+}
+
 module.exports = {
   ver,
+  destinoPublico,
   criar: async (req, res) => {
     try { return res.status(201).json(await lv.criar(req.parceiro, req.parceiroUsuario, req.body)); } catch (err) { return responderErro(res, err); }
   },

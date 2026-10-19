@@ -12,6 +12,7 @@ const { precoComClube, clubeDaLoja, pctDoItem } = require('./clubePreco');
 const { whatsappConfirmado, normalizarWhatsapp } = require('./whatsappVerificacao');
 const { onlyDigits } = require('../utils/validators');
 const pedidoAvisos = require('./pedidoAvisos');
+const { codigoValido } = require('./lojaVendedores');
 
 // Pedido pelo site (botão Comprar) — núcleo. O DINHEIRO NÃO PASSA PELO IUB:
 // o cliente paga no Pix da loja; aqui só se registra e acompanha.
@@ -431,6 +432,22 @@ function gerarTokenLoja() {
 }
 
 // entrada: { itens, modo_recebimento, endereco?, observacao?, confirmo_maior_18? }
+// Equipe de vendas (e2): o site manda os códigos de vendedor guardados no
+// navegador do cliente (link /v/CÓDIGO ou ?v=CÓDIGO, 7 dias), do mais recente
+// para o mais antigo. Vale o mais recente que seja DESTA loja e de vendedor
+// ativo; nenhum = "loja" (NULL). O cliente nunca vê nem escolhe.
+async function vendedorDoPedido(parceiroId, codigos) {
+  const lista = (Array.isArray(codigos) ? codigos : [])
+    .map(c => String(c ?? '').trim().toUpperCase()).filter(codigoValido).slice(0, 20);
+  if (!lista.length) return null;
+  const r = await db.query('SELECT id, codigo FROM loja_vendedores WHERE parceiro_id = $1 AND ativo AND codigo = ANY($2)', [parceiroId, lista]);
+  for (const c of lista) {
+    const v = r.rows.find(x => x.codigo === c);
+    if (v) return v.id;
+  }
+  return null;
+}
+
 async function criarPedido(associado, entrada, { qa = false, ip = null, userAgent = null } = {}) {
   if (!associado.ativo) throw new ErroPedido(403, 'CONTA_INATIVA', 'Sua conta está desativada.');
   if (!whatsappConfirmado(associado)) {
@@ -453,6 +470,8 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
   if (catalogo === 'beer') await conferirIdadeBeer(associado, entrada, ip, userAgent);
 
   const automatico = Boolean(loja.pedidos_aceite_automatico);
+  // Equipe de vendas (e2): o vendedor que trouxe o cliente pelo link dele
+  const vendedorId = await vendedorDoPedido(loja.id, entrada?.vendedores);
   let criado;
   try {
     criado = await db.transacao(async (client) => {
@@ -463,8 +482,8 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
            cep, endereco, numero, complemento, bairro, cidade, estado, referencia,
            subtotal, valor_entrega, total, forma_pagamento, entrega_dispensada_clube,
            pix_chave, pix_tipo, pix_nome_recebedor, aceito_em,
-           aviso_idade, aceite_automatico, observacao, token_loja)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'pix',$28,$20,$21,$22,$23,$24,$25,$26,$27)
+           aviso_idade, aceite_automatico, observacao, token_loja, vendedor_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'pix',$28,$20,$21,$22,$23,$24,$25,$26,$27,$29)
          RETURNING *`,
         [
           loja.id, associado.id, catalogo, catalogo === 'beer' ? loja.beer.id : null, automatico ? 'aceito' : 'enviado',
@@ -476,7 +495,7 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
           automatico ? loja.pix_chave : null, automatico ? loja.pix_tipo : null, automatico ? loja.pix_nome_recebedor : null,
           automatico ? new Date() : null,
           catalogo === 'beer', automatico, observacao, gerarTokenLoja(),
-          resumo.entrega_dispensada_clube,
+          resumo.entrega_dispensada_clube, vendedorId,
         ]
       )).rows[0];
       // Promoção com limite: reserva 1 vaga por pedido já na criação (mesma

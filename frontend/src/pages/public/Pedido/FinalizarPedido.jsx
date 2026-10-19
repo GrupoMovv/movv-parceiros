@@ -8,6 +8,7 @@ import ConfirmarWhatsapp from '../../../components/ConfirmarWhatsapp';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import { ROXO, PRETO } from '../Marketplace/theme';
 import { lerSacola, mudarQuantidade, limparSacola, aoMudarSacola } from './sacola';
+import { codigosVendedor } from './vendedorLink';
 
 const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const campoCls = 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-slate-400';
@@ -96,6 +97,8 @@ export default function FinalizarPedido() {
       const res = await apiPainel.post('/public/pedidos', {
         itens: itensEntrada, modo_recebimento: modo, endereco: modo === 'entrega' ? enderecoEscolhido() : undefined,
         observacao: observacao || undefined, confirmo_maior_18: maior18 || undefined,
+        // Equipe de vendas: códigos de vendedor guardados no navegador (o servidor escolhe)
+        vendedores: codigosVendedor(),
       });
       limparSacola();
       setEnviado(res.data);

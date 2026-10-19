@@ -146,6 +146,8 @@ router.get('/marketplace/busca', qa, marketplaceHomeCtrl.getBusca);
 router.get('/marketplace/food', marketplaceHomeCtrl.getFood);
 router.get('/food/:slug', qa, marketplaceHomeCtrl.getFoodPorSlug);
 router.get('/lojas/:slug', qa, marketplaceHomeCtrl.getLojaPorSlug);
+// Equipe de vendas: destino do link /v/CÓDIGO (sem dados do vendedor)
+router.get('/vendedor/:codigo', qa, require('../controllers/lojaVendedoresController').destinoPublico);
 router.get('/parceiros/master-por-categoria', marketplaceHomeCtrl.getMasterPorCategoria);
 router.get('/cupons/disponiveis', marketplaceHomeCtrl.getCuponsDisponiveis);
 

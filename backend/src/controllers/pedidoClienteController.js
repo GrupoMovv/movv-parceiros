@@ -36,7 +36,8 @@ async function viewCliente(pedido) {
   // Z-API não avisou a loja: botão manual pro cliente, só com o número do
   // pedido (o link com token da loja NUNCA aparece pro cliente).
   const avisoFalhou = pedido.status === 'enviado' && await pedidoAvisos.avisoLojaFalhou(pedido.id);
-  const { token_loja: _t, associado_id: _a, ...p } = pedido; // eslint-disable-line no-unused-vars
+  // vendedor_id: Equipe de vendas — o cliente nunca sabe que veio por um vendedor
+  const { token_loja: _t, associado_id: _a, vendedor_id: _v, ...p } = pedido; // eslint-disable-line no-unused-vars
   return {
     ...p,
     pix_chave: mostraPix ? p.pix_chave : null,
@@ -114,7 +115,7 @@ async function listar(req, res) {
       [req.painelAssociado.id]
     );
     return res.json({
-      pedidos: r.rows.map(({ token_loja: _t, pix_chave: _c, pix_tipo: _pt, pix_nome_recebedor: _n, ...p }) => ({ // eslint-disable-line no-unused-vars
+      pedidos: r.rows.map(({ token_loja: _t, pix_chave: _c, pix_tipo: _pt, pix_nome_recebedor: _n, vendedor_id: _v, ...p }) => ({ // eslint-disable-line no-unused-vars
         ...p, status_texto: rotuloStatus(p.status, p.modo_recebimento),
       })),
     });

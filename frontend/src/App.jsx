@@ -123,6 +123,7 @@ import ParceiroJogos from './pages/parceiro/Jogos';
 import ParceiroConfiguracaoEntrega from './pages/parceiro/ConfiguracaoEntrega';
 import ParceiroClubeMais from './pages/parceiro/ClubeMais';
 import ParceiroEquipeVendas from './pages/parceiro/EquipeVendas';
+import { CapturaVendedor, LinkVendedor } from './pages/public/Pedido/vendedorLink';
 import SindicatoClube from './pages/sindicato/Clube/SindicatoClube';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
 import ParceiroPedidosSite from './pages/parceiro/PedidosSite';
@@ -300,8 +301,11 @@ function HomeRedirect() {
 export default function App() {
   return (
     <AuthProvider>
+      {/* Equipe de vendas: ?v=CÓDIGO em qualquer página marca o vendedor (7 dias) */}
+      <CapturaVendedor />
       <Routes>
         {/* Páginas públicas */}
+        <Route path="/v/:codigo"        element={<LinkVendedor />} />
         <Route path="/login"             element={<Login />} />
         <Route path="/seja-indicador"    element={<SejaIndicador />} />
         <Route path="/cadastro-indicador" element={<CadastroIndicador />} />

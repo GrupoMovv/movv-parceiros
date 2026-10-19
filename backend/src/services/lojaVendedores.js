@@ -6,6 +6,8 @@ const crypto = require('crypto');
 const db = require('../config/database');
 const { PLANOS, planoEfetivo } = require('../config/planos');
 const { normalizarWhatsapp } = require('./whatsappVerificacao');
+const { lojaVisivel } = require('../utils/lojaVisivel');
+const { ehRestaurante } = require('../utils/categorias');
 
 class ErroEquipe extends Error {
   constructor(status, codigo, mensagem) { super(mensagem); this.status = status; this.codigo = codigo; }
@@ -151,7 +153,27 @@ async function novoCodigo(parceiro, id) {
   });
 }
 
+// Link /v/CÓDIGO (e2): para qual página da loja ele leva. Não diz nada do
+// vendedor (nem nome): só o destino e se o código ainda marca o cliente
+// (vendedor desativado: o link abre a loja, mas não marca).
+async function destinoDoCodigo(codigo, qa = false) {
+  if (!codigoValido(codigo)) return null;
+  const r = (await db.query(
+    `SELECT v.ativo, pa.slug, pa.categorias, pa.tipo_negocio, pa.tipo_pessoa,
+            EXISTS (SELECT 1 FROM sindicato_parceiro_produtos pr WHERE pr.parceiro_id = pa.id AND pr.ativo AND NOT pr.rascunho AND pr.moderacao_status = 'aprovado') AS tem_produtos,
+            EXISTS (SELECT 1 FROM beer_estabelecimentos be WHERE be.parceiro_id = pa.id AND be.ativo) AS tem_beer
+       FROM loja_vendedores v JOIN sindicato_parceiros pa ON pa.id = v.parceiro_id
+      WHERE v.codigo = $1 AND ${lojaVisivel(qa, 'pa')}`, [String(codigo).toUpperCase()])).rows[0];
+  if (!r) return null;
+  let destino = `/marketplace/parceiro/${r.slug}`;
+  if (ehRestaurante(r.categorias)) destino = `/food/${r.slug}`;
+  else if (r.tipo_negocio === 'servico') destino = `/servicos/${r.slug}`;
+  else if (r.tem_beer && !r.tem_produtos) destino = `/beer/estabelecimento/${r.slug}`;
+  return { destino, marcar: Boolean(r.ativo) && r.tipo_pessoa !== 'pf' };
+}
+
 module.exports = {
+  destinoDoCodigo,
   ErroEquipe, ALFABETO, gerarCodigo, codigoValido, limiteDoPlano,
   listar, criar, editar, desativar, ativar, novoCodigo,
 };
