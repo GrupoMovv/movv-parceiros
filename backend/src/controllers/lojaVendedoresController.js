@@ -33,8 +33,26 @@ async function destinoPublico(req, res) {
   } catch (err) { return responderErro(res, err); }
 }
 
+// GET /relatorio?de=AAAA-MM-DD&ate=AAAA-MM-DD — vendas por vendedor (só entregues)
+async function relatorio(req, res) {
+  try { return res.json(await lv.relatorio(req.parceiro, req.query.de, req.query.ate)); } catch (err) { return responderErro(res, err); }
+}
+
+// GET /relatorio.xlsx — a mesma coisa em planilha (abas Resumo e Pedidos)
+async function relatorioPlanilha(req, res) {
+  try {
+    const rel = await lv.relatorio(req.parceiro, req.query.de, req.query.ate);
+    const arquivo = `equipe-de-vendas-${req.parceiro.slug || 'loja'}-${rel.de}-a-${rel.ate}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${arquivo}"`);
+    return res.send(lv.planilha(rel, req.parceiro.nome));
+  } catch (err) { return responderErro(res, err); }
+}
+
 module.exports = {
   ver,
+  relatorio,
+  relatorioPlanilha,
   destinoPublico,
   criar: async (req, res) => {
     try { return res.status(201).json(await lv.criar(req.parceiro, req.parceiroUsuario, req.body)); } catch (err) { return responderErro(res, err); }

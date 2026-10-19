@@ -5,6 +5,8 @@ const ctrl = require('../controllers/lojaVendedoresController');
 // Equipe de vendas da loja — aba "Equipe de vendas" do painel (/api/parceiro/equipe).
 router.use(authenticateParceiro);
 router.get('/', ctrl.ver);
+router.get('/relatorio', ctrl.relatorio);
+router.get('/relatorio.xlsx', ctrl.relatorioPlanilha);
 router.post('/', ctrl.criar);
 router.put('/:id(\\d+)', ctrl.editar);
 router.post('/:id(\\d+)/desativar', ctrl.desativar);

@@ -172,7 +172,81 @@ async function destinoDoCodigo(codigo, qa = false) {
   return { destino, marcar: Boolean(r.ativo) && r.tipo_pessoa !== 'pf' };
 }
 
+// ── Relatório (e4) ─────────────────────────────────────────────────────
+// Vendas por vendedor no período: só pedidos ENTREGUES, pela data da
+// entrega (horário de Itumbiara). "valor dos produtos" = sem a entrega;
+// "valor total" = o que o cliente pagou. A loja escolhe a base da comissão.
+const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_DIAS_RELATORIO = 400;
+
+function periodo(de, ate) {
+  if (!RE_DATA.test(String(de)) || !RE_DATA.test(String(ate)) || Number.isNaN(Date.parse(de)) || Number.isNaN(Date.parse(ate))) {
+    throw new ErroEquipe(400, 'PERIODO', 'Escolha o período (de e até).');
+  }
+  const dias = (Date.parse(ate) - Date.parse(de)) / 86400000;
+  if (dias < 0) throw new ErroEquipe(400, 'PERIODO', 'A data final vem antes da inicial.');
+  if (dias > MAX_DIAS_RELATORIO) throw new ErroEquipe(400, 'PERIODO', 'Escolha um período de até um ano.');
+  return { de, ate };
+}
+
+const dinheiro = v => Math.round(Number(v || 0) * 100) / 100;
+
+async function relatorio(parceiro, de, ate) {
+  const per = periodo(de, ate);
+  const pedidos = (await db.query(
+    `SELECT p.id, p.entregue_em, p.vendedor_id, v.nome AS vendedor, p.subtotal, p.valor_entrega, p.total
+       FROM loja_pedidos p LEFT JOIN loja_vendedores v ON v.id = p.vendedor_id
+      WHERE p.parceiro_id = $1 AND p.status = 'entregue'
+        AND p.entregue_em >= ($2::date)::timestamp AT TIME ZONE 'America/Sao_Paulo'
+        AND p.entregue_em <  ($3::date + 1)::timestamp AT TIME ZONE 'America/Sao_Paulo'
+      ORDER BY p.entregue_em, p.id`, [parceiro.id, per.de, per.ate])).rows
+    .map(r => ({ ...r, subtotal: dinheiro(r.subtotal), valor_entrega: dinheiro(r.valor_entrega), total: dinheiro(r.total) }));
+  const vendedores = (await db.query('SELECT id, nome, ativo FROM loja_vendedores WHERE parceiro_id = $1 ORDER BY nome', [parceiro.id])).rows;
+  const linha = (id, nome, ativo) => {
+    const dele = pedidos.filter(p => (p.vendedor_id ?? null) === id);
+    return { vendedor_id: id, vendedor: nome, ativo, pedidos: dele.length,
+      valor_produtos: dinheiro(dele.reduce((s, p) => s + p.subtotal, 0)), valor_total: dinheiro(dele.reduce((s, p) => s + p.total, 0)) };
+  };
+  // vendedores ativos sempre aparecem (mesmo zerados); desativados só com venda no período
+  const porVendedor = vendedores.map(v => linha(v.id, v.nome, v.ativo)).filter(l => l.ativo || l.pedidos > 0)
+    .sort((a, b) => b.valor_total - a.valor_total || a.vendedor.localeCompare(b.vendedor));
+  const loja = linha(null, 'Loja (sem link)', true);
+  return {
+    de: per.de, ate: per.ate,
+    linhas: [...porVendedor, loja],
+    total: { pedidos: pedidos.length, valor_produtos: dinheiro(pedidos.reduce((s, p) => s + p.subtotal, 0)), valor_total: dinheiro(pedidos.reduce((s, p) => s + p.total, 0)) },
+    pedidos: pedidos.map(({ vendedor_id: _id, ...p }) => ({ ...p, vendedor: p.vendedor || 'Loja (sem link)' })), // eslint-disable-line no-unused-vars
+  };
+}
+
+// Planilha (.xlsx) com duas abas: Resumo e Pedidos. Sem dado do cliente.
+function planilha(rel, nomeLoja) {
+  const XLSX = require('xlsx');
+  const br = d => d.split('-').reverse().join('/');
+  const dataHora = d => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const resumo = XLSX.utils.aoa_to_sheet([
+    [`Vendas por vendedor — ${nomeLoja}`],
+    [`Período: ${br(rel.de)} a ${br(rel.ate)}. Só pedidos entregues pelo IUB MAIS+.`],
+    ['A atribuição é uma estimativa: conta o último link de vendedor usado pelo cliente nos 7 dias antes do pedido.'],
+    [],
+    ['Vendedor', 'Pedidos entregues', 'Valor dos produtos (R$)', 'Valor total (R$)'],
+    ...rel.linhas.map(l => [l.vendedor + (l.ativo === false ? ' (desativado)' : ''), l.pedidos, l.valor_produtos, l.valor_total]),
+    ['Total', rel.total.pedidos, rel.total.valor_produtos, rel.total.valor_total],
+  ]);
+  resumo['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 24 }, { wch: 18 }];
+  const lista = XLSX.utils.aoa_to_sheet([
+    ['Pedido', 'Entregue em', 'Vendedor', 'Valor dos produtos (R$)', 'Entrega (R$)', 'Valor total (R$)'],
+    ...rel.pedidos.map(p => [p.id, dataHora(p.entregue_em), p.vendedor, p.subtotal, p.valor_entrega, p.total]),
+  ]);
+  lista['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 30 }, { wch: 24 }, { wch: 14 }, { wch: 18 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, resumo, 'Resumo');
+  XLSX.utils.book_append_sheet(wb, lista, 'Pedidos');
+  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
 module.exports = {
+  relatorio, planilha,
   destinoDoCodigo,
   ErroEquipe, ALFABETO, gerarCodigo, codigoValido, limiteDoPlano,
   listar, criar, editar, desativar, ativar, novoCodigo,
