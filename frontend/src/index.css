@@ -122,6 +122,38 @@ input::-ms-clear {
   animation-play-state: paused;
 }
 
+/* Brilho dos selos MASTER VIP e Pioneiro (Junior, 19/10/2026). Antes era o
+   animate-pulse do Tailwind, que pisca a OPACIDADE do selo inteiro: na fase
+   clara o texto quase sumia. Agora só a luz em volta pulsa e um reflexo passa
+   POR TRÁS do texto (::before com z-index -1 dentro do isolate); o texto fica
+   escuro e opaco o tempo todo. */
+.selo-brilho {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  animation: selo-luz 2.4s ease-in-out infinite;
+}
+.selo-brilho::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.6) 50%, transparent 70%);
+  transform: translateX(-130%);
+  animation: selo-reflexo 3.2s ease-in-out infinite;
+}
+@keyframes selo-luz {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 184, 0, 0.45); }
+  50%      { box-shadow: 0 0 16px rgba(255, 184, 0, 0.9); }
+}
+@keyframes selo-reflexo {
+  0%       { transform: translateX(-130%); }
+  55%, 100% { transform: translateX(130%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .selo-brilho, .selo-brilho::before { animation: none; }
+}
+
 /* Flip 3D das cartas do Jogo da Memória — backface-visibility não tem
    utility no Tailwind desse projeto, por isso CSS puro em vez de @apply. */
 .memoria-carta {

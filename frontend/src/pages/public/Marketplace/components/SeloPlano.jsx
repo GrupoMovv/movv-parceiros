@@ -32,13 +32,14 @@ export default function SeloPlano({ plano, size = 'sm', mostrarGratis = false, c
 
   return (
     <span
-      className={`inline-flex items-center font-black uppercase tracking-wide rounded-full whitespace-nowrap ${tamanhoTexto} ${isMaster ? 'animate-pulse' : ''} ${className}`}
+      className={`inline-flex items-center font-black uppercase tracking-wide rounded-full whitespace-nowrap ${tamanhoTexto} ${isMaster ? 'selo-brilho' : ''} ${className}`}
       style={{
         background: isMaster
           ? `linear-gradient(135deg, ${DOURADO_ESCURO} 0%, ${DOURADO} 45%, #FFE9A8 55%, ${DOURADO} 100%)`
           : `linear-gradient(135deg, ${DOURADO_ESCURO} 0%, ${DOURADO} 100%)`,
         color: ROXO_ESCURO,
-        boxShadow: isMaster ? `0 0 14px ${DOURADO}AA` : isPremium ? '0 2px 8px rgba(15,15,20,0.18)' : '0 1px 3px rgba(15,15,20,0.12)',
+        // Master: a luz em volta é animada pela classe selo-brilho (index.css)
+        boxShadow: isMaster ? undefined : isPremium ? '0 2px 8px rgba(15,15,20,0.18)' : '0 1px 3px rgba(15,15,20,0.12)',
       }}
     >
       <Icon size={tamanhoIcone} weight="fill" /> {cfg.emoji} {cfg.label}
