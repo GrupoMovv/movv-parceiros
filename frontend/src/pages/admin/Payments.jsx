@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreditCard, CheckCircle2, AlertCircle, Calendar, FileDown, Loader2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
@@ -47,8 +47,9 @@ export default function AdminPayments() {
   function openPay(partner) {
     setSelected(partner);
     setForm({
-      reference_month: new Date().toISOString().slice(0, 7),
-      payment_date: new Date().toISOString().slice(0, 10),
+      // data local (toISOString é UTC: depois das 21h já era o dia seguinte)
+      reference_month: format(new Date(), 'yyyy-MM'),
+      payment_date: format(new Date(), 'yyyy-MM-dd'),
       receipt: null,
     });
     setModal(true);
@@ -162,7 +163,8 @@ export default function AdminPayments() {
                 {payments.map(pay => (
                   <tr key={pay.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="py-3 pr-4 text-slate-500 whitespace-nowrap text-xs">
-                      {format(new Date(pay.payment_date), 'dd/MM/yyyy')}
+                      {/* data sem hora: parseISO lê no fuso local (new Date voltava um dia) */}
+                      {format(parseISO(pay.payment_date), 'dd/MM/yyyy')}
                     </td>
                     <td className="py-3 pr-4 text-slate-900 whitespace-nowrap">{pay.partner_name}</td>
                     <td className="py-3 pr-4 font-mono text-xs text-[#C9A84C]">{pay.partner_code}</td>
