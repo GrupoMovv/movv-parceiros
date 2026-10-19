@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ImageOff, Clock } from 'lucide-react';
 import SeloPlano from './SeloPlano';
+import SeloClube from './SeloClube';
 import { ROXO, PRETO } from '../theme';
 import { statusFuncionamento, textoTaxaEntrega, textoTempoPreparo } from '../../../../utils/iubFood';
 
@@ -44,6 +45,7 @@ export default function CardFood({ restaurante }) {
         <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.4em] mt-0.5" style={{ color: PRETO }}>
           {restaurante.nome}
         </p>
+        <SeloClube clube={restaurante.clube} className="mt-1 self-start" />
 
         <div className="mt-1.5 min-h-[2em] space-y-0.5">
           {restaurante.preco_medio && <p className="text-sm font-black" style={{ color: ROXO }}>{restaurante.preco_medio}</p>}

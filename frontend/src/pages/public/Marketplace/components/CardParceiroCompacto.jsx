@@ -3,11 +3,12 @@ import { PRETO, ROXO } from '../theme';
 import IconePorCategoria from './IconePorCategoria';
 import SeloPlano from './SeloPlano';
 import SeloPioneiro from './SeloPioneiro';
+import SeloClube from './SeloClube';
 
 export default function CardParceiroCompacto({ parceiro }) {
   const categoria = parceiro.categoria_principal || parceiro.categorias?.[0];
 
-  const temSelo = (parceiro.plano && parceiro.plano !== 'gratis') || parceiro.e_pioneiro;
+  const temSelo = (parceiro.plano && parceiro.plano !== 'gratis') || parceiro.e_pioneiro || parceiro.clube;
 
   // Celular (2 cards por linha, ~160 px cada): logo e nome em cima, selo
   // numa linha própria e "Ver perfil" embaixo — antes o selo, que não
@@ -38,6 +39,7 @@ export default function CardParceiroCompacto({ parceiro }) {
             <span className="hidden sm:contents">
               <SeloPlano plano={parceiro.plano} size="sm" />
               <SeloPioneiro pioneiro={parceiro.e_pioneiro} size="sm" />
+              <SeloClube clube={parceiro.clube} />
             </span>
           </div>
           {categoria && <p className="text-slate-400 text-xs truncate mt-0.5">{categoria}</p>}
@@ -48,6 +50,7 @@ export default function CardParceiroCompacto({ parceiro }) {
         <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
           <SeloPlano plano={parceiro.plano} size="sm" />
           <SeloPioneiro pioneiro={parceiro.e_pioneiro} size="sm" />
+              <SeloClube clube={parceiro.clube} />
         </div>
       )}
 

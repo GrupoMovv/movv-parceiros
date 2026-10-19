@@ -7,6 +7,7 @@ import TopNav from './components/TopNav';
 import CategoriaFaixa from './components/CategoriaFaixa';
 import HeroBannerCarousel from './components/HeroBannerCarousel';
 import CardParceiroCompacto from './components/CardParceiroCompacto';
+import VitrineLojasDoClube from './components/VitrineLojasDoClube';
 import SecaoProdutos from './components/SecaoProdutos';
 import SecaoResultadosBusca from './components/SecaoResultadosBusca';
 import CardPromocao from './components/CardPromocao';
@@ -135,6 +136,8 @@ export default function Marketplace() {
         </div>
 
         <VitrineParceirosDestaque />
+
+        <VitrineLojasDoClube limite={8} id="lojas-clube" />
 
         <SecaoProdutos
           id="ofertas" Icone={Lightning} titulo="Ofertas do Dia"

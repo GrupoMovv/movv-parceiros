@@ -22,6 +22,14 @@ function sqlClubePct(catalogo, itemId, parceiroId) {
                     WHERE x.parceiro_id = lc.parceiro_id AND x.catalogo = '${catalogo}' AND x.item_id = ${itemId})))`;
 }
 
+// Pedaço de SQL: benefício da Loja do Clube para o selo e a vitrine (b4),
+// { percentual, alcance, entrega_gratis } ou NULL. parceiroId é expressão SQL.
+function sqlClubeLoja(parceiroId) {
+  if (!PRECO_LOJA_CLUBE_NO_SITE) return 'NULL::json';
+  return `(SELECT json_build_object('percentual', lc.percentual, 'alcance', lc.alcance, 'entrega_gratis', lc.entrega_gratis)
+            FROM loja_clube lc WHERE lc.parceiro_id = ${parceiroId} AND lc.ativo)`;
+}
+
 // Benefício da loja para o pedido (com cache no ctx do pedido).
 async function clubeDaLoja(ctx, parceiroId) {
   if (!PRECO_LOJA_CLUBE_NO_SITE) return null;
@@ -48,7 +56,7 @@ function pctDoItem(clube, catalogo, itemId) {
   return clube.percentual;
 }
 
-module.exports = { precoComClube, sqlClubePct, clubeDaLoja, pctDoItem };
+module.exports = { precoComClube, sqlClubePct, sqlClubeLoja, clubeDaLoja, pctDoItem };
 
 // Menor preço Clube de um produto (preço fixo ou percentual da loja), ou
 // null. Para as mensagens de WhatsApp e a "Minha lista".

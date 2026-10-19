@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { ROXO, ROXO_ESCURO, DOURADO } from './theme';
 import BotaoVoltar from '../../../components/ui/BotaoVoltar';
+import VitrineLojasDoClube from './components/VitrineLojasDoClube';
 
 // /clube — página do Clube MAIS+ (marca neutra; decisões do Junior, 07/10).
 // Duas portas, com o mesmo peso: a assinatura de R$ 9,90 vem primeiro (por
@@ -94,8 +95,8 @@ export default function Clube() {
   const origem = new URLSearchParams(location.search).get('origem') || 'pagina_clube';
 
   useEffect(() => {
-    if (location.hash !== '#avisar') return;
-    const t = setTimeout(() => document.getElementById('avisar')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    if (location.hash !== '#avisar' && location.hash !== '#lojas') return;
+    const t = setTimeout(() => document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     return () => clearTimeout(t);
   }, [location.hash, carregando]);
 
@@ -143,6 +144,8 @@ export default function Clube() {
             ))}
           </div>
         </section>
+
+        <VitrineLojasDoClube id="lojas" subtitulo="Lojas de Itumbiara com desconto permanente para quem é do Clube" />
 
         {!ehAssociadoSeci && (
           <section id="avisar" className="scroll-mt-24">

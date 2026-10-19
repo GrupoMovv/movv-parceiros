@@ -2,7 +2,7 @@
 // (/api/sindicato-clube). Regras em services/lojaClube.js.
 const db = require('../config/database');
 const lc = require('../services/lojaClube');
-const { PRECO_LOJA_CLUBE_NO_SITE } = require('../config/clube');
+const { PRECO_LOJA_CLUBE_NO_SITE, ALERTA_PRECO_PCT, ALERTA_PRECO_DIAS } = require('../config/clube');
 const { nomeDoAdmin } = require('../services/registroAdmin');
 
 function responderErro(res, err) {
@@ -55,7 +55,8 @@ async function resumo(req, res) {
     const interessados = await q(
       `SELECT id, nome, whatsapp, autorizou_contato, origem, criado_em FROM clube_interessados ORDER BY criado_em DESC LIMIT 500`);
     const termos = await q(`SELECT versao, titulo, provisoria, publicado_em, publicado_por, prazo_aceite_dias FROM loja_clube_termos ORDER BY versao DESC`);
-    return res.json({ numeros, termo_vigente: termo, termos, lojas: lojas.map(l => ({ ...l, percentual: l.percentual != null ? Number(l.percentual) : null })), interessados });
+    const alertas = await lc.alertasPreco();
+    return res.json({ numeros: { ...numeros, alertas_preco: alertas.length }, alerta_regra: { pct: ALERTA_PRECO_PCT, dias: ALERTA_PRECO_DIAS }, alertas_preco: alertas, termo_vigente: termo, termos, lojas: lojas.map(l => ({ ...l, percentual: l.percentual != null ? Number(l.percentual) : null })), interessados });
   } catch (err) { return responderErro(res, err); }
 }
 

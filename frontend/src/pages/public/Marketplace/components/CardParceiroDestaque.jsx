@@ -3,6 +3,7 @@ import { PRETO } from '../theme';
 import IconePorCategoria from './IconePorCategoria';
 import SeloPlano from './SeloPlano';
 import SeloPioneiro from './SeloPioneiro';
+import SeloClube from './SeloClube';
 
 // Card "grande" só pra vitrine Parceiros em Destaque (Premium/Master) —
 // mesma base do PartnerCard normal, mas com foto maior e selo do plano em
@@ -37,7 +38,12 @@ export default function CardParceiroDestaque({ parceiro }) {
       <div className="p-3.5">
         <h3 className="font-bold text-sm leading-tight truncate" style={{ color: PRETO }}>{parceiro.nome}</h3>
         <p className="text-slate-500 text-xs mt-1 truncate">{parceiro.categoria_principal || parceiro.categorias?.[0]}</p>
-        {parceiro.e_pioneiro && <SeloPioneiro pioneiro size="sm" className="mt-2" />}
+        {(parceiro.e_pioneiro || parceiro.clube) && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <SeloPioneiro pioneiro={parceiro.e_pioneiro} size="sm" />
+            <SeloClube clube={parceiro.clube} />
+          </div>
+        )}
       </div>
     </Link>
   );

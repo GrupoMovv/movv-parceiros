@@ -20,4 +20,10 @@ const AVISO_DIAS_ANTES = 3;
 // benefício só fica gravado (b1 e b2), sem efeito no preço.
 const PRECO_LOJA_CLUBE_NO_SITE = true;
 
-module.exports = { PERCENTUAL_MIN, PERCENTUAL_MAX, MINIMOS_SUGERIDOS, MINIMO_PADRAO, AVISO_DIAS_ANTES, PRECO_LOJA_CLUBE_NO_SITE };
+// Alerta do admin (b4): Loja do Clube que sobe o preço normal de um produto
+// mais que isto acima do menor preço dele nos 30 dias anteriores. Só alerta:
+// não bloqueia e não avisa a loja.
+const ALERTA_PRECO_PCT = 10;
+const ALERTA_PRECO_DIAS = 30;
+
+module.exports = { PERCENTUAL_MIN, PERCENTUAL_MAX, MINIMOS_SUGERIDOS, MINIMO_PADRAO, AVISO_DIAS_ANTES, PRECO_LOJA_CLUBE_NO_SITE, ALERTA_PRECO_PCT, ALERTA_PRECO_DIAS };

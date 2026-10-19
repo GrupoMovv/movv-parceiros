@@ -7,6 +7,8 @@ import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { DIAS, horarioConfigurado, statusFuncionamento, textoTaxaEntrega } from '../../../utils/iubFood';
 import SeloPlano from './components/SeloPlano';
+import SeloClube from './components/SeloClube';
+import { useEhAssociado } from './precoPessoa';
 import CardProdutoGrande from './components/CardProdutoGrande';
 import CardPromocao from './components/CardPromocao';
 import { ROXO, ROXO_ESCURO, GRAFITE } from './theme';
@@ -21,6 +23,7 @@ export default function LojaDetalhe() {
   const { slug } = useParams();
   const [loja, setLoja] = useState(null);
   const [estado, setEstado] = useState('carregando'); // carregando | ok | nao_encontrada
+  const ehMembro = useEhAssociado();
 
   useEffect(() => {
     setEstado('carregando');
@@ -53,7 +56,7 @@ export default function LojaDetalhe() {
     <div className="min-h-screen w-full bg-white pb-28">
       <div className="relative px-6 pt-8 pb-12 text-center overflow-hidden" style={{ background: `linear-gradient(150deg, ${ROXO_ESCURO} 0%, ${ROXO} 130%)` }}>
         <div className="relative text-left -mt-4 mb-2"><BotaoVoltar variante="claro" fallback="/marketplace" /></div>
-        <div className="relative flex justify-center mb-3"><SeloPlano plano={loja.plano} size="lg" /></div>
+        <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3"><SeloPlano plano={loja.plano} size="lg" /><SeloClube clube={loja.clube} size="lg" /></div>
         <div className="relative w-24 h-24 rounded-3xl mx-auto shadow-2xl bg-white overflow-hidden flex items-center justify-center">
           {foto ? <img src={foto} alt={loja.nome} className="w-full h-full object-cover" /> : <span className="text-4xl">{loja.icone || <ImageOff className="w-8 h-8 text-slate-200" />}</span>}
         </div>
@@ -67,7 +70,7 @@ export default function LojaDetalhe() {
         )}
         {(loja.delivery_disponivel || loja.retirada_disponivel) && (
           <div className="relative flex items-center justify-center gap-2 flex-wrap mt-3">
-            {loja.delivery_disponivel && <span className="text-xs font-semibold text-white bg-white/15 px-3 py-1.5 rounded-full">🚚 {textoTaxaEntrega(loja)}</span>}
+            {loja.delivery_disponivel && <span className="text-xs font-semibold text-white bg-white/15 px-3 py-1.5 rounded-full">🚚 {ehMembro && loja.clube?.entrega_gratis ? 'Entrega grátis no Clube' : textoTaxaEntrega(loja)}</span>}
             {loja.retirada_disponivel && <span className="text-xs font-semibold text-white bg-white/15 px-3 py-1.5 rounded-full">🏪 Retirada na loja</span>}
           </div>
         )}

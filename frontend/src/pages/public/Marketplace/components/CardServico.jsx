@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
 import SeloPlano from './SeloPlano';
+import SeloClube from './SeloClube';
 import { ROXO, PRETO } from '../theme';
 
 // Card de prestador de serviço (não SKU) — um card = um parceiro, não um
@@ -31,6 +32,7 @@ export default function CardServico({ servico }) {
         <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.4em] mt-0.5" style={{ color: PRETO }}>
           {servico.nome}
         </p>
+        <SeloClube clube={servico.clube} className="mt-1 self-start" />
 
         <div className="mt-1.5 min-h-[2em]">
           {servico.preco_medio && <p className="text-sm font-black" style={{ color: ROXO }}>{servico.preco_medio}</p>}

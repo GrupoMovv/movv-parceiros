@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
 import SeloPlano from './SeloPlano';
+import SeloClube from './SeloClube';
 import { normalizarCategoria } from '../parceirosData';
 import { ROXO, PRETO } from '../theme';
 
@@ -43,6 +44,7 @@ export default function PartnerCardBusca({ parceiro }) {
         <p className="text-sm font-bold leading-snug line-clamp-2 min-h-[2.4em] mt-0.5" style={{ color: PRETO }}>
           {parceiro.nome}
         </p>
+        <SeloClube clube={parceiro.clube} className="mt-1 self-start" />
 
         <span
           className="mt-2 flex items-center justify-center text-[11px] font-bold py-1.5 rounded-lg border transition-colors group-hover:bg-purple-50"

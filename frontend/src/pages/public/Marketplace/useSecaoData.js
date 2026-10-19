@@ -121,3 +121,19 @@ export function useParceirosDestaques() {
 
   return { parceiros, carregando };
 }
+
+// Vitrine "Lojas do Clube" (home e /clube, b4): lojas com o benefício do
+// Clube ativo, da maior vantagem para a menor (getLojasDoClube no backend).
+export function useLojasDoClube() {
+  const [lojas, setLojas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    api.get('/public/marketplace/lojas-clube')
+      .then(res => setLojas(res.data.lojas))
+      .catch(() => setLojas([]))
+      .finally(() => setCarregando(false));
+  }, []);
+
+  return { lojas, carregando };
+}

@@ -136,6 +136,7 @@ router.get('/marketplace/categorias', marketplaceHomeCtrl.getCategorias);
 router.get('/marketplace/categoria/:slug/produtos', qa, marketplaceHomeCtrl.getProdutosPorCategoria);
 router.get('/marketplace/parceiros', marketplaceHomeCtrl.getParceiros);
 router.get('/marketplace/parceiros-destaques', marketplaceHomeCtrl.getParceirosDestaques);
+router.get('/marketplace/lojas-clube', qa, marketplaceHomeCtrl.getLojasDoClube);
 router.get('/marketplace/pioneiro-vagas', marketplaceHomeCtrl.getPioneiroVagas);
 router.get('/marketplace/pioneiros', marketplaceHomeCtrl.getPioneiros);
 router.get('/marketplace/parceiro-plano/:slug', qa, marketplaceHomeCtrl.getParceiroPlanoPorSlug);

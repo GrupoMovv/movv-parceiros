@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { sqlClubePct } = require('../services/clubePreco');
+const { sqlClubePct, sqlClubeLoja } = require('../services/clubePreco');
 const { PLANOS, planoEfetivo, sqlPlanoVigente, limiteDestaquesBeer } = require('../config/planos');
 const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto, abertoEfetivo, FAIXAS_VOLUME, faixaVolume } = require('../config/beer');
 const { onlyDigits, isValidCPF } = require('../utils/validators');
@@ -38,7 +38,8 @@ const FROM_PRODUTO = `
 const SELECT_ESTABELECIMENTO = `
   be.id AS estabelecimento_id, pa.slug, pa.nome, pa.logo_url, be.tipo, be.whatsapp,
   be.bairros_entrega, be.horario_funcionamento, be.status_aberto, be.ultimo_status_update, be.tempo_entrega_min, be.retirada_disponivel,
-  pa.plano, pa.plano_expira_em, pa.cortesia_interna
+  pa.plano, pa.plano_expira_em, pa.cortesia_interna,
+  ${sqlClubeLoja('pa.id')} AS clube
 `;
 
 // Tira os campos internos e devolve o que vale AGORA: plano efetivo e

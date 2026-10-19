@@ -5,6 +5,7 @@ import BotaoVoltar from '../../../components/ui/BotaoVoltar';
 import api from '../../../services/api';
 import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import SeloPlano from './components/SeloPlano';
+import SeloClube from './components/SeloClube';
 import { usePetCatalogo } from '../../../components/PetServicosPicker';
 import toast from 'react-hot-toast';
 import apiPainel from '../../../services/apiPainel';
@@ -77,6 +78,7 @@ export default function ServicoDetalhe() {
 
         <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
           <SeloPlano plano={servico.plano} size="lg" />
+          <SeloClube clube={servico.clube} size="lg" />
         </div>
 
         <div className="relative w-24 h-24 rounded-3xl mx-auto shadow-2xl bg-white overflow-hidden flex items-center justify-center">

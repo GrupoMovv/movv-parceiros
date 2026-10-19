@@ -4,6 +4,7 @@ import { MapPin, Clock, Storefront, Wine } from '@phosphor-icons/react';
 import BotaoVoltar from '../../components/ui/BotaoVoltar';
 import api from '../../services/api';
 import SeloPlano from '../public/Marketplace/components/SeloPlano';
+import SeloClube from '../public/Marketplace/components/SeloClube';
 import BadgeAberto from '../../components/beer/BadgeAberto';
 import FiltroCategorias from '../../components/beer/FiltroCategorias';
 import { GradeProdutos, Vazio } from './BeerLayout';
@@ -71,6 +72,7 @@ export default function EstabelecimentoDetail() {
                 <span className="text-[11px] font-bold uppercase tracking-[2px]" style={{ color: BEER.lavanda }}>{TIPOS_ESTABELECIMENTO[e.tipo]}</span>
                 <BadgeAberto aberto={e.status_aberto} />
                 <SeloPlano plano={e.plano} />
+                <SeloClube clube={e.clube} />
               </div>
               <h1 className="mt-1 text-2xl sm:text-4xl font-black text-white leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{e.nome}</h1>
               <div className="mt-2 space-y-1 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>

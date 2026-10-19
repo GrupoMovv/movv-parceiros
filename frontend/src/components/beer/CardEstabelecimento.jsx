@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Wine, MapPin, ArrowRight, Clock } from '@phosphor-icons/react';
 import SeloPlano from '../../pages/public/Marketplace/components/SeloPlano';
+import SeloClube from '../../pages/public/Marketplace/components/SeloClube';
 import BadgeAberto from './BadgeAberto';
 import { BEER, TIPOS_ESTABELECIMENTO } from '../../pages/beer/beerConfig';
 
@@ -36,6 +37,7 @@ function Info({ e, grande }) {
       <p className={`font-black text-white leading-tight mt-1 ${grande ? 'text-xl sm:text-2xl' : 'text-base line-clamp-2'}`} style={{ fontFamily: 'Poppins, sans-serif' }}>
         {e.nome}
       </p>
+      <SeloClube clube={e.clube} className="mt-1.5" />
       {bairros && (
         <p className="text-xs mt-1.5 flex items-center gap-1 min-w-0" style={{ color: BEER.lavandaFraca }}>
           <MapPin size={12} weight="fill" className="flex-shrink-0" /> <span className="truncate">{bairros}</span>
@@ -96,6 +98,7 @@ export default function CardEstabelecimento({ estabelecimento: e }) {
       <Logo e={e} className="w-14 h-14 rounded-xl flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-white truncate">{e.nome}</p>
+        <SeloClube clube={e.clube} className="mt-0.5" />
         <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
           <BadgeAberto aberto={e.status_aberto} className="flex-shrink-0" />
           <span className="text-[11px] truncate" style={{ color: BEER.lavandaFraca }}>{TIPOS_ESTABELECIMENTO[e.tipo]}</span>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Gem, Store, Users, FileSignature, ChevronDown } from 'lucide-react';
+import { Gem, Store, Users, FileSignature, ChevronDown, TrendingUp } from 'lucide-react';
 import api from '../../../services/api';
 
 const dataBR = d => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
 const fmtPct = n => `${String(Number(n)).replace('.', ',')}%`;
+const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 // Clube MAIS+ no admin (só admin): número de Lojas do Clube e de
 // interessados na assinatura, as lojas com o benefício, os interessados e o
@@ -33,6 +34,8 @@ export default function SindicatoClube() {
         <Numero icone={Users} valor={d.numeros.interessados} rotulo="interessados na assinatura de R$ 9,90" />
         <Numero icone={Users} valor={d.numeros.interessados_autorizaram} rotulo="autorizaram contato" />
       </div>
+
+      <AlertasPreco alertas={d.alertas_preco || []} regra={d.alerta_regra} />
 
       <Termo termo={t} termos={d.termos} onPublicado={carregar} />
 
@@ -82,6 +85,45 @@ export default function SindicatoClube() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// Alerta de preço (b4): Loja do Clube que subiu o preço normal de um produto
+// acima do menor preço dele nos 30 dias anteriores. Só alerta: não bloqueia
+// e a loja não é avisada.
+function AlertasPreco({ alertas, regra }) {
+  const pct = regra?.pct ?? 10; const dias = regra?.dias ?? 30;
+  return (
+    <div className="card p-0 overflow-x-auto">
+      <div className="px-4 pt-4 flex items-start gap-2">
+        <TrendingUp className={`w-5 h-5 mt-0.5 ${alertas.length ? 'text-amber-600' : 'text-slate-400'}`} />
+        <div>
+          <h2 className="font-semibold text-slate-900">Alertas de preço {alertas.length > 0 && <span className="badge-pending ml-1">{alertas.length}</span>}</h2>
+          <p className="text-xs text-slate-500">Loja do Clube que subiu o preço normal de um produto mais de {pct}% acima do menor preço dele nos {dias} dias anteriores. Só alerta: não bloqueia e a loja não é avisada.</p>
+        </div>
+      </div>
+      {alertas.length === 0 ? (
+        <p className="px-4 py-4 text-sm text-slate-400">Nenhum alerta agora.</p>
+      ) : (
+        <table className="w-full text-sm mt-2">
+          <thead><tr className="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
+            {['Loja', 'Produto', `Menor em ${dias} dias`, 'Hoje', 'Aumento', 'Subiu em'].map(h => <th key={h} className="px-4 py-2">{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {alertas.map(a => (
+              <tr key={`${a.catalogo}-${a.item_id}`} className="border-b border-slate-100">
+                <td className="px-4 py-2.5 text-slate-900">{a.loja_nome}</td>
+                <td className="px-4 py-2.5 text-slate-700">{a.produto_nome}{a.catalogo === 'beer' && <span className="block text-xs text-slate-400">Disk Bebidas</span>}</td>
+                <td className="px-4 py-2.5 tabular-nums">{brl(a.menor_antes)}</td>
+                <td className="px-4 py-2.5 tabular-nums font-medium">{brl(a.preco_hoje)}</td>
+                <td className="px-4 py-2.5 tabular-nums text-amber-700 font-semibold">+{fmtPct(a.aumento_pct)}</td>
+                <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{dataBR(a.subiu_em)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { linkWhatsappComTexto } from '../../../utils/carteirinhaWhatsapp';
 import { DIAS, formatarBRL, horarioConfigurado, statusFuncionamento, textoTaxaEntrega, textoTempoPreparo } from '../../../utils/iubFood';
 import { useCarrinho } from './CarrinhoContext';
 import SeloPlano from './components/SeloPlano';
+import SeloClube from './components/SeloClube';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useDisponibilidade, colocarNaSacola } from '../../../components/BotaoComprar';
@@ -113,6 +114,7 @@ export default function FoodDetalhe() {
 
         <div className="relative flex items-center justify-center gap-2 flex-wrap mb-3">
           <SeloPlano plano={restaurante.plano} size="lg" />
+          <SeloClube clube={restaurante.clube} size="lg" />
         </div>
 
         <div className="relative w-24 h-24 rounded-3xl mx-auto shadow-2xl bg-white overflow-hidden flex items-center justify-center">
@@ -140,7 +142,7 @@ export default function FoodDetalhe() {
 
         {configurouAtendimento && (
           <div className="relative flex items-center justify-center gap-2 flex-wrap mt-3">
-            {restaurante.delivery_disponivel && <ChipHeader>🚚 {textoTaxaEntrega(restaurante)}</ChipHeader>}
+            {restaurante.delivery_disponivel && <ChipHeader>🚚 {ehAssociadoSeci && restaurante.clube?.entrega_gratis ? 'Entrega grátis no Clube' : textoTaxaEntrega(restaurante)}</ChipHeader>}
             {restaurante.retirada_disponivel && <ChipHeader>🏪 Retirada disponível</ChipHeader>}
             {tempo && <ChipHeader>⏱️ Pronto em {tempo}</ChipHeader>}
           </div>

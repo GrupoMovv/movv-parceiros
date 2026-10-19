@@ -3,7 +3,7 @@
 const db = require('../config/database');
 const { sendWhatsAppMessage } = require('./zapApiService');
 const {
-  PERCENTUAL_MIN, PERCENTUAL_MAX, MINIMOS_SUGERIDOS, MINIMO_PADRAO, AVISO_DIAS_ANTES,
+  PERCENTUAL_MIN, PERCENTUAL_MAX, MINIMOS_SUGERIDOS, MINIMO_PADRAO, AVISO_DIAS_ANTES, ALERTA_PRECO_PCT, ALERTA_PRECO_DIAS,
 } = require('../config/clube');
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -266,7 +266,47 @@ async function publicarVersao({ titulo, texto, provisoria }, quem) {
   });
 }
 
+// Alerta do admin (b4): Loja do Clube que subiu o preço NORMAL de um produto
+// mais de ALERTA_PRECO_PCT acima do menor preço dele nos ALERTA_PRECO_DIAS
+// anteriores à subida (histórico da migration 083). Vale para subidas dos
+// últimos 30 dias, a partir de 30 dias antes de a loja entrar no Clube
+// (subir antes de entrar também é desconto de fachada), e só enquanto o preço
+// de hoje continua alto. Só alerta: não bloqueia e não avisa a loja.
+async function alertasPreco(cx = db) {
+  const fator = 1 + ALERTA_PRECO_PCT / 100;
+  const r = await cx.query(
+    `WITH subidas AS (
+       SELECT h.id, h.catalogo, h.item_id, h.parceiro_id, h.preco_antes, h.preco_depois, h.registrado_em,
+              LEAST(h.preco_antes, (SELECT MIN(h2.preco_depois) FROM precos_historico h2
+                                     WHERE h2.catalogo = h.catalogo AND h2.item_id = h.item_id
+                                       AND h2.registrado_em >= h.registrado_em - make_interval(days => $2)
+                                       AND h2.registrado_em < h.registrado_em)) AS menor_antes
+         FROM precos_historico h JOIN loja_clube lc ON lc.parceiro_id = h.parceiro_id AND lc.ativo
+        WHERE h.origem = 'alteracao' AND h.registrado_em >= NOW() - make_interval(days => $2)
+          AND h.registrado_em >= lc.entrou_em - make_interval(days => $2)
+     ), ultima AS (
+       SELECT DISTINCT ON (catalogo, item_id) * FROM subidas
+        WHERE menor_antes > 0 AND preco_depois > menor_antes * $1
+        ORDER BY catalogo, item_id, registrado_em DESC
+     )
+     SELECT u.catalogo, u.item_id, u.parceiro_id, pa.nome AS loja_nome, COALESCE(pr.nome, bp.nome) AS produto_nome,
+            u.menor_antes, u.preco_depois AS subiu_para, u.registrado_em AS subiu_em,
+            COALESCE(pr.preco, bp.preco_original, bp.preco) AS preco_hoje
+       FROM ultima u JOIN sindicato_parceiros pa ON pa.id = u.parceiro_id
+       LEFT JOIN sindicato_parceiro_produtos pr ON u.catalogo = 'geral' AND pr.id = u.item_id
+       LEFT JOIN beer_produtos bp ON u.catalogo = 'beer' AND bp.id = u.item_id
+      WHERE COALESCE(pr.preco, bp.preco_original, bp.preco) > u.menor_antes * $1
+      ORDER BY u.registrado_em DESC
+      LIMIT 100`,
+    [fator, ALERTA_PRECO_DIAS]
+  );
+  return r.rows.map(a => ({
+    ...a, menor_antes: Number(a.menor_antes), subiu_para: Number(a.subiu_para), preco_hoje: Number(a.preco_hoje),
+    aumento_pct: Math.round((Number(a.preco_hoje) / Number(a.menor_antes) - 1) * 1000) / 10,
+  }));
+}
+
 module.exports = {
   ErroClube, sugestaoMinima, descreverBeneficio, textoComBeneficio, termoVigente, estado, lojaNoClube,
-  salvar, sair, rodarAvisos, iniciarTimer, publicarVersao,
+  salvar, sair, rodarAvisos, iniciarTimer, publicarVersao, alertasPreco,
 };

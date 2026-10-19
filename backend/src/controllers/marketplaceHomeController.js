@@ -1,9 +1,10 @@
 const db = require('../config/database');
-const { sqlClubePct } = require('../services/clubePreco');
+const { sqlClubePct, sqlClubeLoja } = require('../services/clubePreco');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
 const { PLANOS, PIONEIRO_VAGAS_TOTAL, planoEfetivo, sqlPlanoVigente } = require('../config/planos');
 const { normalizarCategoria, ehRestaurante } = require('../utils/categorias');
 const { lojaVisivel } = require('../utils/lojaVisivel');
+const { PRECO_LOJA_CLUBE_NO_SITE } = require('../config/clube');
 
 const PLANOS_COM_DESTAQUE = Object.entries(PLANOS).filter(([, cfg]) => cfg.aparece_destaques_parceiros).map(([plano]) => plano);
 
@@ -22,6 +23,8 @@ function sqlBoostBusca(alias = 'pa.') {
 // clube_pct: percentual da Loja do Clube que vale para o item (b3)
 const CLUBE_PCT_PR = sqlClubePct('geral', 'pr.id', 'pr.parceiro_id');
 const CLUBE_PCT_PM = sqlClubePct('geral', 'pm.produto_id', 'pm.parceiro_id');
+// Benefício da Loja do Clube no card e na página da loja (selo "Clube X%", b4)
+const CLUBE_LOJA = sqlClubeLoja('sindicato_parceiros.id');
 const SELECT_PRODUTO = `
   pr.id, pr.nome, pr.preco, pr.preco_associado, ${CLUBE_PCT_PR} AS clube_pct, pr.fotos, pr.created_at,
   pa.nome AS parceiro_nome, pa.slug AS parceiro_slug
@@ -322,7 +325,7 @@ async function getVitrineRotativa(req, res) {
 async function getParceiros(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro, ${CLUBE_LOJA} AS clube
        FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste ORDER BY nome ASC`
     );
     return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
@@ -339,7 +342,7 @@ async function getParceirosDestaques(req, res) {
   try {
     const planosLiteral = PLANOS_COM_DESTAQUE.map(p => `'${p}'`).join(',') || `''`;
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro,
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro, ${CLUBE_LOJA} AS clube,
               plano_expira_em, cortesia_interna
        FROM sindicato_parceiros
        WHERE status = 'ativo' AND NOT empresa_teste AND plano IN (${planosLiteral}) AND ${sqlPlanoVigente()}
@@ -350,6 +353,28 @@ async function getParceirosDestaques(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar parceiros em destaque' });
+  }
+}
+
+// Vitrine "Lojas do Clube" (home e /clube, b4): lojas visíveis com o benefício
+// ativo, da maior vantagem para a menor — maior percentual; no mesmo
+// percentual, loja toda antes de produtos escolhidos; depois quem dá entrega
+// grátis; por fim, só entrega grátis.
+async function getLojasDoClube(req, res) {
+  try {
+    if (!PRECO_LOJA_CLUBE_NO_SITE) return res.json({ lojas: [] });
+    const r = await db.query(
+      `SELECT pa.id, pa.slug, pa.nome, pa.icone, pa.logo_url, pa.categoria_principal, pa.categorias, pa.plano, pa.e_pioneiro,
+              json_build_object('percentual', lc.percentual, 'alcance', lc.alcance, 'entrega_gratis', lc.entrega_gratis) AS clube
+       FROM loja_clube lc JOIN sindicato_parceiros pa ON pa.id = lc.parceiro_id
+       WHERE lc.ativo AND ${lojaVisivel(req.modoQa, 'pa')}
+       ORDER BY lc.percentual DESC NULLS LAST, (lc.alcance = 'loja') DESC, lc.entrega_gratis DESC, pa.nome ASC
+       LIMIT 24`
+    );
+    return res.json({ lojas: r.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar as Lojas do Clube' });
   }
 }
 
@@ -372,7 +397,7 @@ async function getPioneiroVagas(req, res) {
 async function getPioneiros(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro
+      `SELECT id, slug, nome, icone, cor_icone, logo_url, categoria_principal, categorias, plano, e_pioneiro, ${CLUBE_LOJA} AS clube
        FROM sindicato_parceiros WHERE status = 'ativo' AND NOT empresa_teste AND e_pioneiro = true ORDER BY plano_ativo_desde ASC`
     );
     return res.json({ parceiros: result.rows.map(p => ({ ...p, plano: planoEfetivo(p) })) });
@@ -482,7 +507,7 @@ async function getCuponsDisponiveis(req, res) {
 async function getServicos(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio, ${CLUBE_LOJA} AS clube,
               preco_medio, duracao_media, modalidades
        FROM sindicato_parceiros
        WHERE ${lojaVisivel(req.modoQa, '')} AND tipo_negocio IN ('servico', 'hibrido')
@@ -508,7 +533,7 @@ async function getServicos(req, res) {
 async function getServicoPorSlug(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio, ${CLUBE_LOJA} AS clube,
               descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
               preco_medio, duracao_media, modalidades, horario_atendimento, fotos_estabelecimento,
               pet_servicos, pet_portes, pet_racas
@@ -567,7 +592,7 @@ async function getBusca(req, res) {
       [like]
     );
     const parceirosResult = await db.query(
-      `SELECT id, slug, nome, logo_url, categoria_principal, categorias, plano, tipo_negocio
+      `SELECT id, slug, nome, logo_url, categoria_principal, categorias, plano, tipo_negocio, ${CLUBE_LOJA} AS clube
        FROM sindicato_parceiros
        WHERE ${lojaVisivel(req.modoQa, '')} AND nome ILIKE $1
        ORDER BY nome ASC
@@ -604,7 +629,7 @@ const SELECT_ENTREGA = `horario_funcionamento, delivery_disponivel, retirada_dis
 async function getFood(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio, ${CLUBE_LOJA} AS clube,
               preco_medio, duracao_media, horario_atendimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
        WHERE status = 'ativo' AND NOT empresa_teste`
@@ -628,7 +653,7 @@ async function getFood(req, res) {
 async function getFoodPorSlug(req, res) {
   try {
     const result = await db.query(
-      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio,
+      `SELECT id, slug, nome, logo_url, categorias, categoria_principal, plano, tipo_negocio, ${CLUBE_LOJA} AS clube,
               descricao, descricao_completa, endereco, bairro, cidade, whatsapp,
               preco_medio, duracao_media, horario_atendimento, fotos_estabelecimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
@@ -662,7 +687,7 @@ async function getFoodPorSlug(req, res) {
 async function getLojaPorSlug(req, res) {
   try {
     const r = await db.query(
-      `SELECT id, slug, nome, logo_url, icone, categorias, categoria_principal, plano, plano_expira_em, cortesia_interna, e_pioneiro,
+      `SELECT id, slug, nome, logo_url, icone, categorias, categoria_principal, plano, plano_expira_em, cortesia_interna, e_pioneiro, ${CLUBE_LOJA} AS clube,
               tipo_negocio, descricao, descricao_completa, endereco, bairro, cidade, whatsapp, instagram,
               google_maps_url, fotos_estabelecimento, pet_servicos, horario_atendimento, ${SELECT_ENTREGA}
        FROM sindicato_parceiros
@@ -699,6 +724,7 @@ async function getLojaPorSlug(req, res) {
 }
 
 module.exports = {
+  getLojasDoClube,
   getLojaPorSlug,
   // usado também pela busca do /marketplace/pet (petController)
   sqlBoostBusca,
