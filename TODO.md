@@ -1,5 +1,24 @@
 # TODO
 
+## Chave PIX dos pagamentos antigos — levantar quando o acesso ao banco voltar (anotado 19/10/2026)
+
+Desde a migration 099 (commit 5410294) cada pagamento guarda a chave PIX usada na hora
+(`payments.pix_key_usada`, origem `registro`). Os pagamentos antigos ficaram com a chave vazia e o
+Histórico mostra "chave usada não registrada". Não preencher nada sem a decisão do Junior.
+
+Levantamento (só leitura, `_tmp_*.js` apagado depois), pagamento por pagamento:
+- registrado depois de 09/10/2026 17h14 (início do `partner_pix_historico`, migration 090): chave certa =
+  `valor_antes` da primeira troca registrada depois do pagamento, ou a chave atual se não houve troca;
+- anterior a 09/10 com troca registrada depois: a chave de 09/10 (`pix_key_origem = 'historico'`),
+  que só é a usada se não houve troca entre o pagamento e 09/10 (não ficou registrado);
+- anterior a 09/10 sem troca registrada: a chave atual é só suposição (`'suposicao'`) ou fica vazia;
+- comprovantes (`pix_receipt`) são a única prova nos antigos: conferência manual.
+Mostrar a lista ao Junior; se ele aprovar, gravar numa transação só nos que ele escolher.
+
+Bloqueio em 19/10/2026: a conexão deste computador ao Postgres do Render cai logo no início
+("Connection terminated unexpectedly", até `SELECT now()`), com o site e a API funcionando.
+Ver o acesso externo do banco no Render (lista de IPs ou senha) antes.
+
 ## Trocar o PDF dos convênios do SECI pelo admin (anotado 09/10/2026 — não fazer agora)
 
 Hoje o PDF que "Meus convênios" abre fica no código (`backend/uploads/beneficios/catalogo-beneficios-seci.pdf`):
