@@ -38,6 +38,8 @@ const PLANOS = {
     // (exclusivos daquela edição) — zero vaga de catálogo normal.
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
+    // Equipe de vendas da loja (migration 102): vendedores ATIVOS; desativado não conta
+    max_vendedores: 1,
     tem_selo: false,
     selo_nome: 'Parceiro IUB',
     selo_cor: 'cinza',
@@ -70,6 +72,8 @@ const PLANOS = {
     max_destaques_beer: 4,
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
+    // Equipe de vendas da loja (migration 102): vendedores ATIVOS; desativado não conta
+    max_vendedores: 3,
     tem_selo: true,
     selo_nome: 'Parceiro Oficial',
     selo_cor: 'dourado',
@@ -95,6 +99,8 @@ const PLANOS = {
     max_destaques_beer: 9,
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
+    // Equipe de vendas da loja (migration 102): vendedores ATIVOS; desativado não conta
+    max_vendedores: 10,
     tem_selo: true,
     selo_nome: 'Parceiro Premium',
     selo_cor: 'dourado_estrela',
@@ -122,6 +128,8 @@ const PLANOS = {
     max_destaques_beer: null, // ilimitado
     participa_fecha_mes: true,
     max_produtos_bonus_fecha_mes: 3,
+    // Equipe de vendas da loja (migration 102): vendedores ATIVOS; desativado não conta
+    max_vendedores: 30,
     tem_selo: true,
     selo_nome: 'Parceiro VIP Master',
     selo_cor: 'vip_dourado_brilho',

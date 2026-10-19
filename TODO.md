@@ -1,5 +1,19 @@
 # TODO
 
+## Política de Privacidade: dados dos vendedores da Equipe de vendas — para o advogado (anotado 19/10/2026)
+
+A loja marca, ao cadastrar o vendedor, que ele autorizou o uso do WhatsApp
+(data, hora e quem marcou ficam gravados — migration 102). Falta o advogado
+revisar e incluir na Política (`/politica-privacidade`) uma frase como:
+
+> "Dados de vendedores das lojas parceiras: quando uma loja cadastra os seus
+> vendedores na Equipe de vendas, o IUB MAIS+ guarda o nome e o WhatsApp de
+> cada vendedor em nome da loja, que é a responsável por esses dados e declara
+> ter a autorização do vendedor. O número é usado só para o aviso de pedidos
+> que a loja escolher ligar, e não é mostrado a clientes nem a outras lojas.
+> O vendedor pode pedir à loja, ou ao IUB MAIS+, para deixar de receber os
+> avisos ou para ter os dados excluídos."
+
 ## Pedido pelo site — acabamentos (anotado 19/10/2026, para depois)
 
 - **Barra de pedido com um padrão só.** Hoje a página da loja mostra

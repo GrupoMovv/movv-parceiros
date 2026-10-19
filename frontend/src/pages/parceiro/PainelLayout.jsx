@@ -22,6 +22,8 @@ const ABAS = [
   { label: '🛵 Entrega e horários', to: '/parceiro/painel/entrega', soCnpj: true },
   { label: '📦 Pedidos', to: '/parceiro/painel/pedidos', soCnpj: true, soPedidosSite: true },
   { label: '⚙️ Configurar pedidos', to: '/parceiro/painel/pedidos-site', soCnpj: true, soPedidosSite: true },
+  // Equipe de vendas (migration 102): link por vendedor e vendas por vendedor
+  { label: '🧑‍💼 Equipe de vendas', to: '/parceiro/painel/equipe', soCnpj: true, soPedidosSite: true },
   { label: '🐾 Agendamentos', to: '/parceiro/painel/agendamentos', soPetAtendimento: true },
   { label: '🎟️ Fidelidade & QR', to: '/parceiro/painel/fidelidade', soPetAtendimento: true },
   // IUB Disk Bebidas: só pra quem é do ramo (Bebidas/Alimentação) ou já tem

@@ -97,6 +97,7 @@ app.use('/api/parceiro/pet-agenda',     require('./routes/parceiroPetAgenda'));
 app.use('/api/parceiro/pet-fidelidade', require('./routes/parceiroPetFidelidade'));
 app.use('/api/parceiro/pedidos',        require('./routes/parceiroPedidos'));
 app.use('/api/parceiro/clube',          require('./routes/parceiroClube'));
+app.use('/api/parceiro/equipe',         require('./routes/parceiroEquipe'));
 app.use('/api/sindicato-clube',         require('./routes/sindicatoClube'));
 // Mercado Pago (público, protegido por assinatura HMAC) e rotinas do cron.
 app.use('/api/webhook/mercadopago',     require('./routes/webhookMercadoPago'));
