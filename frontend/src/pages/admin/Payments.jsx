@@ -166,7 +166,9 @@ export default function AdminPayments() {
                     </td>
                     <td className="py-3 pr-4 text-slate-900 whitespace-nowrap">{pay.partner_name}</td>
                     <td className="py-3 pr-4 font-mono text-xs text-[#C9A84C]">{pay.partner_code}</td>
-                    <td className="py-3 pr-4 text-slate-500 text-xs">{pay.pix_key || '—'}</td>
+                    <td className="py-3 pr-4 text-slate-500 text-xs max-w-[190px]">
+                      <ChaveDoPagamento pay={pay} />
+                    </td>
                     <td className="py-3 pr-4 text-slate-600 capitalize text-xs">
                       {format(new Date(pay.reference_month + '-02'), 'MMM/yyyy', { locale: ptBR })}
                     </td>
@@ -265,5 +267,28 @@ export default function AdminPayments() {
         )}
       </Modal>
     </div>
+  );
+}
+
+// Chave PIX do pagamento (migration 099): a que estava no cadastro na hora do
+// registro, não a de hoje. Pagamento antigo, de antes de 19/10, não tem a
+// chave guardada: aparece o aviso, com a chave de hoje só como referência.
+function ChaveDoPagamento({ pay }) {
+  if (pay.pix_key_usada) {
+    const mudou = pay.pix_key && pay.pix_key !== pay.pix_key_usada;
+    return (
+      <>
+        <span className="block truncate text-slate-700" title={pay.pix_key_usada}>{pay.pix_key_usada}</span>
+        {pay.pix_key_origem && pay.pix_key_origem !== 'registro' && (
+          <span className="block text-[11px] text-amber-700">{pay.pix_key_origem === 'historico' ? 'recuperada do histórico' : 'provável (sem registro)'}</span>
+        )}
+        {mudou && <span className="block truncate text-[11px] text-slate-400" title={pay.pix_key}>hoje: {pay.pix_key}</span>}
+      </>
+    );
+  }
+  return (
+    <span className="block text-[11px] text-slate-400" title="Pagamento registrado antes de a chave usada passar a ser guardada">
+      chave usada não registrada{pay.pix_key ? <span className="block truncate">hoje: {pay.pix_key}</span> : null}
+    </span>
   );
 }

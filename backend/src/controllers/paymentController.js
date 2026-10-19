@@ -9,6 +9,7 @@ async function listPayments(req, res) {
   try {
     const { partner_id, month } = req.query;
     let query = `
+      -- pix_key_usada = chave do pagamento (migration 099); pix_key = a de hoje
       SELECT pay.*, p.name AS partner_name, p.code AS partner_code, p.pix_key
              ${veTudo(req.user) ? `, ${COLUNAS_ULTIMA_ACAO()}` : ''}
       FROM payments pay
@@ -58,9 +59,12 @@ async function registerPayment(req, res) {
   try {
     // Pagamento + comissões marcadas como pagas: tudo ou nada.
     const payment = await db.transacao(async (client) => {
+      // chave PIX do cadastro neste momento fica gravada no pagamento (099);
+      // FOR SHARE: ninguém troca a chave no meio do registro
+      const parceiro = (await client.query('SELECT pix_key FROM partners WHERE id = $1 FOR SHARE', [partner_id])).rows[0];
       const payResult = await client.query(
-        `INSERT INTO payments (partner_id, amount, payment_date, reference_month, commission_ids, pix_receipt)
-         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        `INSERT INTO payments (partner_id, amount, payment_date, reference_month, commission_ids, pix_receipt, pix_key_usada, pix_key_origem)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'registro') RETURNING *`,
         [
           partner_id,
           amount,
@@ -68,6 +72,7 @@ async function registerPayment(req, res) {
           reference_month,
           ids,
           receiptFile,
+          parceiro?.pix_key || null,
         ]
       );
 
