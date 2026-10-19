@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, WhatsappLogo, MapPin, Clock, Wine, MagnifyingGlassPlus, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import BadgeAberto from './BadgeAberto';
+import { useEhAssociado, precoDoBeer } from '../../pages/public/Marketplace/precoPessoa';
 import BotaoComprar, { useDisponibilidade } from '../BotaoComprar';
 import { formatarBRL } from '../../utils/iubFood';
 import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, linkDuvida, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
@@ -11,6 +12,7 @@ import { BEER, TIPOS_ESTABELECIMENTO, linkPedido, linkDuvida, percentualDesconto
 // arrastar o dedo e ←/→ do teclado; a foto amplia no clique; ESC e o X
 // fecham. `produto` null = ainda carregando (link direto).
 export default function ModalProduto({ produto: p, onFechar }) {
+  const preco = precoDoBeer(p, useEhAssociado()); // Loja do Clube (b3)
   const [zoom, setZoom] = useState(false);
   // pedido pelo site: se a adega vende agora, ele é o botão principal
   const disp = useDisponibilidade(p?.id ? 'beer' : null, p?.id);
@@ -80,9 +82,11 @@ export default function ModalProduto({ produto: p, onFechar }) {
                 <p className="text-[11px] font-bold uppercase tracking-[1.5px]" style={{ color: BEER.lavandaFraca }}>{p.categoria?.nome}</p>
                 <h2 className="mt-1 text-xl sm:text-2xl font-black text-white leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{p.nome}</h2>
                 <div className="mt-2 flex items-baseline gap-2 flex-wrap">
-                  <span className="text-3xl font-black text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{formatarBRL(p.preco)}</span>
-                  {p.em_oferta && p.preco_original && <span className="text-base line-through" style={{ color: BEER.lavandaFraca }}>{formatarBRL(p.preco_original)}</span>}
+                  <span className="text-3xl font-black" style={{ fontFamily: 'Poppins, sans-serif', color: preco.tipo === 'associado' ? BEER.dourado : '#fff' }}>{formatarBRL(preco.principal)}</span>
+                  {preco.riscado && <span className="text-base line-through" style={{ color: BEER.lavandaFraca }}>{formatarBRL(preco.riscado)}</span>}
+                  {preco.tipo === 'associado' && <span className="text-xs font-bold" style={{ color: BEER.dourado }}>◆ preço Clube</span>}
                 </div>
+                {preco.chamadaAssociado && <p className="text-sm font-semibold mt-1" style={{ color: BEER.dourado }}>{formatarBRL(preco.chamadaAssociado)} no Clube MAIS+</p>}
                 {p.em_oferta && p.oferta_ate && (
                   <p className="text-xs mt-1" style={{ color: '#FCA5A5' }}>Oferta até {new Date(p.oferta_ate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
                 )}

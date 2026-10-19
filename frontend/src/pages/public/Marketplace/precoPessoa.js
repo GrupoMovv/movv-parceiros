@@ -37,6 +37,21 @@ export function useEhAssociado() {
 
 const num = v => (v === null || v === undefined || v === '' ? null : Number(v));
 
+// Loja do Clube (b3): percentual da loja sobre o preço NORMAL, arredondado
+// para baixo em centavos — a MESMA conta de backend/src/services/clubePreco.js.
+export function precoComClube(normal, pct) {
+  const centavos = Math.round(Number(normal) * 100);
+  return Math.floor((centavos * (1000 - Math.round(Number(pct) * 10))) / 1000) / 100;
+}
+
+// Menor preço Clube de um item: o fixo ("Preço Clube" do produto ou da
+// promoção) ou o percentual da loja (clube_pct, que a API já manda só quando
+// vale para esse item), sobre o preço normal (base). null = sem preço Clube.
+export function precoClubeDe(fixo, base, pct) {
+  const c = [num(fixo), num(pct) !== null && num(base) !== null ? precoComClube(base, pct) : null].filter(v => v !== null && v > 0);
+  return c.length ? Math.min(...c) : null;
+}
+
 // Produto do catálogo: { principal, riscado, tipo, chamadaAssociado, descontoPct }
 //   principal         o que a pessoa paga agora
 //   riscado           preço normal riscado (quando principal é menor)
@@ -45,7 +60,7 @@ const num = v => (v === null || v === undefined || v === '' ? null : Number(v));
 //                     é associado (gancho pra fazer a carteirinha), ou null
 export function precoDoProduto(p, ehAssociado) {
   const normal = num(p.preco);
-  const assoc = num(p.preco_associado);
+  const assoc = precoClubeDe(p.preco_associado, p.preco, p.clube_pct);
   const fm = num(p.preco_fecha_mes);
   const opcoes = [{ v: normal, tipo: 'normal' }];
   if (ehAssociado && assoc !== null && assoc > 0) opcoes.push({ v: assoc, tipo: 'associado' });
@@ -61,16 +76,30 @@ export function precoDoProduto(p, ehAssociado) {
   };
 }
 
-// Promoção: "por" pra todo mundo; associado paga o menor entre "por" e o preço
-// de associado da promoção.
+// Promoção: "por" pra todo mundo; o membro do Clube paga o menor entre "por" e o
+// preço Clube (fixo da promoção ou percentual da loja sobre o "de").
 export function precoDaPromocao(pm, ehAssociado) {
   const por = num(pm.preco_por);
-  const assoc = num(pm.preco_associado);
+  const assoc = precoClubeDe(pm.preco_associado, pm.preco_de, pm.clube_pct);
   const usaAssoc = ehAssociado && assoc !== null && assoc > 0 && assoc < por;
   return {
     principal: usaAssoc ? assoc : por,
     riscado: num(pm.preco_de),
     tipo: usaAssoc ? 'associado' : 'promocao',
     chamadaAssociado: !ehAssociado && assoc !== null && assoc < por ? assoc : null,
+  };
+}
+
+// Disk Bebidas: preço vigente (oferta ou normal) pra todo mundo; o membro do
+// Clube paga o menor entre ele e o percentual da loja sobre o preço normal.
+export function precoDoBeer(b, ehAssociado) {
+  const vigente = num(b.preco);
+  const clube = precoClubeDe(null, b.preco_normal, b.clube_pct);
+  const usaClube = ehAssociado && clube !== null && clube < vigente;
+  return {
+    principal: usaClube ? clube : vigente,
+    riscado: usaClube ? num(b.preco_normal) : (b.em_oferta ? num(b.preco_original) : null),
+    tipo: usaClube ? 'associado' : (b.em_oferta ? 'oferta' : 'normal'),
+    chamadaAssociado: !ehAssociado && clube !== null && clube < vigente ? clube : null,
   };
 }

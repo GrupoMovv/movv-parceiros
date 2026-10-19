@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sqlClubePct, precoClubePromocao } = require('../services/clubePreco');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
 const { lojaVisivel } = require('../utils/lojaVisivel');
@@ -27,6 +28,7 @@ function linkWhatsappComTexto(numero, mensagem) {
 
 const SELECT_PROMOCAO = `
   pm.id, pm.titulo, pm.descricao, pm.categoria, pm.preco_de, pm.preco_por, pm.preco_associado,
+  ${sqlClubePct('geral', 'pm.produto_id', 'pm.parceiro_id')} AS clube_pct,
   pm.data_inicio, pm.data_fim, pm.destaque, pm.exclusivo_associado, pm.limite_usos, pm.usos_atuais,
   pm.created_at, pm.produto_id,
   COALESCE(pm.foto_url, pr.fotos->0->>'url') AS foto_url,
@@ -92,7 +94,9 @@ async function registrarEvento(req, res) {
 }
 
 function montarMensagemWhatsapp(promocao, associado) {
-  const temPrecoAssociado = promocao.preco_associado != null;
+  // preço Clube: fixo da promoção ou percentual da loja sobre o "de", o menor (b3)
+  const precoClube = precoClubePromocao(promocao);
+  const temPrecoAssociado = precoClube != null && precoClube < parseFloat(promocao.preco_por);
   const horasRestantes = (new Date(promocao.data_fim) - Date.now()) / 3.6e6;
   const urgente = horasRestantes > 0 && horasRestantes < 24;
 
@@ -104,7 +108,7 @@ function montarMensagemWhatsapp(promocao, associado) {
   ];
 
   if (temPrecoAssociado && associado) {
-    linhas.push(`💎 Preço Clube MAIS+: ${formatarPrecoBRL(promocao.preco_associado)}`);
+    linhas.push(`💎 Preço Clube MAIS+: ${formatarPrecoBRL(precoClube)}`);
   }
 
   if (associado) {
@@ -119,7 +123,7 @@ function montarMensagemWhatsapp(promocao, associado) {
 async function getMensagemWhatsapp(req, res) {
   try {
     const result = await db.query(
-      `SELECT pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, pm.data_fim, pa.whatsapp AS parceiro_whatsapp
+      `SELECT pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, ${sqlClubePct('geral', 'pm.produto_id', 'pm.parceiro_id')} AS clube_pct, pm.data_fim, pa.whatsapp AS parceiro_whatsapp
        ${fromPromocaoAtiva(req.modoQa)} AND pm.id = $1`,
       [req.params.id]
     );

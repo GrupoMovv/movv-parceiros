@@ -6,6 +6,7 @@ import BadgeAberto from './BadgeAberto';
 import { formatarBRL } from '../../utils/iubFood';
 import { BEER, linkPedido, percentualDesconto, textoDias } from '../../pages/beer/beerConfig';
 import { useProdutoModal } from '../../pages/beer/produtoModalContext';
+import { useEhAssociado, precoDoBeer } from '../../pages/public/Marketplace/precoPessoa';
 
 // Card de produto do Disk Bebidas. Clique no card abre o modal do produto
 // (ModalProduto via BeerLayout); o botão de pedido vai direto pro WhatsApp.
@@ -17,6 +18,11 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
   const link = linkPedido(p, { agora });
   const dias = textoDias(p.dias_disponiveis);
   const pct = percentualDesconto(p);
+  // Loja do Clube (b3): o membro vê e paga o preço Clube; o visitante vê o
+  // normal e "R$ X no Clube MAIS+"
+  const ehMembro = useEhAssociado();
+  const preco = precoDoBeer(p, ehMembro);
+  const clube = preco.tipo === 'associado';
   const e = p.estabelecimento || {};
   const destaque = variante === 'destaque';
   const oferta = variante === 'oferta';
@@ -64,9 +70,11 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
         {p.categoria?.nome && <p className="text-[10px] font-bold uppercase tracking-[1.5px] truncate" style={{ color: BEER.lavandaFraca }}>{p.categoria.nome}</p>}
         <h3 className="mt-0.5 text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">{p.nome}</h3>
         <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
-          <span className={`font-black ${oferta ? 'text-xl' : 'text-lg'}`} style={{ fontFamily: 'Poppins, sans-serif', color: pct ? '#FCA5A5' : '#fff' }}>{formatarBRL(p.preco)}</span>
-          {pct && <span className="text-xs line-through" style={{ color: BEER.lavandaFraca }}>{formatarBRL(p.preco_original)}</span>}
+          <span className={`font-black ${oferta ? 'text-xl' : 'text-lg'}`} style={{ fontFamily: 'Poppins, sans-serif', color: clube ? BEER.dourado : pct ? '#FCA5A5' : '#fff' }}>{formatarBRL(preco.principal)}</span>
+          {preco.riscado && <span className="text-xs line-through" style={{ color: BEER.lavandaFraca }}>{formatarBRL(preco.riscado)}</span>}
+          {clube && <span className="text-[10px] font-bold" style={{ color: BEER.dourado }}>◆ preço Clube</span>}
         </div>
+        {preco.chamadaAssociado && <p className="mt-0.5 text-[11px] font-semibold" style={{ color: BEER.dourado }}>{formatarBRL(preco.chamadaAssociado)} no Clube MAIS+</p>}
 
         {p.categoria?.regulamentada && (
           <p className="mt-1 text-[10px] leading-snug" style={{ color: '#FCA5A5' }}>Venda proibida para menores de 18 anos. O Ministério da Saúde adverte: fumar faz mal à saúde.</p>
@@ -92,7 +100,7 @@ export default function CardProduto({ produto: p, agora = false, mostrarEstabele
               className="w-full inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-black py-2.5 rounded-xl transition-opacity hover:opacity-90"
               style={{ backgroundColor: BEER.dourado, color: '#0F0F14' }}
             >
-              <ShoppingBag size={16} weight="fill" /> Pedir agora · {formatarBRL(p.preco)}
+              <ShoppingBag size={16} weight="fill" /> Pedir agora · {formatarBRL(preco.principal)}
             </button>
           ) : link ? (
             <a

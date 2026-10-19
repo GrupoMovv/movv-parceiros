@@ -180,7 +180,7 @@ export default function FinalizarPedido() {
           <div className="grid grid-cols-2 gap-3">
             {loja.modos.includes('entrega') && (
               <Opcao ativo={modo === 'entrega'} onClick={() => setModo('entrega')} icone={Truck} titulo="Entrega"
-                sub={cotacao.taxa_se_entrega ? `Taxa ${brl(cotacao.taxa_se_entrega)}` : 'Entrega grátis'} />
+                sub={cotacao.taxa_se_entrega ? `Taxa ${brl(cotacao.taxa_se_entrega)}` : cotacao.entrega_gratis_clube ? 'Entrega grátis no Clube MAIS+' : 'Entrega grátis'} />
             )}
             {loja.modos.includes('retirada') && (
               <Opcao ativo={modo === 'retirada'} onClick={() => setModo('retirada')} icone={Store} titulo="Retirar na loja" sub="Sem taxa" />
@@ -264,7 +264,7 @@ export default function FinalizarPedido() {
             {cotacao.itens.map((s, k) => (
               <p key={k} className="flex justify-between gap-3"><span className="text-slate-600">{s.quantidade}x {s.nome}</span><span>{brl(s.subtotal)}</span></p>
             ))}
-            {modo === 'entrega' && <p className="flex justify-between"><span className="text-slate-600">Entrega</span><span>{cotacao.valor_entrega > 0 ? brl(cotacao.valor_entrega) : 'Grátis'}</span></p>}
+            {modo === 'entrega' && <p className="flex justify-between"><span className="text-slate-600">Entrega</span><span>{cotacao.valor_entrega > 0 ? brl(cotacao.valor_entrega) : cotacao.entrega_dispensada_clube > 0 ? <>Grátis <span className="text-xs text-violet-700">(Clube MAIS+, economia de {brl(cotacao.entrega_dispensada_clube)})</span></> : 'Grátis'}</span></p>}
             <p className="flex justify-between font-extrabold text-lg pt-2 border-t border-slate-100" style={{ color: PRETO }}><span>Total</span><span>{brl(cotacao.total)}</span></p>
           </div>
         </Bloco>

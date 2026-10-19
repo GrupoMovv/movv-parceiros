@@ -114,13 +114,14 @@ export default function PedidoLojaDetalhe({ pedido, setPedido, executar, recarre
         <ul className="space-y-2 text-sm">
           {pedido.itens.map((i, k) => (
             <li key={k} className="flex justify-between gap-3">
-              <span style={{ color: PRETO }}><strong>{i.quantidade}x</strong> {i.nome}</span>
+              <span style={{ color: PRETO }}><strong>{i.quantidade}x</strong> {i.nome}{i.tipo_preco === 'clube' && <span className="text-xs text-violet-700"> · preço Clube</span>}</span>
               <span className="text-slate-600 whitespace-nowrap">{brl(i.subtotal)}</span>
             </li>
           ))}
         </ul>
         <div className="border-t border-slate-100 mt-3 pt-3 text-sm space-y-1">
           {Number(pedido.valor_entrega) > 0 && <p className="flex justify-between"><span className="text-slate-500">Entrega</span><span>{brl(pedido.valor_entrega)}</span></p>}
+          {pedido.entrega_gratis_clube && <p className="flex justify-between"><span className="text-slate-500">Entrega</span><span className="text-violet-700">grátis (Clube MAIS+)</span></p>}
           <p className="flex justify-between font-bold text-base" style={{ color: PRETO }}><span>Total (Pix para você)</span><span>{brl(pedido.total)}</span></p>
         </div>
       </Bloco>

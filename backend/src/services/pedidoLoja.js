@@ -8,6 +8,7 @@ const { horarioConfigurado, turnoAtual, abertoEfetivo, diaDeHoje, idadeEmAnos, I
 const { ehHojeODiaDoEvento } = require('../config/fechaMes');
 const { fechaMesHabilitadoGlobalmente, obterProximoEvento } = require('./fechaMesService');
 const { situacaoDoAssociado } = require('./beneficioAssociado');
+const { precoComClube, clubeDaLoja, pctDoItem } = require('./clubePreco');
 const { whatsappConfirmado, normalizarWhatsapp } = require('./whatsappVerificacao');
 const { onlyDigits } = require('../utils/validators');
 const pedidoAvisos = require('./pedidoAvisos');
@@ -121,7 +122,11 @@ function resumoLoja(loja, catalogo) {
 //   produto:   preço normal, de associado (benefício ativo) ou Fecha Mês (dia do evento)
 //   promoção:  preço "por", ou de associado da promoção (benefício ativo)
 //   Fecha Mês: preço do evento (item bônus só existe no evento)
-//   Beer:      preço vigente (oferta dentro do prazo); Beer não tem preço de associado
+//   Beer:      preço vigente (oferta dentro do prazo)
+// Loja do Clube (b3, migration 100): para o membro, o percentual da loja
+// sobre o preço NORMAL é mais um candidato (produto, promoção e Beer), em
+// "associado" — o tipo que a loja vê como "preço Clube" (nunca a porta de
+// entrada). preco_sem_clube = o menor preço SEM os candidatos do Clube.
 
 async function edicaoFechaMesDeHoje() {
   if (!(await fechaMesHabilitadoGlobalmente())) return null;
@@ -150,7 +155,7 @@ async function resolverItem(entrada, ctx) {
               (bp.em_oferta AND bp.preco_original IS NOT NULL AND bp.oferta_ate > NOW()) AS oferta_ativa,
               (CASE WHEN (bp.em_oferta AND bp.preco_original IS NOT NULL AND bp.oferta_ate > NOW())
                     THEN bp.preco ELSE COALESCE(bp.preco_original, bp.preco) END) AS preco_vigente,
-              bp.preco_original
+              bp.preco_original, COALESCE(bp.preco_original, bp.preco) AS preco_normal
        FROM beer_produtos bp
        JOIN beer_estabelecimentos be ON be.id = bp.estabelecimento_id
        JOIN beer_categorias bc ON bc.codigo = bp.categoria_codigo
@@ -162,11 +167,15 @@ async function resolverItem(entrada, ctx) {
     const dias = p.dias_disponiveis || { todos: true };
     if (!dias.todos && !dias[diaDeHoje()]) throw indisponivel(p.nome);
     if (!temPreco(p.preco_vigente)) throw indisponivel(p.nome);
+    const semClube = { preco: p.preco_vigente, tipo: p.oferta_ativa ? 'oferta' : 'normal' };
+    const pct = ctx.associadoAtivo ? pctDoItem(await clubeDaLoja(ctx, p.parceiro_id), 'beer', p.id) : null;
+    const escolhido = menorPreco([semClube, pct != null ? { preco: precoComClube(p.preco_normal, pct), tipo: 'associado' } : null].filter(Boolean));
     return {
       catalogo: 'beer', parceiro_id: p.parceiro_id, origem: 'beer', beer_produto_id: p.id,
       nome: p.nome, foto_url: fotoDe(p.fotos, p.imagem),
-      tipo_preco: p.oferta_ativa ? 'oferta' : 'normal', preco_unitario: dinheiro(p.preco_vigente),
-      preco_cheio: p.oferta_ativa ? dinheiro(p.preco_original) : null,
+      tipo_preco: escolhido.tipo, preco_unitario: dinheiro(escolhido.preco),
+      preco_cheio: escolhido.tipo === 'normal' ? null : dinheiro(escolhido.tipo === 'oferta' ? p.preco_original : p.preco_normal),
+      preco_sem_clube: dinheiro(semClube.preco),
     };
   }
 
@@ -188,14 +197,19 @@ async function resolverItem(entrada, ctx) {
     if (p.exclusivo_associado && !ctx.associadoAtivo) {
       throw new ErroPedido(403, 'SO_ASSOCIADO', 'Esta promoção é só para quem é do Clube MAIS+.');
     }
+    // Clube em percentual: sobre o preço "de" (o normal), se o produto da
+    // promoção entra no benefício da loja. Vale o menor, sem somar.
+    const pct = ctx.associadoAtivo && temPreco(p.preco_de) ? pctDoItem(await clubeDaLoja(ctx, p.parceiro_id), 'geral', p.produto_id) : null;
     const escolhido = menorPreco([
       { preco: p.preco_por, tipo: 'promocao' },
       ctx.associadoAtivo ? { preco: p.preco_associado, tipo: 'associado' } : null,
+      pct != null ? { preco: precoComClube(p.preco_de, pct), tipo: 'associado' } : null,
     ].filter(Boolean));
     return {
       catalogo: 'geral', parceiro_id: p.parceiro_id, origem: 'promocao', promocao_id: p.id, produto_id: p.produto_id,
       nome: p.titulo, foto_url: p.foto_url || fotoDe(p.fotos),
       tipo_preco: escolhido.tipo, preco_unitario: dinheiro(escolhido.preco), preco_cheio: temPreco(p.preco_de) ? dinheiro(p.preco_de) : null,
+      preco_sem_clube: dinheiro(p.preco_por),
     };
   }
 
@@ -215,6 +229,7 @@ async function resolverItem(entrada, ctx) {
         catalogo: 'geral', parceiro_id: fmp.parceiro_id, origem: 'produto', fecha_mes_produto_id: fmp.id,
         nome: fmp.bonus_nome, foto_url: fmp.bonus_foto_url,
         tipo_preco: 'fecha_mes', preco_unitario: dinheiro(fmp.preco_fecha_mes), preco_cheio: dinheiro(fmp.preco_original),
+        preco_sem_clube: dinheiro(fmp.preco_fecha_mes),
         estoque_max: fmp.estoque_disponivel,
       };
     }
@@ -239,10 +254,15 @@ async function resolverItem(entrada, ctx) {
       [ctx.edicaoFechaMes, p.id]
     )).rows[0] || null;
   }
-  const escolhido = menorPreco([
+  const pct = ctx.associadoAtivo ? pctDoItem(await clubeDaLoja(ctx, p.parceiro_id), 'geral', p.id) : null;
+  const semClube = menorPreco([
     { preco: p.preco, tipo: 'normal' },
-    ctx.associadoAtivo ? { preco: p.preco_associado, tipo: 'associado' } : null,
     fmp ? { preco: fmp.preco_fecha_mes, tipo: 'fecha_mes' } : null,
+  ].filter(Boolean));
+  const escolhido = menorPreco([
+    semClube,
+    ctx.associadoAtivo ? { preco: p.preco_associado, tipo: 'associado' } : null,
+    pct != null ? { preco: precoComClube(p.preco, pct), tipo: 'associado' } : null,
   ].filter(Boolean));
   return {
     catalogo: 'geral', parceiro_id: p.parceiro_id, origem: 'produto', produto_id: p.id,
@@ -250,6 +270,7 @@ async function resolverItem(entrada, ctx) {
     nome: p.nome, foto_url: fotoDe(p.fotos, p.foto_url),
     tipo_preco: escolhido.tipo, preco_unitario: dinheiro(escolhido.preco),
     preco_cheio: escolhido.tipo === 'normal' ? null : dinheiro(p.preco),
+    preco_sem_clube: dinheiro(semClube.preco),
     estoque_max: escolhido.tipo === 'fecha_mes' ? fmp.estoque_disponivel : null,
   };
 }
@@ -358,7 +379,12 @@ async function cotar(associado, entrada, { qa = false } = {}) {
   if (modo !== null && !modos.includes(modo)) {
     throw new ErroPedido(409, 'MODO_INDISPONIVEL', modo === 'entrega' ? 'Essa loja não faz entrega.' : 'Essa loja não tem retirada.');
   }
-  const valorEntrega = modo === 'entrega' ? taxaEntrega(loja, subtotal) : 0;
+  // Entrega grátis do Clube (b3): para o membro, a loja que oferece não
+  // cobra a taxa — vale também com promoção (é frete, não preço).
+  const entregaGratisClube = Boolean(ctx.associadoAtivo && (await clubeDaLoja(ctx, parceiroId))?.entrega_gratis);
+  const taxaNormal = taxaEntrega(loja, subtotal);
+  const taxaPessoa = entregaGratisClube ? 0 : taxaNormal;
+  const valorEntrega = modo === 'entrega' ? taxaPessoa : 0;
   return {
     loja, catalogo,
     resumo: {
@@ -366,7 +392,9 @@ async function cotar(associado, entrada, { qa = false } = {}) {
       itens: itens.map(semInterno),
       subtotal, modo_recebimento: modo, valor_entrega: valorEntrega, total: dinheiro(subtotal + valorEntrega),
       // valor de entrega se escolher entrega (pra tela mostrar antes de escolher)
-      taxa_se_entrega: modos.includes('entrega') ? taxaEntrega(loja, subtotal) : null,
+      taxa_se_entrega: modos.includes('entrega') ? taxaPessoa : null,
+      entrega_gratis_clube: entregaGratisClube && taxaNormal > 0,
+      entrega_dispensada_clube: modo === 'entrega' && entregaGratisClube ? taxaNormal : 0,
       aviso_idade: catalogo === 'beer',
       forma_pagamento: 'pix',
     },
@@ -428,10 +456,10 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
            parceiro_id, associado_id, catalogo, beer_estabelecimento_id, status,
            cliente_nome, cliente_whatsapp, modo_recebimento,
            cep, endereco, numero, complemento, bairro, cidade, estado, referencia,
-           subtotal, valor_entrega, total, forma_pagamento,
+           subtotal, valor_entrega, total, forma_pagamento, entrega_dispensada_clube,
            pix_chave, pix_tipo, pix_nome_recebedor, aceito_em,
            aviso_idade, aceite_automatico, observacao, token_loja)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'pix',$20,$21,$22,$23,$24,$25,$26,$27)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'pix',$28,$20,$21,$22,$23,$24,$25,$26,$27)
          RETURNING *`,
         [
           loja.id, associado.id, catalogo, catalogo === 'beer' ? loja.beer.id : null, automatico ? 'aceito' : 'enviado',
@@ -443,6 +471,7 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
           automatico ? loja.pix_chave : null, automatico ? loja.pix_tipo : null, automatico ? loja.pix_nome_recebedor : null,
           automatico ? new Date() : null,
           catalogo === 'beer', automatico, observacao, gerarTokenLoja(),
+          resumo.entrega_dispensada_clube,
         ]
       )).rows[0];
       // Promoção com limite: reserva 1 vaga por pedido já na criação (mesma
@@ -460,10 +489,10 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
       for (const i of resumo.itens) {
         itens.push((await client.query(
           `INSERT INTO loja_pedido_itens (pedido_id, origem, produto_id, promocao_id, fecha_mes_produto_id, beer_produto_id,
-             nome, foto_url, tipo_preco, preco_unitario, preco_cheio, quantidade, subtotal)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+             nome, foto_url, tipo_preco, preco_unitario, preco_cheio, quantidade, subtotal, preco_sem_clube)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
           [p.id, i.origem, i.produto_id ?? null, i.promocao_id ?? null, i.fecha_mes_produto_id ?? null, i.beer_produto_id ?? null,
-            String(i.nome).slice(0, 200), i.foto_url, i.tipo_preco, i.preco_unitario, i.preco_cheio, i.quantidade, i.subtotal]
+            String(i.nome).slice(0, 200), i.foto_url, i.tipo_preco, i.preco_unitario, i.preco_cheio, i.quantidade, i.subtotal, i.preco_sem_clube ?? i.preco_unitario]
         )).rows[0]);
       }
       return { pedido: p, itens };

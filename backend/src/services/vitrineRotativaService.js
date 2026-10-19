@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sqlClubePct } = require('./clubePreco');
 const { beneficios, planoEfetivo } = require('../config/planos');
 
 // Regra oficial (Fase 1): Grátis NÃO entra na rotativa — só planos pagos
@@ -73,7 +74,7 @@ function montarRoundRobin(porParceiro) {
 
 async function gerarRotacao() {
   const result = await db.query(
-    `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos, pr.destaque, pr.created_at,
+    `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, ${sqlClubePct('geral', 'pr.id', 'pr.parceiro_id')} AS clube_pct, pr.fotos, pr.destaque, pr.created_at,
             pa.id AS parceiro_id, pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.plano,
             pa.plano_expira_em, pa.cortesia_interna
      FROM sindicato_parceiro_produtos pr
@@ -100,6 +101,7 @@ async function gerarRotacao() {
     nome: r.nome,
     preco: r.preco,
     preco_associado: r.preco_associado,
+    clube_pct: r.clube_pct,
     fotos: r.fotos,
     created_at: r.created_at,
     parceiro_id: r.parceiro_id,

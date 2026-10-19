@@ -10,6 +10,7 @@ import SeloPlano from './components/SeloPlano';
 import { ROXO, ROXO_ESCURO, DOURADO, GRAFITE } from './theme';
 import { useAssociadoSessao } from './useAssociadoSessao';
 import { useDisponibilidade, colocarNaSacola } from '../../../components/BotaoComprar';
+import { precoClubeDe } from './precoPessoa';
 import { quantidadeNaSacola, aoMudarSacola, lerSacola } from '../Pedido/sacola';
 
 // Recalcula aberto/fechado sozinho — cliente que deixa a página aberta
@@ -81,8 +82,11 @@ export default function FoodDetalhe() {
     : null;
   // Preço que ESTA pessoa paga (mesma regra do servidor: associado com
   // benefício ativo paga o menor; o resumo do pedido confere no servidor)
-  const precoPessoa = item => (ehAssociadoSeci && item.preco_associado != null
-    ? Math.min(Number(item.preco), Number(item.preco_associado)) : Number(item.preco));
+  // preço Clube = fixo do item ou percentual da Loja do Clube, o menor (b3)
+  const precoPessoa = item => {
+    const clube = ehAssociadoSeci ? precoClubeDe(item.preco_associado, item.preco, item.clube_pct) : null;
+    return clube !== null ? Math.min(Number(item.preco), clube) : Number(item.preco);
+  };
 
   // null = restaurante ainda não configurou horário: não mostra badge nem
   // bloqueia pedido (não dá pra afirmar que está fechado).
@@ -226,8 +230,8 @@ export default function FoodDetalhe() {
                       {item.tempo_preparo_min && <p className="text-[10px] text-slate-400">⏱️ ~{item.tempo_preparo_min} min</p>}
                     </div>
                     {/* quem não é associado vê o preço de associado como chamada, não como preço */}
-                    {!ehAssociadoSeci && item.preco_associado != null && Number(item.preco_associado) < Number(item.preco) && (
-                      <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarBRL(item.preco_associado)} no Clube MAIS+</p>
+                    {!ehAssociadoSeci && (precoClubeDe(item.preco_associado, item.preco, item.clube_pct) ?? Infinity) < Number(item.preco) && (
+                      <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#92700C' }}>{formatarBRL(precoClubeDe(item.preco_associado, item.preco, item.clube_pct))} no Clube MAIS+</p>
                     )}
                     <div className="mt-auto pt-2">
                       {vendeSite ? (

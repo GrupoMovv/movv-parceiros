@@ -38,6 +38,8 @@ function novoPedidoLoja(p, itens) {
   const valores = [
     linhasItens(itens),
     Number(p.valor_entrega) > 0 ? `Entrega — ${brl(p.valor_entrega)}` : null,
+    // entrega grátis do Clube (b3): a loja sabe que não cobra o frete, nunca por que a pessoa é do Clube
+    Number(p.entrega_dispensada_clube) > 0 ? 'Entrega — grátis (Clube MAIS+)' : null,
     `*Total: ${brl(p.total)}* (Pix direto para você)`,
   ].filter(Boolean).join('\n');
   const acao = p.status === 'aceito'

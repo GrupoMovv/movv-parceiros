@@ -118,12 +118,6 @@ export default function ClubeMais() {
         <p className="text-slate-500 text-sm mt-0.5">Ofereça um benefício permanente aos membros do Clube MAIS+. Você pode sair quando quiser.</p>
       </div>
 
-      {!d.preco_no_site && (
-        <div className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-4 text-sm text-violet-900">
-          <strong>Em breve no site:</strong> o benefício que você escolher fica guardado agora. O preço Clube, o selo e a vitrine "Lojas do Clube" passam a aparecer para os clientes na próxima etapa do Clube MAIS+.
-        </div>
-      )}
-
       {d.precisa_aceitar_versao_nova && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900 flex gap-3">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />

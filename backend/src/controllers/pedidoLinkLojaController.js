@@ -35,8 +35,11 @@ function acoesDisponiveis(p) {
 }
 
 async function viewLoja(p) {
+  // A loja vê o preço cobrado e "clube" no lugar de "associado": nunca a
+  // porta por onde a pessoa entrou no Clube (Junior, 19/10/2026).
   const itens = (await db.query(
-    `SELECT nome, foto_url, tipo_preco, preco_unitario, quantidade, subtotal FROM loja_pedido_itens WHERE pedido_id = $1 ORDER BY id`,
+    `SELECT nome, foto_url, CASE WHEN tipo_preco = 'associado' THEN 'clube' ELSE tipo_preco END AS tipo_preco,
+            preco_unitario, quantidade, subtotal FROM loja_pedido_itens WHERE pedido_id = $1 ORDER BY id`,
     [p.id]
   )).rows;
   const loja = (await db.query('SELECT nome FROM sindicato_parceiros WHERE id = $1', [p.parceiro_id])).rows[0] || {};
@@ -54,6 +57,7 @@ async function viewLoja(p) {
     } : null,
     observacao: p.observacao, resposta: p.resposta,
     itens, subtotal: p.subtotal, valor_entrega: p.valor_entrega, total: p.total,
+    entrega_gratis_clube: Number(p.entrega_dispensada_clube) > 0,
     acoes: acoesDisponiveis(p),
     prazo_esgotado: prazoEsgotado(p),
   };

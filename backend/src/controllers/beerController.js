@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sqlClubePct } = require('../services/clubePreco');
 const { PLANOS, planoEfetivo, sqlPlanoVigente, limiteDestaquesBeer } = require('../config/planos');
 const { IDADE_MINIMA, DIAS, idadeEmAnos, diaDeHoje, normalizarTexto, abertoEfetivo, FAIXAS_VOLUME, faixaVolume } = require('../config/beer');
 const { onlyDigits, isValidCPF } = require('../utils/validators');
@@ -74,6 +75,8 @@ function publicoProduto(r) {
     // galeria do detalhe (a 1ª = imagem, a principal) — só as urls
     fotos: Array.isArray(r.fotos) && r.fotos.length ? r.fotos.map(f => f.url).filter(Boolean) : (r.imagem ? [r.imagem] : []),
     em_oferta: r.oferta_ativa, preco_original: r.oferta_ativa ? r.preco_original : null, oferta_ate: r.oferta_ativa ? r.oferta_ate : null,
+    // Loja do Clube (b3): percentual sobre o preço normal, para o membro
+    preco_normal: r.preco_normal, clube_pct: r.clube_pct,
     volume_ml: r.volume_ml, origem: r.origem,
     disponivel_agora: r.disponivel_agora, dias_disponiveis: r.dias_disponiveis,
     // destaque só vale se o plano que vale AGORA dá direito (Grátis = 0 —
@@ -88,6 +91,7 @@ const SELECT_PRODUTO = `
   bp.id AS produto_id, bp.nome AS produto_nome, bp.descricao, bp.imagem, bp.fotos, bp.disponivel_agora,
   bp.dias_disponiveis, bp.destaque, bp.categoria_codigo, bp.volume_ml, bp.origem, bp.created_at AS produto_criado_em,
   ${SQL_PRECO_VIGENTE} AS preco_vigente, ${SQL_OFERTA_ATIVA} AS oferta_ativa, bp.preco_original, bp.oferta_ate,
+  COALESCE(bp.preco_original, bp.preco) AS preco_normal, ${sqlClubePct('beer', 'bp.id', 'be.parceiro_id')} AS clube_pct,
   bc.nome_exibicao AS categoria_nome, bc.icone AS categoria_icone, bc.regulamentada, bc.categoria_pai,
   ${SELECT_ESTABELECIMENTO}
 `;

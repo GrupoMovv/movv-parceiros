@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sqlClubePct, precoClubeProduto } = require('../services/clubePreco');
 const { montarLinkWhatsapp } = require('../utils/whatsapp');
 const { associadoAtivoPorHash, situacaoDoAssociado } = require('../services/beneficioAssociado');
 
@@ -25,7 +26,9 @@ function montarMensagemGrupo(produtos, associado) {
   const linhas = ['Olá! Vi seus produtos no IUB Marketplace e tenho interesse em:', ''];
   let total = 0;
   for (const p of produtos) {
-    const preco = usaPrecoAssociado && p.preco_associado != null ? parseFloat(p.preco_associado) : parseFloat(p.preco);
+    // membro: o menor entre o preço normal e o preço Clube (fixo ou percentual da loja)
+    const clube = usaPrecoAssociado ? precoClubeProduto(p) : null;
+    const preco = clube != null && clube < parseFloat(p.preco) ? clube : parseFloat(p.preco);
     total += preco;
     linhas.push(`🛍️ ${p.nome} — ${formatarPrecoBRL(preco)}`);
   }
@@ -49,7 +52,7 @@ async function montarGrupos(produtoIds, associado) {
   if (produtoIds.length === 0) return { grupos: [], produtos_invalidos: [] };
 
   const result = await db.query(
-    `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos,
+    `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, ${sqlClubePct('geral', 'pr.id', 'pr.parceiro_id')} AS clube_pct, pr.fotos,
             pa.id AS parceiro_id, pa.nome AS parceiro_nome, pa.slug AS parceiro_slug,
             pa.whatsapp AS parceiro_whatsapp, pa.logo_url AS parceiro_logo_url
      FROM sindicato_parceiro_produtos pr
@@ -76,6 +79,7 @@ async function montarGrupos(produtoIds, associado) {
       nome: row.nome,
       preco: row.preco,
       preco_associado: row.preco_associado,
+      clube_pct: row.clube_pct,
       foto_url: row.fotos?.[0]?.url || null,
     });
     porParceiro.set(row.parceiro_id, grupo);

@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sqlClubePct, precoClubeProduto } = require('../services/clubePreco');
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
 const { edicaoFechaMesDeHoje } = require('../services/pedidoLoja');
@@ -33,7 +34,9 @@ function linkWhatsappComTexto(numero, mensagem) {
 }
 
 function montarMensagemWhatsapp(produto, associado) {
-  const temPrecoAssociado = produto.preco_associado != null;
+  // preço Clube: fixo do produto ou percentual da Loja do Clube, o menor (b3)
+  const precoClube = precoClubeProduto(produto);
+  const temPrecoAssociado = precoClube != null && precoClube < parseFloat(produto.preco);
   const linhas = [
     'Olá! Vi seu produto no IUB Marketplace e tenho interesse.',
     '',
@@ -42,8 +45,8 @@ function montarMensagemWhatsapp(produto, associado) {
   ];
 
   if (temPrecoAssociado && associado) {
-    const diferenca = parseFloat(produto.preco) - parseFloat(produto.preco_associado);
-    linhas.push(`💎 Preço Clube MAIS+: ${formatarPrecoBRL(produto.preco_associado)} (economia de ${formatarPrecoBRL(diferenca)})`);
+    const diferenca = parseFloat(produto.preco) - precoClube;
+    linhas.push(`💎 Preço Clube MAIS+: ${formatarPrecoBRL(precoClube)} (economia de ${formatarPrecoBRL(diferenca)})`);
   }
 
   if (associado) {
@@ -59,7 +62,7 @@ async function getProduto(req, res) {
   try {
     const result = await db.query(
       `SELECT
-         pr.id, pr.nome, pr.descricao, pr.preco, pr.preco_associado, pr.categoria, pr.marca,
+         pr.id, pr.nome, pr.descricao, pr.preco, pr.preco_associado, ${sqlClubePct('geral', 'pr.id', 'pr.parceiro_id')} AS clube_pct, pr.categoria, pr.marca,
          pr.estoque_disponivel, pr.destaque, pr.fotos, pr.created_at,
          pa.id AS parceiro_id, pa.slug AS parceiro_slug, pa.nome AS parceiro_nome,
          pa.icone AS parceiro_icone, pa.cor_icone AS parceiro_cor_icone, pa.logo_url AS parceiro_logo_url,
@@ -101,7 +104,9 @@ async function getOutrosDoParceiro(req, res) {
     if (!atual.rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });
 
     const result = await db.query(
-      `SELECT id, nome, preco, preco_associado, fotos FROM sindicato_parceiro_produtos
+      `SELECT id, nome, preco, preco_associado, fotos,
+              ${sqlClubePct('geral', 'sindicato_parceiro_produtos.id', 'sindicato_parceiro_produtos.parceiro_id')} AS clube_pct
+       FROM sindicato_parceiro_produtos
        WHERE parceiro_id = $1 AND id != $2 AND ativo = true AND rascunho = false AND moderacao_status = 'aprovado'
        ORDER BY created_at DESC LIMIT 6`,
       [atual.rows[0].parceiro_id, req.params.id]
@@ -144,7 +149,7 @@ async function registrarEvento(req, res) {
 async function getMensagemWhatsapp(req, res) {
   try {
     const result = await db.query(
-      `SELECT pr.nome, pr.preco, pr.preco_associado, pa.whatsapp AS parceiro_whatsapp
+      `SELECT pr.nome, pr.preco, pr.preco_associado, ${sqlClubePct('geral', 'pr.id', 'pr.parceiro_id')} AS clube_pct, pa.whatsapp AS parceiro_whatsapp
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
        WHERE pr.id = $1 AND pr.ativo = true AND pr.rascunho = false AND pr.moderacao_status = 'aprovado' AND ${lojaVisivel(req.modoQa)}`,

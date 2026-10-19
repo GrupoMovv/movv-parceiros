@@ -16,8 +16,8 @@ const MINIMO_PADRAO = { tipo: 'produtos', rotulo: 'demais produtos', percentual:
 // Versão nova do termo: dias para a loja aceitar e aviso antes do fim.
 const AVISO_DIAS_ANTES = 3;
 
-// b3 liga o preço Clube da loja no site e no pedido. Até lá o benefício só
-// fica gravado e o painel avisa que ainda não vale no site.
-const PRECO_LOJA_CLUBE_NO_SITE = false;
+// Preço Clube da loja no site e no pedido (b3, ligado em 19/10/2026). false = o
+// benefício só fica gravado (b1 e b2), sem efeito no preço.
+const PRECO_LOJA_CLUBE_NO_SITE = true;
 
 module.exports = { PERCENTUAL_MIN, PERCENTUAL_MAX, MINIMOS_SUGERIDOS, MINIMO_PADRAO, AVISO_DIAS_ANTES, PRECO_LOJA_CLUBE_NO_SITE };

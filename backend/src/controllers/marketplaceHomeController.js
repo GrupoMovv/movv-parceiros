@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sqlClubePct } = require('../services/clubePreco');
 const { obterVitrineRotativa } = require('../services/vitrineRotativaService');
 const { PLANOS, PIONEIRO_VAGAS_TOTAL, planoEfetivo, sqlPlanoVigente } = require('../config/planos');
 const { normalizarCategoria, ehRestaurante } = require('../utils/categorias');
@@ -18,8 +19,11 @@ function sqlBoostBusca(alias = 'pa.') {
 
 // Colunas comuns de produto pra qualquer vitrine da home — sempre junto do
 // parceiro (nome/slug), porque todo CardProduto mostra "vendido por X".
+// clube_pct: percentual da Loja do Clube que vale para o item (b3)
+const CLUBE_PCT_PR = sqlClubePct('geral', 'pr.id', 'pr.parceiro_id');
+const CLUBE_PCT_PM = sqlClubePct('geral', 'pm.produto_id', 'pm.parceiro_id');
 const SELECT_PRODUTO = `
-  pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos, pr.created_at,
+  pr.id, pr.nome, pr.preco, pr.preco_associado, ${CLUBE_PCT_PR} AS clube_pct, pr.fotos, pr.created_at,
   pa.nome AS parceiro_nome, pa.slug AS parceiro_slug
 `;
 const fromProdutoAtivo = (qa = false) => `
@@ -40,7 +44,7 @@ const FROM_PRODUTO_ATIVO = `
 async function getOfertasSemana(req, res) {
   try {
     const result = await db.query(
-      `SELECT pm.id, pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado,
+      `SELECT pm.id, pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, ${CLUBE_PCT_PM} AS clube_pct,
               pm.exclusivo_associado, pm.limite_usos, pm.usos_atuais, pm.data_fim,
               COALESCE(pm.foto_url, pr.fotos->0->>'url') AS foto_url,
               pa.nome AS parceiro_nome, pa.slug AS parceiro_slug,
@@ -277,7 +281,7 @@ async function getProdutosPorCategoria(req, res) {
     params.push(limiteNum, (paginaNum - 1) * limiteNum);
 
     const produtosResult = await db.query(
-      `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.categoria, pr.fotos, pr.created_at,
+      `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, ${CLUBE_PCT_PR} AS clube_pct, pr.categoria, pr.fotos, pr.created_at,
               pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.bairro AS parceiro_bairro
        FROM sindicato_parceiro_produtos pr
        JOIN sindicato_parceiros pa ON pa.id = pr.parceiro_id
@@ -524,7 +528,8 @@ async function getServicoPorSlug(req, res) {
     }
 
     const itensResult = await db.query(
-      `SELECT id, nome, preco, preco_associado
+      `SELECT id, nome, preco, preco_associado,
+              ${sqlClubePct('geral', 'sindicato_parceiro_produtos.id', 'sindicato_parceiro_produtos.parceiro_id')} AS clube_pct
        FROM sindicato_parceiro_produtos
        WHERE parceiro_id = $1 AND ativo = true AND rascunho = false AND moderacao_status = 'aprovado'
        ORDER BY destaque DESC, created_at DESC`,
@@ -636,7 +641,8 @@ async function getFoodPorSlug(req, res) {
     }
 
     const itensResult = await db.query(
-      `SELECT id, nome, descricao, preco, preco_associado, fotos, estoque_disponivel, tempo_preparo_min
+      `SELECT id, nome, descricao, preco, preco_associado, fotos, estoque_disponivel, tempo_preparo_min,
+              ${sqlClubePct('geral', 'sindicato_parceiro_produtos.id', 'sindicato_parceiro_produtos.parceiro_id')} AS clube_pct
        FROM sindicato_parceiro_produtos
        WHERE parceiro_id = $1 AND ativo = true AND rascunho = false AND moderacao_status = 'aprovado'
        ORDER BY destaque DESC, created_at DESC`,
@@ -666,7 +672,7 @@ async function getLojaPorSlug(req, res) {
     const loja = r.rows[0];
     if (!loja) return res.status(404).json({ error: 'Loja não encontrada' });
     const produtos = (await db.query(
-      `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, pr.fotos, pr.created_at, pr.estoque_disponivel,
+      `SELECT pr.id, pr.nome, pr.preco, pr.preco_associado, ${CLUBE_PCT_PR} AS clube_pct, pr.fotos, pr.created_at, pr.estoque_disponivel,
               $2::text AS parceiro_nome, $3::text AS parceiro_slug
        FROM sindicato_parceiro_produtos pr
        WHERE pr.parceiro_id = $1 AND pr.ativo AND NOT pr.rascunho AND pr.moderacao_status = 'aprovado'
@@ -675,7 +681,7 @@ async function getLojaPorSlug(req, res) {
       [loja.id, loja.nome, loja.slug]
     )).rows;
     const promocoes = (await db.query(
-      `SELECT pm.id, pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, pm.data_fim, pm.exclusivo_associado,
+      `SELECT pm.id, pm.titulo, pm.preco_de, pm.preco_por, pm.preco_associado, ${CLUBE_PCT_PM} AS clube_pct, pm.data_fim, pm.exclusivo_associado,
               COALESCE(pm.foto_url, pr.fotos->0->>'url') AS foto_url, $2::text AS parceiro_nome, $3::text AS parceiro_slug
        FROM sindicato_parceiro_promocoes pm
        LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = pm.produto_id
