@@ -153,7 +153,7 @@ router.get('/cupons/disponiveis', marketplaceHomeCtrl.getCuponsDisponiveis);
 
 router.get('/fecha-mes/proximo', fechaMesCtrl.getProximo);
 router.get('/fecha-mes/ativo', fechaMesCtrl.getAtivo);
-router.get('/fecha-mes/produtos', fechaMesCtrl.getProdutos);
+router.get('/fecha-mes/produtos', qa, fechaMesCtrl.getProdutos);
 
 // Nomes das empresas com lista de colaboradores aprovados (Bloco de
 // autocadastro por CPF+CNPJ) — só nome + contagem, nunca CPF/matrícula/

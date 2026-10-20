@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { ehHojeODiaDoEvento, comecaEmISO, terminaEmISO, diasAte } = require('../config/fechaMes');
 const { fechaMesHabilitadoGlobalmente, obterProximoEvento } = require('../services/fechaMesService');
 const relogio = require('../config/relogio');
+const { lojaVisivel } = require('../utils/lojaVisivel');
 
 // Resolve o estado do próximo evento de uma vez (evento + se está no ar
 // hoje) — reaproveitado pelos três endpoints públicos abaixo.
@@ -45,6 +46,8 @@ async function getAtivo(req, res) {
 // Vitrine especial do marketplace — só devolve produto se o evento estiver
 // ativo HOJE de verdade (nunca serve preço de Fecha Mês fora da janela,
 // mesmo que a linha de confirmação continue existindo no banco depois).
+// Loja de teste só aparece para admin ou testador (modo QA), como no resto
+// do site (utils/lojaVisivel.js).
 async function getProdutos(req, res) {
   try {
     const { evento, ativoHoje } = await resolverEstado();
@@ -69,7 +72,7 @@ async function getProdutos(req, res) {
        LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = fmp.produto_id
        JOIN sindicato_parceiros pa ON pa.id = fmp.parceiro_id
        WHERE fmp.fecha_mes_id = $1 AND fmp.status = 'confirmado'
-         AND (fmp.e_produto_bonus = true OR (pr.ativo = true AND pr.moderacao_status = 'aprovado')) AND pa.status = 'ativo' AND NOT pa.empresa_teste
+         AND (fmp.e_produto_bonus = true OR (pr.ativo = true AND pr.moderacao_status = 'aprovado')) AND ${lojaVisivel(req.modoQa)}
        ORDER BY pa.plano = 'master' DESC, desconto_pct DESC`,
       [evento.id]
     );
