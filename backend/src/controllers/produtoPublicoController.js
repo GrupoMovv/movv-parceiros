@@ -3,6 +3,8 @@ const { sqlClubePct, sqlClubeLoja, precoClubeProduto } = require('../services/cl
 const { associadoAtivoPorHash } = require('../services/beneficioAssociado');
 const { ipCliente } = require('../utils/ipCliente');
 const { edicaoFechaMesDeHoje } = require('../services/pedidoLoja');
+const { terminaEmISO, hojeISOBrasil } = require('../config/fechaMes');
+const relogio = require('../config/relogio');
 const { lojaVisivel } = require('../utils/lojaVisivel');
 
 const TIPOS_EVENTO_VALIDOS = ['ver_produto', 'clique_whatsapp'];
@@ -88,6 +90,11 @@ async function getProduto(req, res) {
         [edicao, produto.id]
       );
       produto.preco_fecha_mes = fm.rows[0]?.preco_fecha_mes ?? null;
+      // a página tira o preço do evento sozinha às 23:59:59 (hora do servidor)
+      if (produto.preco_fecha_mes != null) {
+        produto.fecha_mes_termina_em = terminaEmISO(hojeISOBrasil());
+        produto.agora = relogio.agora().toISOString();
+      }
     }
     return res.json(produto);
   } catch (err) {

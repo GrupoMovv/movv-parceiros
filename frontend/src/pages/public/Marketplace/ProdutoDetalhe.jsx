@@ -38,7 +38,9 @@ export default function ProdutoDetalhe() {
 
   const ehAssociado = ehAssociadoSeci;
   // Pedido pelo site: só aparece se a loja vende pelo site agora
-  const dispCompra = useDisponibilidade('produto', id);
+  // Fecha Mês: às 23:59:59 (hora do servidor) o preço do evento sai da tela sozinho
+  const [fechaMesAcabou, setFechaMesAcabou] = useState(false);
+  const dispCompra = useDisponibilidade('produto', id, fechaMesAcabou);
   const nomeAssociado = associado?.nome_completo?.trim().split(/\s+/)[0] || null;
 
   function carregarProduto() {
@@ -53,6 +55,15 @@ export default function ProdutoDetalhe() {
   }
 
   useEffect(() => { carregarProduto(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setFechaMesAcabou(false);
+    if (!produto?.fecha_mes_termina_em) return undefined;
+    const desvio = Date.parse(produto.agora) - Date.now() || 0;
+    const falta = Date.parse(produto.fecha_mes_termina_em) + 1000 - (Date.now() + desvio);
+    const t = setTimeout(() => setFechaMesAcabou(true), Math.max(0, falta));
+    return () => clearTimeout(t);
+  }, [produto]);
 
   useEffect(() => {
     if (!produto) return;
@@ -128,7 +139,7 @@ export default function ProdutoDetalhe() {
 
   // preço que ESTA pessoa paga agora (normal, associado ou Fecha Mês do dia):
   // mesma regra do servidor (precoPessoa.js) — é o valor do Comprar e do pedido
-  const pp = precoDoProduto(produto, ehAssociado);
+  const pp = precoDoProduto(fechaMesAcabou ? { ...produto, preco_fecha_mes: null } : produto, ehAssociado);
   const economia = pp.riscado ? pp.riscado - pp.principal : (pp.chamadaAssociado ? Number(produto.preco) - pp.chamadaAssociado : 0);
   const favorito = ehFavorito(produto.id);
   const descricaoLonga = (produto.descricao || '').length > 180;

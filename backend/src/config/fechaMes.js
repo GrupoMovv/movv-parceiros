@@ -6,6 +6,7 @@
 // "sexta" sem isso erraria o dia perto da meia-noite.
 const TIMEZONE = 'America/Sao_Paulo';
 const { beneficios, planoValido } = require('./planos');
+const relogio = require('./relogio');
 
 // Limite de catálogo no Fecha Mês = mesmo número da vitrine rotativa
 // (config/planos.js `max_produtos_rotativa`) — de propósito acoplado
@@ -40,7 +41,7 @@ function agoraBrasil() {
   const partes = new Intl.DateTimeFormat('en-US', {
     timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  }).formatToParts(new Date());
+  }).formatToParts(relogio.agora());
   const obter = (tipo) => partes.find(p => p.type === tipo).value;
   return {
     ano: Number(obter('year')), mes: Number(obter('month')), dia: Number(obter('day')),

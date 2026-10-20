@@ -4,21 +4,22 @@ import { DOURADO, DOURADO_ESCURO } from '../theme';
 
 const VERMELHO = '#DC2626';
 
-function useContagemRegressiva(terminaEm) {
+function useContagemRegressiva(terminaEm, desvio = 0) {
   const [texto, setTexto] = useState('');
   useEffect(() => {
     if (!terminaEm) return;
     function atualizar() {
-      const restanteMs = new Date(terminaEm).getTime() - Date.now();
+      // hora do servidor (desvio medido em useFechaMesProximo), não a do aparelho
+      const restanteMs = new Date(terminaEm).getTime() - (Date.now() + desvio);
       if (restanteMs <= 0) { setTexto('Encerrado'); return; }
       const horas = Math.floor(restanteMs / 3.6e6);
       const min = Math.floor((restanteMs % 3.6e6) / 60000);
-      setTexto(`${horas}h ${min}min restantes`);
+      setTexto(horas === 0 && min === 0 ? 'menos de 1 min' : `${horas}h ${min}min restantes`);
     }
     atualizar();
     const id = setInterval(atualizar, 30000);
     return () => clearInterval(id);
-  }, [terminaEm]);
+  }, [terminaEm, desvio]);
   return texto;
 }
 
@@ -27,7 +28,7 @@ function useContagemRegressiva(terminaEm) {
 // janela (nem perto nem hoje) não renderiza nada — não é dado "carregando",
 // é a maior parte do mês mesmo.
 export default function FechaMesBanner({ info }) {
-  const contagem = useContagemRegressiva(info?.ativo_hoje ? info.termina_em : null);
+  const contagem = useContagemRegressiva(info?.ativo_hoje ? info.termina_em : null, info?.desvio);
 
   if (!info || !info.habilitado_globalmente) return null;
 

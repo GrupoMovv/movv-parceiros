@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { ehHojeODiaDoEvento, comecaEmISO, terminaEmISO, diasAte } = require('../config/fechaMes');
 const { fechaMesHabilitadoGlobalmente, obterProximoEvento } = require('../services/fechaMesService');
+const relogio = require('../config/relogio');
 
 // Resolve o estado do próximo evento de uma vez (evento + se está no ar
 // hoje) — reaproveitado pelos três endpoints públicos abaixo.
@@ -21,6 +22,9 @@ async function getProximo(req, res) {
       ativo_hoje: ativoHoje,
       comeca_em: comecaEmISO(evento.data_evento),
       termina_em: terminaEmISO(evento.data_evento),
+      // hora do servidor: o site acerta a contagem e a virada da meia-noite
+      // por ela, mesmo com o relógio do celular adiantado ou atrasado
+      agora: relogio.agora().toISOString(),
     });
   } catch (err) {
     console.error(err);
@@ -31,7 +35,7 @@ async function getProximo(req, res) {
 async function getAtivo(req, res) {
   try {
     const { evento, ativoHoje } = await resolverEstado();
-    return res.json({ ativo: ativoHoje, data_evento: evento.data_evento, termina_em: terminaEmISO(evento.data_evento) });
+    return res.json({ ativo: ativoHoje, data_evento: evento.data_evento, termina_em: terminaEmISO(evento.data_evento), agora: relogio.agora().toISOString() });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao verificar Fecha Mês' });

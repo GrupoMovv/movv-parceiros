@@ -9,7 +9,8 @@ const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency
 
 // Pergunta ao servidor se dá pra comprar esse item pelo site AGORA (loja
 // ligou, aberta, não pausou, item com preço...). null = ainda carregando.
-export function useDisponibilidade(tipo, id) {
+// `chave`: quando muda, pergunta de novo (ex.: o Fecha Mês acabou).
+export function useDisponibilidade(tipo, id, chave) {
   const [disp, setDisp] = useState(null);
   useEffect(() => {
     if (!tipo || !id) return undefined;
@@ -18,7 +19,7 @@ export function useDisponibilidade(tipo, id) {
       .then(res => { if (vivo) setDisp(res.data); })
       .catch(() => { if (vivo) setDisp({ pode: false }); });
     return () => { vivo = false; };
-  }, [tipo, id]);
+  }, [tipo, id, chave]);
   return disp;
 }
 
