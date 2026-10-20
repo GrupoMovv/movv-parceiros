@@ -98,30 +98,41 @@ function ehHojeODiaDoEvento(dataEventoISO) {
   return hojeISOBrasil() === dataEventoISO;
 }
 
-// Deadline pra parceiro confirmar participação: quinta 23:59:59 (véspera).
-function deadlineConfirmacaoISO(dataEventoISO) {
+// Dia N dias antes/depois de uma data YYYY-MM-DD (meio-dia UTC, sem vazar de dia).
+function diaRelativo(dataEventoISO, dias) {
   const d = new Date(`${dataEventoISO}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return `${dataISO({ ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate() })}T23:59:59`;
+  d.setUTCDate(d.getUTCDate() + dias);
+  return dataISO({ ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate() });
 }
 
-function passouDaDeadline(dataEventoISO) {
-  return agoraISOBrasil() > deadlineConfirmacaoISO(dataEventoISO);
-}
-
-// Prazo pra editar/remover/adicionar produto na edição (Feature 1): até 3
-// dias ANTES do evento, 23:59:59 — depois disso a seleção trava (logística
-// já em andamento). Substitui deadlineConfirmacaoISO/passouDaDeadline (que
-// só valiam pra "confirmar participação" na véspera) como o prazo único
-// pra qualquer mudança na lista de produtos.
+// Prazo único da loja para cadastrar, trocar, editar ou remover produto da
+// edição: véspera (quinta) até 18:00, horário de Itumbiara. Decisão do
+// Junior em 20/10/2026 (antes era 3 dias antes, 23:59:59). A partir das
+// 18:00:00 a aba trava.
+const HORA_PRAZO = '18:00:00';
 function prazoEdicaoISO(dataEventoISO) {
-  const d = new Date(`${dataEventoISO}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 3);
-  return `${dataISO({ ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate() })}T23:59:59`;
+  return `${diaRelativo(dataEventoISO, -1)}T${HORA_PRAZO}`;
 }
 
 function passouPrazoEdicao(dataEventoISO) {
-  return agoraISOBrasil() > prazoEdicaoISO(dataEventoISO);
+  return agoraISOBrasil() >= prazoEdicaoISO(dataEventoISO);
+}
+
+// Nomes antigos ("confirmar participação"): hoje são o mesmo prazo.
+const deadlineConfirmacaoISO = prazoEdicaoISO;
+const passouDaDeadline = passouPrazoEdicao;
+
+// Avisos pelo WhatsApp às lojas (services/fechaMesAvisos.js), às 10:00:
+// convite na segunda da semana do evento e lembrete do prazo na quinta.
+const HORA_AVISO = '10:00:00';
+function janelaAvisoISO(dataEventoISO, tipo) {
+  if (tipo === 'convite') {
+    // segunda 10:00 até o fim da segunda (perdeu a segunda: o lembrete cobre)
+    const dia = diaRelativo(dataEventoISO, -4);
+    return { de: `${dia}T${HORA_AVISO}`, ate: `${dia}T23:59:59` };
+  }
+  // quinta 10:00 até o prazo (18:00)
+  return { de: `${diaRelativo(dataEventoISO, -1)}T${HORA_AVISO}`, ate: prazoEdicaoISO(dataEventoISO) };
 }
 
 // ISO com offset explícito de Brasília — o front só precisa de
@@ -153,6 +164,8 @@ module.exports = {
   passouDaDeadline,
   prazoEdicaoISO,
   passouPrazoEdicao,
+  diaRelativo,
+  janelaAvisoISO,
   terminaEmISO,
   comecaEmISO,
   diasAte,

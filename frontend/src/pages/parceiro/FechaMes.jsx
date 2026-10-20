@@ -15,6 +15,12 @@ function formatarPreco(v) {
 function formatarData(iso) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
+// "quinta, 29/10, às 18:00" a partir de "2026-10-29T18:00:00" (horário de Itumbiara)
+function formatarPrazo(isoLocal) {
+  const [data, hora] = String(isoLocal).split('T');
+  const dia = new Date(`${data}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' }).replace('-feira', '');
+  return `${dia}, ${formatarDataCurta(data)}, às ${hora.slice(0, 5)}`;
+}
 function formatarDataCurta(iso) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
@@ -146,7 +152,7 @@ export default function ParceiroFechaMes() {
         <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold" style={{ color: podeEditar ? DOURADO : '#FCA5A5' }}>
           <Clock className="w-3.5 h-3.5" />
           {podeEditar
-            ? `Você pode editar até ${formatarData(info.prazo_edicao.slice(0, 10))}`
+            ? `Você pode cadastrar e trocar produtos até ${formatarPrazo(info.prazo_edicao)}`
             : `🔒 Edição encerrada — próximo Fecha Mês em ${formatarDataCurta(info.data_evento)}`}
         </div>
       </div>
@@ -162,7 +168,7 @@ export default function ParceiroFechaMes() {
             <h2 className="font-bold text-sm" style={{ color: PRETO }}>Produtos do catálogo</h2>
             <span className="text-xs font-semibold text-slate-400">{confirmadosCatalogo.length + qtdSelecionados} / {info.limite_catalogo}</span>
           </div>
-          <p className="text-slate-400 text-xs mb-4">Você pode editar preço/estoque ou remover até 3 dias antes do evento.</p>
+          <p className="text-slate-400 text-xs mb-4">Você pode editar preço/estoque, trocar ou remover até {formatarPrazo(info.prazo_edicao)}.</p>
 
           {confirmadosCatalogo.length > 0 && (
             <div className="space-y-2 mb-4">
@@ -347,10 +353,13 @@ function ItemConfirmado({ item, onEditar, onRemover }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate" style={{ color: PRETO }}>{item.nome}</p>
-        {item.estoque_disponivel != null && <p className="text-[11px] text-slate-400">Estoque: {item.estoque_disponivel}</p>}
+        {/* preços embaixo do nome: na mesma linha, a 360 px o nome sumia e o estoque cobria o preço */}
+        <p className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 line-through">{formatarPreco(item.preco_original)}</span>
+          <span className="text-sm font-bold" style={{ color: VERMELHO }}>{formatarPreco(item.preco_fecha_mes)}</span>
+          {item.estoque_disponivel != null && <span className="text-[11px] text-slate-400">Estoque: {item.estoque_disponivel}</span>}
+        </p>
       </div>
-      <p className="text-xs text-slate-400 line-through">{formatarPreco(item.preco_original)}</p>
-      <p className="text-sm font-bold" style={{ color: VERMELHO }}>{formatarPreco(item.preco_fecha_mes)}</p>
       {(onEditar || onRemover) ? (
         <div className="flex items-center gap-1 flex-shrink-0">
           {onEditar && (

@@ -3,6 +3,7 @@ const router = require('express').Router();
 const assinaturaService = require('../services/assinaturaService');
 const carteirinhaAvisos = require('../services/carteirinhaAvisosService');
 const pedidoPrazos = require('../services/pedidoPrazos');
+const fechaMesAvisos = require('../services/fechaMesAvisos');
 
 // Rotinas internas disparadas por agendador externo (Render Cron Job) —
 // o projeto não roda cron dentro do processo (o serviço web pode dormir no
@@ -64,6 +65,20 @@ router.post('/pedidos/prazos', exigirSegredo, async (req, res) => {
     return res.json({ ok: true, ...r, duracao_ms: Date.now() - inicio });
   } catch (err) {
     console.error('[prazos pedidos] rota falhou:', err);
+    return res.status(500).json({ error: 'rotina falhou', detalhe: err.message });
+  }
+});
+
+// POST /api/interno/fecha-mes/avisos — convite (segunda) e lembrete do prazo
+// (quinta) do Fecha Mês às lojas. O timer do servidor já roda a cada 10 min;
+// esta rota é reserva. Idempotente: cada aviso sai uma vez por loja e edição.
+router.post('/fecha-mes/avisos', exigirSegredo, async (req, res) => {
+  const inicio = Date.now();
+  try {
+    const r = await fechaMesAvisos.rodarAvisos();
+    return res.json({ ok: true, ...r, duracao_ms: Date.now() - inicio });
+  } catch (err) {
+    console.error('[fecha mês avisos] rota falhou:', err);
     return res.status(500).json({ error: 'rotina falhou', detalhe: err.message });
   }
 });

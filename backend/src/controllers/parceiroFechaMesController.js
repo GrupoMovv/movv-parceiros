@@ -80,7 +80,7 @@ async function getMeus(req, res) {
 
 // Só insere linhas novas de CATÁLOGO — produto bônus tem endpoint próprio
 // (criarProdutoBonus, com upload de foto). Permitido até o prazo de edição
-// (3 dias antes, Feature 1) — antes disso era só até a véspera.
+// (véspera do evento até 18:00 — config/fechaMes.js prazoEdicaoISO).
 async function participar(req, res) {
   try {
     const plano = planoEfetivo(req.parceiro);
@@ -92,7 +92,7 @@ async function participar(req, res) {
     const evento = await obterProximoEvento();
     if (!evento.ativo) return res.status(403).json({ error: 'A próxima edição do Fecha Mês foi cancelada.' });
     if (passouPrazoEdicao(evento.data_evento)) {
-      return res.status(403).json({ error: 'O prazo pra adicionar produtos (3 dias antes do evento) já passou.' });
+      return res.status(403).json({ error: 'O prazo pra adicionar produtos (véspera do evento, até 18:00) já passou.' });
     }
 
     const itens = Array.isArray(req.body.produtos) ? req.body.produtos : [];
@@ -137,7 +137,12 @@ async function participar(req, res) {
       await db.query(
         `INSERT INTO sindicato_fecha_mes_produtos (fecha_mes_id, produto_id, parceiro_id, preco_original, preco_fecha_mes, estoque_disponivel)
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (fecha_mes_id, produto_id) DO NOTHING`,
+         ON CONFLICT (fecha_mes_id, produto_id) DO UPDATE SET
+           -- produto removido antes e escolhido de novo (troca): volta a valer
+           status = 'confirmado', removido_em = NULL, confirmado_em = NOW(), atualizado_em = NOW(),
+           preco_original = EXCLUDED.preco_original, preco_fecha_mes = EXCLUDED.preco_fecha_mes,
+           estoque_disponivel = EXCLUDED.estoque_disponivel
+         WHERE sindicato_fecha_mes_produtos.status = 'removido'`,
         [evento.id, produtoId, req.parceiro.id, produto.preco, precoFechaMes, estoque]
       );
       confirmados.push(produtoId);
@@ -165,7 +170,7 @@ async function criarProdutoBonus(req, res) {
     const evento = await obterProximoEvento();
     if (!evento.ativo) return res.status(403).json({ error: 'A próxima edição do Fecha Mês foi cancelada.' });
     if (passouPrazoEdicao(evento.data_evento)) {
-      return res.status(403).json({ error: 'O prazo pra adicionar produtos bônus (3 dias antes do evento) já passou.' });
+      return res.status(403).json({ error: 'O prazo pra adicionar produtos bônus (véspera do evento, até 18:00) já passou.' });
     }
 
     const { nome, descricao, preco_original, preco_fecha_mes, estoque_disponivel } = req.body;
@@ -227,7 +232,7 @@ async function editarProduto(req, res) {
     if (item.parceiro_id !== req.parceiro.id) return res.status(403).json({ error: 'Acesso negado' });
     if (item.status !== 'confirmado') return res.status(400).json({ error: 'Este produto já foi removido da edição' });
     if (passouPrazoEdicao(item.data_evento)) {
-      return res.status(403).json({ error: 'O prazo pra editar produtos (3 dias antes do evento) já passou.' });
+      return res.status(403).json({ error: 'O prazo pra editar produtos (véspera do evento, até 18:00) já passou.' });
     }
 
     const precoOriginal = item.e_produto_bonus && req.body.preco_original !== undefined
@@ -281,7 +286,7 @@ async function removerProduto(req, res) {
     if (item.parceiro_id !== req.parceiro.id) return res.status(403).json({ error: 'Acesso negado' });
     if (item.status === 'removido') return res.status(400).json({ error: 'Este produto já foi removido' });
     if (passouPrazoEdicao(item.data_evento)) {
-      return res.status(403).json({ error: 'O prazo pra remover produtos (3 dias antes do evento) já passou.' });
+      return res.status(403).json({ error: 'O prazo pra remover produtos (véspera do evento, até 18:00) já passou.' });
     }
 
     const result = await db.query(
