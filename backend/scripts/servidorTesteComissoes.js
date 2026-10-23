@@ -8,6 +8,7 @@
 //
 // Logins (senha de todos: teste123):
 //   ADMIN-T01           admin (Comissões do Partner no menu Admin)
+//   ADMIN-001           admin principal de teste (só ele vê "Administrador — Financeiro")
 //   PARTNER-T01         MOVV Partner nível Mobile, com lançamentos
 //   PARTNER-T02         MOVV Partner nível Hub, com lançamentos
 //   fernando@teste.local  vendedor do Movv Certificado (Nova Venda com Partner)
@@ -31,6 +32,7 @@ async function semear(db) {
   )).rows[0].id;
 
   await partner('ADMIN-T01', 'Admin de Teste', 'accounting', { admin: true });
+  await partner('ADMIN-001', 'Admin Principal (teste)', 'accounting', { admin: true });
   const a = await partner('PARTNER-T01', 'Ana Partner (teste)', 'movv_partner', { nivel: 'mobile' });
   const b = await partner('PARTNER-T02', 'Bruno Partner (teste)', 'movv_partner', { nivel: 'hub' });
   await db.query(
@@ -88,6 +90,6 @@ async function semear(db) {
   const porta = Number(process.env.PORT) || 3001;
   app.listen(porta, () => {
     console.log(`Servidor de TESTE (banco em memória, sem produção) em http://localhost:${porta}`);
-    console.log('Logins (senha teste123): ADMIN-T01, PARTNER-T01, PARTNER-T02, fernando@teste.local');
+    console.log('Logins (senha teste123): ADMIN-001, ADMIN-T01, PARTNER-T01, PARTNER-T02, fernando@teste.local');
   });
 })().catch(err => { console.error(err); process.exit(1); });

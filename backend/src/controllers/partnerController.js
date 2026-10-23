@@ -3,6 +3,9 @@ const { ADMIN_PRINCIPAL, ehAdminPrincipal } = require('../config/adminPrincipal'
 const db = require('../config/database');
 const emailService = require('../services/emailService');
 const { registrarTrocaPix } = require('../services/historicoPix');
+const { PERFIL_FINANCEIRO } = require('../config/perfilAdmin');
+const { registrarAcao } = require('../services/registroAdmin');
+const { mascararPix } = require('../utils/validators');
 
 async function listPartners(req, res) {
   try {
@@ -49,6 +52,23 @@ async function createPartner(req, res) {
   const isAdmin = !!req.user?.is_admin;
   let { name, email, type, whatsapp, pix_key, parent_id, password, is_admin } = req.body;
 
+  // "Administrador — Financeiro" (Junior, 23/10/2026): conta admin com
+  // partners.perfil_admin = 'financeiro' (migration 089, igual à ADMIN-002).
+  // Só o ADMIN-001 cria, mesmo que o pedido chegue direto no servidor.
+  const perfilAdmin = req.body.perfil_admin ?? null;
+  if (perfilAdmin !== null && perfilAdmin !== PERFIL_FINANCEIRO) {
+    return res.status(400).json({ error: 'Perfil de administrador inválido.' });
+  }
+  const financeiro = perfilAdmin === PERFIL_FINANCEIRO;
+  if (financeiro) {
+    if (!ehAdminPrincipal(req.user)) {
+      return res.status(403).json({ error: `Só o ${ADMIN_PRINCIPAL} cria contas de administrador.` });
+    }
+    is_admin = true;
+    type = 'accounting'; // como as contas de admin do portal (setup.js)
+    parent_id = null;
+  }
+
   if (!isAdmin) {
     // Fernando (comercial_full) e o perfil financeiro só cadastram contabilidades parceiras —
     // ignora qualquer type/is_admin/parent_id que venha no corpo da requisição.
@@ -82,13 +102,22 @@ async function createPartner(req, res) {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    const result = await db.query(
-      `INSERT INTO partners (code, name, email, password_hash, type, whatsapp, pix_key, parent_id, is_admin, must_change_password)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING id, code, name, email, type, whatsapp, pix_key, is_admin, is_active, created_at`,
-      // conta de admin nasce com senha provisória: troca obrigatória no 1º acesso
-      [code, name, email, hash, type, whatsapp, pix_key, parent_id || null, Boolean(is_admin)]
-    );
-    const partner = result.rows[0];
+    const partner = await db.transacao(async cx => {
+      const result = await cx.query(
+        `INSERT INTO partners (code, name, email, password_hash, type, whatsapp, pix_key, parent_id, is_admin, must_change_password, perfil_admin)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10) RETURNING id, code, name, email, type, whatsapp, pix_key, is_admin, perfil_admin, is_active, created_at`,
+        // conta de admin nasce com senha provisória: troca obrigatória no 1º acesso
+        [code, name, email, hash, type, whatsapp, pix_key, parent_id || null, Boolean(is_admin), financeiro ? PERFIL_FINANCEIRO : null]
+      );
+      const p = result.rows[0];
+      // sem senha; e-mail mascarado
+      if (financeiro) {
+        await registrarAcao(cx, req, 'admin_financeiro_criado', 'partners', p.id, {
+          codigo: p.code, perfil: PERFIL_FINANCEIRO, email: mascararPix('email', p.email),
+        });
+      }
+      return p;
+    });
     emailService.enviarCredenciais({
       nome: partner.name,
       email: partner.email,
