@@ -324,3 +324,69 @@ test('"Expirar pendentes" não expira indicação com contrato ou com lançament
   assert.equal(await st(comContrato), 'pending');
   assert.equal(await st(comLanc), 'pending');
 });
+
+// ─── CPF informado depois, em "Minhas vendas" (indicação antiga sem documento) ─
+
+async function indicacaoAntigaSemDocumento(p, produtoId) {
+  return (await db.query(
+    `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at)
+     VALUES ($1, $2, 'Cliente Antigo', '64999990000', $3, NOW() + INTERVAL '20 days') RETURNING id`,
+    [`ANTIGA-${seq++}`, p.id, produtoId]
+  )).rows[0].id;
+}
+const informarCpf = (p, id, cpf) => chamar('PATCH', `/api/referrals/${id}/dados`, p.token, { client_cpf: cpf });
+
+test('Minhas vendas: CPF já protegido no mesmo produto é barrado (mesma mensagem e registro); CPF livre passa', async () => {
+  const [a, b] = [await novoPartner(), await novoPartner()];
+  const protegido = gerarCpf();
+  const rA = await indicar(a, prod.azul, protegido);
+  assert.equal(rA.status, 201);
+
+  const antiga = await indicacaoAntigaSemDocumento(b, prod.azul);
+  let r = await informarCpf(b, antiga, protegido);
+  assert.equal(r.status, 409);
+  assert.deepEqual(r.body, { error: MSG }, 'a mesma mensagem, sem revelar quem indicou');
+  const ind = (await db.query('SELECT client_cpf, client_documento FROM referrals WHERE id = $1', [antiga])).rows[0];
+  assert.equal(ind.client_cpf, null, 'nada foi gravado na indicação');
+  assert.equal(ind.client_documento, null);
+  const tent = (await db.query('SELECT * FROM referral_tentativas_bloqueadas WHERE partner_id = $1', [b.id])).rows;
+  assert.equal(tent.length, 1, 'a tentativa fica registrada');
+  assert.equal(tent[0].motivo, 'duplicidade');
+  assert.equal(tent[0].referral_bloqueadora_id, rA.body.id);
+  assert.ok(!JSON.stringify(tent).includes(protegido), 'só mascarado + hash');
+
+  // o mesmo CPF em OUTRO produto não conflita
+  const antigaSeguro = await indicacaoAntigaSemDocumento(b, prod.seguro);
+  assert.equal((await informarCpf(b, antigaSeguro, protegido)).status, 200);
+
+  const livre = gerarCpf();
+  r = await informarCpf(b, antiga, livre);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal((await db.query('SELECT client_documento FROM referrals WHERE id = $1', [antiga])).rows[0].client_documento, livre);
+  // e agora esse cliente fica protegido para os outros
+  assert.equal((await indicar(a, prod.azul, livre)).status, 409);
+});
+
+test('Minhas vendas entra no mesmo limite de 5 tentativas em 24 h da tela Indicar cliente', async () => {
+  const [a, b] = [await novoPartner(), await novoPartner()];
+  // 4 barradas pela tela Indicar cliente + 1 por Minhas vendas = 5
+  for (let i = 0; i < 4; i++) {
+    const cpf = gerarCpf();
+    await indicar(a, prod.azul, cpf);
+    assert.equal((await indicar(b, prod.azul, cpf)).status, 409);
+  }
+  const cpf = gerarCpf();
+  await indicar(a, prod.azul, cpf);
+  const antiga = await indicacaoAntigaSemDocumento(b, prod.azul);
+  assert.equal((await informarCpf(b, antiga, cpf)).status, 409);
+
+  // 6ª: CPF livre, nas duas telas, continua barrado com a mesma mensagem
+  let r = await informarCpf(b, antiga, gerarCpf());
+  assert.equal(r.status, 409);
+  assert.deepEqual(r.body, { error: MSG });
+  r = await indicar(b, prod.azul, gerarCpf());
+  assert.equal(r.status, 409);
+  assert.deepEqual(r.body, { error: MSG });
+  const motivos = (await db.query('SELECT motivo FROM referral_tentativas_bloqueadas WHERE partner_id = $1 ORDER BY id', [b.id])).rows.map(x => x.motivo);
+  assert.deepEqual(motivos, ['duplicidade', 'duplicidade', 'duplicidade', 'duplicidade', 'duplicidade', 'limite', 'limite']);
+});

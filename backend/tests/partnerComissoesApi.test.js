@@ -199,8 +199,11 @@ test('indicação: Partner informa CPF e vê mascarado; contrato só a equipe; e
   assert.equal(r.status, 201, JSON.stringify(r.body));
   assert.equal(r.body.partner_id, ids.b);
   assert.equal((await chamar('PATCH', `/api/referrals/${r.body.id}/dados`, t.admin, { numero_contrato: '123456789' })).status, 409);
-  // Partner sem CPF pode completar depois
-  assert.equal((await chamar('PATCH', `/api/referrals/${r.body.id}/dados`, t.b, { client_cpf: '52998224725' })).status, 200);
+  // Partner sem CPF pode completar depois, passando pela checagem de
+  // duplicidade (migration 103): o CPF que o Partner A já indicou neste
+  // produto é barrado; um CPF livre passa
+  assert.equal((await chamar('PATCH', `/api/referrals/${r.body.id}/dados`, t.b, { client_cpf: '52998224725' })).status, 409);
+  assert.equal((await chamar('PATCH', `/api/referrals/${r.body.id}/dados`, t.b, { client_cpf: '39053344705' })).status, 200);
 });
 
 test('importação da Azul pela API: prévia por upload; Partner não abre', async () => {

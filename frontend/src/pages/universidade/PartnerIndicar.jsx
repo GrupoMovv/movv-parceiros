@@ -122,7 +122,7 @@ export default function PartnerIndicar({ previa = false }) {
           value={f.cpf} onChange={e => set('cpf', maskDocumento(e.target.value))} />
         {docErrado
           ? <p id="ind-cpf-ajuda" role="alert" className="text-xs text-red-600 font-medium mt-1">CPF ou CNPJ inválido. Confira os números.</p>
-          : <p id="ind-cpf-ajuda" className="text-xs text-slate-500 mt-1">Obrigatório. Garante que o cliente fique com você.</p>}
+          : <p id="ind-cpf-ajuda" className="text-xs text-slate-500 mt-1">Obrigatório. Evita indicação repetida do mesmo cliente.</p>}
       </div>
 
       {comEmail ? (

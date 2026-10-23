@@ -267,7 +267,7 @@ async function atualizarDados(req, res) {
   const equipe = veTudo(req.user);
   const { client_cpf, numero_contrato } = req.body || {};
   try {
-    const r = (await db.query('SELECT id, partner_id, client_cpf, client_documento, numero_contrato FROM referrals WHERE id = $1', [req.params.id])).rows[0];
+    const r = (await db.query('SELECT id, partner_id, product_id, client_cpf, client_documento, numero_contrato FROM referrals WHERE id = $1', [req.params.id])).rows[0];
     if (!r) return res.status(404).json({ error: 'Indicação não encontrada' });
     if (!equipe && r.partner_id !== req.user.id) return res.status(403).json({ error: 'Acesso negado' });
 
@@ -293,7 +293,16 @@ async function atualizarDados(req, res) {
     if (!Object.keys(mudancas).length) return res.status(400).json({ error: 'Nada para alterar' });
 
     const campos = Object.keys(mudancas);
+    // MOVV Partner informando o documento depois (indicação antiga sem CPF):
+    // mesma checagem, mesmo registro e mesmo limite da tela Indicar cliente
+    const checarDuplicidade = !equipe && req.user.type === 'movv_partner' && mudancas.client_documento;
     const atualizada = await db.transacao(async cx => {
+      let liberacaoId = null;
+      if (checarDuplicidade) {
+        const c = await dup.checarIndicacaoDoPartner(cx, { partnerId: req.user.id, productId: r.product_id, documento: mudancas.client_documento });
+        if (c.bloqueada) return null;
+        liberacaoId = c.liberacaoId;
+      }
       const u = (await cx.query(
         `UPDATE referrals SET ${campos.map((c, i) => `${c} = $${i + 2}`).join(', ')} WHERE id = $1 RETURNING *`,
         [r.id, ...campos.map(c => mudancas[c])]
@@ -304,15 +313,19 @@ async function atualizarDados(req, res) {
           contrato: mudancas.numero_contrato,
         });
       }
+      if (liberacaoId) await dup.marcarLiberacaoUsada(cx, liberacaoId, r.id);
       return u;
     });
+    // bloqueada: a tentativa já ficou registrada (COMMIT); sempre a mesma mensagem
+    if (!atualizada) return res.status(409).json({ error: dup.MSG_DUPLICADA });
     return res.json({
       ...atualizada,
       client_cpf: equipe ? atualizada.client_cpf : mascararCpf(atualizada.client_cpf),
       client_documento: equipe ? atualizada.client_documento : mascararDocumento(atualizada.client_documento),
     });
   } catch (err) {
-    console.error(err);
+    // sem a mensagem do banco: ela pode trazer o CPF digitado
+    console.error('[INDICAÇÃO DADOS]', err?.code || err?.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
