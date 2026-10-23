@@ -5,7 +5,7 @@
 // pelas do próprio Partner.
 const { paraCentavos, formatarCentavos } = require('./dinheiro');
 const pc = require('./partnerComissoes');
-const { mascararCpf } = require('../utils/validators');
+const { mascararCpf, mascararDocumento } = require('../utils/validators');
 const { dataLimitePagamento } = require('./calendarioPagamento');
 
 const ORIGEM_ROTULO = { azul: 'Azul', certificado: 'Certificado', seguro: 'Seguros', federal_invest: 'Federal Invest', seguro_auto: 'Seguro de carro' };
@@ -62,7 +62,7 @@ async function lancamentosDaView(db, partnerId) {
 
 async function indicacoesDoPartner(db, partnerId) {
   return (await db.query(
-    `SELECT r.id, r.protocol, r.client_name, r.client_cpf, r.numero_contrato, r.status, r.created_at, pr.name AS produto
+    `SELECT r.id, r.protocol, r.client_name, r.client_cpf, r.client_documento, r.numero_contrato, r.status, r.created_at, pr.name AS produto
      FROM referrals r JOIN products pr ON pr.id = r.product_id
      WHERE r.partner_id = $1 ORDER BY r.created_at DESC, r.id DESC`,
     [partnerId]
@@ -104,7 +104,7 @@ async function vendasDoPartner(db, partnerId) {
       ...situacaoDaVenda({ tipo: 'indicacao', status: r.status, numero_contrato: r.numero_contrato }),
       detalhes: {
         indicacao_id: r.id, protocolo: r.protocol, indicado_em: r.created_at,
-        cpf: mascararCpf(r.client_cpf), cpf_pendente: !r.client_cpf, numero_contrato: r.numero_contrato,
+        cpf: mascararDocumento(r.client_documento || r.client_cpf), cpf_pendente: !r.client_documento && !r.client_cpf, numero_contrato: r.numero_contrato,
       },
     });
   }

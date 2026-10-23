@@ -489,6 +489,7 @@ export default function App() {
           <Route path="admin/universidade/ver-como-partner/certificado"         element={<RequireAdminUniversidade><UniversidadeCertificado previa /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/ver-como-partner/inicio"              element={<RequireAdminUniversidade><PartnerInicio previa /></RequireAdminUniversidade>} />
           <Route path="admin/universidade/ver-como-partner/vendas"              element={<RequireAdminUniversidade><PartnerVendas previa /></RequireAdminUniversidade>} />
+          <Route path="admin/universidade/ver-como-partner/indicar"             element={<RequireAdminUniversidade><PartnerIndicar previa /></RequireAdminUniversidade>} />
           {/* Rotas do Indicador */}
           <Route path="indicador/dashboard"          element={<RequireIndicator><IndicadorDashboard /></RequireIndicator>} />
           <Route path="indicador/indicar"            element={<RequireIndicator><IndicadorIndicar /></RequireIndicator>} />

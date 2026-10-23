@@ -67,14 +67,17 @@ async function semear(db) {
   )).rows[0].id;
   // o produto "Movv Certificado" vem da migration 094
   const indicacao = (partnerId, nome, cpf, contrato) => db.query(
-    `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at, client_cpf, numero_contrato)
-     VALUES ($1, $2, $3, '64999990000', $4, NOW() + INTERVAL '30 days', $5, $6)`,
+    `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, product_id, expires_at, client_cpf, client_documento, numero_contrato)
+     VALUES ($1, $2, $3, '64999990000', $4, NOW() + INTERVAL '30 days', $5, $5, $6)`,
     [`TESTE-${Math.random().toString(36).slice(2, 8).toUpperCase()}`, partnerId, nome, produto, cpf, contrato]
   );
   await indicacao(a, 'Cliente Fictício 01', null, '118159083');
   await indicacao(a, 'Cliente Fictício 02', '13818854463', null);
   await indicacao(a, 'Cliente Fictício 05 (Ana)', '72317422075', null);
   await indicacao(b, 'Cliente Fictício 05 (Bruno)', '72317422075', null);
+  // Indicação duplicada (migration 103): o Bruno indicou este CPF para o
+  // Consignado INSS; a Ana, ao indicar o mesmo CPF e produto, é barrada.
+  await indicacao(b, 'Cliente Fictício 09 (Bruno)', '39053344705', null);
 }
 
 (async () => {

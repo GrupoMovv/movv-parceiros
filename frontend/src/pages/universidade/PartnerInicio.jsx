@@ -52,9 +52,10 @@ export default function PartnerInicio({ previa = false }) {
       </div>
 
       {previa ? (
-        <span className="w-full min-h-[56px] rounded-2xl bg-gold-gradient text-movv-900 font-bold text-lg flex items-center justify-center gap-2 opacity-70">
+        // prévia do formulário: mostra a tela, não grava nada
+        <Link to={`${base}/indicar`} className="w-full min-h-[56px] rounded-2xl bg-gold-gradient text-movv-900 font-bold text-lg flex items-center justify-center gap-2 shadow-card">
           <UserPlus className="w-6 h-6" /> Indicar cliente
-        </span>
+        </Link>
       ) : (
         <Link to="/indicar" className="w-full min-h-[56px] rounded-2xl bg-gold-gradient text-movv-900 font-bold text-lg flex items-center justify-center gap-2 shadow-card">
           <UserPlus className="w-6 h-6" /> Indicar cliente

@@ -79,6 +79,8 @@ export default function NewReferral() {
       });
       setSuccess(res.data);
       toast.success('Indicação registrada! WhatsApp enviado ao cliente.');
+      // equipe registrando para um Partner um cliente que já tem dono
+      if (res.data.aviso_duplicidade) toast(res.data.aviso_duplicidade, { icon: '⚠️', duration: 10000 });
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao registrar indicação');
     } finally {

@@ -108,7 +108,7 @@ function DetalhesIndicacao({ d, onCpfSalvo, previa }) {
           </div>
         </div>
       ) : (
-        <Item rotulo="CPF"><span className="font-mono">{d.cpf || '—'}</span></Item>
+        <Item rotulo="CPF/CNPJ"><span className="font-mono">{d.cpf || '—'}</span></Item>
       )}
     </dl>
   );

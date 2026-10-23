@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ClipboardList, Search, CheckCircle2, Filter, Pencil } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
+import TentativasBloqueadas from './ReferralsTentativas';
+import { maskCpf, maskCnpj } from '../../utils/documentos';
 
 const STATUS_MAP = {
   pending:   { label: 'Pendente',   cls: 'badge-pending' },
@@ -12,6 +14,13 @@ const STATUS_MAP = {
   expired:   { label: 'Expirada',   cls: 'badge-expired' },
   cancelled: { label: 'Cancelada',  cls: 'badge-expired' },
 };
+
+// "CPF 529.982.247-25" ou "CNPJ 11.222.333/0001-81" (a equipe vê inteiro)
+function docDaIndicacao(r) {
+  const d = r.client_documento || r.client_cpf;
+  if (!d) return '';
+  return d.length === 14 ? `CNPJ ${maskCnpj(d)}` : `CPF ${maskCpf(d)}`;
+}
 
 export default function AdminReferrals() {
   const [referrals, setReferrals] = useState([]);
@@ -24,6 +33,8 @@ export default function AdminReferrals() {
   const [form, setForm] = useState({ operated_value: '', bpo_month_count: 1 });
   const [saving, setSaving] = useState(false);
   const [dados, setDados] = useState(null); // indicação com CPF/contrato em edição
+  const [aba, setAba] = useState('indicacoes');
+  const [bloqueadas, setBloqueadas] = useState(0); // tentativas ainda não liberadas
 
   useEffect(() => { load(); }, []);
 
@@ -37,7 +48,7 @@ export default function AdminReferrals() {
         r.protocol.toLowerCase().includes(q) ||
         r.partner_code?.toLowerCase().includes(q) ||
         (r.numero_contrato || '').includes(q) ||
-        (r.client_cpf || '').includes(q.replace(/\D/g, '') || '§')
+        (r.client_documento || r.client_cpf || '').includes(q.replace(/\D/g, '') || '§')
       );
     }
     setFiltered(data);
@@ -85,6 +96,19 @@ export default function AdminReferrals() {
         <p className="text-slate-500 text-sm mt-1">{referrals.length} indicações no total</p>
       </div>
 
+      <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
+        {[['indicacoes', 'Indicações'], ['tentativas', `Tentativas bloqueadas${bloqueadas ? ` (${bloqueadas})` : ''}`]].map(([k, r]) => (
+          <button key={k} onClick={() => setAba(k)}
+            className={`px-4 py-2 text-sm font-medium whitespace-nowrap -mb-px border-b-2 ${aba === k ? 'border-movv-900 text-movv-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+            {r}
+          </button>
+        ))}
+      </div>
+      <div className={aba === 'tentativas' ? '' : 'hidden'}>
+        <TentativasBloqueadas onContagem={setBloqueadas} />
+      </div>
+
+      <div className={aba === 'tentativas' ? 'hidden' : 'space-y-6'}>
       {/* Filters */}
       <div className="card py-4">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -146,10 +170,10 @@ export default function AdminReferrals() {
                   <td className="py-3 px-4 font-mono text-xs text-[#C9A84C] whitespace-nowrap">{r.protocol}</td>
                   <td className="py-3 px-4 text-slate-900 whitespace-nowrap">
                     {r.client_name}
-                    {(r.client_cpf || r.numero_contrato) && (
+                    {(r.client_documento || r.client_cpf || r.numero_contrato) && (
                       <p className="text-[11px] text-slate-400 font-mono">
-                        {r.client_cpf ? `CPF ${r.client_cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')}` : ''}
-                        {r.client_cpf && r.numero_contrato ? ' · ' : ''}
+                        {docDaIndicacao(r)}
+                        {(r.client_documento || r.client_cpf) && r.numero_contrato ? ' · ' : ''}
                         {r.numero_contrato ? `contrato ${r.numero_contrato}` : ''}
                       </p>
                     )}
@@ -182,6 +206,7 @@ export default function AdminReferrals() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* CPF e contrato da indicação (o contrato só existe depois que a Azul

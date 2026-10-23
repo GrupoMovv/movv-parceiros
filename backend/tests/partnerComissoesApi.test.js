@@ -238,7 +238,8 @@ test('Partner indica Movv Certificado; BPO e conta continuam recusados; aparece 
   assert.ok(tipos.has('digital_certificate'));
   assert.ok(!tipos.has('bpo') && !tipos.has('account'));
 
-  const base = { client_name: 'Cliente Cert Indicado', client_whatsapp: '64999990001' };
+  // CPF/CNPJ obrigatório na indicação do Partner (migration 103)
+  const base = { client_name: 'Cliente Cert Indicado', client_whatsapp: '64999990001', client_documento: '11.222.333/0001-81' };
   const r = await chamar('POST', '/api/referrals', t.a, { ...base, product_id: cert });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   assert.equal((await chamar('POST', '/api/referrals', t.a, { ...base, product_id: bpo })).status, 400);

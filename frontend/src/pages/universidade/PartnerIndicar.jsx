@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { CheckCircle2, Loader2, UserPlus } from 'lucide-react';
 import api from '../../services/api';
-import { mascaraCpf } from './PartnerVendas';
+import { maskDocumento, validCPF, validCNPJ, soDigitos } from '../../utils/documentos';
+import { AvisoPrevia } from './UniversidadeHome';
 
-// "Indicar cliente" do MOVV Partner: nome, WhatsApp e produto (um toque).
-// CPF opcional (só uma vez, como antes) e e-mail escondido atrás de um link.
+// "Indicar cliente" do MOVV Partner: nome, WhatsApp, produto (um toque) e
+// CPF ou CNPJ do cliente (obrigatório desde 23/10/2026: o mesmo cliente no
+// mesmo produto fica com quem indicou primeiro). E-mail escondido atrás de
+// um link. Com `previa` ("Ver como Partner" do admin) nada é gravado.
 // A lista de produtos vem da tabela products (o servidor já filtra o que o
 // Partner pode indicar). As outras contas continuam com a tela antiga.
 
@@ -19,7 +22,7 @@ const mascaraWhats = valor => {
 
 const VAZIO = { nome: '', whats: '', produto: null, cpf: '', email: '' };
 
-export default function PartnerIndicar() {
+export default function PartnerIndicar({ previa = false }) {
   const [produtos, setProdutos] = useState(null);
   const [f, setF] = useState(VAZIO);
   const [comEmail, setComEmail] = useState(false);
@@ -33,20 +36,22 @@ export default function PartnerIndicar() {
 
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   const whatsOk = f.whats.replace(/\D/g, '').length >= 10;
-  const cpfDig = f.cpf.replace(/\D/g, '');
-  const cpfOk = !cpfDig || cpfDig.length === 11;
-  const pronto = f.nome.trim().length >= 2 && whatsOk && f.produto && cpfOk;
+  const docDig = soDigitos(f.cpf);
+  const docOk = validCPF(docDig) || validCNPJ(docDig);
+  const docErrado = (docDig.length === 11 || docDig.length === 14) && !docOk;
+  const pronto = f.nome.trim().length >= 2 && whatsOk && f.produto && docOk;
 
   async function enviar(e) {
     e.preventDefault();
     if (!pronto) return;
+    if (previa) { toast('Prévia: nada foi gravado.', { icon: '👀' }); return; }
     setEnviando(true);
     try {
       const r = await api.post('/referrals', {
         client_name: f.nome.trim(),
         client_whatsapp: f.whats.replace(/\D/g, ''),
         product_id: f.produto.id,
-        ...(cpfDig && { client_cpf: cpfDig }),
+        client_documento: docDig,
         ...(comEmail && f.email.trim() && { client_email: f.email.trim() }),
       });
       setFeito({ nome: f.nome.trim().split(' ')[0], produto: f.produto.name, protocolo: r.data.protocol });
@@ -74,6 +79,7 @@ export default function PartnerIndicar() {
 
   return (
     <form onSubmit={enviar} className="max-w-md mx-auto space-y-4">
+      {previa && <AvisoPrevia />}
       <h1 className="text-xl font-display font-semibold text-slate-900">Indicar cliente</h1>
 
       <div>
@@ -110,10 +116,13 @@ export default function PartnerIndicar() {
       </div>
 
       <div>
-        <label className="label" htmlFor="ind-cpf">CPF do cliente <span className="font-normal text-slate-400">(opcional)</span></label>
-        <input id="ind-cpf" className="input min-h-[48px]" inputMode="numeric" placeholder="000.000.000-00"
-          value={f.cpf} onChange={e => set('cpf', mascaraCpf(e.target.value))} />
-        <p className="text-xs text-slate-500 mt-1">Com o CPF, sua comissão é ligada à venda mais rápido.</p>
+        <label className="label" htmlFor="ind-cpf">CPF ou CNPJ do cliente</label>
+        <input id="ind-cpf" className="input min-h-[48px]" inputMode="numeric" autoComplete="off" placeholder="000.000.000-00"
+          aria-invalid={docErrado} aria-describedby="ind-cpf-ajuda"
+          value={f.cpf} onChange={e => set('cpf', maskDocumento(e.target.value))} />
+        {docErrado
+          ? <p id="ind-cpf-ajuda" role="alert" className="text-xs text-red-600 font-medium mt-1">CPF ou CNPJ inválido. Confira os números.</p>
+          : <p id="ind-cpf-ajuda" className="text-xs text-slate-500 mt-1">Obrigatório. Garante que o cliente fique com você.</p>}
       </div>
 
       {comEmail ? (

@@ -5,8 +5,9 @@ const { generateProtocol, getExpirationDate } = require('../services/protocolSer
 const { sendWhatsAppMessage, buildProtocolMessage } = require('../services/zapApiService');
 const { calculateCommissions } = require('../services/commissionService');
 const emailService = require('../services/emailService');
-const { onlyDigits, isValidCPF, mascararCpf } = require('../utils/validators');
-const { registrarAcao } = require('../services/registroAdmin');
+const { onlyDigits, isValidCPF, mascararCpf, mascararDocumento } = require('../utils/validators');
+const { registrarAcao, nomeDoAdmin } = require('../services/registroAdmin');
+const dup = require('../services/indicacaoDuplicada');
 
 // CPF do cliente na indicação (livro de comissões do Partner, Etapa 2):
 // opcional, só dígitos, validado. Devolve { cpf } ou { erro }.
@@ -47,7 +48,7 @@ async function listReferrals(req, res) {
 
     const result = await db.query(query, params);
     // Parceiro vê o CPF do próprio cliente mascarado; a equipe vê inteiro
-    if (!veTudo(req.user)) return res.json(result.rows.map(r => ({ ...r, client_cpf: mascararCpf(r.client_cpf) })));
+    if (!veTudo(req.user)) return res.json(result.rows.map(r => ({ ...r, client_cpf: mascararCpf(r.client_cpf), client_documento: mascararDocumento(r.client_documento) })));
     return res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -56,12 +57,15 @@ async function listReferrals(req, res) {
 }
 
 async function createReferral(req, res) {
-  const { client_name, client_whatsapp, product_id, client_email, client_cpf, partner_id } = req.body;
+  const { client_name, client_whatsapp, product_id, client_email, client_documento, client_cpf, partner_id } = req.body;
   if (!client_name || !client_whatsapp || !product_id) {
     return res.status(400).json({ error: 'Nome, WhatsApp e produto são obrigatórios' });
   }
-  const { cpf, erro: erroCpf } = cpfDaIndicacao(client_cpf);
-  if (erroCpf) return res.status(400).json({ error: erroCpf });
+  // CPF ou CNPJ no mesmo campo (client_cpf: nome antigo, ainda aceito).
+  // Obrigatório só na indicação feita pelo próprio MOVV Partner.
+  const doPartner = req.user.type === 'movv_partner';
+  const { documento, erro: erroDoc } = dup.documentoDaIndicacao(client_documento ?? client_cpf, { obrigatorio: doPartner });
+  if (erroDoc) return res.status(400).json({ error: erroDoc });
 
   try {
     // Dono da indicação: quem está logado, ou, se for a equipe registrando
@@ -89,19 +93,44 @@ async function createReferral(req, res) {
     if (dono.type !== 'movv_partner' && product.type === 'digital_certificate') {
       return res.status(400).json({ error: 'O Certificado é vendido pelo módulo Direta Certificação, não por indicação' });
     }
+    // Crédito da Azul é de pessoa física: só CPF
+    if (documento && documento.length === 14 && product.type === 'credit') {
+      return res.status(400).json({ error: 'Para este produto, informe o CPF do cliente.' });
+    }
 
-    const protocol = await generateProtocol();
     const expiresAt = getExpirationDate();
-
-    const result = await db.query(
-      `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, client_email, product_id, expires_at, client_cpf)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [protocol, dono.id, client_name, client_whatsapp, client_email || null, product_id, expiresAt, cpf]
-    );
-    const referral = result.rows[0];
+    // Checagem de duplicidade, protocolo e INSERT na MESMA transação (trava
+    // por documento + produto e trava do protocolo; ver indicacaoDuplicada.js)
+    const r = await db.transacao(async cx => {
+      let liberacaoId = null;
+      let aviso = null;
+      if (documento && doPartner) {
+        const c = await dup.checarIndicacaoDoPartner(cx, { partnerId: dono.id, productId: product.id, documento });
+        if (c.bloqueada) return { bloqueada: true };
+        liberacaoId = c.liberacaoId;
+      } else if (documento && dono.type === 'movv_partner') {
+        // equipe registrando para um Partner: não barra (a Central decide),
+        // mas avisa quem já tem o cliente
+        await dup.travarDocumentoProduto(cx, documento, product.id);
+        const dona = await dup.indicacaoQueProtege(cx, documento, product.id);
+        if (dona) aviso = `Atenção: este cliente já tem a indicação ${dona.protocol} em andamento para este produto.`;
+      }
+      const protocol = await generateProtocol(cx);
+      const ins = (await cx.query(
+        `INSERT INTO referrals (protocol, partner_id, client_name, client_whatsapp, client_email, product_id, expires_at, client_cpf, client_documento)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [protocol, dono.id, client_name, client_whatsapp, client_email || null, product_id, expiresAt,
+          documento && documento.length === 11 ? documento : null, documento]
+      )).rows[0];
+      if (liberacaoId) await dup.marcarLiberacaoUsada(cx, liberacaoId, ins.id);
+      return { referral: ins, aviso };
+    });
+    // Sempre a mesma mensagem: sem dizer quem indicou nem quando
+    if (r.bloqueada) return res.status(409).json({ error: dup.MSG_DUPLICADA });
+    const { referral } = r;
 
     const message = buildProtocolMessage(
-      client_name, protocol, product.name, dono.name, expiresAt
+      client_name, referral.protocol, product.name, dono.name, expiresAt
     );
     sendWhatsAppMessage(client_whatsapp, message).catch(() => {});
 
@@ -109,18 +138,22 @@ async function createReferral(req, res) {
       emailService.enviarConfirmacaoIndicacao({
         nome: client_name,
         email: client_email,
-        protocolo: protocol,
+        protocolo: referral.protocol,
         produto: product.name,
         validade: expiresAt,
       }).catch(err => console.error('[EMAIL]', err.message));
     }
 
+    const equipe = veTudo(req.user);
     return res.status(201).json({
       ...referral, product_name: product.name,
-      client_cpf: veTudo(req.user) ? referral.client_cpf : mascararCpf(referral.client_cpf),
+      client_cpf: equipe ? referral.client_cpf : mascararCpf(referral.client_cpf),
+      client_documento: equipe ? referral.client_documento : mascararDocumento(referral.client_documento),
+      ...(r.aviso && { aviso_duplicidade: r.aviso }),
     });
   } catch (err) {
-    console.error(err);
+    // sem a mensagem do banco: ela pode trazer o documento digitado
+    console.error('[INDICAÇÃO]', err?.code || err?.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
@@ -193,8 +226,11 @@ async function expireOldReferrals(req, res) {
     // mesmo quando nenhuma expira
     const rows = await db.transacao(async cx => {
       const result = await cx.query(
+        // nunca expira indicação com contrato ou com lançamento no livro
         `UPDATE referrals SET status='expired'
          WHERE status='pending' AND expires_at < NOW()
+           AND numero_contrato IS NULL
+           AND NOT EXISTS (SELECT 1 FROM partner_comissoes pc WHERE pc.referral_id = referrals.id)
          RETURNING id, protocol`
       );
       await registrarLote(cx, req, 'indicacoes_expiradas', 'referrals', { quantidade: result.rows.length, protocolos: result.rows.map(r => r.protocol) });
@@ -231,7 +267,7 @@ async function atualizarDados(req, res) {
   const equipe = veTudo(req.user);
   const { client_cpf, numero_contrato } = req.body || {};
   try {
-    const r = (await db.query('SELECT id, partner_id, client_cpf, numero_contrato FROM referrals WHERE id = $1', [req.params.id])).rows[0];
+    const r = (await db.query('SELECT id, partner_id, client_cpf, client_documento, numero_contrato FROM referrals WHERE id = $1', [req.params.id])).rows[0];
     if (!r) return res.status(404).json({ error: 'Indicação não encontrada' });
     if (!equipe && r.partner_id !== req.user.id) return res.status(403).json({ error: 'Acesso negado' });
 
@@ -239,8 +275,10 @@ async function atualizarDados(req, res) {
     if (client_cpf !== undefined) {
       const { cpf, erro } = cpfDaIndicacao(client_cpf);
       if (erro) return res.status(400).json({ error: erro });
-      if (!equipe && r.client_cpf) return res.status(403).json({ error: 'O CPF já foi informado; para corrigir, fale com a Central Movv.' });
+      if (!equipe && (r.client_cpf || r.client_documento)) return res.status(403).json({ error: 'O CPF já foi informado; para corrigir, fale com a Central Movv.' });
       mudancas.client_cpf = cpf;
+      // o documento acompanha o CPF (apagar o CPF só apaga o documento se ele era esse CPF)
+      mudancas.client_documento = cpf || (r.client_documento === r.client_cpf ? null : r.client_documento);
     }
     if (numero_contrato !== undefined) {
       if (!equipe) return res.status(403).json({ error: 'O número do contrato é preenchido pela Central Movv.' });
@@ -268,11 +306,48 @@ async function atualizarDados(req, res) {
       }
       return u;
     });
-    return res.json({ ...atualizada, client_cpf: equipe ? atualizada.client_cpf : mascararCpf(atualizada.client_cpf) });
+    return res.json({
+      ...atualizada,
+      client_cpf: equipe ? atualizada.client_cpf : mascararCpf(atualizada.client_cpf),
+      client_documento: equipe ? atualizada.client_documento : mascararDocumento(atualizada.client_documento),
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
 
-module.exports = { listReferrals, createReferral, confirmSale, expireOldReferrals, ultimaExpiracao, atualizarDados };
+// ─── Tentativas bloqueadas (indicação duplicada) — só a equipe ─────────────
+
+async function listarTentativas(req, res) {
+  try {
+    return res.json(await dup.listarTentativas(db));
+  } catch (err) {
+    console.error('[TENTATIVAS]', err?.code || err?.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+// Libera UMA tentativa: a próxima indicação do mesmo Partner, produto e
+// documento passa. Motivo obrigatório; admin_acoes só com o documento mascarado.
+async function liberarTentativa(req, res) {
+  const motivo = String(req.body?.motivo || '').trim();
+  if (motivo.length < 3) return res.status(400).json({ error: 'Informe o motivo da liberação.' });
+  try {
+    const t = await db.transacao(async cx => {
+      const lib = await dup.liberarTentativa(cx, Number(req.params.id), motivo, nomeDoAdmin(req.user));
+      if (lib) await registrarAcao(cx, req, 'indicacao_tentativa_liberada', 'referral_tentativas_bloqueadas', lib.id, { ...lib, motivo_liberacao: motivo });
+      return lib;
+    });
+    if (!t) return res.status(404).json({ error: 'Tentativa não encontrada ou já liberada.' });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[TENTATIVAS]', err?.code || err?.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+}
+
+module.exports = {
+  listReferrals, createReferral, confirmSale, expireOldReferrals, ultimaExpiracao, atualizarDados,
+  listarTentativas, liberarTentativa,
+};
