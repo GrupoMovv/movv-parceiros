@@ -60,6 +60,15 @@ function avisoDaVez(dataEvento, agora = agoraISOBrasil()) {
   return null;
 }
 
+// Fecha Mês de 30/10/2026, o primeiro no ar, só com a Imaginari
+// Personalizados (id 14). Decisão do Junior em 28/10: o convite de segunda
+// não saiu e não sai depois; o lembrete de quinta, 10:00, vai só para ela,
+// mesmo que outra loja fique ativa até lá. Edições sem entrada aqui seguem
+// a regra geral.
+const SO_NESTA_EDICAO = {
+  '2026-10-30': { tipos: ['lembrete'], lojas: [14] },
+};
+
 async function lojasQueRecebem(fechaMesId) {
   const { rows } = await db.query(
     `SELECT pa.id, pa.nome, pa.whatsapp, pa.plano, pa.plano_expira_em, pa.cortesia_interna,
@@ -82,11 +91,15 @@ async function rodarAvisos() {
   const dataEvento = String(evento.data_evento).slice(0, 10);
   const tipo = avisoDaVez(dataEvento);
   if (!tipo) return resultado;
+  const restricao = SO_NESTA_EDICAO[dataEvento];
+  if (restricao && !restricao.tipos.includes(tipo)) return resultado;
   resultado.tipo = tipo;
   const prazo = janelaAvisoISO(dataEvento, 'lembrete').ate;
   const link = `${FRONT()}/parceiro/painel/fecha-mes`;
 
-  for (const loja of await lojasQueRecebem(evento.id)) {
+  let lojas = await lojasQueRecebem(evento.id);
+  if (restricao) lojas = lojas.filter(l => restricao.lojas.includes(l.id));
+  for (const loja of lojas) {
     const variante = loja.confirmados > 0 ? 'com_produto' : 'sem_produto';
     const reservado = await db.query(
       `INSERT INTO fecha_mes_avisos (fecha_mes_id, parceiro_id, tipo, variante, whatsapp)
