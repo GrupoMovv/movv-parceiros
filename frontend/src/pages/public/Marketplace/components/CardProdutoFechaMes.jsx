@@ -41,7 +41,7 @@ export default function CardProdutoFechaMes({ produto }) {
     >
       <div className="relative w-full h-[130px] sm:h-[150px] xl:h-[180px] rounded-lg overflow-hidden bg-white flex items-center justify-center">
         {foto ? (
-          <img src={foto} alt={produto.nome} loading="lazy" className="w-full h-full object-contain" />
+          <img src={foto} alt={produto.nome} loading="lazy" className={`w-full h-full object-contain${produto.esgotado ? ' grayscale opacity-60' : ''}`} />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-200 bg-slate-50">
             <ImageOff className="w-8 h-8" />
@@ -62,6 +62,11 @@ export default function CardProdutoFechaMes({ produto }) {
             -{produto.desconto_pct}%
           </span>
         )}
+        {produto.esgotado && (
+          <span className="absolute inset-x-0 bottom-2 mx-auto w-fit text-[11px] font-black px-2 py-0.5 rounded uppercase tracking-wide text-white bg-slate-800/90">
+            Esgotado
+          </span>
+        )}
       </div>
 
       <div className="pt-2 flex-1 flex flex-col">
@@ -75,7 +80,10 @@ export default function CardProdutoFechaMes({ produto }) {
           <p className="font-black text-lg leading-tight" style={{ color: VERMELHO }}>{formatarPreco(produto.preco_fecha_mes)}</p>
         </div>
 
-        {produto.e_produto_bonus && produto.fecha_mes_produto_id && (
+        {produto.esgotado && (
+          <p className="mt-1 text-xs font-semibold text-slate-500">Esgotou no Fecha Mês</p>
+        )}
+        {produto.e_produto_bonus && produto.fecha_mes_produto_id && !produto.esgotado && (
           // bônus não tem página: o Comprar fica no card (o card é um Link — não deixa o clique abrir a loja)
           <span className="mt-2 block" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
             <BotaoComprar tipo="fecha_mes" id={produto.fecha_mes_produto_id} urlLoja={`/marketplace/parceiro/${produto.parceiro_slug}`} mini />

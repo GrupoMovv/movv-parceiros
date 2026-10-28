@@ -61,6 +61,8 @@ async function getProdutos(req, res) {
       `SELECT fmp.id AS fecha_mes_produto_id,
               fmp.produto_id AS id,
               fmp.produto_id, fmp.e_produto_bonus, fmp.estoque_disponivel,
+              -- f5: estoque do evento que esgota (migration 105)
+              (fmp.estoque_disponivel IS NOT NULL AND fmp.estoque_vendido >= fmp.estoque_disponivel) AS esgotado,
               fmp.preco_original, fmp.preco_fecha_mes,
               ROUND(((fmp.preco_original - fmp.preco_fecha_mes) / NULLIF(fmp.preco_original, 0)) * 100) AS desconto_pct,
               COALESCE(pr.nome, fmp.bonus_nome) AS nome,
@@ -73,7 +75,7 @@ async function getProdutos(req, res) {
        JOIN sindicato_parceiros pa ON pa.id = fmp.parceiro_id
        WHERE fmp.fecha_mes_id = $1 AND fmp.status = 'confirmado'
          AND (fmp.e_produto_bonus = true OR (pr.ativo = true AND pr.moderacao_status = 'aprovado')) AND ${lojaVisivel(req.modoQa)}
-       ORDER BY pa.plano = 'master' DESC, desconto_pct DESC`,
+       ORDER BY esgotado, pa.plano = 'master' DESC, desconto_pct DESC`,
       [evento.id]
     );
     return res.json({ produtos: result.rows, ativo: true, termina_em: terminaEmISO(evento.data_evento) });

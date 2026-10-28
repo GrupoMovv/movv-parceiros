@@ -54,7 +54,7 @@ async function getMeus(req, res) {
     const evento = await obterProximoEvento();
     const result = await db.query(
       `SELECT fmp.id, fmp.produto_id, fmp.preco_original, fmp.preco_fecha_mes, fmp.confirmado_em,
-              fmp.e_produto_bonus, fmp.estoque_disponivel, fmp.status,
+              fmp.e_produto_bonus, fmp.estoque_disponivel, fmp.estoque_vendido, fmp.status,
               COALESCE(pr.nome, fmp.bonus_nome) AS nome,
               CASE WHEN fmp.e_produto_bonus THEN fmp.bonus_descricao ELSE NULL END AS descricao,
               CASE WHEN fmp.e_produto_bonus

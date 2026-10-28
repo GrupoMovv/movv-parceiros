@@ -139,6 +139,12 @@ function menorPreco(candidatos) {
   return candidatos.filter(c => temPreco(c.preco)).reduce((m, c) => (!m || Number(c.preco) < Number(m.preco) ? c : m), null);
 }
 
+// Estoque do evento que ainda pode ser pedido (f5, migration 105): o que a
+// loja informou menos o já pedido. null = sem limite.
+function restanteFechaMes(fmp) {
+  return fmp.estoque_disponivel == null ? null : Math.max(0, fmp.estoque_disponivel - fmp.estoque_vendido);
+}
+
 function fotoDe(fotos, fallback = null) {
   return (Array.isArray(fotos) && fotos[0]?.url) || fallback || null;
 }
@@ -220,18 +226,18 @@ async function resolverItem(entrada, ctx) {
   if (entrada.tipo === 'fecha_mes') {
     if (!ctx.edicaoFechaMes) throw new ErroPedido(409, 'ITEM_INDISPONIVEL', 'O Fecha Mês não está acontecendo agora.', { item: entrada });
     fmp = (await db.query(
-      `SELECT id, parceiro_id, produto_id, e_produto_bonus, bonus_nome, bonus_foto_url, preco_original, preco_fecha_mes, estoque_disponivel
+      `SELECT id, parceiro_id, produto_id, e_produto_bonus, bonus_nome, bonus_foto_url, preco_original, preco_fecha_mes, estoque_disponivel, estoque_vendido
        FROM sindicato_fecha_mes_produtos WHERE id = $1 AND fecha_mes_id = $2 AND status = 'confirmado'`,
       [id, ctx.edicaoFechaMes]
     )).rows[0];
-    if (!fmp || fmp.estoque_disponivel === 0) throw indisponivel();
+    if (!fmp || restanteFechaMes(fmp) === 0) throw indisponivel(fmp?.bonus_nome);
     if (fmp.e_produto_bonus) {
       return {
         catalogo: 'geral', parceiro_id: fmp.parceiro_id, origem: 'produto', fecha_mes_produto_id: fmp.id,
         nome: fmp.bonus_nome, foto_url: fmp.bonus_foto_url,
         tipo_preco: 'fecha_mes', preco_unitario: dinheiro(fmp.preco_fecha_mes), preco_cheio: dinheiro(fmp.preco_original),
         preco_sem_clube: dinheiro(fmp.preco_fecha_mes),
-        estoque_max: fmp.estoque_disponivel,
+        estoque_max: restanteFechaMes(fmp),
       };
     }
     produtoId = fmp.produto_id;
@@ -249,9 +255,9 @@ async function resolverItem(entrada, ctx) {
   // Produto do catálogo que está no Fecha Mês de hoje também ganha o preço do evento.
   if (!fmp && ctx.edicaoFechaMes) {
     fmp = (await db.query(
-      `SELECT id, preco_fecha_mes, estoque_disponivel FROM sindicato_fecha_mes_produtos
+      `SELECT id, preco_fecha_mes, estoque_disponivel, estoque_vendido FROM sindicato_fecha_mes_produtos
        WHERE fecha_mes_id = $1 AND produto_id = $2 AND status = 'confirmado' AND NOT e_produto_bonus
-         AND (estoque_disponivel IS NULL OR estoque_disponivel > 0)`,
+         AND (estoque_disponivel IS NULL OR estoque_disponivel > estoque_vendido)`,
       [ctx.edicaoFechaMes, p.id]
     )).rows[0] || null;
   }
@@ -272,7 +278,7 @@ async function resolverItem(entrada, ctx) {
     tipo_preco: escolhido.tipo, preco_unitario: dinheiro(escolhido.preco),
     preco_cheio: escolhido.tipo === 'normal' ? null : dinheiro(p.preco),
     preco_sem_clube: dinheiro(semClube.preco),
-    estoque_max: escolhido.tipo === 'fecha_mes' ? fmp.estoque_disponivel : null,
+    estoque_max: escolhido.tipo === 'fecha_mes' ? restanteFechaMes(fmp) : null,
   };
 }
 
@@ -357,7 +363,7 @@ async function cotar(associado, entrada, { qa = false } = {}) {
       throw new ErroPedido(400, 'QUANTIDADE', `Promoção: ${MAX_QUANTIDADE_PROMOCAO} unidade por pedido.`, { item: e });
     }
     if (item.estoque_max != null && quantidade > item.estoque_max) {
-      throw new ErroPedido(409, 'QUANTIDADE', `Só tem ${item.estoque_max} unidade(s) de ${item.nome} no Fecha Mês.`, { item: e });
+      throw new ErroPedido(409, 'QUANTIDADE', item.estoque_max === 1 ? `Só resta 1 unidade de ${item.nome} no Fecha Mês.` : `Só restam ${item.estoque_max} unidades de ${item.nome} no Fecha Mês.`, { item: e });
     }
     itens.push({ ...item, quantidade, subtotal: dinheiro(item.preco_unitario * quantidade) });
   }
@@ -457,6 +463,12 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
     throw new ErroPedido(400, 'MODO', 'Escolha entrega ou retirada.', { campo: 'modo_recebimento' });
   }
   const { loja, catalogo, resumo } = await cotar(associado, entrada, { qa });
+  // Preço mudou entre a tela de Finalizar e o envio (ex.: o Fecha Mês acabou
+  // às 23:59:59, a loja mudou o preço): o pedido não sai com o valor novo sem
+  // o cliente ver. O site manda o total que mostrou; volta o resumo novo.
+  if (entrada?.total_visto != null && dinheiro(entrada.total_visto) !== resumo.total) {
+    throw new ErroPedido(409, 'PRECO_MUDOU', 'O preço mudou desde que você abriu o pedido. Confira o novo total e envie de novo.', { resumo, total_visto: dinheiro(entrada.total_visto) });
+  }
   const endereco = entrada.modo_recebimento === 'entrega' ? validarEndereco(entrada.endereco) : null;
   const observacao = String(entrada?.observacao ?? '').trim().slice(0, 500) || null;
 
@@ -508,6 +520,24 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
           [i.promocao_id]
         );
         if (!vaga.rows[0]) throw new ErroPedido(409, 'ITEM_INDISPONIVEL', `As vagas da promoção "${i.nome}" acabaram.`);
+      }
+      // Fecha Mês (f5): reserva as unidades no estoque do evento. Atômico:
+      // com a última unidade, só um pedido passa. Devolvidas em
+      // recusado/expirado/cancelado.
+      for (const i of resumo.itens.filter(x => x.fecha_mes_produto_id)) {
+        const reserva = await client.query(
+          `UPDATE sindicato_fecha_mes_produtos SET estoque_vendido = estoque_vendido + $2
+           WHERE id = $1 AND (estoque_disponivel IS NULL OR estoque_vendido + $2 <= estoque_disponivel)
+           RETURNING id`,
+          [i.fecha_mes_produto_id, i.quantidade]
+        );
+        if (!reserva.rows[0]) {
+          const r = (await client.query('SELECT estoque_disponivel, estoque_vendido FROM sindicato_fecha_mes_produtos WHERE id = $1', [i.fecha_mes_produto_id])).rows[0];
+          const resta = r ? restanteFechaMes(r) : 0;
+          throw new ErroPedido(409, resta > 0 ? 'QUANTIDADE' : 'ITEM_INDISPONIVEL', resta > 0
+            ? `Só ${resta === 1 ? 'resta 1 unidade' : `restam ${resta} unidades`} de ${i.nome} no Fecha Mês.`
+            : `Acabou o estoque de ${i.nome} no Fecha Mês.`);
+        }
       }
       const itens = [];
       for (const i of resumo.itens) {
@@ -581,6 +611,14 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
       await client.query(
         `UPDATE sindicato_parceiro_promocoes SET usos_atuais = GREATEST(usos_atuais - 1, 0)
          WHERE id IN (SELECT DISTINCT promocao_id FROM loja_pedido_itens WHERE pedido_id = $1 AND promocao_id IS NOT NULL)`,
+        [pedidoId]
+      );
+      // Devolve as unidades do Fecha Mês reservadas pelo pedido (f5).
+      await client.query(
+        `UPDATE sindicato_fecha_mes_produtos fmp SET estoque_vendido = GREATEST(fmp.estoque_vendido - i.qtd, 0)
+         FROM (SELECT fecha_mes_produto_id, SUM(quantidade)::int AS qtd FROM loja_pedido_itens
+               WHERE pedido_id = $1 AND fecha_mes_produto_id IS NOT NULL GROUP BY 1) i
+         WHERE fmp.id = i.fecha_mes_produto_id`,
         [pedidoId]
       );
     }

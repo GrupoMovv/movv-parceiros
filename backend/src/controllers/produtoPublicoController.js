@@ -86,7 +86,7 @@ async function getProduto(req, res) {
       const fm = await db.query(
         `SELECT preco_fecha_mes FROM sindicato_fecha_mes_produtos
          WHERE fecha_mes_id = $1 AND produto_id = $2 AND status = 'confirmado' AND NOT e_produto_bonus
-           AND (estoque_disponivel IS NULL OR estoque_disponivel > 0)`,
+           AND (estoque_disponivel IS NULL OR estoque_disponivel > estoque_vendido)`,
         [edicao, produto.id]
       );
       produto.preco_fecha_mes = fm.rows[0]?.preco_fecha_mes ?? null;

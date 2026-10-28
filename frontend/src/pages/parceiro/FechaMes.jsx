@@ -153,7 +153,9 @@ export default function ParceiroFechaMes() {
           <Clock className="w-3.5 h-3.5" />
           {podeEditar
             ? `Você pode cadastrar e trocar produtos até ${formatarPrazo(info.prazo_edicao)}`
-            : `🔒 Edição encerrada — próximo Fecha Mês em ${formatarDataCurta(info.data_evento)}`}
+            : info.ativo_hoje
+              ? '🔒 Prazo para mudar produtos encerrado. Acompanhe abaixo o que já foi pedido.'
+              : `🔒 Edição encerrada — próximo Fecha Mês em ${formatarDataCurta(info.data_evento)}`}
         </div>
       </div>
 
@@ -161,6 +163,19 @@ export default function ParceiroFechaMes() {
         catalogoAtual={confirmadosCatalogo.length + qtdSelecionados} catalogoLimite={info.limite_catalogo}
         bonusAtual={confirmadosBonus.length} bonusLimite={info.limite_bonus}
       />
+
+      {/* depois do prazo (e no dia do evento) a loja continua vendo os produtos do catálogo, só para leitura */}
+      {!podeEditar && confirmadosCatalogo.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-sm" style={{ color: PRETO }}>Produtos do catálogo</h2>
+            <span className="text-xs font-semibold text-slate-400">{confirmadosCatalogo.length} / {info.limite_catalogo}</span>
+          </div>
+          <div className="space-y-2">
+            {confirmadosCatalogo.map(c => <ItemConfirmado key={c.id} item={c} />)}
+          </div>
+        </div>
+      )}
 
       {podeEditar && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -359,6 +374,11 @@ function ItemConfirmado({ item, onEditar, onRemover }) {
           <span className="text-sm font-bold" style={{ color: VERMELHO }}>{formatarPreco(item.preco_fecha_mes)}</span>
           {item.estoque_disponivel != null && <span className="text-[11px] text-slate-400">Estoque: {item.estoque_disponivel}</span>}
         </p>
+        {item.estoque_vendido > 0 && (
+          <p className="text-[11px] font-semibold text-emerald-700">
+            Pedidos no evento: {item.estoque_vendido}{item.estoque_disponivel != null && (item.estoque_vendido >= item.estoque_disponivel ? ' (esgotou)' : ` de ${item.estoque_disponivel}`)}
+          </p>
+        )}
       </div>
       {(onEditar || onRemover) ? (
         <div className="flex items-center gap-1 flex-shrink-0">

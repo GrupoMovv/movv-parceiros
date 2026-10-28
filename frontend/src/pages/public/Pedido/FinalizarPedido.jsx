@@ -37,6 +37,8 @@ export default function FinalizarPedido() {
   const [erroCotacao, setErroCotacao] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(null);
+  const [precoMudou, setPrecoMudou] = useState(null); // { de, para } — o servidor recusou o envio
+  const [recotar, setRecotar] = useState(0);
 
   useEffect(() => {
     if (!getPainelToken()) { navigate('/entrar?voltar=/pedido/finalizar', { replace: true }); return; }
@@ -67,7 +69,7 @@ export default function FinalizarPedido() {
       })
       .catch(err => { if (vivo) { setErroCotacao(err.response?.data || { error: 'Não conseguimos calcular o pedido agora.' }); } });
     return () => { vivo = false; };
-  }, [me, itensEntrada, modo]);
+  }, [me, itensEntrada, modo, recotar]);
 
   async function buscarCep(cep) {
     const d = cep.replace(/\D/g, '');
@@ -99,14 +101,23 @@ export default function FinalizarPedido() {
         observacao: observacao || undefined, confirmo_maior_18: maior18 || undefined,
         // Equipe de vendas: códigos de vendedor guardados no navegador (o servidor escolhe)
         vendedores: codigosVendedor(),
+        // o servidor recusa se o total mudou desde este resumo (Fecha Mês acabou, loja mudou o preço)
+        total_visto: cotacao?.total,
       });
       limparSacola();
       setEnviado(res.data);
       window.scrollTo(0, 0);
     } catch (err) {
       const r = err.response?.data || {};
+      if (r.code === 'PRECO_MUDOU' && r.resumo) {
+        setPrecoMudou({ de: r.total_visto, para: r.resumo.total });
+        setCotacao(r.resumo);
+        return;
+      }
       toast.error(r.error || 'Não conseguimos enviar o pedido. Tente de novo.');
       if (r.code === 'WHATSAPP_NAO_CONFIRMADO') setMe(m => ({ ...m, whatsapp_confirmado: false }));
+      // estoque do Fecha Mês acabou ou diminuiu: o resumo mostra qual item
+      if (r.code === 'QUANTIDADE' || r.code === 'ITEM_INDISPONIVEL') setRecotar(n => n + 1);
     } finally {
       setEnviando(false);
     }
@@ -284,7 +295,17 @@ export default function FinalizarPedido() {
         </Bloco>
       )}
 
-      <button type="button" onClick={enviar} disabled={!podeEnviar || enviando}
+      {precoMudou && (
+        <div role="alert" className="mt-6 flex gap-2 items-start rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <p>
+            <strong>O preço mudou.</strong> O total era {brl(precoMudou.de)} e agora é {brl(precoMudou.para)}.
+            {' '}O resumo acima já está atualizado. Se estiver tudo certo, envie de novo.
+          </p>
+        </div>
+      )}
+
+      <button type="button" onClick={() => { setPrecoMudou(null); enviar(); }} disabled={!podeEnviar || enviando}
         className="mt-6 w-full py-4 rounded-xl font-bold text-white text-base flex items-center justify-center gap-2 disabled:opacity-50"
         style={{ backgroundColor: ROXO }}>
         {enviando && <Loader2 className="w-5 h-5 animate-spin" />} Enviar pedido{cotacao ? ` · ${brl(cotacao.total)}` : ''}
