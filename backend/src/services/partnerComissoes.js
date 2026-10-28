@@ -18,7 +18,7 @@ const {
 
 const ORIGENS = ['azul', 'certificado', 'seguro', 'movv_cred', 'federal_invest', 'seguro_auto'];
 // Origens em uso (seguro desde 14/10/2026, migration 095; MOVV CRED, crédito
-// do Grupo fora da Azul, só por lançamento manual, migration 104; Federal
+// do Grupo fora da Azul, só por lançamento manual, migration 105; Federal
 // Invest e seguro_auto: só o modelo)
 const ORIGENS_ATIVAS = ['azul', 'certificado', 'seguro', 'movv_cred'];
 const NIVEIS = ['mobile', 'point', 'hub', 'regional'];

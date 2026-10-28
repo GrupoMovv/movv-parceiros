@@ -95,7 +95,7 @@ test('095: origem "seguro" aceita, regra de 20% nos 4 níveis, sem restrição d
      VALUES ('seguro', 'hub', 'valor_venda', 20, '2027-01-01', 't')`), /pcr_seguro_base/);
 });
 
-test('104: origem "movv_cred" aceita sem regra de percentual; importação da Azul intacta', async () => {
+test('105: origem "movv_cred" aceita sem regra de percentual; importação da Azul intacta', async () => {
   const movvCred = async () => (await db.query(`SELECT count(*)::int AS n FROM partner_comissao_regras WHERE origem = 'movv_cred'`)).rows[0].n;
   assert.equal(await movvCred(), 0, 'a migration não grava percentual: o admin cadastra em Regras');
   await rodarDeNovo();

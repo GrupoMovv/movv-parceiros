@@ -1,4 +1,4 @@
-// MOVV CRED (migration 104, Junior 28/10/2026): crédito do Grupo fora da
+// MOVV CRED (migration 105, Junior 28/10/2026): crédito do Grupo fora da
 // Azul, com origem própria 'movv_cred' no livro. Só lançamento manual, com o
 // percentual da regra cadastrada pelo admin. Banco em memória (PGlite);
 // nunca toca produção.
