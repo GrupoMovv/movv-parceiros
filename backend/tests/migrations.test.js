@@ -94,3 +94,26 @@ test('095: origem "seguro" aceita, regra de 20% nos 4 níveis, sem restrição d
     `INSERT INTO partner_comissao_regras (origem, nivel_partner, base, percentual, vigente_desde, criado_por)
      VALUES ('seguro', 'hub', 'valor_venda', 20, '2027-01-01', 't')`), /pcr_seguro_base/);
 });
+
+test('104: origem "movv_cred" aceita sem regra de percentual; importação da Azul intacta', async () => {
+  const movvCred = async () => (await db.query(`SELECT count(*)::int AS n FROM partner_comissao_regras WHERE origem = 'movv_cred'`)).rows[0].n;
+  assert.equal(await movvCred(), 0, 'a migration não grava percentual: o admin cadastra em Regras');
+  await rodarDeNovo();
+  assert.equal(await movvCred(), 0);
+
+  const checks = async tabela => (await db.query(
+    `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+     WHERE contype = 'c' AND conrelid = $1::regclass AND pg_get_constraintdef(oid) LIKE '%(origem)::text = ANY%'`, [tabela])).rows;
+  for (const t of ['partner_comissao_regras', 'partner_comissoes']) {
+    const c = await checks(t);
+    assert.equal(c.length, 1, `${t}: uma restrição de origem só`);
+    for (const o of ['azul', 'certificado', 'seguro', 'movv_cred', 'federal_invest', 'seguro_auto']) assert.match(c[0].def, new RegExp(`'${o}'`));
+  }
+  const imp = await checks('comissao_importacoes');
+  assert.equal(imp.length, 1);
+  assert.doesNotMatch(imp[0].def, /movv_cred/, 'a importação da Azul não ganha a origem nova');
+
+  await assert.rejects(db.query(
+    `INSERT INTO partner_comissao_regras (origem, nivel_partner, base, percentual, vigente_desde, criado_por)
+     VALUES ('movv_cred', 'hub', 'lucro_grupo', 30, '2027-01-01', 't')`), /pcr_movv_cred_base/);
+});

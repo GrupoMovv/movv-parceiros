@@ -14,6 +14,7 @@ export const ORIGEM = {
   azul: 'Azul',
   certificado: 'Movv Certificado',
   seguro: 'Seguros',
+  movv_cred: 'MOVV CRED',
   federal_invest: 'Federal Invest',
   seguro_auto: 'Seguro de carro',
 };

@@ -8,7 +8,7 @@ const pc = require('./partnerComissoes');
 const { mascararCpf, mascararDocumento } = require('../utils/validators');
 const { dataLimitePagamento } = require('./calendarioPagamento');
 
-const ORIGEM_ROTULO = { azul: 'Azul', certificado: 'Certificado', seguro: 'Seguros', federal_invest: 'Federal Invest', seguro_auto: 'Seguro de carro' };
+const ORIGEM_ROTULO = { azul: 'Azul', certificado: 'Certificado', seguro: 'Seguros', movv_cred: 'MOVV CRED', federal_invest: 'Federal Invest', seguro_auto: 'Seguro de carro' };
 
 const ddmm = data => {
   const s = String(data || '').slice(0, 10);

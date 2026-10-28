@@ -312,7 +312,7 @@ function ModalManual({ partners, onFechar, onSalvo }) {
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">Origem</label>
           <select className="input" value={f.origem} onChange={e => set('origem', e.target.value)}>
-            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option><option value="seguro">Seguros</option>
+            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option><option value="seguro">Seguros</option><option value="movv_cred">MOVV CRED</option>
           </select>
         </div>
         <div><label className="label">Competência</label><input type="month" className="input" value={f.competencia} onChange={e => set('competencia', e.target.value)} /></div>
@@ -346,7 +346,7 @@ function ModalManual({ partners, onFechar, onSalvo }) {
 
 // ─── Regras ─────────────────────────────────────────────────────────────────
 
-const BASES_POR_ORIGEM = { azul: ['comissao_recebida'], certificado: ['lucro_grupo', 'valor_venda'], seguro: ['comissao_recebida'] };
+const BASES_POR_ORIGEM = { azul: ['comissao_recebida'], certificado: ['lucro_grupo', 'valor_venda'], seguro: ['comissao_recebida'], movv_cred: ['comissao_recebida'] };
 
 function Regras() {
   const { user } = useAuth();
@@ -427,7 +427,7 @@ function ModalRegra({ regra, onFechar, onSalvo }) {
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">Origem</label>
           <select className="input" value={f.origem} onChange={e => set('origem', e.target.value)}>
-            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option><option value="seguro">Seguros</option>
+            <option value="azul">Azul</option><option value="certificado">Movv Certificado</option><option value="seguro">Seguros</option><option value="movv_cred">MOVV CRED</option>
           </select>
         </div>
         <div><label className="label">Nível</label>

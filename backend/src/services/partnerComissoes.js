@@ -16,15 +16,17 @@ const {
   paraCentavos, paraPct4, valorPartnerCentavos, formatarCentavos, formatarPct4,
 } = require('./dinheiro');
 
-const ORIGENS = ['azul', 'certificado', 'seguro', 'federal_invest', 'seguro_auto'];
-// Origens em uso (seguro desde 14/10/2026, migration 095; Federal Invest e
-// seguro_auto: só o modelo)
-const ORIGENS_ATIVAS = ['azul', 'certificado', 'seguro'];
+const ORIGENS = ['azul', 'certificado', 'seguro', 'movv_cred', 'federal_invest', 'seguro_auto'];
+// Origens em uso (seguro desde 14/10/2026, migration 095; MOVV CRED, crédito
+// do Grupo fora da Azul, só por lançamento manual, migration 104; Federal
+// Invest e seguro_auto: só o modelo)
+const ORIGENS_ATIVAS = ['azul', 'certificado', 'seguro', 'movv_cred'];
 const NIVEIS = ['mobile', 'point', 'hub', 'regional'];
 const BASES_POR_ORIGEM = {
   azul: ['comissao_recebida'],
   certificado: ['valor_venda', 'lucro_grupo'],
   seguro: ['comissao_recebida'],
+  movv_cred: ['comissao_recebida'],
   federal_invest: ['comissao_recebida'],
   seguro_auto: ['comissao_recebida'],
 };
