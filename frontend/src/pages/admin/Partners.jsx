@@ -7,9 +7,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ADMIN_PRINCIPAL } from '../../utils/adminPrincipal';
 import { ehFinanceiro } from '../../utils/perfilAdmin';
 
-// Opção do "Novo Parceiro" que só o ADMIN-001 vê: cria conta admin com o
-// perfil financeiro (mesmo acesso da ADMIN-002)
+// Opções do "Novo Parceiro" que só o ADMIN-001 vê: conta admin com o perfil
+// financeiro (mesmo acesso da ADMIN-002) ou admin completo (acesso total)
 const TIPO_ADMIN_FINANCEIRO = 'admin_financeiro';
+const TIPO_ADMIN_COMPLETO = 'admin_completo';
 
 const EMPTY_FORM ={ name: '', email: '', type: 'employee', whatsapp: '', pix_key: '', parent_id: '', password: '', is_admin: false };
 
@@ -61,6 +62,10 @@ export default function AdminPartners() {
         // conta admin com perfil financeiro (só o ADMIN-001; o servidor confere)
         const r = await api.post('/partners', { ...form, type: 'accounting', parent_id: '', perfil_admin: 'financeiro' });
         toast.success(`Administrador — Financeiro criado: ${r.data.code}. A senha é trocada no primeiro acesso.`, { duration: 8000 });
+      } else if (modal === 'create' && form.type === TIPO_ADMIN_COMPLETO) {
+        // conta admin completa (só o ADMIN-001; o servidor confere)
+        const r = await api.post('/partners', { ...form, type: 'accounting', parent_id: '', is_admin: true });
+        toast.success(`Administrador — Completo criado: ${r.data.code}. A senha é trocada no primeiro acesso.`, { duration: 8000 });
       } else if (modal === 'create') {
         await api.post('/partners', form);
         toast.success('Parceiro criado!');
@@ -226,8 +231,16 @@ export default function AdminPartners() {
                   <option value="employee">Funcionário</option>
                   <option value="accounting">Contabilidade</option>
                   {souPrincipal && modal === 'create' && <option value={TIPO_ADMIN_FINANCEIRO}>Administrador — Financeiro</option>}
+                  {souPrincipal && modal === 'create' && <option value={TIPO_ADMIN_COMPLETO}>Administrador — Completo</option>}
                 </select>
               </div>
+              {form.type === TIPO_ADMIN_COMPLETO && (
+                <p className="col-span-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Atenção: acesso total ao dinheiro (aprova, paga e estorna comissões, vê o cadastro completo para pagamento),
+                  às Regras de comissão e aos Produtos. Só não cria administrador nem altera outro admin. O código ADMIN é
+                  gerado sozinho e a pessoa troca a senha no primeiro acesso.
+                </p>
+              )}
               {form.type === TIPO_ADMIN_FINANCEIRO && (
                 <p className="col-span-2 text-xs text-slate-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                   Mesmo acesso da conta financeira: aprova e paga comissões, Cadastro para pagamento, indicações e pagamentos.

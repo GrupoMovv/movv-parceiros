@@ -83,6 +83,12 @@ async function createPartner(req, res) {
   if (is_admin && !ehAdminPrincipal(req.user)) {
     return res.status(403).json({ error: `Só o ${ADMIN_PRINCIPAL} cria contas de administrador.` });
   }
+  if (is_admin) {
+    // "Administrador — Completo" (Junior, 29/10/2026): conta admin como a do
+    // Financeiro, sem perfil (perfil_admin NULL = acesso total)
+    type = 'accounting';
+    parent_id = null;
+  }
 
   try {
     const countResult = await db.query(
@@ -110,10 +116,11 @@ async function createPartner(req, res) {
         [code, name, email, hash, type, whatsapp, pix_key, parent_id || null, Boolean(is_admin), financeiro ? PERFIL_FINANCEIRO : null]
       );
       const p = result.rows[0];
-      // sem senha; e-mail mascarado
-      if (financeiro) {
-        await registrarAcao(cx, req, 'admin_financeiro_criado', 'partners', p.id, {
-          codigo: p.code, perfil: PERFIL_FINANCEIRO, email: mascararPix('email', p.email),
+      // toda conta de admin criada fica registrada: sem senha; e-mail mascarado
+      if (p.is_admin) {
+        const perfil = financeiro ? PERFIL_FINANCEIRO : 'completo';
+        await registrarAcao(cx, req, `admin_${perfil}_criado`, 'partners', p.id, {
+          codigo: p.code, perfil, email: mascararPix('email', p.email),
         });
       }
       return p;
