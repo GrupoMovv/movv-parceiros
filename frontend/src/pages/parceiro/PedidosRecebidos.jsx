@@ -5,6 +5,7 @@ import { Loader2, ChevronLeft, Truck, Store } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import PedidoLojaDetalhe, { brl } from '../../components/pedidos/PedidoLojaDetalhe';
+import { avisarPedidosMudou, tocarCampainha } from '../../components/pedidos/campainha';
 
 const ABAS = [
   { id: 'responder', label: 'Para responder' },
@@ -17,30 +18,6 @@ const COR_STATUS = {
   entregue: ['#DCFCE7', '#166534'], recusado: ['#FEE2E2', '#991B1B'], cancelado: ['#F1F5F9', '#475569'], expirado: ['#F1F5F9', '#475569'],
 };
 
-// Dois bipes curtos gerados no navegador (sem arquivo de som). O navegador só
-// deixa tocar depois que a pessoa já clicou na página — no painel isso já
-// aconteceu ao abrir a aba Pedidos.
-function tocarAviso() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    [0, 0.25].forEach(inicio => {
-      const osc = ctx.createOscillator();
-      const ganho = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-      ganho.gain.setValueAtTime(0.0001, ctx.currentTime + inicio);
-      ganho.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + inicio + 0.02);
-      ganho.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + inicio + 0.18);
-      osc.connect(ganho).connect(ctx.destination);
-      osc.start(ctx.currentTime + inicio);
-      osc.stop(ctx.currentTime + inicio + 0.2);
-    });
-    setTimeout(() => ctx.close(), 800);
-  } catch { /* sem áudio: fica só o título */ }
-}
-
 function hora(iso) {
   const d = new Date(iso);
   return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`;
@@ -49,7 +26,8 @@ function hora(iso) {
 // /parceiro/painel/pedidos — pedidos pelo site que chegaram pra loja. Mesmas
 // abas da agenda do PET. O detalhe e as ações são os mesmos do link sem login
 // do aviso de WhatsApp (PedidoLojaDetalhe). "Para responder" se atualiza
-// sozinho a cada 30s (pedido novo tem 10 min pra resposta).
+// sozinho a cada 30s (pedido novo tem 10 min pra resposta). A campainha, o
+// "(n) Novo pedido" no título e o número na aba ficam no PainelLayout (A1).
 export default function PedidosRecebidos() {
   const [aba, setAba] = useState('responder');
   const [dados, setDados] = useState(null);
@@ -57,38 +35,18 @@ export default function PedidosRecebidos() {
   const abaRef = useRef(aba);
   abaRef.current = aba;
 
-  const [pendentes, setPendentes] = useState(0);
-  const pendentesRef = useRef(null);
-
-  // Pedido novo com o painel aberto (loja no computador): som curto + "(n)"
-  // no título da aba do navegador — percebe sem olhar o WhatsApp.
-  function conferirNovos(contagem) {
-    const n = contagem?.responder || 0;
-    if (pendentesRef.current !== null && n > pendentesRef.current) tocarAviso();
-    pendentesRef.current = n;
-    setPendentes(n);
-  }
-
   function carregar(filtro = abaRef.current, silencioso = false) {
     if (!silencioso) setDados(null);
     apiParceiro.get('/parceiro/pedidos', { params: { filtro } })
-      .then(r => { conferirNovos(r.data.contagem); if (filtro === abaRef.current) setDados(r.data); })
+      .then(r => { if (filtro === abaRef.current) setDados(r.data); })
       .catch(() => { if (!silencioso) { toast.error('Erro ao carregar os pedidos'); setDados({ pedidos: [], contagem: {} }); } });
   }
   useEffect(() => { carregar(aba); setAberto(null); }, [aba]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    // com um pedido aberto, só confere se chegou outro (não mexe na lista)
-    const t = setInterval(() => {
-      if (!aberto) carregar(abaRef.current, true);
-      else apiParceiro.get('/parceiro/pedidos', { params: { filtro: 'responder' } }).then(r => conferirNovos(r.data.contagem)).catch(() => {});
-    }, 30000);
+    // com um pedido aberto, não mexe na lista
+    const t = setInterval(() => { if (!aberto) carregar(abaRef.current, true); }, 30000);
     return () => clearInterval(t);
   }, [aberto]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const original = document.title;
-    if (pendentes > 0) document.title = `(${pendentes}) ${pendentes === 1 ? 'Novo pedido' : 'Novos pedidos'} · IUB MAIS+`;
-    return () => { document.title = original; };
-  }, [pendentes]);
 
   if (aberto) {
     return (
@@ -100,7 +58,7 @@ export default function PedidosRecebidos() {
           pedido={aberto}
           setPedido={setAberto}
           recarregar={() => apiParceiro.get(`/parceiro/pedidos/${aberto.id}`).then(r => setAberto(r.data)).catch(() => {})}
-          executar={(acao, corpo) => apiParceiro.post(`/parceiro/pedidos/${aberto.id}/${acao}`, corpo).then(r => r.data)}
+          executar={(acao, corpo) => apiParceiro.post(`/parceiro/pedidos/${aberto.id}/${acao}`, corpo).then(r => { avisarPedidosMudou(); return r.data; })}
         />
       </div>
     );
@@ -113,6 +71,13 @@ export default function PedidosRecebidos() {
         <h1 className="text-xl font-bold" style={{ color: PRETO }}>📦 Pedidos</h1>
         <p className="text-sm text-slate-500 mt-1">
           Pedidos feitos pelo site. O cliente paga direto no seu Pix. Cada pedido novo também chega no seu WhatsApp com um link que abre aqui.
+        </p>
+        <p className="text-xs text-slate-500 mt-2">
+          Com o painel aberto, a campainha toca a cada 30 segundos enquanto houver pedido esperando você aceitar ou recusar.{' '}
+          <button type="button" onClick={() => tocarCampainha().then(ok => { if (!ok) toast.error('O navegador bloqueou o som. Toque de novo.'); })}
+            className="font-semibold underline" style={{ color: ROXO }}>
+            🔔 Ouvir a campainha
+          </button>
         </p>
       </div>
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">

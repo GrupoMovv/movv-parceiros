@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiParceiro, { getParceiroToken, setParceiroToken } from '../../services/apiParceiro';
@@ -7,6 +7,8 @@ import { ROXO, PRETO } from '../public/Marketplace/theme';
 import InstallPWABanner from '../../components/InstallPWABanner';
 import InstallAppButton from '../../components/InstallAppButton';
 import MenuPills from '../../components/ui/MenuPills';
+import AvisoPedidosEsperando, { usePedidosEsperando } from '../../components/pedidos/AvisoPedidosEsperando';
+import { useCampainha } from '../../components/pedidos/campainha';
 import { WhatsappLogo } from '@phosphor-icons/react';
 import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config/contato';
 
@@ -85,6 +87,11 @@ export default function ParceiroPainelLayout() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [promosTerminandoEm24h, setPromosTerminandoEm24h] = useState(0);
   const menuRef = useRef(null);
+  const { pathname } = useLocation();
+  // Campainha (A1): toca a cada 30 s, em qualquer aba, enquanto houver pedido
+  // esperando a loja aceitar ou recusar.
+  const esperando = usePedidosEsperando(Boolean(parceiro?.pedidos_site_liberado && parceiro?.tipo_pessoa !== 'pf'));
+  const campainha = useCampainha(esperando > 0);
 
   useEffect(() => {
     if (!getParceiroToken()) {
@@ -188,13 +195,15 @@ export default function ParceiroPainelLayout() {
               .filter(aba => !aba.soCnpj || parceiro.tipo_pessoa !== 'pf')
               .filter(aba => !aba.soPedidosSite || parceiro.pedidos_site_liberado)
               .filter(aba => !aba.soBeer || parceiro.beer_disponivel !== false)
-              .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h } : aba))}
+              .map(aba => (aba.to === '/parceiro/painel/promocoes' ? { ...aba, badge: promosTerminandoEm24h }
+                : aba.to === '/parceiro/painel/pedidos' ? { ...aba, badge: esperando } : aba))}
           />
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
         <AvisoVerificacao parceiro={parceiro} />
+        <AvisoPedidosEsperando esperando={esperando} campainha={campainha} naPaginaDePedidos={pathname === '/parceiro/painel/pedidos'} />
         <Outlet context={{ parceiro, usuario }} />
       </main>
 

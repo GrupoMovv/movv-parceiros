@@ -12,6 +12,7 @@ router.post('/config/teste', ctrl.enviarTeste);
 
 // Aba Pedidos (parte 7)
 router.get('/', ctrl.listarPedidos);
+router.get('/contagem', ctrl.contagemPedidos);
 router.get('/:id(\\d+)', ctrl.verPedido);
 router.post('/:id(\\d+)/:acao', ctrl.agirPedido);
 

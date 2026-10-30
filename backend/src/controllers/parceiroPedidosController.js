@@ -234,6 +234,26 @@ const FILTROS_PEDIDOS = {
   encerrados: ['entregue', 'recusado', 'cancelado', 'expirado'],
 };
 
+async function contarPedidos(parceiroId) {
+  return (await db.query(
+    `SELECT COUNT(*) FILTER (WHERE status = 'enviado')::int AS responder,
+            COUNT(*) FILTER (WHERE status IN ('aceito', 'pago_saiu'))::int AS andamento
+     FROM loja_pedidos WHERE parceiro_id = $1`,
+    [parceiroId]
+  )).rows[0];
+}
+
+// GET /contagem — o painel pergunta a cada 30 s, em qualquer aba, para a
+// campainha (A1): toca enquanto houver pedido esperando aceitar ou recusar.
+async function contagemPedidos(req, res) {
+  try {
+    return res.json(await contarPedidos(req.parceiro.id));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao contar os pedidos' });
+  }
+}
+
 // GET /  ?filtro=responder|andamento|encerrados
 async function listarPedidos(req, res) {
   try {
@@ -243,12 +263,7 @@ async function listarPedidos(req, res) {
        ORDER BY ${filtro === 'encerrados' ? 'COALESCE(encerrado_em, created_at) DESC' : 'created_at ASC'} LIMIT 60`,
       [req.parceiro.id, FILTROS_PEDIDOS[filtro]]
     );
-    const contagem = (await db.query(
-      `SELECT COUNT(*) FILTER (WHERE status = 'enviado')::int AS responder,
-              COUNT(*) FILTER (WHERE status IN ('aceito', 'pago_saiu'))::int AS andamento
-       FROM loja_pedidos WHERE parceiro_id = $1`,
-      [req.parceiro.id]
-    )).rows[0];
+    const contagem = await contarPedidos(req.parceiro.id);
     const pedidos = [];
     for (const p of r.rows) pedidos.push(await viewLoja(p));
     return res.json({ pedidos, contagem });
@@ -290,5 +305,5 @@ async function agirPedido(req, res) {
 
 module.exports = {
   getConfig, salvarConfig, pausar, enviarTeste, normalizarChavePix, requisitos,
-  listarPedidos, verPedido, agirPedido,
+  listarPedidos, contagemPedidos, verPedido, agirPedido,
 };

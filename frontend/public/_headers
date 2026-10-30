@@ -10,3 +10,8 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Campainha dos pedidos (A1): o arquivo é trocado sem mudar o nome, então
+# o navegador confere se mudou antes de usar o que guardou.
+/sons/*
+  Cache-Control: no-cache

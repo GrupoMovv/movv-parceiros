@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import api from '../../services/api';
 import PedidoLojaDetalhe from '../../components/pedidos/PedidoLojaDetalhe';
+import { useCampainha, INTERVALO_CAMPAINHA_MS } from '../../components/pedidos/campainha';
 
 const ROXO = '#5B21B6';
 const PRETO = '#0F172A';
@@ -10,7 +11,9 @@ const PRETO = '#0F172A';
 // /pedido-loja/:token — o link do aviso de WhatsApp da LOJA, sem login.
 // No máximo 2 toques: Aceitar (ou Recusar) e "Pago, saiu". /pedido-loja/teste
 // é o link do "Enviar aviso de teste" do painel. O corpo (pedido + ações) é o
-// mesmo da aba Pedidos do painel (PedidoLojaDetalhe).
+// mesmo da aba Pedidos do painel (PedidoLojaDetalhe). Enquanto o pedido espera
+// resposta, a campainha toca a cada 30 s (A1) e a página confere o status
+// (a loja pode ter aceitado pelo painel).
 export default function PedidoLoja() {
   const { token } = useParams();
   const [pedido, setPedido] = useState(null);
@@ -29,6 +32,14 @@ export default function PedidoLoja() {
   }
   useEffect(() => { if (token !== 'teste') carregar(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const esperando = pedido?.status === 'enviado';
+  const campainha = useCampainha(esperando);
+  useEffect(() => {
+    if (!esperando) return undefined;
+    const t = setInterval(carregar, INTERVALO_CAMPAINHA_MS);
+    return () => clearInterval(t);
+  }, [esperando]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (token === 'teste') {
     return (
       <Casca>
@@ -45,6 +56,12 @@ export default function PedidoLoja() {
 
   return (
     <Casca>
+      {esperando && campainha.bloqueada && (
+        <button type="button" onClick={campainha.ativar}
+          className="w-full mb-3 text-sm font-bold px-4 py-3 rounded-xl text-white bg-amber-600">
+          🔔 Ativar campainha deste pedido
+        </button>
+      )}
       <PedidoLojaDetalhe
         pedido={pedido}
         setPedido={setPedido}
