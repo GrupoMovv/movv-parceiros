@@ -228,10 +228,15 @@ f1, f4 e f5 no ar. O que fica para 27/11, nesta ordem:
   para 2026-10-30. Em 27/11 o convite de segunda e o lembrete de quinta
   voltam a ir para todas as lojas ativas que participam. Decidir antes de
   23/11 se é isso mesmo.
-- **Achado em 30/10:** passado o prazo de quinta 18:00, nem a loja nem o
-  admin conseguem pôr produto no evento (o admin não tem tela para isso).
-  Em 30/10 o evento abriu sem nenhum produto. Decidir se o admin precisa
-  de um jeito de incluir produto depois do prazo.
+- **Tela no admin para incluir ou tirar produto do evento depois do prazo**
+  (pedido do Junior em 30/10): passado o prazo de quinta 18:00, nem a loja
+  nem o admin conseguem mexer nos produtos do evento, e em 30/10 o evento
+  abriu sem nenhum. A tela do admin escolhe a edição e a loja, inclui
+  produto do catálogo (com preço do evento e estoque) ou bônus, e tira
+  produto, mesmo depois do prazo e no dia do evento. Cada inclusão e
+  retirada fica registrada com quem fez, quando e o que mudou (tabela de
+  registro nova; o admin vê o histórico na própria tela). Tirar produto no
+  dia não mexe nos pedidos já feitos (o preço fica congelado no pedido).
 
 ### Preço do evento e "Comprar" nos cards de lista (anotado 05/10/2026)
 
