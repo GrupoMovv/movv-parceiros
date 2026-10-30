@@ -97,6 +97,13 @@ export default function PedidoLojaDetalhe({ pedido, setPedido, executar, recarre
         </p>
       )}
 
+      {/* B1: o cliente mudou os itens antes da resposta */}
+      {pedido.status === 'enviado' && pedido.alterado_em && (
+        <div className="mt-4 rounded-xl bg-violet-50 border border-violet-200 p-3 text-sm font-semibold text-violet-900">
+          ✏️ O cliente mudou o pedido às {new Date(pedido.alterado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}. Os itens abaixo já são os novos.
+        </div>
+      )}
+
       {pedido.aviso_idade && (
         <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 flex gap-2 text-sm text-amber-900">
           <AlertTriangle className="w-5 h-5 flex-shrink-0" /> Bebida alcoólica: confira a idade (18+) do cliente na {retirada ? 'retirada' : 'entrega'}.

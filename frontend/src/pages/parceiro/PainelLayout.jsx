@@ -90,8 +90,8 @@ export default function ParceiroPainelLayout() {
   const { pathname } = useLocation();
   // Campainha (A1): toca a cada 30 s, em qualquer aba, enquanto houver pedido
   // esperando a loja aceitar ou recusar.
-  const { esperando, pausaMotivo } = usePedidosEsperando(Boolean(parceiro?.pedidos_site_liberado && parceiro?.tipo_pessoa !== 'pf'));
-  const campainha = useCampainha(esperando > 0);
+  const { esperando, pausaMotivo, mudouEm } = usePedidosEsperando(Boolean(parceiro?.pedidos_site_liberado && parceiro?.tipo_pessoa !== 'pf'));
+  const campainha = useCampainha(esperando > 0, mudouEm);
 
   useEffect(() => {
     if (!getParceiroToken()) {

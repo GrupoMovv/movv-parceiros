@@ -33,7 +33,7 @@ export default function PedidoLoja() {
   useEffect(() => { if (token !== 'teste') carregar(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const esperando = pedido?.status === 'enviado';
-  const campainha = useCampainha(esperando);
+  const campainha = useCampainha(esperando, pedido?.alterado_em || null);
   useEffect(() => {
     if (!esperando) return undefined;
     const t = setInterval(carregar, INTERVALO_CAMPAINHA_MS);

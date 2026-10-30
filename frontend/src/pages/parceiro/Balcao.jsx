@@ -70,7 +70,9 @@ export default function Balcao() {
   }, [carregar]);
 
   const esperando = (pedidos || []).filter(p => p.status === 'enviado');
-  const campainha = useCampainha(esperando.length > 0 && problema !== 'login');
+  // B1: o cliente mudou os itens de um pedido esperando → toca na hora
+  const ultimaMudanca = esperando.map(p => p.alterado_em).filter(Boolean).sort().pop() || null;
+  const campainha = useCampainha(esperando.length > 0 && problema !== 'login', ultimaMudanca);
 
   useEffect(() => {
     const original = document.title;
@@ -193,6 +195,9 @@ function CartaoBalcao({ p, agora, aoMudar, aoFalharAviso }) {
         {p.modo_recebimento === 'retirada' ? 'Retirada na loja' : `Entrega · ${p.endereco?.bairro || ''}`}
         {p.aviso_idade && <span className="font-bold text-amber-700">· 18+ conferir documento</span>}
       </p>
+      {p.status === 'enviado' && p.alterado_em && (
+        <p className="mt-1 text-base font-bold text-violet-800">✏️ O cliente mudou o pedido às {new Date(p.alterado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</p>
+      )}
       {p.observacao && <p className="mt-1 text-base text-slate-700">📝 {p.observacao}</p>}
       {p.vendedor && <p className="mt-1 text-sm font-semibold text-violet-800">🧑‍💼 Vendedor: {p.vendedor}</p>}
       {erro && <p className="mt-2 text-sm font-semibold text-red-600">{erro}</p>}

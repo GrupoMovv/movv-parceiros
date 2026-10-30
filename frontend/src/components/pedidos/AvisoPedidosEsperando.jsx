@@ -12,12 +12,13 @@ import { EVENTO_PEDIDOS_MUDOU, INTERVALO_CAMPAINHA_MS, avisarPedidosMudou } from
 export function usePedidosEsperando(ativo) {
   const [esperando, setEsperando] = useState(0);
   const [pausaMotivo, setPausaMotivo] = useState(null);
+  const [mudouEm, setMudouEm] = useState(null);
 
   useEffect(() => {
     if (!ativo) { setEsperando(0); setPausaMotivo(null); return undefined; }
     let vivo = true;
     const contar = () => apiParceiro.get('/parceiro/pedidos/contagem')
-      .then(r => { if (vivo) { setEsperando(r.data.responder || 0); setPausaMotivo(r.data.pausa_motivo || null); } })
+      .then(r => { if (vivo) { setEsperando(r.data.responder || 0); setPausaMotivo(r.data.pausa_motivo || null); setMudouEm(r.data.mudou_em || null); } })
       .catch(() => {});
     contar();
     const t = setInterval(contar, INTERVALO_CAMPAINHA_MS);
@@ -32,7 +33,7 @@ export function usePedidosEsperando(ativo) {
     return () => { document.title = original; };
   }, [esperando]);
 
-  return { esperando, pausaMotivo };
+  return { esperando, pausaMotivo, mudouEm };
 }
 
 // A3: faixa no topo do painel quando o sistema pausou os pedidos pelo site.

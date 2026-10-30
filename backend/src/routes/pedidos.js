@@ -20,6 +20,8 @@ router.get('/economia-clube', ctrl.economiaClube);
 router.post('/cotacao', ctrl.cotacao);
 router.post('/', simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 15 }), ctrl.criar);
 router.get('/:id', ctrl.detalhe);
+router.get('/:id/produtos-da-loja', ctrl.produtosDaLoja);
+router.put('/:id/itens', simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 20 }), ctrl.mudarItens);
 router.post('/:id/cancelar', ctrl.cancelar);
 router.post('/:id/recebi', ctrl.recebi);
 

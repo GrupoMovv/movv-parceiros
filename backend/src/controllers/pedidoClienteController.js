@@ -85,7 +85,13 @@ async function lojas(req, res) {
 // POST /cotacao — resumo com preço do servidor (Finalizar pedido)
 async function cotacao(req, res) {
   try {
-    const { resumo } = await pedidoLoja.cotar(req.painelAssociado, req.body, { qa: req.modoQa });
+    // B1: prévia da mudança de um pedido (pedido_id): o que ele já reservou conta como livre
+    let devolver = null;
+    if (/^\d+$/.test(String(req.body?.pedido_id ?? ''))) {
+      const meu = await buscarDoCliente(req.body.pedido_id, req.painelAssociado.id);
+      if (meu?.status === 'enviado') devolver = await pedidoLoja.reservasDoPedido(meu.id);
+    }
+    const { resumo } = await pedidoLoja.cotar(req.painelAssociado, req.body, { qa: req.modoQa, devolver });
     return res.json(resumo);
   } catch (err) {
     return responderErro(res, err, 'Não conseguimos calcular o pedido agora.');
@@ -172,6 +178,28 @@ function acao(nome) {
   };
 }
 
+// B1: PUT /:id/itens  { itens, total_visto } — o cliente muda o pedido
+// enquanto a loja não aceitou (não reinicia os 10 minutos da loja)
+async function mudarItens(req, res) {
+  try {
+    if (!/^\d+$/.test(String(req.params.id))) return res.status(404).json({ error: 'Pedido não encontrado.' });
+    const { pedido } = await pedidoLoja.mudarItens(req.painelAssociado, Number(req.params.id), req.body, { qa: req.modoQa });
+    return res.json(await viewCliente(pedido));
+  } catch (err) {
+    return responderErro(res, err, 'Não conseguimos mudar o pedido agora.');
+  }
+}
+
+// B1: GET /:id/produtos-da-loja — para "Adicionar produto desta loja"
+async function produtosDaLoja(req, res) {
+  try {
+    if (!/^\d+$/.test(String(req.params.id))) return res.status(404).json({ error: 'Pedido não encontrado.' });
+    return res.json({ produtos: await pedidoLoja.produtosParaAcrescentar(req.painelAssociado, Number(req.params.id)) });
+  } catch (err) {
+    return responderErro(res, err, 'Não conseguimos carregar os produtos da loja.');
+  }
+}
+
 // GET /enderecos-recentes — sugestão no Finalizar pedido: os últimos
 // endereços diferentes usados em pedidos (sem tabela de endereços).
 async function enderecosRecentes(req, res) {
@@ -190,6 +218,6 @@ async function enderecosRecentes(req, res) {
 }
 
 module.exports = {
-  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes, economiaClube,
+  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes, economiaClube, mudarItens, produtosDaLoja,
   cancelar: acao('cancelar'), recebi: acao('recebi'), viewCliente,
 };

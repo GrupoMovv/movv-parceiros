@@ -60,6 +60,21 @@ function novoPedidoLoja(p, itens, vendedorNome = null) {
 // Aceito há 30 min sem "pago": o cliente pode ter pago e a loja esquecido
 // de marcar — sem isso o sistema cancela em 2h e o cliente recebe
 // "cancelado" mesmo tendo pago.
+// B1: o cliente mudou os itens antes da loja responder. O prazo continua o
+// do pedido (a mudança não reinicia os 10 minutos).
+function mudouPedidoLoja(p, itens) {
+  const fim = new Date(new Date(p.created_at).getTime() + PRAZO_RESPOSTA_MIN * 60000)
+    .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  return [
+    `✏️ *Pedido #${p.id} mudou* — o cliente trocou os itens`, '',
+    `Cliente: ${p.cliente_nome}`,
+    linhasItens(itens),
+    Number(p.valor_entrega) > 0 ? `Entrega — ${brl(p.valor_entrega)}` : null,
+    `*Novo total: ${brl(p.total)}*`,
+    '', `👉 Aceite ou recuse até ${fim}:`, linkLoja(p.token_loja),
+  ].filter(l => l !== null).join('\n');
+}
+
 // A3: 2 pedidos seguidos passaram dos 10 min sem resposta → loja pausada.
 // Texto aprovado pelo Junior em 30/10/2026 (com a última frase no fim).
 function pausaExpiradosLoja() {
@@ -201,6 +216,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, novoPedidoVendedor, lembretePixLoja, pausaExpiradosLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, mudouPedidoLoja, novoPedidoVendedor, lembretePixLoja, pausaExpiradosLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

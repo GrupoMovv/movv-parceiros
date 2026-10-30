@@ -148,6 +148,25 @@ async function textoMudanca(pedido, loja) {
   return null; // entregue, ou o próprio cliente cancelou
 }
 
+// B1: o cliente mudou os itens → loja (WhatsApp nos dois números e o
+// celular). Um aviso por mudança (tipo mudou_1, mudou_2...).
+async function avisarMudancaItens(pedido) {
+  const loja = await dadosLoja(pedido);
+  const avisada = await avisarLoja(pedido.id, `mudou_${pedido.alteracoes}`, loja, msg.mudouPedidoLoja(pedido, await itensDo(pedido.id)));
+  try {
+    await lojaPush.enviarParaLoja(pedido.parceiro_id, {
+      title: `Pedido #${pedido.id} mudou`,
+      body: `O cliente trocou os itens. Novo total: ${msg.brl(pedido.total)}`,
+      url: `/pedido-loja/${pedido.token_loja}`,
+      tag: `pedido-${pedido.id}`,
+      requireInteraction: true,
+    });
+  } catch (err) {
+    console.error('[pedidoAvisos] notificação da mudança', pedido.id, err.message);
+  }
+  return avisada;
+}
+
 // Mudou de status → cliente. Devolve { avisado: true|false|null, texto }
 // (texto pra o botão manual da loja quando o Z-API falha).
 async function avisarMudanca(pedido) {
@@ -179,4 +198,4 @@ async function lembrarPixLoja(pedido) {
   return avisarLoja(pedido.id, 'lembrete_pix', loja, msg.lembretePixLoja(pedido));
 }
 
-module.exports = { enviar, registrarEEnviar, dadosLoja, avisarLoja, avisarNovoPedido, avisarMudanca, avisoLojaFalhou, lembrarPixLoja };
+module.exports = { enviar, registrarEEnviar, dadosLoja, avisarLoja, avisarNovoPedido, avisarMudancaItens, avisarMudanca, avisoLojaFalhou, lembrarPixLoja };

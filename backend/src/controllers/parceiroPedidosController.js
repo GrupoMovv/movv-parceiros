@@ -328,7 +328,9 @@ const FILTROS_PEDIDOS = {
 async function contarPedidos(parceiroId) {
   return (await db.query(
     `SELECT COUNT(*) FILTER (WHERE status = 'enviado')::int AS responder,
-            COUNT(*) FILTER (WHERE status IN ('aceito', 'pago_saiu'))::int AS andamento
+            COUNT(*) FILTER (WHERE status IN ('aceito', 'pago_saiu'))::int AS andamento,
+            -- B1: última mudança de itens num pedido esperando (a campainha toca na hora)
+            MAX(alterado_em) FILTER (WHERE status = 'enviado') AS mudou_em
      FROM loja_pedidos WHERE parceiro_id = $1`,
     [parceiroId]
   )).rows[0];

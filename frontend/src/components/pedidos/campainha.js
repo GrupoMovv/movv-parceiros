@@ -50,7 +50,8 @@ export async function tocarCampainha() {
 // Toca já e a cada 30 s enquanto `tocando` for true (há pedido esperando a
 // loja aceitar ou recusar). O navegador só deixa tocar som depois de um toque
 // na página: aí `bloqueada` fica true e a tela mostra "Ativar campainha".
-export function useCampainha(tocando) {
+// `gatilho` (B1): quando muda (o cliente mudou os itens), toca na hora.
+export function useCampainha(tocando, gatilho = null) {
   const [bloqueada, setBloqueada] = useState(false);
   const tocandoRef = useRef(tocando);
   tocandoRef.current = tocando;
@@ -65,7 +66,7 @@ export function useCampainha(tocando) {
     tocar();
     const t = setInterval(tocar, INTERVALO_CAMPAINHA_MS);
     return () => clearInterval(t);
-  }, [tocando, tocar]);
+  }, [tocando, tocar, gatilho]);
 
   // o toque no botão já libera o som; toca uma vez para a loja ouvir
   const ativar = useCallback(() => { tocar(); }, [tocar]);

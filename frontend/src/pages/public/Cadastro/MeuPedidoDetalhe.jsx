@@ -6,6 +6,7 @@ import { WhatsappLogo } from '@phosphor-icons/react';
 import { QRCodeSVG } from 'qrcode.react';
 import apiPainel from '../../../services/apiPainel';
 import { COR_STATUS } from './MeusPedidos';
+import MudarItensPedido from '../../../components/pedidos/MudarItensPedido';
 
 const NAVY = '#0B1F3A';
 const ROXO = '#5B21B6';
@@ -34,6 +35,7 @@ export default function MeuPedidoDetalhe() {
   const [erro, setErro] = useState(null);
   const [agindo, setAgindo] = useState(null);
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
+  const [mudando, setMudando] = useState(false); // B1
 
   function carregar() {
     apiPainel.get(`/public/pedidos/${id}`).then(r => setP(r.data))
@@ -118,6 +120,7 @@ export default function MeuPedidoDetalhe() {
           </ol>
         )}
         {p.status === 'enviado' && <p className="mt-3 text-xs text-slate-500">A loja tem até 10 minutos para aceitar. A chave Pix chega no seu WhatsApp e aparece aqui.</p>}
+        {p.status === 'enviado' && p.alterado_em && <p className="mt-1 text-xs font-semibold" style={{ color: ROXO }}>✏️ Você mudou o pedido às {hora(p.alterado_em).slice(-5)}. A loja já recebeu os itens novos.</p>}
       </div>
 
       {p.link_manual_loja && (
@@ -171,8 +174,22 @@ export default function MeuPedidoDetalhe() {
         </button>
       )}
 
+      {mudando && p.status === 'enviado' ? (
+        <MudarItensPedido
+          pedido={p}
+          aoSalvar={novo => { setP(novo); setMudando(false); }}
+          aoCancelarPedido={() => { setMudando(false); setConfirmandoCancelar(true); }}
+          aoFechar={recarregar => { setMudando(false); if (recarregar) carregar(); }}
+        />
+      ) : (
       <div className="bg-white rounded-2xl border border-slate-100 p-5">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Itens</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-slate-400">Itens</h2>
+          {/* B1: enquanto a loja não aceitou, o cliente acrescenta ou tira itens */}
+          {p.status === 'enviado' && (
+            <button type="button" onClick={() => setMudando(true)} className="text-sm font-bold" style={{ color: ROXO }}>✏️ Mudar itens</button>
+          )}
+        </div>
         <ul className="space-y-1.5 text-sm">
           {p.itens.map(i => (
             <li key={i.id} className="flex justify-between gap-3"><span className="text-slate-700">{i.quantidade}x {i.nome}</span><span>{brl(i.subtotal)}</span></li>
@@ -189,6 +206,7 @@ export default function MeuPedidoDetalhe() {
         {p.aviso_idade && <p className="text-xs text-amber-800 mt-2 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Bebida alcoólica: tenha um documento com foto na {retirada ? 'retirada' : 'entrega'}.</p>}
         {p.observacao && <p className="text-xs text-slate-500 mt-2">Seu recado: "{p.observacao}"</p>}
       </div>
+      )}
 
       {falarComLoja && (
         <a href={falarComLoja} target="_blank" rel="noreferrer"

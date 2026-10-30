@@ -51,6 +51,8 @@ async function viewLoja(p) {
     created_at: p.created_at, aceito_em: p.aceito_em, pago_saiu_em: p.pago_saiu_em, encerrado_em: p.encerrado_em,
     responder_ate: p.status === 'enviado' ? new Date(new Date(p.created_at).getTime() + PRAZO_RESPOSTA_MIN * 60000) : null,
     aceite_automatico: p.aceite_automatico,
+    // B1: o cliente mudou os itens antes da resposta (marca "mudou" na loja)
+    alterado_em: p.alterado_em || null, alteracoes: p.alteracoes || 0,
     cliente: { nome: p.cliente_nome, whatsapp: p.cliente_whatsapp, link_whatsapp: linkWhatsapp(p.cliente_whatsapp) },
     vendedor,
     modo_recebimento: p.modo_recebimento,

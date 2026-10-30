@@ -133,6 +133,9 @@ function CardResumo({ p, onAbrir }) {
         {p.modo_recebimento === 'retirada' ? 'Retirada na loja' : `Entrega · ${p.endereco?.bairro || ''}`}
         {p.aviso_idade && <span className="ml-1 font-semibold text-amber-700">· 18+</span>}
       </p>
+      {p.status === 'enviado' && p.alterado_em && (
+        <p className="text-xs font-bold mt-2" style={{ color: '#5B21B6' }}>✏️ O cliente mudou o pedido às {hora(p.alterado_em).slice(-5)}</p>
+      )}
       {p.status === 'enviado' && (
         <p className={`text-xs font-semibold mt-2 ${p.prazo_esgotado ? 'text-slate-500' : minutos <= 2 ? 'text-red-600' : 'text-amber-700'}`}>
           {p.prazo_esgotado ? 'Prazo de resposta esgotado' : `Responda em até ${minutos} min`}

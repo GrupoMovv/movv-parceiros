@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const {
-  PRAZO_RESPOSTA_MIN, MAX_PEDIDOS_ABERTOS, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM, MAX_QUANTIDADE_PROMOCAO,
+  PRAZO_RESPOSTA_MIN, MAX_PEDIDOS_ABERTOS, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM, MAX_QUANTIDADE_PROMOCAO, MAX_MUDANCAS_PEDIDO,
   STATUS_NAO_PAGOS, TRANSICOES,
 } = require('../config/pedidos');
 const { horarioConfigurado, turnoAtual, abertoEfetivo, diaDeHoje, idadeEmAnos, IDADE_MINIMA } = require('../config/beer');
@@ -148,6 +148,9 @@ function menorPreco(candidatos) {
 
 // Estoque do evento que ainda pode ser pedido (f5, migration 105): o que a
 // loja informou menos o já pedido. null = sem limite.
+// B1: unidades do Fecha Mês que o próprio pedido (sendo mudado) já reservou
+const devolvidoFm = (ctx, fmpId) => Number(ctx.devolver?.fm?.[fmpId] || 0);
+
 function restanteFechaMes(fmp) {
   return fmp.estoque_disponivel == null ? null : Math.max(0, fmp.estoque_disponivel - fmp.estoque_vendido);
 }
@@ -201,8 +204,9 @@ async function resolverItem(entrada, ctx) {
        LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = pm.produto_id
        WHERE pm.id = $1 AND pm.ativo = true AND pm.rascunho = false
          AND (pm.data_inicio IS NULL OR pm.data_inicio <= NOW()) AND (pm.data_fim IS NULL OR pm.data_fim >= NOW())
-         AND (pm.limite_usos IS NULL OR pm.usos_atuais < pm.limite_usos)`,
-      [id]
+         AND (pm.limite_usos IS NULL OR pm.usos_atuais < pm.limite_usos OR pm.id = ANY($2::int[]))`,
+      // B1: a vaga que o próprio pedido já reservou volta antes de reservar de novo
+      [id, ctx.devolver?.promocoes || []]
     );
     const p = r.rows[0];
     if (!p || !temPreco(p.preco_por)) throw indisponivel();
@@ -237,6 +241,7 @@ async function resolverItem(entrada, ctx) {
        FROM sindicato_fecha_mes_produtos WHERE id = $1 AND fecha_mes_id = $2 AND status = 'confirmado'`,
       [id, ctx.edicaoFechaMes]
     )).rows[0];
+    if (fmp) fmp.estoque_vendido -= devolvidoFm(ctx, fmp.id);
     if (!fmp || restanteFechaMes(fmp) === 0) throw indisponivel(fmp?.bonus_nome);
     if (fmp.e_produto_bonus) {
       return {
@@ -264,9 +269,10 @@ async function resolverItem(entrada, ctx) {
     fmp = (await db.query(
       `SELECT id, preco_fecha_mes, estoque_disponivel, estoque_vendido FROM sindicato_fecha_mes_produtos
        WHERE fecha_mes_id = $1 AND produto_id = $2 AND status = 'confirmado' AND NOT e_produto_bonus
-         AND (estoque_disponivel IS NULL OR estoque_disponivel > estoque_vendido)`,
-      [ctx.edicaoFechaMes, p.id]
+         AND (estoque_disponivel IS NULL OR estoque_disponivel > estoque_vendido - COALESCE(($3::jsonb ->> id::text)::int, 0))`,
+      [ctx.edicaoFechaMes, p.id, JSON.stringify(ctx.devolver?.fm || {})]
     )).rows[0] || null;
+    if (fmp) fmp.estoque_vendido -= devolvidoFm(ctx, fmp.id);
   }
   const pct = ctx.associadoAtivo ? pctDoItem(await clubeDaLoja(ctx, p.parceiro_id), 'geral', p.id) : null;
   const semClube = menorPreco([
@@ -349,12 +355,14 @@ function validarEndereco(e) {
 
 // Monta tudo a partir da entrada do cliente e confere as regras. Não grava.
 // entrada: { itens: [{ tipo, id, quantidade }], modo_recebimento?, confirmo_maior_18? }
-async function cotar(associado, entrada, { qa = false } = {}) {
+// devolver (B1): { promocoes: [id], fm: { fmpId: qtd } } que o pedido sendo
+// mudado já reservou: contam como livres para ele mesmo.
+async function cotar(associado, entrada, { qa = false, devolver = null } = {}) {
   const lista = Array.isArray(entrada?.itens) ? entrada.itens : [];
   if (lista.length === 0) throw new ErroPedido(400, 'SEM_ITENS', 'Escolha pelo menos um produto.');
   if (lista.length > MAX_ITENS_DIFERENTES) throw new ErroPedido(400, 'ITENS_DEMAIS', `No máximo ${MAX_ITENS_DIFERENTES} produtos diferentes por pedido.`);
 
-  const ctx = await contextoPreco(associado);
+  const ctx = { ...(await contextoPreco(associado)), devolver };
   const itens = [];
   const vistos = new Set();
   for (const e of lista) {
@@ -461,6 +469,67 @@ async function vendedorDoPedido(parceiroId, codigos) {
   return null;
 }
 
+// Promoção com limite: reserva 1 vaga por pedido (mesma "vaga" do clique no
+// WhatsApp da promoção). Fecha Mês (f5): reserva as unidades no estoque do
+// evento. Atômico: com a última vaga/unidade, só um pedido passa. Devolvidas
+// em recusado/expirado/cancelado e quando o cliente muda os itens (B1).
+async function reservar(client, itens) {
+  for (const i of itens.filter(x => x.promocao_id)) {
+    const vaga = await client.query(
+      `UPDATE sindicato_parceiro_promocoes SET usos_atuais = usos_atuais + 1
+       WHERE id = $1 AND (limite_usos IS NULL OR usos_atuais < limite_usos) RETURNING id`,
+      [i.promocao_id]
+    );
+    if (!vaga.rows[0]) throw new ErroPedido(409, 'ITEM_INDISPONIVEL', `As vagas da promoção "${i.nome}" acabaram.`);
+  }
+  for (const i of itens.filter(x => x.fecha_mes_produto_id)) {
+    const reserva = await client.query(
+      `UPDATE sindicato_fecha_mes_produtos SET estoque_vendido = estoque_vendido + $2
+       WHERE id = $1 AND (estoque_disponivel IS NULL OR estoque_vendido + $2 <= estoque_disponivel)
+       RETURNING id`,
+      [i.fecha_mes_produto_id, i.quantidade]
+    );
+    if (!reserva.rows[0]) {
+      const r = (await client.query('SELECT estoque_disponivel, estoque_vendido FROM sindicato_fecha_mes_produtos WHERE id = $1', [i.fecha_mes_produto_id])).rows[0];
+      const resta = r ? restanteFechaMes(r) : 0;
+      throw new ErroPedido(409, resta > 0 ? 'QUANTIDADE' : 'ITEM_INDISPONIVEL', resta > 0
+        ? `Só ${resta === 1 ? 'resta 1 unidade' : `restam ${resta} unidades`} de ${i.nome} no Fecha Mês.`
+        : `Acabou o estoque de ${i.nome} no Fecha Mês.`);
+    }
+  }
+}
+
+async function devolverReservas(client, pedidoId) {
+  // a vaga das promoções do pedido (1 por pedido)
+  await client.query(
+    `UPDATE sindicato_parceiro_promocoes SET usos_atuais = GREATEST(usos_atuais - 1, 0)
+     WHERE id IN (SELECT DISTINCT promocao_id FROM loja_pedido_itens WHERE pedido_id = $1 AND promocao_id IS NOT NULL)`,
+    [pedidoId]
+  );
+  // as unidades do Fecha Mês (f5)
+  await client.query(
+    `UPDATE sindicato_fecha_mes_produtos fmp SET estoque_vendido = GREATEST(fmp.estoque_vendido - i.qtd, 0)
+     FROM (SELECT fecha_mes_produto_id, SUM(quantidade)::int AS qtd FROM loja_pedido_itens
+           WHERE pedido_id = $1 AND fecha_mes_produto_id IS NOT NULL GROUP BY 1) i
+     WHERE fmp.id = i.fecha_mes_produto_id`,
+    [pedidoId]
+  );
+}
+
+async function inserirItens(client, pedidoId, itens) {
+  const gravados = [];
+  for (const i of itens) {
+    gravados.push((await client.query(
+      `INSERT INTO loja_pedido_itens (pedido_id, origem, produto_id, promocao_id, fecha_mes_produto_id, beer_produto_id,
+         nome, foto_url, tipo_preco, preco_unitario, preco_cheio, quantidade, subtotal, preco_sem_clube)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [pedidoId, i.origem, i.produto_id ?? null, i.promocao_id ?? null, i.fecha_mes_produto_id ?? null, i.beer_produto_id ?? null,
+        String(i.nome).slice(0, 200), i.foto_url, i.tipo_preco, i.preco_unitario, i.preco_cheio, i.quantidade, i.subtotal, i.preco_sem_clube ?? i.preco_unitario]
+    )).rows[0]);
+  }
+  return gravados;
+}
+
 async function criarPedido(associado, entrada, { qa = false, ip = null, userAgent = null } = {}) {
   if (!associado.ativo) throw new ErroPedido(403, 'CONTA_INATIVA', 'Sua conta está desativada.');
   if (!whatsappConfirmado(associado)) {
@@ -517,45 +586,8 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
           resumo.entrega_dispensada_clube, vendedorId,
         ]
       )).rows[0];
-      // Promoção com limite: reserva 1 vaga por pedido já na criação (mesma
-      // "vaga" do clique no WhatsApp da promoção). Atômico: com a última vaga,
-      // só um pedido passa. Devolvida em recusado/expirado/cancelado.
-      for (const i of resumo.itens.filter(x => x.promocao_id)) {
-        const vaga = await client.query(
-          `UPDATE sindicato_parceiro_promocoes SET usos_atuais = usos_atuais + 1
-           WHERE id = $1 AND (limite_usos IS NULL OR usos_atuais < limite_usos) RETURNING id`,
-          [i.promocao_id]
-        );
-        if (!vaga.rows[0]) throw new ErroPedido(409, 'ITEM_INDISPONIVEL', `As vagas da promoção "${i.nome}" acabaram.`);
-      }
-      // Fecha Mês (f5): reserva as unidades no estoque do evento. Atômico:
-      // com a última unidade, só um pedido passa. Devolvidas em
-      // recusado/expirado/cancelado.
-      for (const i of resumo.itens.filter(x => x.fecha_mes_produto_id)) {
-        const reserva = await client.query(
-          `UPDATE sindicato_fecha_mes_produtos SET estoque_vendido = estoque_vendido + $2
-           WHERE id = $1 AND (estoque_disponivel IS NULL OR estoque_vendido + $2 <= estoque_disponivel)
-           RETURNING id`,
-          [i.fecha_mes_produto_id, i.quantidade]
-        );
-        if (!reserva.rows[0]) {
-          const r = (await client.query('SELECT estoque_disponivel, estoque_vendido FROM sindicato_fecha_mes_produtos WHERE id = $1', [i.fecha_mes_produto_id])).rows[0];
-          const resta = r ? restanteFechaMes(r) : 0;
-          throw new ErroPedido(409, resta > 0 ? 'QUANTIDADE' : 'ITEM_INDISPONIVEL', resta > 0
-            ? `Só ${resta === 1 ? 'resta 1 unidade' : `restam ${resta} unidades`} de ${i.nome} no Fecha Mês.`
-            : `Acabou o estoque de ${i.nome} no Fecha Mês.`);
-        }
-      }
-      const itens = [];
-      for (const i of resumo.itens) {
-        itens.push((await client.query(
-          `INSERT INTO loja_pedido_itens (pedido_id, origem, produto_id, promocao_id, fecha_mes_produto_id, beer_produto_id,
-             nome, foto_url, tipo_preco, preco_unitario, preco_cheio, quantidade, subtotal, preco_sem_clube)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-          [p.id, i.origem, i.produto_id ?? null, i.promocao_id ?? null, i.fecha_mes_produto_id ?? null, i.beer_produto_id ?? null,
-            String(i.nome).slice(0, 200), i.foto_url, i.tipo_preco, i.preco_unitario, i.preco_cheio, i.quantidade, i.subtotal, i.preco_sem_clube ?? i.preco_unitario]
-        )).rows[0]);
-      }
+      await reservar(client, resumo.itens);
+      const itens = await inserirItens(client, p.id, resumo.itens);
       return { pedido: p, itens };
     });
   } catch (err) {
@@ -567,6 +599,92 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
   // Depois do COMMIT: aviso pra loja (e pro cliente, no aceite automático).
   const avisos = await pedidoAvisos.avisarNovoPedido(criado.pedido);
   return { ...criado, avisos };
+}
+
+// ── B1: o cliente muda os itens enquanto a loja não aceitou ────────────
+// Recalcula tudo como num pedido novo (preço do momento, Clube, Fecha Mês,
+// estoque do evento, vagas de promoção) e grava só se o pedido ainda está
+// "enviado" (FOR UPDATE: se a loja aceitar no mesmo instante, vale quem
+// chegou primeiro). NÃO reinicia os 10 minutos da loja (decisão do Junior,
+// 30/10/2026). Tirar todos os itens = cancelar (outra rota).
+// O que o pedido já reservou (vagas de promoção e unidades do Fecha Mês):
+// na mudança (e na prévia dela) conta como livre para ele mesmo.
+async function reservasDoPedido(pedidoId) {
+  const r = (await db.query(
+    'SELECT promocao_id, fecha_mes_produto_id, quantidade FROM loja_pedido_itens WHERE pedido_id = $1', [pedidoId]
+  )).rows;
+  return {
+    promocoes: [...new Set(r.filter(i => i.promocao_id).map(i => i.promocao_id))],
+    fm: r.filter(i => i.fecha_mes_produto_id).reduce((m, i) => ({ ...m, [i.fecha_mes_produto_id]: (m[i.fecha_mes_produto_id] || 0) + i.quantidade }), {}),
+  };
+}
+
+// entrada: { itens, total_visto? }
+async function mudarItens(associado, pedidoId, entrada, { qa = false } = {}) {
+  const atual = (await db.query('SELECT * FROM loja_pedidos WHERE id = $1 AND associado_id = $2', [pedidoId, associado.id])).rows[0];
+  if (!atual) throw new ErroPedido(404, 'NAO_ENCONTRADO', 'Pedido não encontrado.');
+  const naoDaMais = (status) => (['aceito', 'pago_saiu'].includes(status)
+    ? new ErroPedido(409, 'JA_ACEITO', 'A loja já aceitou o pedido. Para acrescentar um item, peça um complemento.', { status })
+    : new ErroPedido(409, 'STATUS_MUDOU', 'Esse pedido não pode mais ser mudado.', { status }));
+  if (atual.status !== 'enviado') throw naoDaMais(atual.status);
+  if (atual.alteracoes >= MAX_MUDANCAS_PEDIDO) {
+    throw new ErroPedido(409, 'MUDANCAS_DEMAIS', `Esse pedido já foi mudado ${MAX_MUDANCAS_PEDIDO} vezes. Cancele e faça um novo, se precisar.`);
+  }
+  const prazoEsgotado = () => new ErroPedido(409, 'PRAZO_ESGOTADO', `Passaram os ${PRAZO_RESPOSTA_MIN} minutos da loja: esse pedido não pode mais ser mudado.`);
+  const devolver = await reservasDoPedido(pedidoId);
+  const { catalogo, resumo } = await cotar(associado, { itens: entrada?.itens, modo_recebimento: atual.modo_recebimento }, { qa, devolver });
+  if (resumo.loja.id !== atual.parceiro_id || catalogo !== atual.catalogo) {
+    throw new ErroPedido(400, 'OUTRA_LOJA', 'Só dá para pôr produtos da mesma loja do pedido.');
+  }
+  if (entrada?.total_visto != null && dinheiro(entrada.total_visto) !== resumo.total) {
+    throw new ErroPedido(409, 'PRECO_MUDOU', 'O preço mudou. Confira o novo total e salve de novo.', { resumo, total_visto: dinheiro(entrada.total_visto) });
+  }
+  const pedido = await db.transacao(async (client) => {
+    const travado = (await client.query(
+      `SELECT status, created_at > NOW() - make_interval(mins => ${PRAZO_RESPOSTA_MIN}) AS no_prazo FROM loja_pedidos WHERE id = $1 FOR UPDATE`,
+      [pedidoId]
+    )).rows[0];
+    if (travado.status !== 'enviado') throw naoDaMais(travado.status);
+    if (!travado.no_prazo) throw prazoEsgotado();
+    await devolverReservas(client, pedidoId);
+    await client.query('DELETE FROM loja_pedido_itens WHERE pedido_id = $1', [pedidoId]);
+    await reservar(client, resumo.itens);
+    await inserirItens(client, pedidoId, resumo.itens);
+    return (await client.query(
+      `UPDATE loja_pedidos SET subtotal = $2, valor_entrega = $3, total = $4, entrega_dispensada_clube = $5,
+         alterado_em = NOW(), alteracoes = alteracoes + 1, updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [pedidoId, resumo.subtotal, resumo.valor_entrega, resumo.total, resumo.entrega_dispensada_clube]
+    )).rows[0];
+  });
+  // Depois do COMMIT: a loja fica sabendo (WhatsApp nos dois números e o celular)
+  await pedidoAvisos.avisarMudancaItens(pedido);
+  return { pedido };
+}
+
+// B1: "Adicionar produto desta loja" — o que o cliente pode pôr no pedido
+// agora, com o preço dele (Clube, Fecha Mês). Mesmo catálogo do pedido.
+const MAX_PRODUTOS_PARA_ACRESCENTAR = 80;
+async function produtosParaAcrescentar(associado, pedidoId) {
+  const p = (await db.query('SELECT * FROM loja_pedidos WHERE id = $1 AND associado_id = $2', [pedidoId, associado.id])).rows[0];
+  if (!p) throw new ErroPedido(404, 'NAO_ENCONTRADO', 'Pedido não encontrado.');
+  const ctx = await contextoPreco(associado);
+  const tipo = p.catalogo === 'beer' ? 'beer' : 'produto';
+  const ids = (await db.query(
+    tipo === 'beer'
+      ? `SELECT id FROM beer_produtos WHERE estabelecimento_id = $1 AND status = 'aprovado' AND disponivel ORDER BY nome LIMIT ${MAX_PRODUTOS_PARA_ACRESCENTAR}`
+      : `SELECT id FROM sindicato_parceiro_produtos WHERE parceiro_id = $1 AND ativo AND NOT rascunho AND moderacao_status = 'aprovado' AND estoque_disponivel
+         ORDER BY nome LIMIT ${MAX_PRODUTOS_PARA_ACRESCENTAR}`,
+    [tipo === 'beer' ? p.beer_estabelecimento_id : p.parceiro_id]
+  )).rows.map(r => r.id);
+  const produtos = [];
+  for (const id of ids) {
+    try {
+      const i = await resolverItem({ tipo, id }, ctx);
+      produtos.push({ tipo, id, nome: i.nome, foto_url: i.foto_url, tipo_preco: i.tipo_preco, preco_unitario: i.preco_unitario, preco_cheio: i.preco_cheio });
+    } catch { /* indisponível agora: fica de fora */ }
+  }
+  return produtos;
 }
 
 // ── Mudança de status ──────────────────────────────────────────────────
@@ -613,22 +731,7 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
   const devolveVaga = ['recusado', 'expirado', 'cancelado'].includes(regra.para);
   const pedido = await db.transacao(async (client) => {
     const r = await client.query(`UPDATE loja_pedidos SET ${sets.join(', ')} WHERE ${filtros.join(' AND ')} RETURNING *`, params);
-    if (r.rows[0] && devolveVaga) {
-      // Devolve a vaga reservada das promoções do pedido (1 por pedido).
-      await client.query(
-        `UPDATE sindicato_parceiro_promocoes SET usos_atuais = GREATEST(usos_atuais - 1, 0)
-         WHERE id IN (SELECT DISTINCT promocao_id FROM loja_pedido_itens WHERE pedido_id = $1 AND promocao_id IS NOT NULL)`,
-        [pedidoId]
-      );
-      // Devolve as unidades do Fecha Mês reservadas pelo pedido (f5).
-      await client.query(
-        `UPDATE sindicato_fecha_mes_produtos fmp SET estoque_vendido = GREATEST(fmp.estoque_vendido - i.qtd, 0)
-         FROM (SELECT fecha_mes_produto_id, SUM(quantidade)::int AS qtd FROM loja_pedido_itens
-               WHERE pedido_id = $1 AND fecha_mes_produto_id IS NOT NULL GROUP BY 1) i
-         WHERE fmp.id = i.fecha_mes_produto_id`,
-        [pedidoId]
-      );
-    }
+    if (r.rows[0] && devolveVaga) await devolverReservas(client, pedidoId);
     return r.rows[0] || null;
   });
   // Depois do COMMIT: aviso pro cliente (só nas mudanças que avisam).
@@ -651,5 +754,5 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
 
 module.exports = {
   ErroPedido, edicaoFechaMesDeHoje, carregarLoja, motivoLojaNaoVende, modosDisponiveis, taxaEntrega, resumoLoja, whatsappDaLoja,
-  resolverItem, disponibilidade, lojasVendendo, cotar, criarPedido, transicionar, gerarTokenLoja,
+  resolverItem, disponibilidade, lojasVendendo, cotar, criarPedido, mudarItens, reservasDoPedido, produtosParaAcrescentar, transicionar, gerarTokenLoja,
 };

@@ -19,6 +19,9 @@ const STATUS_NAO_PAGOS = ['enviado', 'aceito'];
 const MAX_QUANTIDADE_PROMOCAO = 1;
 const MAX_ITENS_DIFERENTES = 30;
 const MAX_QUANTIDADE_ITEM = 99;
+// B1: quantas vezes o cliente pode mudar os itens antes da loja responder
+// (cada mudança manda WhatsApp para a loja)
+const MAX_MUDANCAS_PEDIDO = 5;
 
 const STATUS_ABERTOS = ['enviado', 'aceito', 'pago_saiu'];
 const STATUS_ENCERRADOS = ['entregue', 'recusado', 'cancelado', 'expirado'];
@@ -70,6 +73,6 @@ function pedidosSiteLiberado(parceiro) {
 module.exports = {
   pedidosSiteLiberado,
   PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, LEMBRETE_PIX_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN, LINK_LOJA_HORAS_APOS_FIM,
-  MAX_PEDIDOS_ABERTOS, STATUS_NAO_PAGOS, MAX_QUANTIDADE_PROMOCAO, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM,
+  MAX_PEDIDOS_ABERTOS, STATUS_NAO_PAGOS, MAX_QUANTIDADE_PROMOCAO, MAX_ITENS_DIFERENTES, MAX_QUANTIDADE_ITEM, MAX_MUDANCAS_PEDIDO,
   STATUS_ABERTOS, STATUS_ENCERRADOS, TRANSICOES, rotuloStatus,
 };
