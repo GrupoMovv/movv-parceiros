@@ -8,8 +8,21 @@ import { abrirSessao } from './abrirSessao';
 import { CascaAcesso, Cartao, Campo, InputSenha, BotaoPrimario, BotaoWhatsapp, Aviso } from './AcessoUi';
 
 // Só aceita voltar pra uma rota interna (nada de ?voltar=https://outro-site).
+// Começa com uma barra, sem "//", sem barra invertida (o navegador lê "/\"
+// como "//" e o React Router 6 não barra isso) e sem espaço ou caractere de
+// controle (o navegador apaga tab/quebra de linha e "/<tab>/site" vira
+// "//site"). Por fim, resolvido, tem que continuar no próprio site.
+const DESTINO_PADRAO = '/marketplace';
 export function destinoSeguro(voltar) {
-  return typeof voltar === 'string' && voltar.startsWith('/') && !voltar.startsWith('//') ? voltar : '/marketplace';
+  if (typeof voltar !== 'string' || !voltar.startsWith('/') || voltar.startsWith('//')) return DESTINO_PADRAO;
+  if (/[\\\s\u0000-\u001f\u007f]/.test(voltar)) return DESTINO_PADRAO;
+  try {
+    const url = new URL(voltar, window.location.origin);
+    if (url.origin !== window.location.origin || url.pathname.startsWith('//')) return DESTINO_PADRAO;
+  } catch {
+    return DESTINO_PADRAO;
+  }
+  return voltar;
 }
 
 function identificadorValido(v) {
