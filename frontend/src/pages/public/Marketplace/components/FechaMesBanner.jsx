@@ -30,7 +30,8 @@ function useContagemRegressiva(terminaEm, desvio = 0) {
 export default function FechaMesBanner({ info }) {
   const contagem = useContagemRegressiva(info?.ativo_hoje ? info.termina_em : null, info?.desvio);
 
-  if (!info || !info.habilitado_globalmente) return null;
+  // sem nenhum produto no evento, nem faixa nem contagem (regra de 30/10/2026)
+  if (!info || !info.habilitado_globalmente || !info.tem_produtos) return null;
 
   if (info.ativo_hoje) {
     return (

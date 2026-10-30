@@ -13,11 +13,26 @@ async function resolverEstado() {
   return { habilitado, evento, ativoHoje };
 }
 
+// Produtos do evento que o público vê: confirmados, de produto ativo e
+// aprovado (ou bônus), de loja visível. A mesma regra serve à vitrine e à
+// pergunta "tem produto?" da faixa, para as duas nunca discordarem.
+const FROM_VISIVEIS = (modoQa) => `
+       FROM sindicato_fecha_mes_produtos fmp
+       LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = fmp.produto_id
+       JOIN sindicato_parceiros pa ON pa.id = fmp.parceiro_id
+       WHERE fmp.fecha_mes_id = $1 AND fmp.status = 'confirmado'
+         AND (fmp.e_produto_bonus = true OR (pr.ativo = true AND pr.moderacao_status = 'aprovado')) AND ${lojaVisivel(modoQa)}`;
+
 async function getProximo(req, res) {
   try {
     const { habilitado, evento, ativoHoje } = await resolverEstado();
+    // Regra do Junior (30/10/2026): faixa, slide e contagem só aparecem com
+    // pelo menos 1 produto no evento (o de 30/10 abriu vazio, com a faixa
+    // prometendo descontos).
+    const temProdutos = (await db.query(`SELECT EXISTS (SELECT 1 ${FROM_VISIVEIS(req.modoQa)}) AS tem`, [evento.id])).rows[0].tem;
     return res.json({
       habilitado_globalmente: habilitado,
+      tem_produtos: temProdutos,
       data_evento: evento.data_evento,
       dias_restantes: diasAte(evento.data_evento),
       ativo_hoje: ativoHoje,
@@ -69,12 +84,7 @@ async function getProdutos(req, res) {
               CASE WHEN fmp.e_produto_bonus
                 THEN jsonb_build_array(jsonb_build_object('url', fmp.bonus_foto_url))
                 ELSE pr.fotos END AS fotos,
-              pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.plano
-       FROM sindicato_fecha_mes_produtos fmp
-       LEFT JOIN sindicato_parceiro_produtos pr ON pr.id = fmp.produto_id
-       JOIN sindicato_parceiros pa ON pa.id = fmp.parceiro_id
-       WHERE fmp.fecha_mes_id = $1 AND fmp.status = 'confirmado'
-         AND (fmp.e_produto_bonus = true OR (pr.ativo = true AND pr.moderacao_status = 'aprovado')) AND ${lojaVisivel(req.modoQa)}
+              pa.nome AS parceiro_nome, pa.slug AS parceiro_slug, pa.plano${FROM_VISIVEIS(req.modoQa)}
        ORDER BY esgotado, pa.plano = 'master' DESC, desconto_pct DESC`,
       [evento.id]
     );

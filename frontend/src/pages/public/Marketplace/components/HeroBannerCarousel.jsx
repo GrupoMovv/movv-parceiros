@@ -65,8 +65,9 @@ export default function HeroBannerCarousel({ fechaMesInfo }) {
   // si — aí quem assume é o banner full-width do topo, ver
   // FechaMesBanner/Marketplace.jsx). Nos últimos 3 dias vira o slide
   // principal (posição 1); antes disso fica na posição 7 (depois do Entregador).
+  // Sem nenhum produto no evento, não aparece (tem_produtos, regra de 30/10).
   const diasRestantes = fechaMesInfo?.dias_restantes;
-  const mostrarFechaMes = fechaMesInfo?.habilitado_globalmente && !fechaMesInfo?.ativo_hoje
+  const mostrarFechaMes = fechaMesInfo?.habilitado_globalmente && fechaMesInfo?.tem_produtos && !fechaMesInfo?.ativo_hoje
     && diasRestantes != null && diasRestantes > 0 && diasRestantes <= 20;
   const fechaMesEhPrincipal = mostrarFechaMes && diasRestantes <= 3;
   const slideFechaMes = mostrarFechaMes && {

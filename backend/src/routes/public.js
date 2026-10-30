@@ -151,7 +151,7 @@ router.get('/vendedor/:codigo', qa, require('../controllers/lojaVendedoresContro
 router.get('/parceiros/master-por-categoria', marketplaceHomeCtrl.getMasterPorCategoria);
 router.get('/cupons/disponiveis', marketplaceHomeCtrl.getCuponsDisponiveis);
 
-router.get('/fecha-mes/proximo', fechaMesCtrl.getProximo);
+router.get('/fecha-mes/proximo', qa, fechaMesCtrl.getProximo);
 router.get('/fecha-mes/ativo', fechaMesCtrl.getAtivo);
 router.get('/fecha-mes/produtos', qa, fechaMesCtrl.getProdutos);
 
