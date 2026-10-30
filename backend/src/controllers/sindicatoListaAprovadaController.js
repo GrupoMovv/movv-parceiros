@@ -1,4 +1,4 @@
-const XLSX = require('xlsx');
+const { lerLinhasPlanilha } = require('../utils/lerPlanilha');
 const db = require('../config/database');
 const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 
@@ -166,7 +166,8 @@ function sugerirMapeamento(headers) {
   return sugestao;
 }
 
-// Lê a planilha (XLSX ou CSV — a lib detecta sozinha pelo conteúdo) e devolve
+// Lê a planilha (xlsx, xls ou CSV em UTF-8 com ou sem BOM, ou Latin-1 — a
+// mesma leitura da Base SECI) e devolve
 // TODAS as linhas já como array de arrays, pro front mostrar um preview e
 // deixar o admin ajustar o mapeamento de colunas antes de confirmar — nada
 // é gravado no banco nesse passo.
@@ -174,9 +175,7 @@ async function importarPreview(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'Envie um arquivo CSV ou XLSX' });
 
-    const wb = XLSX.read(req.file.buffer, { type: 'buffer', raw: true });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const linhas = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null })
+    const linhas = lerLinhasPlanilha(req.file.buffer)
       .filter(linha => linha.some(c => c !== null && String(c).trim() !== ''));
 
     if (linhas.length === 0) return res.status(400).json({ error: 'Planilha vazia' });

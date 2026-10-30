@@ -11,6 +11,7 @@
 // do título, ex. JULHO pago em agosto) é ignorada de propósito: o que
 // interessa pra "em dia" é QUANDO o dinheiro entrou.
 const XLSX = require('xlsx');
+const { lerLinhasPlanilha } = require('../utils/lerPlanilha');
 
 const ALIASES = {
   nome:          ['nomecompletorazaosocial', 'razaosocial', 'nomecompleto', 'nome'],
@@ -91,24 +92,6 @@ function mesDaData(v) {
   return m ? chaveMes(m[3], m[2]) : null;
 }
 
-// xlsx (zip "PK") e xls (OLE) vão direto pro SheetJS; o resto é tratado como
-// CSV em texto — UTF-8 ou, se vier com caractere quebrado, Latin-1 (padrão
-// do Excel brasileiro ao "salvar como CSV"). raw:true no CSV mantém tudo
-// como texto, sem o SheetJS converter documento em número.
-function lerLinhas(buffer) {
-  const assinatura = buffer.subarray(0, 4).toString('hex');
-  let wb;
-  if (assinatura.startsWith('504b') || assinatura === 'd0cf11e0') {
-    wb = XLSX.read(buffer, { type: 'buffer' });
-  } else {
-    let texto = buffer.toString('utf8');
-    if (texto.includes('\uFFFD')) texto = buffer.toString('latin1');
-    wb = XLSX.read(texto.replace(/^\uFEFF/, ''), { type: 'string', raw: true });
-  }
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
-}
-
 function montarMapaColunas(headerRow) {
   const mapa = {};
   const usados = new Set();
@@ -161,7 +144,8 @@ class MesObrigatorioError extends Error {
  * @param {{ mesInformado?: string }} opts  'YYYY-MM', só usado quando o arquivo não diz o mês
  */
 function parseBaseSeci(buffer, { mesInformado } = {}) {
-  const linhas = lerLinhas(buffer);
+  // mesma leitura da lista aprovada (xlsx, xls e CSV UTF-8/Latin-1)
+  const linhas = lerLinhasPlanilha(buffer);
   const idxCabecalho = acharLinhaCabecalho(linhas);
   if (idxCabecalho === -1) {
     throw new Error('Não encontrei o cabeçalho (colunas "CPF/CNPJ" e "Nome Completo/Razão Social" ou "Valor Pago"). Confira se é o Relatório de Recebimentos do Higestor.');
