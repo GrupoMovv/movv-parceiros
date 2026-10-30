@@ -516,6 +516,22 @@ async function devolverReservas(client, pedidoId) {
   );
 }
 
+// B2: o mesmo, para os itens de um complemento
+async function devolverReservasComplemento(client, complementoId) {
+  await client.query(
+    `UPDATE sindicato_parceiro_promocoes SET usos_atuais = GREATEST(usos_atuais - 1, 0)
+     WHERE id IN (SELECT DISTINCT promocao_id FROM loja_pedido_complemento_itens WHERE complemento_id = $1 AND promocao_id IS NOT NULL)`,
+    [complementoId]
+  );
+  await client.query(
+    `UPDATE sindicato_fecha_mes_produtos fmp SET estoque_vendido = GREATEST(fmp.estoque_vendido - i.qtd, 0)
+     FROM (SELECT fecha_mes_produto_id, SUM(quantidade)::int AS qtd FROM loja_pedido_complemento_itens
+           WHERE complemento_id = $1 AND fecha_mes_produto_id IS NOT NULL GROUP BY 1) i
+     WHERE fmp.id = i.fecha_mes_produto_id`,
+    [complementoId]
+  );
+}
+
 async function inserirItens(client, pedidoId, itens) {
   const gravados = [];
   for (const i of itens) {
@@ -730,8 +746,28 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
 
   const devolveVaga = ['recusado', 'expirado', 'cancelado'].includes(regra.para);
   const pedido = await db.transacao(async (client) => {
+    // B2 (caminho 1): o complemento vai na mesma entrega, então "Pago" do
+    // pedido só depois de o complemento aberto ser respondido e pago.
+    if (regra.para === 'pago_saiu') {
+      const aberto = (await client.query(
+        `SELECT status, total FROM loja_pedido_complementos WHERE pedido_id = $1 AND status IN ('enviado', 'aceito') FOR UPDATE`, [pedidoId]
+      )).rows[0];
+      if (aberto) {
+        throw new ErroPedido(409, 'COMPLEMENTO_ABERTO', aberto.status === 'enviado'
+          ? 'O cliente pediu um complemento. Aceite ou recuse o complemento antes.'
+          : `Falta o Pix do complemento (${Number(aberto.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}). Confirme quando cair, ou cancele o complemento.`);
+      }
+    }
     const r = await client.query(`UPDATE loja_pedidos SET ${sets.join(', ')} WHERE ${filtros.join(' AND ')} RETURNING *`, params);
-    if (r.rows[0] && devolveVaga) await devolverReservas(client, pedidoId);
+    if (r.rows[0] && devolveVaga) {
+      await devolverReservas(client, pedidoId);
+      // pedido encerrado: o complemento aberto cai junto
+      const caidos = (await client.query(
+        `UPDATE loja_pedido_complementos SET status = 'cancelado', encerrado_em = NOW(), encerrado_por = 'sistema'
+         WHERE pedido_id = $1 AND status IN ('enviado', 'aceito') RETURNING id`, [pedidoId]
+      )).rows;
+      for (const c of caidos) await devolverReservasComplemento(client, c.id);
+    }
     return r.rows[0] || null;
   });
   // Depois do COMMIT: aviso pro cliente (só nas mudanças que avisam).
@@ -755,4 +791,5 @@ async function transicionar(pedidoId, ator, acao, { associadoId = null, parceiro
 module.exports = {
   ErroPedido, edicaoFechaMesDeHoje, carregarLoja, motivoLojaNaoVende, modosDisponiveis, taxaEntrega, resumoLoja, whatsappDaLoja,
   resolverItem, disponibilidade, lojasVendendo, cotar, criarPedido, mudarItens, reservasDoPedido, produtosParaAcrescentar, transicionar, gerarTokenLoja,
+  reservar, devolverReservasComplemento, dinheiro,
 };

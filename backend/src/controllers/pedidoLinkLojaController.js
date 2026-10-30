@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const pedidoLoja = require('../services/pedidoLoja');
+const pedidoComplemento = require('../services/pedidoComplemento');
 const { PRAZO_RESPOSTA_MIN, LINK_LOJA_HORAS_APOS_FIM, rotuloStatus } = require('../config/pedidos');
 const { linkWhatsapp } = require('../services/pedidoMensagens');
 
@@ -44,6 +45,7 @@ async function viewLoja(p) {
   )).rows;
   const loja = (await db.query('SELECT nome FROM sindicato_parceiros WHERE id = $1', [p.parceiro_id])).rows[0] || {};
   // Equipe de vendas (e3): quem trouxe o cliente pelo link (null = loja). Só o nome: o WhatsApp do vendedor fica na aba da equipe.
+  const complementos = await pedidoComplemento.complementosDoPedido(p, { paraLoja: true });
   const vendedor = p.vendedor_id ? (await db.query('SELECT nome FROM loja_vendedores WHERE id = $1', [p.vendedor_id])).rows[0]?.nome || null : null;
   return {
     id: p.id, status: p.status, status_texto: rotuloStatus(p.status, p.modo_recebimento),
@@ -63,8 +65,12 @@ async function viewLoja(p) {
     observacao: p.observacao, resposta: p.resposta,
     itens, subtotal: p.subtotal, valor_entrega: p.valor_entrega, total: p.total,
     entrega_gratis_clube: Number(p.entrega_dispensada_clube) > 0,
-    acoes: acoesDisponiveis(p),
+    // B2: "Pago" do pedido só depois de o complemento aberto ser resolvido
+    acoes: acoesDisponiveis(p).filter(a => a !== 'pago_saiu' || !complementos.some(c => ['enviado', 'aceito'].includes(c.status))),
     prazo_esgotado: prazoEsgotado(p),
+    // B2: complementos com as ações da loja, e o total com eles
+    complementos,
+    total_geral: pedidoComplemento.totalGeral(p, complementos),
   };
 }
 
@@ -99,6 +105,22 @@ async function agir(req, res) {
   }
 }
 
+// B2: POST /api/public/pedido-loja/:token/complemento/:acao (aceitar | recusar | pago | cancelar)
+async function agirComplemento(req, res) {
+  try {
+    const p = await buscarPorToken(req.params.token);
+    if (!p) return res.status(404).json({ error: 'Link inválido ou vencido.', code: 'LINK_INVALIDO' });
+    const { aviso } = await pedidoComplemento.agirComplemento(p.id, 'loja', req.params.acao, {
+      parceiroId: p.parceiro_id, resposta: ['recusar', 'cancelar'].includes(req.params.acao) ? req.body?.resposta : undefined,
+    });
+    return res.json(await respostaAcao((await db.query('SELECT * FROM loja_pedidos WHERE id = $1', [p.id])).rows[0], aviso));
+  } catch (err) {
+    if (err instanceof pedidoLoja.ErroPedido) return res.status(err.status).json({ error: err.message, code: err.code, ...err.extra });
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos atualizar o complemento agora.' });
+  }
+}
+
 // Resposta de uma ação da loja (link ou painel): o pedido atualizado e, se o
 // Z-API falhou, o botão manual pra loja avisar o cliente pelo WhatsApp dela.
 async function respostaAcao(pedido, aviso) {
@@ -109,4 +131,4 @@ async function respostaAcao(pedido, aviso) {
   };
 }
 
-module.exports = { ver, agir, buscarPorToken, viewLoja, respostaAcao };
+module.exports = { ver, agir, agirComplemento, buscarPorToken, viewLoja, respostaAcao };

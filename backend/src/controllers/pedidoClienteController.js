@@ -3,6 +3,7 @@ const pedidoLoja = require('../services/pedidoLoja');
 const { rotuloStatus } = require('../config/pedidos');
 const { ipCliente } = require('../utils/ipCliente');
 const pedidoAvisos = require('../services/pedidoAvisos');
+const pedidoComplemento = require('../services/pedidoComplemento');
 const { linkWhatsapp, manualClienteParaLoja } = require('../services/pedidoMensagens');
 const { copiaEColaDoPedido } = require('../utils/pixBrCode');
 
@@ -33,6 +34,7 @@ async function viewCliente(pedido) {
     [pedido.parceiro_id, pedido.catalogo]
   )).rows[0] || {};
   const mostraPix = ['aceito', 'pago_saiu'].includes(pedido.status);
+  const complementos = await pedidoComplemento.complementosDoPedido(pedido, { loja });
   // Z-API não avisou a loja: botão manual pro cliente, só com o número do
   // pedido (o link com token da loja NUNCA aparece pro cliente).
   const avisoFalhou = pedido.status === 'enviado' && await pedidoAvisos.avisoLojaFalhou(pedido.id);
@@ -52,6 +54,10 @@ async function viewCliente(pedido) {
     aviso_loja_falhou: avisoFalhou,
     link_manual_loja: avisoFalhou && loja.whatsapp ? linkWhatsapp(loja.whatsapp, manualClienteParaLoja(pedido)) : null,
     itens,
+    // B2: complementos ("esqueci um item") e o total com eles
+    complementos,
+    total_geral: pedidoComplemento.totalGeral(pedido, complementos),
+    pode_pedir_complemento: pedido.status === 'aceito' && !complementos.some(c => ['enviado', 'aceito'].includes(c.status)),
   };
 }
 
@@ -190,6 +196,29 @@ async function mudarItens(req, res) {
   }
 }
 
+// B2: POST /:id/complementos  { itens, total_visto } — "esqueci um item"
+// depois do aceite, até a loja confirmar o Pix
+async function pedirComplemento(req, res) {
+  try {
+    if (!/^\d+$/.test(String(req.params.id))) return res.status(404).json({ error: 'Pedido não encontrado.' });
+    const { pedido } = await pedidoComplemento.pedirComplemento(req.painelAssociado, Number(req.params.id), req.body, { qa: req.modoQa });
+    return res.status(201).json(await viewCliente((await buscarDoCliente(pedido.id, req.painelAssociado.id))));
+  } catch (err) {
+    return responderErro(res, err, 'Não conseguimos pedir o complemento agora.');
+  }
+}
+
+// B2: POST /:id/complementos/cancelar — enquanto a loja não respondeu
+async function cancelarComplemento(req, res) {
+  try {
+    if (!/^\d+$/.test(String(req.params.id))) return res.status(404).json({ error: 'Pedido não encontrado.' });
+    await pedidoComplemento.agirComplemento(Number(req.params.id), 'cliente', 'cancelar', { associadoId: req.painelAssociado.id });
+    return res.json(await viewCliente((await buscarDoCliente(req.params.id, req.painelAssociado.id))));
+  } catch (err) {
+    return responderErro(res, err, 'Não conseguimos cancelar o complemento agora.');
+  }
+}
+
 // B1: GET /:id/produtos-da-loja — para "Adicionar produto desta loja"
 async function produtosDaLoja(req, res) {
   try {
@@ -218,6 +247,6 @@ async function enderecosRecentes(req, res) {
 }
 
 module.exports = {
-  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes, economiaClube, mudarItens, produtosDaLoja,
+  disponibilidade, lojas, cotacao, criar, listar, detalhe, enderecosRecentes, economiaClube, mudarItens, produtosDaLoja, pedirComplemento, cancelarComplemento,
   cancelar: acao('cancelar'), recebi: acao('recebi'), viewCliente,
 };

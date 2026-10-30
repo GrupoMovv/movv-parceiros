@@ -58,4 +58,15 @@ function copiaEColaDoPedido(p, loja = {}) {
   }
 }
 
-module.exports = { gerarBrCode, crc16, copiaEColaDoPedido };
+// B2: Pix só do valor do complemento, na mesma chave do pedido
+function copiaEColaDoComplemento(p, complemento, loja = {}) {
+  if (!p?.pix_chave) return null;
+  try {
+    const codigo = gerarBrCode({ chave: p.pix_chave, nome: p.pix_nome_recebedor || loja.nome, cidade: loja.cidade, valor: complemento.total, txid: `IUB${p.id}C${complemento.id}` });
+    return codigo && /^[\x20-\x7E]+$/.test(codigo) ? codigo : null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { gerarBrCode, crc16, copiaEColaDoPedido, copiaEColaDoComplemento };

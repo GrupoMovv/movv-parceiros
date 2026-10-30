@@ -7,6 +7,8 @@ import apiPainel from '../../services/apiPainel';
 // servidor recalcula tudo (preço do momento, Clube, Fecha Mês, estoque,
 // promoção) e só grava se a loja ainda não aceitou. Não reinicia os 10
 // minutos da loja. Tirar tudo = cancelar o pedido.
+// modo 'complemento' (B2): depois do aceite, começa vazio e pede itens a
+// mais, que a loja aceita ou recusa; sem taxa de entrega, Pix à parte.
 const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const ROXO = '#5B21B6';
 
@@ -18,8 +20,9 @@ function entradaDoItem(i) {
   return { tipo: 'produto', id: i.produto_id };
 }
 
-export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, aoFechar }) {
-  const [itens, setItens] = useState(() => pedido.itens.map(i => ({ ...entradaDoItem(i), quantidade: i.quantidade, nome: i.nome })));
+export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, aoFechar, modo = 'mudar' }) {
+  const complemento = modo === 'complemento';
+  const [itens, setItens] = useState(() => (complemento ? [] : pedido.itens.map(i => ({ ...entradaDoItem(i), quantidade: i.quantidade, nome: i.nome }))));
   const [cotacao, setCotacao] = useState(null);
   const [erro, setErro] = useState(null);
   const [aviso, setAviso] = useState(null);
@@ -34,14 +37,17 @@ export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, a
     const n = ++pedidoCotacao.current;
     const t = setTimeout(() => {
       apiPainel.post('/public/pedidos/cotacao', {
-        pedido_id: pedido.id, modo_recebimento: pedido.modo_recebimento,
+        ...(complemento ? { modo_recebimento: null } : { pedido_id: pedido.id, modo_recebimento: pedido.modo_recebimento }),
         itens: itens.map(({ tipo, id, quantidade }) => ({ tipo, id, quantidade })),
       })
         .then(r => { if (n === pedidoCotacao.current) { setCotacao(r.data); setErro(null); } })
         .catch(err => { if (n === pedidoCotacao.current) { setCotacao(null); setErro(err.response?.data?.error || 'Não conseguimos calcular agora.'); } });
     }, 350);
     return () => clearTimeout(t);
-  }, [itens, pedido.id, pedido.modo_recebimento]);
+  }, [itens, pedido.id, pedido.modo_recebimento, complemento]);
+
+  // complemento começa pela lista de produtos da loja
+  useEffect(() => { if (complemento) verCatalogo(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function mudarQtd(k, delta) {
     setAviso(null);
@@ -73,18 +79,18 @@ export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, a
   async function salvar() {
     setSalvando(true);
     try {
-      const r = await apiPainel.put(`/public/pedidos/${pedido.id}/itens`, {
-        itens: itens.map(({ tipo, id, quantidade }) => ({ tipo, id, quantidade })),
-        total_visto: cotacao?.total,
-      });
-      toast.success('Pedido mudado! A loja já foi avisada.');
+      const corpo = { itens: itens.map(({ tipo, id, quantidade }) => ({ tipo, id, quantidade })), total_visto: cotacao?.total };
+      const r = complemento
+        ? await apiPainel.post(`/public/pedidos/${pedido.id}/complementos`, corpo)
+        : await apiPainel.put(`/public/pedidos/${pedido.id}/itens`, corpo);
+      toast.success(complemento ? 'Complemento enviado! A loja tem até 10 minutos para responder.' : 'Pedido mudado! A loja já foi avisada.');
       aoSalvar(r.data);
     } catch (err) {
       const d = err.response?.data || {};
       if (d.code === 'PRECO_MUDOU' && d.resumo) {
         setCotacao(d.resumo);
         setAviso(`O preço mudou. O novo total é ${brl(d.resumo.total)}. Confira e salve de novo.`);
-      } else if (['JA_ACEITO', 'STATUS_MUDOU', 'PRAZO_ESGOTADO'].includes(d.code)) {
+      } else if (['JA_ACEITO', 'STATUS_MUDOU', 'PRAZO_ESGOTADO', 'JA_SAIU', 'JA_TEM_COMPLEMENTO', 'AINDA_NAO_ACEITO'].includes(d.code)) {
         toast.error(d.error);
         aoFechar(true);
       } else {
@@ -100,12 +106,18 @@ export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, a
   return (
     <div className="bg-white rounded-2xl border-2 p-5 space-y-4" style={{ borderColor: ROXO }}>
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold" style={{ color: ROXO }}>Mudar itens do pedido #{pedido.id}</h2>
+        <h2 className="text-base font-bold" style={{ color: ROXO }}>{complemento ? `Pedir mais itens no pedido #${pedido.id}` : `Mudar itens do pedido #${pedido.id}`}</h2>
         <button type="button" onClick={() => aoFechar(false)} aria-label="Fechar" className="p-1 text-slate-400"><X className="w-5 h-5" /></button>
       </div>
-      <p className="text-xs text-slate-500">A loja ainda não aceitou. Ela recebe o pedido novo na hora, e o prazo dela continua o mesmo.</p>
+      <p className="text-xs text-slate-500">
+        {complemento
+          ? 'Vai junto com o seu pedido, na mesma entrega, sem nova taxa. A loja aceita ou recusa em até 10 minutos; se aceitar, você paga só estes itens, num Pix à parte.'
+          : 'A loja ainda não aceitou. Ela recebe o pedido novo na hora, e o prazo dela continua o mesmo.'}
+      </p>
 
-      {itens.length === 0 ? (
+      {itens.length === 0 && complemento ? (
+        <p className="text-sm text-slate-500">Escolha abaixo o que faltou.</p>
+      ) : itens.length === 0 ? (
         <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-900">
           Sem nenhum item, o pedido é cancelado.
           <button type="button" onClick={aoCancelarPedido} className="block mt-2 font-bold underline">Cancelar o pedido</button>
@@ -163,10 +175,10 @@ export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, a
           {erro && <p className="text-red-600 font-semibold">{erro}</p>}
           {cotacao && Number(cotacao.valor_entrega) > 0 && <p className="flex justify-between"><span className="text-slate-500">Entrega</span><span>{brl(cotacao.valor_entrega)}</span></p>}
           <p className="flex justify-between font-bold text-base">
-            <span>Novo total</span>
+            <span>{complemento ? 'Valor do complemento' : 'Novo total'}</span>
             <span>{cotacao ? brl(cotacao.total) : <Loader2 className="w-4 h-4 animate-spin inline" />}</span>
           </p>
-          <p className="flex justify-between text-xs text-slate-400"><span>Antes</span><span>{brl(pedido.total)}</span></p>
+          {!complemento && <p className="flex justify-between text-xs text-slate-400"><span>Antes</span><span>{brl(pedido.total)}</span></p>}
         </div>
       )}
       {aviso && <p className="text-sm font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3" role="alert">{aviso}</p>}
@@ -174,7 +186,7 @@ export default function MudarItensPedido({ pedido, aoSalvar, aoCancelarPedido, a
       {itens.length > 0 && (
         <button type="button" onClick={salvar} disabled={salvando || !cotacao || Boolean(erro)}
           className="w-full py-3 rounded-xl font-bold text-white disabled:opacity-50" style={{ backgroundColor: ROXO }}>
-          {salvando ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Salvar mudança${cotacao ? ` · ${brl(cotacao.total)}` : ''}`}
+          {salvando ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `${complemento ? 'Enviar complemento' : 'Salvar mudança'}${cotacao ? ` · ${brl(cotacao.total)}` : ''}`}
         </button>
       )}
     </div>

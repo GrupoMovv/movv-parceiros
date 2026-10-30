@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, Store, Truck, Loader2, ArrowLeft, BellRing, Wifi
 import apiParceiro, { getParceiroToken } from '../../services/apiParceiro';
 import { brl } from '../../components/pedidos/PedidoLojaDetalhe';
 import { useCampainha, INTERVALO_CAMPAINHA_MS } from '../../components/pedidos/campainha';
+import ComplementosLoja from '../../components/pedidos/ComplementosLoja';
 
 // /parceiro/painel/balcao — modo balcão (A4): tela cheia só com os pedidos
 // abertos, para deixar aberta no computador do caixa. Sem o menu do painel.
@@ -54,7 +55,9 @@ export default function Balcao() {
         apiParceiro.get('/parceiro/pedidos', { params: { filtro: 'responder' } }),
         apiParceiro.get('/parceiro/pedidos', { params: { filtro: 'andamento' } }),
       ]);
-      setPedidos([...a.data.pedidos, ...b.data.pedidos]);
+      // um pedido aceito com complemento esperando vem nas duas listas (B2)
+      const todos = [...a.data.pedidos, ...b.data.pedidos];
+      setPedidos(todos.filter((p, i) => todos.findIndex(x => x.id === p.id) === i));
       setProblema(null);
     } catch (err) {
       setProblema(err.response?.status === 401 ? 'login' : 'rede');
@@ -69,10 +72,13 @@ export default function Balcao() {
     return () => { clearInterval(t); clearInterval(relogio); };
   }, [carregar]);
 
-  const esperando = (pedidos || []).filter(p => p.status === 'enviado');
+  // pedido ou complemento (B2) esperando resposta
+  const esperando = (pedidos || []).filter(p => p.status === 'enviado' || p.complementos?.some(c => c.status === 'enviado'));
   // B1: o cliente mudou os itens de um pedido esperando → toca na hora
   const ultimaMudanca = esperando.map(p => p.alterado_em).filter(Boolean).sort().pop() || null;
-  const campainha = useCampainha(esperando.length > 0 && problema !== 'login', ultimaMudanca);
+  // chegou mais um pedido ou complemento esperando: toca na hora, sem esperar os 30 s
+  const quemEspera = esperando.map(p => `${p.id}:${(p.complementos || []).filter(c => c.status === 'enviado').map(c => c.id).join(',')}`).join('|');
+  const campainha = useCampainha(esperando.length > 0 && problema !== 'login', `${quemEspera}|${ultimaMudanca || ''}`);
 
   useEffect(() => {
     const original = document.title;
@@ -128,7 +134,7 @@ export default function Balcao() {
             return (
               <section key={col.id} className="rounded-2xl p-3 sm:p-4 flex flex-col gap-3" style={{ backgroundColor: col.fundo }}>
                 <h2 className="text-lg sm:text-xl font-black flex items-center gap-2" style={{ color: col.cor }}>
-                  {col.id === 'enviado' && lista.length > 0 && <BellRing className="w-6 h-6 animate-pulse" />}
+                  {lista.some(p => p.status === 'enviado' || p.complementos?.some(c => c.status === 'enviado')) && <BellRing className="w-6 h-6 animate-pulse" />}
                   {col.titulo} <span className="ml-auto text-2xl">{lista.length}</span>
                 </h2>
                 {lista.length === 0 && <p className="text-base text-slate-400 py-6 text-center">Nenhum</p>}
@@ -229,6 +235,9 @@ function CartaoBalcao({ p, agora, aoMudar, aoFalharAviso }) {
           </div>
         </div>
       )}
+      {/* B2: complemento do cliente, com Aceitar/Recusar e "Pix do complemento caiu" */}
+      <ComplementosLoja pedido={p} setPedido={() => aoMudar()} grande recarregar={aoMudar}
+        executarComplemento={(acao, corpo) => apiParceiro.post(`/parceiro/pedidos/${p.id}/complemento/${acao}`, corpo).then(r => r.data)} />
       {pode('pago_saiu') && (
         <button type="button" onClick={() => agir('pago_saiu')} disabled={Boolean(agindo)}
           className="mt-3 w-full py-4 rounded-xl text-lg font-black text-white bg-blue-700 hover:bg-blue-800 disabled:opacity-60">

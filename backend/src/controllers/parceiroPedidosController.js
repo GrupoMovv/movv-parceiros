@@ -3,6 +3,7 @@ const { onlyDigits, isValidCPF, isValidCNPJ } = require('../utils/validators');
 const { horarioConfigurado } = require('../config/beer');
 const { carregarLoja, modosDisponiveis, transicionar, ErroPedido } = require('../services/pedidoLoja');
 const { viewLoja, respostaAcao } = require('./pedidoLinkLojaController');
+const pedidoComplemento = require('../services/pedidoComplemento');
 const { pedidosSiteLiberado } = require('../config/pedidos');
 const pedidoAvisos = require('../services/pedidoAvisos');
 const lojaPush = require('../services/lojaPush');
@@ -327,7 +328,9 @@ const FILTROS_PEDIDOS = {
 
 async function contarPedidos(parceiroId) {
   return (await db.query(
-    `SELECT COUNT(*) FILTER (WHERE status = 'enviado')::int AS responder,
+    // B2: complemento esperando resposta também conta como "para responder"
+    `SELECT COUNT(*) FILTER (WHERE status = 'enviado' OR EXISTS (
+              SELECT 1 FROM loja_pedido_complementos c WHERE c.pedido_id = loja_pedidos.id AND c.status = 'enviado'))::int AS responder,
             COUNT(*) FILTER (WHERE status IN ('aceito', 'pago_saiu'))::int AS andamento,
             -- B1: última mudança de itens num pedido esperando (a campainha toca na hora)
             MAX(alterado_em) FILTER (WHERE status = 'enviado') AS mudou_em
@@ -362,9 +365,10 @@ async function listarPedidos(req, res) {
   try {
     const filtro = FILTROS_PEDIDOS[req.query.filtro] ? req.query.filtro : 'responder';
     const r = await db.query(
-      `SELECT * FROM loja_pedidos WHERE parceiro_id = $1 AND status = ANY($2)
+      `SELECT * FROM loja_pedidos WHERE parceiro_id = $1 AND (status = ANY($2)
+         OR ($3 AND EXISTS (SELECT 1 FROM loja_pedido_complementos c WHERE c.pedido_id = loja_pedidos.id AND c.status = 'enviado')))
        ORDER BY ${filtro === 'encerrados' ? 'COALESCE(encerrado_em, created_at) DESC' : 'created_at ASC'} LIMIT 60`,
-      [req.parceiro.id, FILTROS_PEDIDOS[filtro]]
+      [req.parceiro.id, FILTROS_PEDIDOS[filtro], filtro === 'responder']
     );
     const contagem = await contarPedidos(req.parceiro.id);
     const pedidos = [];
@@ -388,6 +392,21 @@ async function verPedido(req, res) {
   }
 }
 
+// B2: POST /:id/complemento/:acao  (aceitar | recusar | pago | cancelar)
+async function agirComplemento(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const { aviso } = await pedidoComplemento.agirComplemento(id, 'loja', req.params.acao, {
+      parceiroId: req.parceiro.id, resposta: ['recusar', 'cancelar'].includes(req.params.acao) ? req.body?.resposta : undefined,
+    });
+    return res.json(await respostaAcao((await db.query('SELECT * FROM loja_pedidos WHERE id = $1', [id])).rows[0], aviso));
+  } catch (err) {
+    if (err instanceof ErroPedido) return res.status(err.status).json({ error: err.message, code: err.code, ...err.extra });
+    console.error(err);
+    return res.status(500).json({ error: 'Não conseguimos atualizar o complemento agora.' });
+  }
+}
+
 // POST /:id/:acao  (aceitar | recusar | pago_saiu | cancelar) — mesmas regras do link sem login
 async function agirPedido(req, res) {
   try {
@@ -408,5 +427,5 @@ async function agirPedido(req, res) {
 
 module.exports = {
   getConfig, salvarConfig, salvarWhatsappExtra, pausar, enviarTeste, pushSituacao, pushInscrever, pushCancelar, pushTeste, normalizarChavePix, requisitos,
-  listarPedidos, contagemPedidos, verPedido, agirPedido,
+  listarPedidos, contagemPedidos, verPedido, agirPedido, agirComplemento,
 };

@@ -59,6 +59,7 @@ export default function PedidosRecebidos() {
           setPedido={setAberto}
           recarregar={() => apiParceiro.get(`/parceiro/pedidos/${aberto.id}`).then(r => setAberto(r.data)).catch(() => {})}
           executar={(acao, corpo) => apiParceiro.post(`/parceiro/pedidos/${aberto.id}/${acao}`, corpo).then(r => { avisarPedidosMudou(); return r.data; })}
+          executarComplemento={(acao, corpo) => apiParceiro.post(`/parceiro/pedidos/${aberto.id}/complemento/${acao}`, corpo).then(r => { avisarPedidosMudou(); return r.data; })}
         />
       </div>
     );
@@ -133,6 +134,10 @@ function CardResumo({ p, onAbrir }) {
         {p.modo_recebimento === 'retirada' ? 'Retirada na loja' : `Entrega · ${p.endereco?.bairro || ''}`}
         {p.aviso_idade && <span className="ml-1 font-semibold text-amber-700">· 18+</span>}
       </p>
+      {/* B2: complemento esperando resposta */}
+      {p.complementos?.some(c => c.status === 'enviado') && (
+        <p className="text-xs font-bold mt-2" style={{ color: '#5B21B6' }}>➕ Complemento esperando você aceitar ou recusar</p>
+      )}
       {p.status === 'enviado' && p.alterado_em && (
         <p className="text-xs font-bold mt-2" style={{ color: '#5B21B6' }}>✏️ O cliente mudou o pedido às {hora(p.alterado_em).slice(-5)}</p>
       )}

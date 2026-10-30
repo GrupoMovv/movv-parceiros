@@ -3,6 +3,7 @@ const pedidoLoja = require('./pedidoLoja');
 const pedidoAvisos = require('./pedidoAvisos');
 const msg = require('./pedidoMensagens');
 const lojaPush = require('./lojaPush');
+const pedidoComplemento = require('./pedidoComplemento');
 const {
   PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, LEMBRETE_PIX_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN,
 } = require('../config/pedidos');
@@ -106,6 +107,21 @@ async function rodarPrazos() {
       }
     }
     resultado[acao] = feitos;
+  }
+  // B2: complemento sem resposta em 10 min expira; o pedido segue normal.
+  // (Não conta para a pausa da A3, que olha só os pedidos.)
+  const complementos = (await db.query(
+    `SELECT id, pedido_id FROM loja_pedido_complementos
+     WHERE status = 'enviado' AND created_at <= NOW() - make_interval(mins => ${PRAZO_RESPOSTA_MIN}) ORDER BY id LIMIT ${LOTE}`
+  )).rows;
+  resultado.complemento_expirado = 0;
+  for (const c of complementos) {
+    try {
+      await pedidoComplemento.agirComplemento(c.pedido_id, 'sistema', 'expirar', { complementoId: c.id });
+      resultado.complemento_expirado++;
+    } catch (err) {
+      if (!(err instanceof pedidoLoja.ErroPedido)) console.error(`[prazos pedidos] complemento #${c.id} falhou:`, err.message);
+    }
   }
   return resultado;
 }

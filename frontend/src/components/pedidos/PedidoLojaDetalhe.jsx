@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Loader2, CheckCircle2, XCircle, Truck, Store, AlertTriangle } from 'lucide-react';
 import { WhatsappLogo } from '@phosphor-icons/react';
+import ComplementosLoja from './ComplementosLoja';
 
 const ROXO = '#5B21B6';
 const PRETO = '#0F172A';
@@ -42,7 +43,7 @@ function linkEntregador(p) {
 // Cancelar com motivo e confirmação depois do pago, entregador). Usado no
 // link sem login (/pedido-loja/:token) e na aba Pedidos do painel — cada um
 // passa o seu `executar(acao, corpo)` (rota com token ou com login).
-export default function PedidoLojaDetalhe({ pedido, setPedido, executar, recarregar }) {
+export default function PedidoLojaDetalhe({ pedido, setPedido, executar, executarComplemento, recarregar }) {
   const [agindo, setAgindo] = useState(null);
   const [motivoAberto, setMotivoAberto] = useState(null); // 'recusar' | 'cancelar'
   const [motivo, setMotivo] = useState('');
@@ -131,6 +132,8 @@ export default function PedidoLojaDetalhe({ pedido, setPedido, executar, recarre
           {pedido.entrega_gratis_clube && <p className="flex justify-between"><span className="text-slate-500">Entrega</span><span className="text-violet-700">grátis (Clube MAIS+)</span></p>}
           <p className="flex justify-between font-bold text-base" style={{ color: PRETO }}><span>Total (Pix para você)</span><span>{brl(pedido.total)}</span></p>
         </div>
+        {/* B2: "esqueci um item" do cliente, depois do aceite */}
+        {executarComplemento && <ComplementosLoja pedido={pedido} setPedido={setPedido} executarComplemento={executarComplemento} recarregar={recarregar} />}
       </Bloco>
 
       <Bloco titulo={retirada ? 'Retirada na loja' : 'Entrega'}>

@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import apiPainel from '../../../services/apiPainel';
 import { COR_STATUS } from './MeusPedidos';
 import MudarItensPedido from '../../../components/pedidos/MudarItensPedido';
+import ComplementosCliente from '../../../components/pedidos/ComplementosCliente';
 
 const NAVY = '#0B1F3A';
 const ROXO = '#5B21B6';
@@ -36,6 +37,7 @@ export default function MeuPedidoDetalhe() {
   const [agindo, setAgindo] = useState(null);
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
   const [mudando, setMudando] = useState(false); // B1
+  const [complementando, setComplementando] = useState(false); // B2
 
   function carregar() {
     apiPainel.get(`/public/pedidos/${id}`).then(r => setP(r.data))
@@ -171,6 +173,22 @@ export default function MeuPedidoDetalhe() {
           className="w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-60" style={{ backgroundColor: '#059669' }}>
           {agindo === 'recebi' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
           {retirada ? 'Já retirei meu pedido' : 'Recebi meu pedido'}
+        </button>
+      )}
+
+      {/* B2: "esqueci um item" depois do aceite, até a loja confirmar o Pix */}
+      <ComplementosCliente pedido={p} setPedido={setP} />
+      {complementando && p.pode_pedir_complemento ? (
+        <MudarItensPedido
+          modo="complemento"
+          pedido={p}
+          aoSalvar={novo => { setP(novo); setComplementando(false); }}
+          aoFechar={recarregar => { setComplementando(false); if (recarregar) carregar(); }}
+        />
+      ) : p.pode_pedir_complemento && (
+        <button type="button" onClick={() => setComplementando(true)}
+          className="w-full py-3 rounded-xl font-bold border-2 border-dashed" style={{ color: ROXO, borderColor: '#C4B5FD' }}>
+          ➕ Esqueci um item: pedir mais
         </button>
       )}
 

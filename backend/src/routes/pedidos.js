@@ -22,6 +22,8 @@ router.post('/', simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 15 }), ctrl.cr
 router.get('/:id', ctrl.detalhe);
 router.get('/:id/produtos-da-loja', ctrl.produtosDaLoja);
 router.put('/:id/itens', simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 20 }), ctrl.mudarItens);
+router.post('/:id/complementos', simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 15 }), ctrl.pedirComplemento);
+router.post('/:id/complementos/cancelar', ctrl.cancelarComplemento);
 router.post('/:id/cancelar', ctrl.cancelar);
 router.post('/:id/recebi', ctrl.recebi);
 

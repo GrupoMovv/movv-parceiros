@@ -32,8 +32,9 @@ export default function PedidoLoja() {
   }
   useEffect(() => { if (token !== 'teste') carregar(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const esperando = pedido?.status === 'enviado';
-  const campainha = useCampainha(esperando, pedido?.alterado_em || null);
+  // pedido ou complemento (B2) esperando a loja responder
+  const esperando = pedido?.status === 'enviado' || Boolean(pedido?.complementos?.some(c => c.status === 'enviado'));
+  const campainha = useCampainha(esperando, `${pedido?.alterado_em || ''}|${(pedido?.complementos || []).filter(c => c.status === 'enviado').map(c => c.id).join(',')}`);
   useEffect(() => {
     if (!esperando) return undefined;
     const t = setInterval(carregar, INTERVALO_CAMPAINHA_MS);
@@ -67,6 +68,7 @@ export default function PedidoLoja() {
         setPedido={setPedido}
         recarregar={carregar}
         executar={(acao, corpo) => api.post(`/public/pedido-loja/${token}/${acao}`, corpo).then(r => r.data)}
+        executarComplemento={(acao, corpo) => api.post(`/public/pedido-loja/${token}/complemento/${acao}`, corpo).then(r => r.data)}
       />
     </Casca>
   );

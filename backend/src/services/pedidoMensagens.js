@@ -75,6 +75,34 @@ function mudouPedidoLoja(p, itens) {
   ].filter(l => l !== null).join('\n');
 }
 
+// B2: complemento ("esqueci um item") de um pedido já aceito.
+function complementoNovoLoja(p, c, itens) {
+  return [
+    `➕ *Complemento do pedido #${p.id}* — o cliente quer mais itens`, '',
+    `Cliente: ${p.cliente_nome}`,
+    linhasItens(itens),
+    `*Valor do complemento: ${brl(c.total)}* (Pix à parte, só deste valor)`,
+    'Vai junto com o pedido, na mesma entrega, sem nova taxa.',
+    '', `👉 Aceite ou recuse em até ${PRAZO_RESPOSTA_MIN} minutos:`, linkLoja(p.token_loja),
+  ].join('\n');
+}
+
+function complementoAceitoCliente(p, c, lojaNome) {
+  return [
+    `✅ *${lojaNome} aceitou o complemento do pedido #${p.id}*`, '',
+    `Pague só o complemento: *${brl(c.total)}*, no mesmo Pix da loja.`,
+    'Vai junto com o seu pedido.',
+    `Pix e detalhes: ${linkMeuPedido(p.id)}`,
+  ].join('\n');
+}
+
+function complementoEncerradoCliente(p, c, lojaNome) {
+  const motivo = c.status === 'recusado' ? `${lojaNome} não pôde aceitar o complemento do pedido #${p.id}.`
+    : c.status === 'expirado' ? `${lojaNome} não respondeu o complemento do pedido #${p.id} em ${PRAZO_RESPOSTA_MIN} minutos.`
+      : `O complemento do pedido #${p.id} foi cancelado pela loja.`;
+  return [motivo, c.resposta ? `Motivo: ${c.resposta}` : null, 'Nenhum valor a mais foi cobrado. O seu pedido continua normal.'].filter(Boolean).join('\n');
+}
+
 // A3: 2 pedidos seguidos passaram dos 10 min sem resposta → loja pausada.
 // Texto aprovado pelo Junior em 30/10/2026 (com a última frase no fim).
 function pausaExpiradosLoja() {
@@ -216,6 +244,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, mudouPedidoLoja, novoPedidoVendedor, lembretePixLoja, pausaExpiradosLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, mudouPedidoLoja, complementoNovoLoja, complementoAceitoCliente, complementoEncerradoCliente, novoPedidoVendedor, lembretePixLoja, pausaExpiradosLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

@@ -7,6 +7,7 @@ router.use(simpleRateLimit({ windowMs: 10 * 60 * 1000, max: 60 }));
 router.use((req, res, next) => { res.set('X-Robots-Tag', 'noindex'); next(); });
 
 router.get('/:token', ctrl.ver);
+router.post('/:token/complemento/:acao', ctrl.agirComplemento);
 router.post('/:token/:acao', ctrl.agir);
 
 module.exports = router;

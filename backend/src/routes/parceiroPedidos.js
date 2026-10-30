@@ -21,6 +21,7 @@ router.post('/push/teste', ctrl.pushTeste);
 router.get('/', ctrl.listarPedidos);
 router.get('/contagem', ctrl.contagemPedidos);
 router.get('/:id(\\d+)', ctrl.verPedido);
+router.post('/:id(\\d+)/complemento/:acao', ctrl.agirComplemento);
 router.post('/:id(\\d+)/:acao', ctrl.agirPedido);
 
 module.exports = router;
