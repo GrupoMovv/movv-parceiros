@@ -205,9 +205,35 @@ Recurso de **plano pago**. Depende do "Pedido pelo site" (botão Comprar) pronto
   ver a ficha e agendar. Para quem não tem pet, o bloco vira convite para
   cadastrar.
 
-## PRAZO 30/10/2026 (próximo Fecha Mês): preço do evento e "Comprar" nos cards de lista
+## PRAZO 27/11/2026 (Fecha Mês de novembro): f3, f2, f6 e o card esgotado
 
-Anotado 05/10/2026. Tem que estar no ar ANTES do Fecha Mês de 30/10 (última sexta do mês).
+Adiado em 30/10/2026 (decisão do Junior): o Fecha Mês de 30/10 rodou com
+f1, f4 e f5 no ar. O que fica para 27/11, nesta ordem:
+
+- **f3, "Comprar" nos cards do evento:** cards da vitrine do Fecha Mês com
+  Comprar (hoje só o bônus tem; o produto do catálogo tem só "Salvar").
+  Também "Tirar dúvida no WhatsApp". Comprar nos cards comuns (fora do
+  evento) só depois do evento, como combinado em 20/10.
+- **f2, preço do evento em todos os cards:** ver a seção abaixo ("Preço do
+  Fecha Mês nos cards").
+- **Ajuste do card esgotado (junto com a f2):** no card da vitrine o selo
+  "FECHA MÊS" fica cortado pelo selo "-40%" (a 360 px aparece "FECHA I");
+  conferir também como o selo "Esgotado" convive com os dois.
+- **f6, teste ponta a ponta com data simulada:** do cadastro da loja (prazo
+  quinta 18:00) ao pedido no dia (preço do evento, estoque que esgota, preço
+  que muda às 23:59:59) e ao lembrete de quinta. Usar os harness do
+  scratchpad (servidor_f5.mjs, teste_f5.mjs, teste_so_imaginari.mjs).
+- **Avisos de novembro:** a trava de 30/10 (`SO_NESTA_EDICAO` em
+  `services/fechaMesAvisos.js`, só a Imaginari e só o lembrete) vale só
+  para 2026-10-30. Em 27/11 o convite de segunda e o lembrete de quinta
+  voltam a ir para todas as lojas ativas que participam. Decidir antes de
+  23/11 se é isso mesmo.
+- **Achado em 30/10:** passado o prazo de quinta 18:00, nem a loja nem o
+  admin conseguem pôr produto no evento (o admin não tem tela para isso).
+  Em 30/10 o evento abriu sem nenhum produto. Decidir se o admin precisa
+  de um jeito de incluir produto depois do prazo.
+
+### Preço do evento e "Comprar" nos cards de lista (anotado 05/10/2026)
 
 - **Preço do Fecha Mês nos cards:** hoje, no dia do evento, o preço do Fecha Mês
   aparece só na vitrine do Fecha Mês e na página do produto. Os cards da página
