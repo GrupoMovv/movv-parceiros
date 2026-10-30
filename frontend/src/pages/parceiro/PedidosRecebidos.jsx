@@ -68,7 +68,12 @@ export default function PedidosRecebidos() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div>
-        <h1 className="text-xl font-bold" style={{ color: PRETO }}>📦 Pedidos</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-xl font-bold" style={{ color: PRETO }}>📦 Pedidos</h1>
+          <Link to="/parceiro/painel/balcao" className="text-sm font-bold px-3 py-2 rounded-xl text-white" style={{ backgroundColor: ROXO }}>
+            🖥️ Modo balcão
+          </Link>
+        </div>
         <p className="text-sm text-slate-500 mt-1">
           Pedidos feitos pelo site. O cliente paga direto no seu Pix. Cada pedido novo também chega no seu WhatsApp com um link que abre aqui.
         </p>

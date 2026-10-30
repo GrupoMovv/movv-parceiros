@@ -128,6 +128,7 @@ import SindicatoClube from './pages/sindicato/Clube/SindicatoClube';
 import ParceiroAgendamentosPet from './pages/parceiro/AgendamentosPet';
 import ParceiroPedidosSite from './pages/parceiro/PedidosSite';
 import ParceiroPedidosRecebidos from './pages/parceiro/PedidosRecebidos';
+import ParceiroBalcao from './pages/parceiro/Balcao';
 import PedidoLoja from './pages/public/PedidoLoja';
 import FinalizarPedido from './pages/public/Pedido/FinalizarPedido';
 import ParceiroFidelidadePet from './pages/parceiro/FidelidadePet';
@@ -384,6 +385,8 @@ export default function App() {
         {/* Portal do Parceiro IUB MAIS */}
         <Route path="/parceiro/login"            element={<Navigate to="/entrar?voltar=/parceiro/painel" replace />} />
         <Route path="/parceiro/redefinir-senha"  element={<ParceiroRedefinirSenha />} />
+        {/* Modo balcão (A4): tela cheia, sem o menu do painel */}
+        <Route path="/parceiro/painel/balcao" element={<ParceiroBalcao />} />
         <Route path="/parceiro/painel" element={<ParceiroPainelLayout />}>
           <Route index               element={<ParceiroDashboard />} />
           <Route path="perfil"       element={<ParceiroPerfil />} />
