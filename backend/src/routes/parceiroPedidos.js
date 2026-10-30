@@ -8,6 +8,7 @@ router.use(authenticateParceiro);
 router.get('/config', ctrl.getConfig);
 router.put('/config', ctrl.salvarConfig);
 router.patch('/config/pausa', ctrl.pausar);
+router.patch('/config/whatsapp-extra', ctrl.salvarWhatsappExtra);
 router.post('/config/teste', ctrl.enviarTeste);
 
 // Aba Pedidos (parte 7)

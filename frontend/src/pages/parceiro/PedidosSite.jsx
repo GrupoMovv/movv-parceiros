@@ -27,6 +27,8 @@ export default function PedidosSite() {
   const [confirmoAceite, setConfirmoAceite] = useState(false);
   const [erroCampo, setErroCampo] = useState({});
   const [testando, setTestando] = useState(false);
+  const [zapExtra, setZapExtra] = useState('');
+  const [salvandoZap, setSalvandoZap] = useState(false);
   const [resultadoTeste, setResultadoTeste] = useState(null);
 
   function aplicar(c) {
@@ -37,6 +39,25 @@ export default function PedidosSite() {
     });
     setConfirmo(false);
     setConfirmoAceite(false);
+    setZapExtra(c.whatsapp_extra || '');
+  }
+
+  // segundo WhatsApp dos avisos (A2): salva sozinho, sem mexer no resto
+  async function salvarZapExtra(valor) {
+    setSalvandoZap(true);
+    try {
+      const res = await apiParceiro.patch('/parceiro/pedidos/config/whatsapp-extra', { whatsapp: valor });
+      setConfig(res.data);
+      setZapExtra(res.data.whatsapp_extra || '');
+      setResultadoTeste(null);
+      toast.success(res.data.whatsapp_extra ? 'Pronto! Os avisos chegam também nesse número.' : 'Número tirado.');
+    } catch (err) {
+      const r = err.response?.data || {};
+      if (r.campo) setErroCampo(x => ({ ...x, [r.campo]: r.error }));
+      toast.error(r.error || 'Erro ao salvar');
+    } finally {
+      setSalvandoZap(false);
+    }
   }
 
   useEffect(() => {
@@ -227,6 +248,24 @@ export default function PedidosSite() {
             <Link to="/parceiro/painel/beer" className="font-semibold underline" style={{ color: ROXO }}>Trocar o número do Disk Bebidas</Link>
           )}
         </p>
+        <div className="mt-4">
+          <Label>Outro WhatsApp que recebe os avisos de pedido (opcional)</Label>
+          <div className="flex gap-2">
+            <input value={zapExtra} onChange={e => { setZapExtra(e.target.value); setErroCampo(x => ({ ...x, whatsapp_extra: null })); }}
+              inputMode="tel" placeholder="(64) 99999-0000" aria-label="Outro WhatsApp para os avisos" className={campoCls} />
+            <button type="button" onClick={() => salvarZapExtra(zapExtra)} disabled={salvandoZap || zapExtra.replace(/\D/g, '') === (config.whatsapp_extra || '')}
+              className="shrink-0 px-4 rounded-xl text-sm font-bold text-white disabled:opacity-40" style={{ backgroundColor: ROXO }}>
+              {salvandoZap ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Ex.: o celular do dono ou do balcão. Pedido novo e lembrete do Pix chegam nos dois números{vendeBeer ? ', também no Disk Bebidas' : ''}.
+            {config.whatsapp_extra && (
+              <> <button type="button" onClick={() => salvarZapExtra('')} disabled={salvandoZap} className="font-semibold underline text-red-600">Tirar este número</button></>
+            )}
+          </p>
+          {erroCampo.whatsapp_extra && <p className="text-xs text-red-600 mt-1">{erroCampo.whatsapp_extra}</p>}
+        </div>
         <ol className="mt-4 space-y-3 text-sm text-slate-700 list-decimal pl-5">
           <li>
             <strong>Salve o número do IUB MAIS+ nos seus contatos</strong>

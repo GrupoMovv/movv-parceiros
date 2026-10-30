@@ -37,19 +37,23 @@ async function registrarEEnviar(pedidoId, tipo, destino, numero, texto) {
   return ok;
 }
 
-// Nome, WhatsApp de aviso (Beer: o do estabelecimento) e endereço da loja.
+// Nome, WhatsApp de aviso (Beer: o do estabelecimento), o segundo WhatsApp de
+// avisos (A2, opcional, vale nos dois catálogos) e endereço da loja.
 async function dadosLoja(pedido) {
   const r = await db.query(
-    `SELECT pa.nome, pa.endereco, pa.bairro, pa.cidade, pa.whatsapp, be.whatsapp AS whatsapp_beer
+    `SELECT pa.nome, pa.endereco, pa.bairro, pa.cidade, pa.whatsapp, pa.pedidos_whatsapp_extra, be.whatsapp AS whatsapp_beer
      FROM sindicato_parceiros pa LEFT JOIN beer_estabelecimentos be ON be.parceiro_id = pa.id
      WHERE pa.id = $1`,
     [pedido.parceiro_id]
   );
   const l = r.rows[0] || {};
+  const whatsapp = String((pedido.catalogo === 'beer' ? l.whatsapp_beer : l.whatsapp) || '').replace(/\D/g, '') || null;
+  const extra = String(l.pedidos_whatsapp_extra || '').replace(/\D/g, '') || null;
   return {
     nome: l.nome || 'Loja',
     cidade: l.cidade || null,
-    whatsapp: String((pedido.catalogo === 'beer' ? l.whatsapp_beer : l.whatsapp) || '').replace(/\D/g, '') || null,
+    whatsapp,
+    whatsapp2: extra && extra !== whatsapp ? extra : null,
     endereco: [l.endereco, l.bairro].filter(Boolean).join(' — ') || null,
   };
 }
@@ -79,6 +83,15 @@ async function avisarAceito(pedido, loja, texto) {
   return ok;
 }
 
+// Aviso à loja: o número principal e, se houver, o segundo (destino 'loja2'),
+// cada um uma vez. true se chegou em pelo menos um; null = já tratado antes.
+async function avisarLoja(pedidoId, tipo, loja, texto) {
+  const principal = await registrarEEnviar(pedidoId, tipo, 'loja', loja.whatsapp, texto);
+  const segundo = loja.whatsapp2 ? await registrarEEnviar(pedidoId, tipo, 'loja2', loja.whatsapp2, texto) : null;
+  if (principal === true || segundo === true) return true;
+  return principal;
+}
+
 async function itensDo(pedidoId) {
   return (await db.query('SELECT nome, quantidade, subtotal FROM loja_pedido_itens WHERE pedido_id = $1 ORDER BY id', [pedidoId])).rows;
 }
@@ -92,7 +105,7 @@ async function avisarNovoPedido(pedido) {
   const vendedor = pedido.vendedor_id
     ? (await db.query('SELECT nome, whatsapp, avisar_whatsapp FROM loja_vendedores WHERE id = $1', [pedido.vendedor_id])).rows[0] || null
     : null;
-  const lojaAvisada = await registrarEEnviar(pedido.id, 'novo', 'loja', loja.whatsapp, msg.novoPedidoLoja(pedido, await itensDo(pedido.id), vendedor?.nome));
+  const lojaAvisada = await avisarLoja(pedido.id, 'novo', loja, msg.novoPedidoLoja(pedido, await itensDo(pedido.id), vendedor?.nome));
   if (vendedor?.avisar_whatsapp) {
     await registrarEEnviar(pedido.id, 'novo', 'vendedor', vendedor.whatsapp, msg.novoPedidoVendedor(pedido, loja.nome));
   }
@@ -130,17 +143,18 @@ async function avisarMudanca(pedido) {
   return { avisado, texto: textoManual };
 }
 
-// O aviso "novo" da loja falhou? (cliente ganha o botão manual, sem link)
+// O aviso "novo" da loja falhou nos dois números? (cliente ganha o botão
+// manual, sem link)
 async function avisoLojaFalhou(pedidoId) {
-  const r = await db.query(`SELECT enviado FROM loja_pedido_avisos WHERE pedido_id = $1 AND tipo = 'novo' AND destino = 'loja'`, [pedidoId]);
-  return r.rows[0] ? !r.rows[0].enviado : false;
+  const r = await db.query(`SELECT enviado FROM loja_pedido_avisos WHERE pedido_id = $1 AND tipo = 'novo' AND destino IN ('loja', 'loja2')`, [pedidoId]);
+  return r.rows.length > 0 && !r.rows.some(a => a.enviado);
 }
 
 // Aceito há 30 min sem "pago" → UM lembrete pra loja (registro 'lembrete_pix'
 // impede repetir, mesmo com a rotina rodando a cada minuto).
 async function lembrarPixLoja(pedido) {
   const loja = await dadosLoja(pedido);
-  return registrarEEnviar(pedido.id, 'lembrete_pix', 'loja', loja.whatsapp, msg.lembretePixLoja(pedido));
+  return avisarLoja(pedido.id, 'lembrete_pix', loja, msg.lembretePixLoja(pedido));
 }
 
-module.exports = { enviar, registrarEEnviar, dadosLoja, avisarNovoPedido, avisarMudanca, avisoLojaFalhou, lembrarPixLoja };
+module.exports = { enviar, registrarEEnviar, dadosLoja, avisarLoja, avisarNovoPedido, avisarMudanca, avisoLojaFalhou, lembrarPixLoja };

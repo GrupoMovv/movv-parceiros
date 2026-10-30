@@ -75,13 +75,14 @@ function mascarar(n) {
   return n.length >= 10 ? `(${n.slice(0, 2)}) *****-${n.slice(-4)}` : n;
 }
 
-// WhatsApps que recebem o aviso de pedido: o da loja (catálogo geral) e o
-// do estabelecimento do Disk Bebidas, sem repetir.
+// WhatsApps que recebem o aviso de pedido: o da loja (catálogo geral), o
+// do estabelecimento do Disk Bebidas e o segundo número (A2), sem repetir.
 function whatsappsAviso(loja) {
   const r = requisitos(loja);
   const nums = [];
   if (r.catalogos.includes('geral')) nums.push(normalizarWhatsapp(loja.whatsapp));
   if (r.catalogos.includes('beer')) nums.push(normalizarWhatsapp(loja.beer?.whatsapp));
+  if (loja.pedidos_whatsapp_extra) nums.push(normalizarWhatsapp(loja.pedidos_whatsapp_extra));
   return [...new Set(nums.filter(n => n.length >= 10))];
 }
 
@@ -93,6 +94,7 @@ function viewConfig(loja) {
     numero_avisos: (process.env.ZAPI_NUMERO_EXIBICAO || '').trim() || null,
     // pra onde vão os avisos de pedido (Disk Bebidas: o WhatsApp do estabelecimento)
     whatsapps_aviso: whatsappsAviso(loja).map(mascarar),
+    whatsapp_extra: loja.pedidos_whatsapp_extra || null,
     ativo: loja.pedidos_site_ativo,
     pausado: loja.pedidos_pausados,
     aceite_automatico: loja.pedidos_aceite_automatico,
@@ -183,6 +185,31 @@ async function salvarConfig(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao salvar a configuração de pedidos' });
+  }
+}
+
+// PATCH /config/whatsapp-extra  { whatsapp } — segundo número dos avisos de
+// pedido (A2). Vazio tira. Não precisa religar nem reconfirmar a loja.
+async function salvarWhatsappExtra(req, res) {
+  try {
+    const bruto = String(req.body?.whatsapp ?? '').trim();
+    let numero = null;
+    if (bruto) {
+      numero = normalizarWhatsapp(bruto);
+      if (!/^[1-9]\d{9,10}$/.test(numero)) {
+        return res.status(400).json({ error: 'WhatsApp inválido. Use o DDD e o número, ex.: (64) 99999-0000.', campo: 'whatsapp_extra' });
+      }
+      const loja = await carregarLojaPainel(req.parceiro.id);
+      const principais = [loja.whatsapp, loja.beer?.whatsapp].map(normalizarWhatsapp);
+      if (principais.includes(numero)) {
+        return res.status(400).json({ error: 'Esse número já recebe os avisos. Coloque um número diferente.', campo: 'whatsapp_extra' });
+      }
+    }
+    await db.query('UPDATE sindicato_parceiros SET pedidos_whatsapp_extra = $1, updated_at = NOW() WHERE id = $2', [numero, req.parceiro.id]);
+    return res.json(viewConfig(await carregarLojaPainel(req.parceiro.id)));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao salvar o WhatsApp' });
   }
 }
 
@@ -304,6 +331,6 @@ async function agirPedido(req, res) {
 }
 
 module.exports = {
-  getConfig, salvarConfig, pausar, enviarTeste, normalizarChavePix, requisitos,
+  getConfig, salvarConfig, salvarWhatsappExtra, pausar, enviarTeste, normalizarChavePix, requisitos,
   listarPedidos, contagemPedidos, verPedido, agirPedido,
 };
