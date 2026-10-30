@@ -103,6 +103,13 @@ function taxaEntrega(loja, subtotal) {
   return dinheiro(taxa);
 }
 
+// Aceite automático só no catálogo geral. Pedido do Disk Bebidas sempre
+// chega para a loja aceitar: é aí que ela confirma que tem o produto, antes
+// do cliente pagar (decisão de 30/10/2026).
+function aceiteAutomatico(loja, catalogo) {
+  return catalogo !== 'beer' && Boolean(loja.pedidos_aceite_automatico);
+}
+
 // O que o cliente vê da loja no Finalizar pedido (área/bairros informados —
 // sem bloqueio por área na V1: a loja recusa se for fora).
 function resumoLoja(loja, catalogo) {
@@ -114,7 +121,7 @@ function resumoLoja(loja, catalogo) {
     raio_entrega_km: catalogo === 'beer' ? null : (Number(loja.raio_entrega_km) || null),
     bairros_entrega: catalogo === 'beer' ? (loja.beer?.bairros_entrega || []) : [],
     tempo_min: catalogo === 'beer' ? (loja.beer?.tempo_entrega_min || null) : (loja.tempo_preparo_min || null),
-    aceite_automatico: Boolean(loja.pedidos_aceite_automatico),
+    aceite_automatico: aceiteAutomatico(loja, catalogo),
   };
 }
 
@@ -481,7 +488,7 @@ async function criarPedido(associado, entrada, { qa = false, ip = null, userAgen
   }
   if (catalogo === 'beer') await conferirIdadeBeer(associado, entrada, ip, userAgent);
 
-  const automatico = Boolean(loja.pedidos_aceite_automatico);
+  const automatico = aceiteAutomatico(loja, catalogo);
   // Equipe de vendas (e2): o vendedor que trouxe o cliente pelo link dele
   const vendedorId = await vendedorDoPedido(loja.id, entrada?.vendedores);
   let criado;

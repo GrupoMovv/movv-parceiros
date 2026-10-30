@@ -121,7 +121,7 @@ async function getConfig(req, res) {
   }
 }
 
-// PUT /config  { ativo, pix_tipo, pix_chave, pix_nome_recebedor, aceite_automatico, confirmo_configuracao }
+// PUT /config  { ativo, pix_tipo, pix_chave, pix_nome_recebedor, aceite_automatico, confirmo_aceite_automatico, confirmo_configuracao }
 // Ligar (ou continuar ligado mudando Pix) sempre com confirmo_configuracao = true.
 async function salvarConfig(req, res) {
   try {
@@ -140,6 +140,18 @@ async function salvarConfig(req, res) {
         return res.status(400).json({ error: 'Nome de quem recebe o Pix: de 2 a 25 letras, igual aparece no banco.', campo: 'pix_nome_recebedor' });
       }
       pix = { tipo: b.pix_tipo, chave, nome };
+    }
+
+    // Aceite automático: não vale no Disk Bebidas (pedidoLoja.aceiteAutomatico),
+    // então loja só de Disk Bebidas nem liga. Ligar pede a confirmação do texto.
+    if (aceite) {
+      const { catalogos } = requisitos(loja);
+      if (catalogos.length > 0 && !catalogos.includes('geral')) {
+        return res.status(400).json({ error: 'No Disk Bebidas o pedido sempre chega para você aceitar.', campo: 'aceite_automatico' });
+      }
+      if (!loja.pedidos_aceite_automatico && b.confirmo_aceite_automatico !== true) {
+        return res.status(400).json({ error: 'Para ligar o aceite automático, marque que você está de acordo.', campo: 'confirmo_aceite_automatico' });
+      }
     }
 
     if (ativo) {

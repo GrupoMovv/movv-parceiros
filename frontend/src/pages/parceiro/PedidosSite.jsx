@@ -24,6 +24,7 @@ export default function PedidosSite() {
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState({ pix_tipo: 'cnpj', pix_chave: '', pix_nome_recebedor: '', aceite_automatico: false });
   const [confirmo, setConfirmo] = useState(false);
+  const [confirmoAceite, setConfirmoAceite] = useState(false);
   const [erroCampo, setErroCampo] = useState({});
   const [testando, setTestando] = useState(false);
   const [resultadoTeste, setResultadoTeste] = useState(null);
@@ -35,6 +36,7 @@ export default function PedidosSite() {
       aceite_automatico: Boolean(c.aceite_automatico),
     });
     setConfirmo(false);
+    setConfirmoAceite(false);
   }
 
   useEffect(() => {
@@ -51,7 +53,10 @@ export default function PedidosSite() {
     setSalvando(true);
     setErroCampo({});
     try {
-      const res = await apiParceiro.put('/parceiro/pedidos/config', { ...form, ativo, confirmo_configuracao: confirmo });
+      const res = await apiParceiro.put('/parceiro/pedidos/config', {
+        ...form, aceite_automatico: form.aceite_automatico && vendeGeral, ativo,
+        confirmo_configuracao: confirmo, confirmo_aceite_automatico: confirmoAceite,
+      });
       aplicar(res.data);
       toast.success(ativo ? (config.ativo ? 'Configuração salva!' : 'Pronto! Sua loja já recebe pedidos pelo site.') : 'Pedidos pelo site desligados.');
     } catch (err) {
@@ -88,6 +93,11 @@ export default function PedidosSite() {
       setSalvando(false);
     }
   }
+
+  // aceite automático não vale no Disk Bebidas: loja só de Disk Bebidas nem vê a caixa
+  const vendeGeral = !config || config.catalogos.length === 0 || config.catalogos.includes('geral');
+  const vendeBeer = Boolean(config?.catalogos.includes('beer'));
+  const ligandoAceite = form.aceite_automatico && !config?.aceite_automatico;
 
   if (!config) {
     return <div className="flex justify-center py-24"><Loader2 className="w-6 h-6 animate-spin" style={{ color: ROXO }} /></div>;
@@ -166,16 +176,43 @@ export default function PedidosSite() {
       </Secao>
 
       <Secao titulo="Aceite dos pedidos">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" checked={form.aceite_automatico} onChange={e => campo('aceite_automatico', e.target.checked)} className="rounded mt-1" />
-          <span>
-            <span className="block text-sm font-semibold" style={{ color: PRETO }}>Aceitar pedidos automaticamente</span>
-            <span className="block text-xs text-slate-500 mt-0.5">
-              Ligado: o cliente já recebe sua chave Pix na hora, e você só confirma quando o Pix cair e o pedido sair.
-              Desligado: você tem 10 minutos para aceitar ou recusar cada pedido, senão ele expira.
-            </span>
-          </span>
-        </label>
+        {vendeGeral ? (
+          <>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={form.aceite_automatico}
+                onChange={e => { campo('aceite_automatico', e.target.checked); setConfirmoAceite(false); }} className="rounded mt-1" />
+              <span>
+                <span className="block text-sm font-semibold" style={{ color: PRETO }}>Aceitar pedidos automaticamente</span>
+                <span className="block text-xs text-slate-500 mt-0.5">
+                  Ligado: o cliente já recebe sua chave Pix na hora, e você só confirma quando o Pix cair e o pedido sair.
+                  Desligado: você tem 10 minutos para aceitar ou recusar cada pedido, senão ele expira.
+                </span>
+              </span>
+            </label>
+            {ligandoAceite && (
+              <label className="flex items-start gap-3 cursor-pointer mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <input type="checkbox" checked={confirmoAceite}
+                  onChange={e => { setConfirmoAceite(e.target.checked); setErroCampo(x => ({ ...x, confirmo_aceite_automatico: null })); }}
+                  aria-label="Estou de acordo com o aceite automático" className="rounded mt-1" />
+                <span className="text-sm text-amber-900">
+                  Pedido aceito sozinho: o cliente paga na hora. Se faltar produto, a devolução do Pix é com a sua loja.
+                  {erroCampo.confirmo_aceite_automatico && <span className="block text-xs text-red-600 mt-1">{erroCampo.confirmo_aceite_automatico}</span>}
+                </span>
+              </label>
+            )}
+            {vendeBeer && (
+              <p className="text-xs text-slate-500 mt-3">
+                Vale só para os produtos da loja. Pedido do Disk Bebidas sempre chega para você aceitar, porque é na hora
+                de aceitar que você confirma que tem o produto.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-slate-600">
+            No Disk Bebidas o pedido sempre chega para você aceitar ou recusar em até 10 minutos, porque é na hora de
+            aceitar que você confirma que tem o produto. Só depois o cliente recebe a chave Pix.
+          </p>
+        )}
       </Secao>
 
       <Secao titulo="Avisos no WhatsApp" subtitulo="Cada pedido novo chega no WhatsApp com um link que abre o pedido, sem login.">
