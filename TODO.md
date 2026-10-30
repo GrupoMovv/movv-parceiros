@@ -1,5 +1,29 @@
 # TODO
 
+## Segurança: o que ficou do npm audit (anotado 30/10/2026)
+
+Em 30/10 rodamos `npm audit fix` comum nos dois lados e trocamos o xlsx pela
+0.20.3 da SheetJS. O backend ficou com 0 alertas. No frontend sobraram 8, de
+propósito:
+
+- **Vite 8 (fica para depois).** vite 5.4 e esbuild têm alertas que só valem
+  no servidor de desenvolvimento (`npm run dev`), nunca no site no ar. A
+  correção pede vite 8: troca grande (plugins, vite-plugin-pwa, config).
+  Fazer num dia calmo, em commit próprio, com o build, o PWA (instalar,
+  offline, notificação da A5) e a rotina dos menus testados antes do push.
+- **Cadeia do vite-plugin-pwa** (workbox-build, @rollup/plugin-node-resolve,
+  deepmerge; alertas baixos, só no build). O `npm audit fix --force` sugere
+  voltar o vite-plugin-pwa para 0.2.1, o que quebraria o app instalável:
+  não fazer. Resolver junto com o Vite 8.
+- **react-router 6** (moderado): a falha da barra invertida em `navigate` só
+  tem correção no v7. Coberta pelo `destinoSeguro` do login (único lugar
+  que navega para um endereço vindo de fora). Avaliar o v7 junto com o Vite 8.
+
+Achado no teste do xlsx, já acontecia antes da troca: na **lista aprovada**,
+um **CSV salvo em UTF-8 sem BOM** perde os acentos ("Razão" vira "RazÃ£o").
+A Base SECI não tem o problema: ela confere a codificação. Corrigir igual,
+quando der.
+
 ## Política de Privacidade: dados dos vendedores da Equipe de vendas — para o advogado (anotado 19/10/2026)
 
 A loja marca, ao cadastrar o vendedor, que ele autorizou o uso do WhatsApp
