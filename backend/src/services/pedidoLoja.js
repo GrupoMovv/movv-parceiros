@@ -38,7 +38,7 @@ const SELECT_LOJA = `
   pa.id, pa.nome, pa.slug, pa.status, pa.empresa_teste, pa.tipo_pessoa, pa.tipo_negocio, pa.whatsapp,
   pa.horario_funcionamento, pa.delivery_disponivel, pa.retirada_disponivel, pa.taxa_entrega,
   pa.entrega_gratis_acima, pa.raio_entrega_km, pa.tempo_preparo_min,
-  pa.pedidos_site_ativo, pa.pedidos_pausados, pa.pedidos_aceite_automatico, pa.pedidos_confirmado_em,
+  pa.pedidos_site_ativo, pa.pedidos_pausados, pa.pedidos_pausa_motivo, pa.pedidos_aceite_automatico, pa.pedidos_confirmado_em,
   pa.pix_chave, pa.pix_tipo, pa.pix_nome_recebedor, pa.pedidos_whatsapp_extra`;
 
 async function carregarLoja(parceiroId, client = db) {

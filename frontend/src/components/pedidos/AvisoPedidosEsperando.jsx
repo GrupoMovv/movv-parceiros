@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { BellRing, PauseCircle } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
-import { EVENTO_PEDIDOS_MUDOU, INTERVALO_CAMPAINHA_MS } from './campainha';
+import { EVENTO_PEDIDOS_MUDOU, INTERVALO_CAMPAINHA_MS, avisarPedidosMudou } from './campainha';
 
 // Quantos pedidos esperam a loja aceitar ou recusar. Pergunta a cada 30 s, em
 // qualquer aba do painel, e na hora quando um pedido muda (avisarPedidosMudou).
-// Põe "(n) Novo pedido" no título da aba do navegador.
+// Põe "(n) Novo pedido" no título da aba do navegador. Traz também se a loja
+// foi pausada pelo sistema (A3: 2 pedidos seguidos sem resposta).
 export function usePedidosEsperando(ativo) {
   const [esperando, setEsperando] = useState(0);
+  const [pausaMotivo, setPausaMotivo] = useState(null);
 
   useEffect(() => {
-    if (!ativo) { setEsperando(0); return undefined; }
+    if (!ativo) { setEsperando(0); setPausaMotivo(null); return undefined; }
     let vivo = true;
     const contar = () => apiParceiro.get('/parceiro/pedidos/contagem')
-      .then(r => { if (vivo) setEsperando(r.data.responder || 0); })
+      .then(r => { if (vivo) { setEsperando(r.data.responder || 0); setPausaMotivo(r.data.pausa_motivo || null); } })
       .catch(() => {});
     contar();
     const t = setInterval(contar, INTERVALO_CAMPAINHA_MS);
@@ -29,7 +32,38 @@ export function usePedidosEsperando(ativo) {
     return () => { document.title = original; };
   }, [esperando]);
 
-  return esperando;
+  return { esperando, pausaMotivo };
+}
+
+// A3: faixa no topo do painel quando o sistema pausou os pedidos pelo site.
+export function AvisoPausaExpirados({ pausaMotivo }) {
+  const [salvando, setSalvando] = useState(false);
+  if (pausaMotivo !== 'expirados') return null;
+  async function voltar() {
+    setSalvando(true);
+    try {
+      await apiParceiro.patch('/parceiro/pedidos/config/pausa', { pausado: false });
+      toast.success('Pronto! Sua loja voltou a receber pedidos pelo site.');
+      avisarPedidosMudou();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao voltar a receber');
+    } finally {
+      setSalvando(false);
+    }
+  }
+  return (
+    <div className="mb-6 rounded-2xl px-4 py-3 border bg-red-50 border-red-200 flex flex-wrap items-center gap-3" role="status">
+      <PauseCircle className="w-5 h-5 text-red-700 shrink-0" />
+      <p className="text-sm text-red-900 flex-1 min-w-[180px]">
+        <strong>Pedidos pausados: 2 pedidos expiraram sem resposta.</strong>
+        <span className="block text-xs mt-0.5">Os clientes veem só o seu WhatsApp. Volte a receber quando alguém puder responder em até 10 minutos.</span>
+      </p>
+      <button type="button" onClick={voltar} disabled={salvando}
+        className="text-sm font-bold px-3 py-2 rounded-xl text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
+        Voltar a receber
+      </button>
+    </div>
+  );
 }
 
 // Faixa no topo do painel enquanto houver pedido esperando resposta.

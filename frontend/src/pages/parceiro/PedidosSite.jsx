@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2, CheckCircle2, XCircle, PauseCircle, PlayCircle, Send } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
+import { avisarPedidosMudou, EVENTO_PEDIDOS_MUDOU } from '../../components/pedidos/campainha';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { DIAS, textoTaxaEntrega } from '../../utils/iubFood';
 
@@ -64,6 +65,15 @@ export default function PedidosSite() {
     apiParceiro.get('/parceiro/pedidos/config').then(res => aplicar(res.data))
       .catch(() => toast.error('Erro ao carregar a configuração'));
   }, []);
+  // "Voltar a receber" da faixa do topo (A3): atualiza só a pausa, sem
+  // apagar o que a loja estiver digitando no formulário
+  useEffect(() => {
+    const atualizarPausa = () => apiParceiro.get('/parceiro/pedidos/config')
+      .then(res => setConfig(c => (c ? { ...c, pausado: res.data.pausado, pausa_motivo: res.data.pausa_motivo } : c)))
+      .catch(() => {});
+    window.addEventListener(EVENTO_PEDIDOS_MUDOU, atualizarPausa);
+    return () => window.removeEventListener(EVENTO_PEDIDOS_MUDOU, atualizarPausa);
+  }, []);
 
   function campo(nome, valor) {
     setForm(f => ({ ...f, [nome]: valor }));
@@ -108,6 +118,7 @@ export default function PedidosSite() {
       const res = await apiParceiro.patch('/parceiro/pedidos/config/pausa', { pausado: !config.pausado });
       aplicar(res.data);
       toast.success(res.data.pausado ? 'Pedidos pausados. Os clientes veem só o WhatsApp.' : 'Pedidos liberados de novo!');
+      avisarPedidosMudou(); // some a faixa de pausa do topo do painel
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao pausar');
     } finally {
@@ -144,7 +155,8 @@ export default function PedidosSite() {
           <div>
             <p className="font-bold" style={{ color: PRETO }}>{config.pausado ? '⏸️ Pedidos pausados' : '🟢 Recebendo pedidos pelo site'}</p>
             <p className="text-xs text-slate-600 mt-1">
-              {config.pausado ? 'O botão Comprar está escondido. Pedidos já feitos continuam normalmente.' : 'Muito movimento ou faltou produto? Pause na hora, sem perder a configuração.'}
+              {config.pausa_motivo === 'expirados' ? 'Pausado pelo IUB MAIS+: 2 pedidos seguidos passaram de 10 minutos sem resposta. O botão Comprar está escondido.'
+                : config.pausado ? 'O botão Comprar está escondido. Pedidos já feitos continuam normalmente.' : 'Muito movimento ou faltou produto? Pause na hora, sem perder a configuração.'}
             </p>
           </div>
           <button type="button" onClick={alternarPausa} disabled={salvando}

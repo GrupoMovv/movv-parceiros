@@ -7,7 +7,7 @@ import { ROXO, PRETO } from '../public/Marketplace/theme';
 import InstallPWABanner from '../../components/InstallPWABanner';
 import InstallAppButton from '../../components/InstallAppButton';
 import MenuPills from '../../components/ui/MenuPills';
-import AvisoPedidosEsperando, { usePedidosEsperando } from '../../components/pedidos/AvisoPedidosEsperando';
+import AvisoPedidosEsperando, { AvisoPausaExpirados, usePedidosEsperando } from '../../components/pedidos/AvisoPedidosEsperando';
 import { useCampainha } from '../../components/pedidos/campainha';
 import { WhatsappLogo } from '@phosphor-icons/react';
 import { CONTATO_IUB, MSG_WHATSAPP_SUPORTE, linkWhatsappIub } from '../../config/contato';
@@ -90,7 +90,7 @@ export default function ParceiroPainelLayout() {
   const { pathname } = useLocation();
   // Campainha (A1): toca a cada 30 s, em qualquer aba, enquanto houver pedido
   // esperando a loja aceitar ou recusar.
-  const esperando = usePedidosEsperando(Boolean(parceiro?.pedidos_site_liberado && parceiro?.tipo_pessoa !== 'pf'));
+  const { esperando, pausaMotivo } = usePedidosEsperando(Boolean(parceiro?.pedidos_site_liberado && parceiro?.tipo_pessoa !== 'pf'));
   const campainha = useCampainha(esperando > 0);
 
   useEffect(() => {
@@ -203,6 +203,7 @@ export default function ParceiroPainelLayout() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
         <AvisoVerificacao parceiro={parceiro} />
+        <AvisoPausaExpirados pausaMotivo={pausaMotivo} />
         <AvisoPedidosEsperando esperando={esperando} campainha={campainha} naPaginaDePedidos={pathname === '/parceiro/painel/pedidos'} />
         <Outlet context={{ parceiro, usuario }} />
       </main>

@@ -60,6 +60,16 @@ function novoPedidoLoja(p, itens, vendedorNome = null) {
 // Aceito há 30 min sem "pago": o cliente pode ter pago e a loja esquecido
 // de marcar — sem isso o sistema cancela em 2h e o cliente recebe
 // "cancelado" mesmo tendo pago.
+// A3: 2 pedidos seguidos passaram dos 10 min sem resposta → loja pausada.
+// Texto aprovado pelo Junior em 30/10/2026 (com a última frase no fim).
+function pausaExpiradosLoja() {
+  return [
+    `Sua loja ficou pausada no IUB MAIS+ porque 2 pedidos passaram de ${PRAZO_RESPOSTA_MIN} minutos sem resposta.`,
+    `Para voltar a receber: ${FRONT()}/parceiro/painel/pedidos`, '',
+    'Assim nenhum cliente fica esperando sem resposta.',
+  ].join('\n');
+}
+
 function lembretePixLoja(p) {
   const cancelaEm = new Date(new Date(p.aceito_em).getTime() + PRAZO_PAGO_MIN * 60000)
     .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
@@ -191,6 +201,6 @@ function manualClienteParaLoja(p) {
 
 module.exports = {
   linkLoja, linkMeuPedido, linkWhatsapp, brl,
-  novoPedidoLoja, novoPedidoVendedor, lembretePixLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
+  novoPedidoLoja, novoPedidoVendedor, lembretePixLoja, pausaExpiradosLoja, testeLoja, aceitoCliente, pixParaColar, recusadoCliente, expiradoCliente, canceladoCliente, pagoSaiuCliente,
   manualClienteParaLoja,
 };

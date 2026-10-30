@@ -97,6 +97,7 @@ function viewConfig(loja) {
     whatsapp_extra: loja.pedidos_whatsapp_extra || null,
     ativo: loja.pedidos_site_ativo,
     pausado: loja.pedidos_pausados,
+    pausa_motivo: loja.pedidos_pausados ? loja.pedidos_pausa_motivo : null,
     aceite_automatico: loja.pedidos_aceite_automatico,
     confirmado_em: loja.pedidos_confirmado_em,
     pix_tipo: loja.pix_tipo, pix_chave: loja.pix_chave, pix_nome_recebedor: loja.pix_nome_recebedor,
@@ -176,6 +177,8 @@ async function salvarConfig(req, res) {
          pix_tipo = $3, pix_chave = $4, pix_nome_recebedor = $5,
          pedidos_confirmado_em = CASE WHEN $1 THEN NOW() ELSE pedidos_confirmado_em END,
          pedidos_pausados = CASE WHEN $1 AND NOT pedidos_site_ativo THEN false ELSE pedidos_pausados END,
+         pedidos_pausa_motivo = CASE WHEN $1 AND NOT pedidos_site_ativo THEN NULL ELSE pedidos_pausa_motivo END,
+         pedidos_reativados_em = CASE WHEN $1 AND NOT pedidos_site_ativo THEN NOW() ELSE pedidos_reativados_em END,
          updated_at = NOW()
        WHERE id = $6 RETURNING id`,
       [ativo, aceite, pix.tipo, pix.chave, pix.nome, req.parceiro.id]
@@ -217,7 +220,12 @@ async function salvarWhatsappExtra(req, res) {
 async function pausar(req, res) {
   try {
     const r = await db.query(
-      `UPDATE sindicato_parceiros SET pedidos_pausados = $1, updated_at = NOW()
+      // pausa da loja: sem motivo; voltar a receber recomeça a conta dos
+      // expirados seguidos (A3)
+      `UPDATE sindicato_parceiros SET pedidos_pausados = $1, pedidos_pausa_motivo = NULL,
+         pedidos_pausados_em = CASE WHEN $1 THEN NOW() ELSE pedidos_pausados_em END,
+         pedidos_reativados_em = CASE WHEN $1 THEN pedidos_reativados_em ELSE NOW() END,
+         updated_at = NOW()
        WHERE id = $2 AND pedidos_site_ativo RETURNING id`,
       [req.body?.pausado === true, req.parceiro.id]
     );
@@ -270,11 +278,21 @@ async function contarPedidos(parceiroId) {
   )).rows[0];
 }
 
+// A3: pausada pelo sistema (2 expirados seguidos)? Vai junto da contagem
+// para a faixa "Pedidos pausados" aparecer em qualquer aba do painel.
+async function pausaAutomatica(parceiroId) {
+  const r = (await db.query(
+    `SELECT pedidos_pausa_motivo FROM sindicato_parceiros WHERE id = $1 AND pedidos_site_ativo AND pedidos_pausados`,
+    [parceiroId]
+  )).rows[0];
+  return r?.pedidos_pausa_motivo || null;
+}
+
 // GET /contagem — o painel pergunta a cada 30 s, em qualquer aba, para a
 // campainha (A1): toca enquanto houver pedido esperando aceitar ou recusar.
 async function contagemPedidos(req, res) {
   try {
-    return res.json(await contarPedidos(req.parceiro.id));
+    return res.json({ ...(await contarPedidos(req.parceiro.id)), pausa_motivo: await pausaAutomatica(req.parceiro.id) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao contar os pedidos' });
