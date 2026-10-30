@@ -2,6 +2,8 @@ const db = require('../config/database');
 const { sendWhatsAppMessage } = require('./zapApiService');
 const msg = require('./pedidoMensagens');
 const { copiaEColaDoPedido } = require('../utils/pixBrCode');
+const lojaPush = require('./lojaPush');
+const { PRAZO_RESPOSTA_MIN } = require('../config/pedidos');
 
 // Avisos de WhatsApp do pedido pelo site (Z-API). Nunca travam nem derrubam
 // o pedido: o banco é a fonte da verdade. Cada aviso é gravado UMA vez em
@@ -96,6 +98,24 @@ async function itensDo(pedidoId) {
   return (await db.query('SELECT nome, quantidade, subtotal FROM loja_pedido_itens WHERE pedido_id = $1 ORDER BY id', [pedidoId])).rows;
 }
 
+// A5: "Pedido novo #1023" no celular da loja, abrindo o link do pedido (sem
+// login, com a campainha). Reforço do WhatsApp: se falhar, segue a vida.
+async function notificarAparelhos(pedido) {
+  try {
+    await lojaPush.enviarParaLoja(pedido.parceiro_id, {
+      title: `Pedido novo #${pedido.id}`,
+      body: pedido.status === 'aceito'
+        ? `${msg.brl(pedido.total)} · ${pedido.cliente_nome} · já aceito automaticamente`
+        : `${msg.brl(pedido.total)} · ${pedido.cliente_nome} · responda em até ${PRAZO_RESPOSTA_MIN} minutos`,
+      url: `/pedido-loja/${pedido.token_loja}`,
+      tag: `pedido-${pedido.id}`,
+      requireInteraction: true,
+    });
+  } catch (err) {
+    console.error('[pedidoAvisos] notificação do pedido', pedido.id, err.message);
+  }
+}
+
 // Pedido criado → loja ("novo", com o link). Aceite automático: o cliente
 // já recebe o aceito com o Pix.
 async function avisarNovoPedido(pedido) {
@@ -106,6 +126,8 @@ async function avisarNovoPedido(pedido) {
     ? (await db.query('SELECT nome, whatsapp, avisar_whatsapp FROM loja_vendedores WHERE id = $1', [pedido.vendedor_id])).rows[0] || null
     : null;
   const lojaAvisada = await avisarLoja(pedido.id, 'novo', loja, msg.novoPedidoLoja(pedido, await itensDo(pedido.id), vendedor?.nome));
+  // A5: notificação nos aparelhos da loja (só na 1ª vez: null = já avisado)
+  if (lojaAvisada !== null) await notificarAparelhos(pedido);
   if (vendedor?.avisar_whatsapp) {
     await registrarEEnviar(pedido.id, 'novo', 'vendedor', vendedor.whatsapp, msg.novoPedidoVendedor(pedido, loja.nome));
   }

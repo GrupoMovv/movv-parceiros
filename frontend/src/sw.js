@@ -57,8 +57,9 @@ registerRoute(
   })
 );
 
-// Push notification — base preparada, nada no backend dispara isso ainda
-// (fica pronto pra quando integrarmos OneSignal/Firebase).
+// Push notification (Web Push com chaves VAPID, sem OneSignal/Firebase).
+// Hoje o backend manda para os aparelhos da LOJA (A5, services/lojaPush.js):
+// pedido novo e loja pausada. { title, body, url, tag, requireInteraction }.
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let data;
@@ -70,6 +71,9 @@ self.addEventListener('push', (event) => {
     badge: '/icons/icon-72x72.png',
     vibrate: [200, 100, 200],
     tag: data.tag || 'iubmais',
+    // pedido novo fica na tela até a loja tocar (não some sozinho)
+    requireInteraction: Boolean(data.requireInteraction),
+    renotify: Boolean(data.tag),
     data: { url: data.url || '/marketplace' },
   };
   event.waitUntil(self.registration.showNotification(data.title || 'IUB MAIS+', options));

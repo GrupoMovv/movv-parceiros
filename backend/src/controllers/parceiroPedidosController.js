@@ -5,6 +5,7 @@ const { carregarLoja, modosDisponiveis, transicionar, ErroPedido } = require('..
 const { viewLoja, respostaAcao } = require('./pedidoLinkLojaController');
 const { pedidosSiteLiberado } = require('../config/pedidos');
 const pedidoAvisos = require('../services/pedidoAvisos');
+const lojaPush = require('../services/lojaPush');
 const { normalizarWhatsapp } = require('../services/whatsappVerificacao');
 const { testeLoja } = require('../services/pedidoMensagens');
 
@@ -261,6 +262,61 @@ async function enviarTeste(req, res) {
   }
 }
 
+// ── Aviso no celular (A5) ─────────────────────────────────────────────
+// Notificação do navegador. Sem as chaves VAPID no ambiente, chave_publica
+// vem null e o painel não oferece o botão.
+
+// GET /push
+async function pushSituacao(req, res) {
+  try {
+    return res.json({ chave_publica: lojaPush.chavePublica(), aparelhos: await lojaPush.quantosAparelhos(req.parceiro.id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao carregar o aviso no celular' });
+  }
+}
+
+// POST /push/inscrever  { inscricao } (PushSubscription.toJSON() do navegador)
+async function pushInscrever(req, res) {
+  try {
+    if (!lojaPush.chavePublica()) return res.status(409).json({ error: 'Aviso no celular ainda não está disponível.' });
+    const ok = await lojaPush.inscrever(req.parceiro.id, req.parceiroUsuario?.id, req.body?.inscricao, req.headers['user-agent']);
+    if (!ok) return res.status(400).json({ error: 'Não conseguimos ativar neste aparelho.' });
+    return res.json({ aparelhos: await lojaPush.quantosAparelhos(req.parceiro.id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao ativar o aviso no celular' });
+  }
+}
+
+// POST /push/cancelar  { endpoint }
+async function pushCancelar(req, res) {
+  try {
+    await lojaPush.cancelar(req.parceiro.id, req.body?.endpoint);
+    return res.json({ aparelhos: await lojaPush.quantosAparelhos(req.parceiro.id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao desativar' });
+  }
+}
+
+// POST /push/teste — 1 a cada 30 s por loja
+const ultimoTestePush = new Map();
+async function pushTeste(req, res) {
+  try {
+    const desde = Date.now() - (ultimoTestePush.get(req.parceiro.id) || 0);
+    if (desde < 30000) return res.status(429).json({ error: `Aguarde ${Math.ceil((30000 - desde) / 1000)}s para testar de novo.` });
+    ultimoTestePush.set(req.parceiro.id, Date.now());
+    const enviados = await lojaPush.enviarParaLoja(req.parceiro.id, {
+      title: 'Teste do IUB MAIS+', body: 'Assim chega o aviso de pedido novo neste aparelho.', url: '/parceiro/painel/pedidos', tag: 'teste',
+    });
+    return res.json({ enviados });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao mandar o teste' });
+  }
+}
+
 // ── Aba Pedidos (parte 7) ──────────────────────────────────────────────
 // Mesmas abas da agenda do PET: Para responder / Em andamento / Encerrados.
 const FILTROS_PEDIDOS = {
@@ -349,6 +405,6 @@ async function agirPedido(req, res) {
 }
 
 module.exports = {
-  getConfig, salvarConfig, salvarWhatsappExtra, pausar, enviarTeste, normalizarChavePix, requisitos,
+  getConfig, salvarConfig, salvarWhatsappExtra, pausar, enviarTeste, pushSituacao, pushInscrever, pushCancelar, pushTeste, normalizarChavePix, requisitos,
   listarPedidos, contagemPedidos, verPedido, agirPedido,
 };

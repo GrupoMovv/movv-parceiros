@@ -2,6 +2,7 @@ const db = require('../config/database');
 const pedidoLoja = require('./pedidoLoja');
 const pedidoAvisos = require('./pedidoAvisos');
 const msg = require('./pedidoMensagens');
+const lojaPush = require('./lojaPush');
 const {
   PRAZO_RESPOSTA_MIN, PRAZO_PAGO_MIN, LEMBRETE_PIX_MIN, PRAZO_ENTREGUE_ENTREGA_MIN, PRAZO_ENTREGUE_RETIRADA_MIN,
 } = require('../config/pedidos');
@@ -58,6 +59,12 @@ async function pausarSeExpirouSeguidos(pedido) {
   if (!pausou.rows[0]) return false;
   const loja = await pedidoAvisos.dadosLoja(pedido);
   await pedidoAvisos.avisarLoja(pedido.id, 'pausa', loja, msg.pausaExpiradosLoja());
+  await lojaPush.enviarParaLoja(pedido.parceiro_id, {
+    title: 'Pedidos pausados',
+    body: `2 pedidos passaram de ${PRAZO_RESPOSTA_MIN} minutos sem resposta. Toque para voltar a receber.`,
+    url: '/parceiro/painel/pedidos',
+    tag: 'pausa',
+  }).catch(err => console.error('[prazos pedidos] notificação da pausa', err.message));
   return true;
 }
 

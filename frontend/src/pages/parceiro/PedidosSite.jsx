@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Loader2, CheckCircle2, XCircle, PauseCircle, PlayCircle, Send } from 'lucide-react';
 import apiParceiro from '../../services/apiParceiro';
 import { avisarPedidosMudou, EVENTO_PEDIDOS_MUDOU } from '../../components/pedidos/campainha';
+import AvisoNoCelular from '../../components/pedidos/AvisoNoCelular';
 import { ROXO, PRETO } from '../public/Marketplace/theme';
 import { DIAS, textoTaxaEntrega } from '../../utils/iubFood';
 
@@ -304,6 +305,8 @@ export default function PedidosSite() {
           </ul>
         )}
       </Secao>
+
+      <AvisoNoCelular Secao={Secao} />
 
       <Secao titulo="Confira antes de ligar" subtitulo="É isso que o cliente vê no pedido. Algo errado? Ajuste e volte aqui.">
         <dl className="text-sm space-y-3">
